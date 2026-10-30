@@ -8,6 +8,7 @@
 #include <numbers>
 #include <set>
 #include <sstream>
+#include <typeinfo>
 
 #include <BRepAdaptor_Curve.hxx>
 #include <BRepAdaptor_Surface.hxx>
@@ -57,7 +58,8 @@ namespace
 std::string kernelText(const Standard_Failure& f)
 {
     const char* m = f.GetMessageString();
-    return std::string(f.DynamicType()->Name()) + ": " + (m ? m : "");
+    // typeid rather than DynamicType(): OCCT 8 no longer makes Standard_Failure a transient.
+    return std::string(typeid(f).name()) + ": " + (m ? m : "");
 }
 
 std::string surfaceTypeName(GeomAbs_SurfaceType t)

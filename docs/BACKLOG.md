@@ -23,6 +23,9 @@ decision or finding). Move items to STATUS.md when started.
   D-004), and collinear/concentric constraints.
 - **B-010 Windows CI result**: first green Windows run with conda-forge OCCT 8.0.1 (D-011
   revised); fix any MSVC/OCCT 8 issues.
+- **B-012 OCCT 8 deprecations**: `TopTools_*`/`TColStd_*` typedef headers are deprecated in
+  8.0 (warnings on Windows). Switch to `NCollection_*` types once 7.6 support is dropped, or
+  wrap them in one compatibility header.
 - **B-011 Windows package DLL audit**: ship only the DLLs Jigsmith loads; list each licence.
 - **B-009 Recompute off the UI thread** for long timelines with a progress indicator
   (5.3.6), once any real design exceeds 100 ms.
