@@ -121,25 +121,18 @@ jobs:
   windows:
     name: Windows (x64)
     runs-on: windows-2022
-    timeout-minutes: 240
-    # Queue (never cancel) Windows runs on the same branch, so a cold vcpkg build of
-    # OCCT (about an hour) can finish and save its binary cache.
-    concurrency:
-      group: windows-${{ github.ref }}
-      cancel-in-progress: false
-    env:
-      VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}\vcpkg-bincache
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: cmd /C CALL {0}
     steps:
       - uses: actions/checkout@v4
-      - name: Prepare vcpkg binary cache
-        shell: pwsh
-        run: New-Item -ItemType Directory -Force -Path "$env:VCPKG_DEFAULT_BINARY_CACHE" | Out-Null
-      - name: Cache vcpkg binaries
-        uses: actions/cache@v4
+      - name: Install dependencies (conda-forge, prebuilt OCCT)
+        uses: conda-incubator/setup-miniconda@v3
         with:
-          path: ${{ github.workspace }}\vcpkg-bincache
-          key: vcpkg-win-${{ hashFiles('vcpkg.json') }}
-          restore-keys: vcpkg-win-
+          miniforge-version: latest
+          environment-file: packaging/windows/environment.yml
+          activate-environment: jigsmith
       - name: Install Qt (official LGPL binaries)
         uses: jurplel/install-qt-action@v4
         with:
@@ -147,21 +140,20 @@ jobs:
           cache: true
       - uses: ilammy/msvc-dev-cmd@v1
       - name: Configure
-        shell: pwsh
-        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release "-DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-windows
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release "-DCMAKE_PREFIX_PATH=%CONDA_PREFIX%\Library;%QT_ROOT_DIR%"
       - name: Build
         run: cmake --build build
       - name: Test
         run: ctest --test-dir build --output-on-failure -j4
       - name: Benchmarks
-        shell: pwsh
-        run: ./build/bench/jigsmith-bench.exe | Tee-Object bench-windows.json
-      - name: Package portable zip
+        run: build\bench\jigsmith-bench.exe > bench-windows.json && type bench-windows.json
+      - name: Package portable zip (unverified on a clean machine)
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force dist | Out-Null
           Copy-Item build/app/jigsmith.exe, build/cli/jigsmith-cli.exe dist/
-          Copy-Item build/app/*.dll dist/ -ErrorAction SilentlyContinue
+          # OCCT and its runtime dependencies from the conda environment
+          Copy-Item "$env:CONDA_PREFIX/Library/bin/*.dll" dist/
           windeployqt --release --no-translations dist/jigsmith.exe
           Copy-Item LICENSE, THIRD_PARTY_LICENSES.md dist/
           Compress-Archive -Path dist/* -DestinationPath Jigsmith-windows-x64-portable.zip

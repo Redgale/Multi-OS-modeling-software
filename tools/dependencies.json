@@ -1,6 +1,6 @@
 {
   "$comment": "Every third-party component Jigsmith builds with, links or ships. tools/license_audit.py fails CI if a dependency is missing here, has a license not on the allow-list, or lacks a notice entry in THIRD_PARTY_LICENSES.md.",
-  "allowed_licenses": ["GPL-3.0-or-later", "LGPL-2.1-only WITH OCCT-exception-1.0", "LGPL-2.1-only", "LGPL-2.1-or-later", "LGPL-3.0-only", "MIT", "BSD-3-Clause", "BSL-1.0", "MPL-2.0", "Apache-2.0", "SIL-OFL-1.1", "ISC", "Zlib"],
+  "allowed_licenses": ["GPL-3.0-or-later", "LGPL-2.1-only WITH OCCT-exception-1.0", "LGPL-2.1-only", "LGPL-2.1-or-later", "LGPL-3.0-only", "MIT", "BSD-3-Clause", "BSL-1.0", "MPL-2.0", "Apache-2.0", "SIL-OFL-1.1", "ISC", "Zlib", "FTL"],
   "dependencies": [
     {"name": "Open CASCADE Technology", "id": "opencascade", "license": "LGPL-2.1-only WITH OCCT-exception-1.0", "linking": "dynamic", "use": "geometry kernel", "notice": "visible notice required (About box, README, CLI --help)", "source": "https://github.com/Open-Cascade-SAS/OCCT"},
     {"name": "planegcs (from FreeCAD)", "id": "planegcs", "license": "LGPL-2.1-or-later", "linking": "static, vendored source in third_party/planegcs", "use": "2D constraint solver", "notice": "source shipped; upstream commit recorded", "source": "https://github.com/FreeCAD/FreeCAD/tree/main/src/Mod/Sketcher/App/planegcs"},
@@ -10,6 +10,7 @@
     {"name": "nlohmann/json", "id": "nlohmann-json", "license": "MIT", "linking": "header-only", "use": "document format", "notice": "listed", "source": "https://github.com/nlohmann/json"},
     {"name": "miniz", "id": "miniz", "license": "MIT", "linking": "static (fetched 3.0.2 by CMake)", "use": ".jig ZIP container", "notice": "listed", "source": "https://github.com/richgel999/miniz"},
     {"name": "GoogleTest", "id": "gtest", "license": "BSD-3-Clause", "linking": "tests only, not shipped", "use": "unit tests", "notice": "listed", "source": "https://github.com/google/googletest"},
+    {"name": "OCCT runtime libraries on Windows (FreeType, FreeImage and others from conda-forge)", "id": "occt-runtime-win", "license": "FTL", "linking": "dynamic, shipped in the Windows zip", "use": "OCCT's own dependencies", "notice": "the Windows zip currently copies the whole conda Library/bin; to be trimmed and audited per DLL before release (BACKLOG B-011)", "source": "https://conda-forge.org"},
     {"name": "oneTBB (pulled in by some OCCT builds)", "id": "tbb", "license": "Apache-2.0", "linking": "dynamic, transitively via OCCT where enabled", "use": "OCCT threading", "notice": "listed", "source": "https://github.com/uxlfoundation/oneTBB"}
   ]
 }

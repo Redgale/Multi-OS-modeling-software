@@ -270,7 +270,7 @@ The Python API (v0.2) will expose the same commands.
 
 ---
 
-## D-011 Build and dependency management (accepted)
+## D-011 Build and dependency management (accepted; Windows route revised in D-013)
 
 **Decision.** CMake ≥ 3.24 with Ninja. Linux: distribution packages (apt). macOS:
 Homebrew. Windows: vcpkg manifest (`vcpkg.json`) plus Qt's official LGPL binaries
@@ -294,3 +294,35 @@ CI enforces the allow-list (`tools/license_audit.py`).
 
 **Options considered.** LGPL or MPL for the core (would allow proprietary forks; the
 brief prefers keeping improvements free).
+
+---
+
+## D-013 Windows dependencies from conda-forge instead of vcpkg (accepted, supersedes part of D-011)
+
+**Context.** The first Windows CI run with vcpkg spent **over 89 minutes** in the
+configure step still compiling OCCT 8.0.1 and its dependencies from source (vcpkg builds
+debug and release by default on a 4-core runner), and was cancelled. The owner noticed it
+first. A contributor on Windows would face the same wait, which breaks the brief's
+30-minute cold build (success measure 4, scenario A8).
+
+**Options.** (a) Keep vcpkg with a binary cache: fast once warm, but every cache miss
+(new OCCT version, new runner image) costs hours, and contributors start cold. (b) vcpkg
+with a release-only triplet and minimal OCCT features: roughly halves the time, still
+far over budget. (c) **conda-forge**: prebuilt OCCT 8.0.1 for win-64 (`novtk` variant),
+plus Eigen, Boost headers, nlohmann/json and GoogleTest, in one environment file;
+installs in minutes. (d) Official OCCT Windows binary archives: no matching Eigen/Boost/
+GTest, more manual steps.
+
+**Decision.** (c). `packaging/windows/environment.yml` is the single source for Windows
+dependencies (CI and README). Qt still comes from the official LGPL binaries. `vcpkg.json`
+is removed. The license audit reads the conda environment file.
+
+**Evidence.** conda-forge's OCCT feedstock recipe (checked 2026-10-30) builds 8.0.1 with a
+`novtk` variant. The first conda-based Windows CI result is recorded in STATUS.md.
+
+**Consequences.** The Windows package must bundle OCCT's runtime DLLs from the conda
+environment; until a per-DLL audit (B-011) the Windows zip is a development artifact
+only. conda-forge's OCCT is built with its own toolchain (MSVC-compatible C++ ABI).
+
+**How to reverse.** Restore a `vcpkg.json` (git history) and the previous CI job; consider
+a prebuilt-binary cache hosted by the project.

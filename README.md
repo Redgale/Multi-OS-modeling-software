@@ -24,8 +24,8 @@ telemetry, no paywall. Your designs are files on your computer.
 
 ## Build from source
 
-You need a C++20 compiler, CMake ≥ 3.24, Ninja, and the dependencies below. On a
-typical machine the whole build takes 5 to 15 minutes, plus the dependency install time.
+You need a C++20 compiler, CMake ≥ 3.24, Ninja, and the dependencies below. Every platform
+uses prebuilt dependencies, so a typical machine builds Jigsmith in 5 to 15 minutes.
 
 ### Linux (Ubuntu 24.04 / Debian 13)
 
@@ -63,23 +63,32 @@ cmake --build build && ctest --test-dir build
 open build/app/jigsmith.app
 ```
 
-### Windows 10/11 (Visual Studio 2022, vcpkg, Qt)
+### Windows 10/11 (Visual Studio 2022, conda-forge, Qt)
 
-1. Install Visual Studio 2022 with “Desktop development with C++”, plus
-   [vcpkg](https://github.com/microsoft/vcpkg) and Qt 6.8 (open-source edition, MSVC 2022
-   64-bit) from the Qt online installer.
-2. In a “x64 Native Tools Command Prompt”:
+1. Install Visual Studio 2022 with “Desktop development with C++”,
+   [Miniforge](https://github.com/conda-forge/miniforge) (for prebuilt Open CASCADE), and
+   Qt 6.8 (open-source edition, “MSVC 2022 64-bit”) from the Qt online installer.
+2. Open the “Miniforge Prompt”, create the dependency environment once (about two minutes):
 
 ```bash
-cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=%VCPKG_ROOT%/scripts/buildsystems/vcpkg.cmake -DCMAKE_PREFIX_PATH=C:/Qt/6.8.3/msvc2022_64
+conda env create -f packaging/windows/environment.yml
+```
+
+3. In the same prompt, activate it and load the compiler (adjust the VS path if needed):
+
+```bash
+conda activate jigsmith && "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Auxiliary/Build/vcvars64.bat"
+```
+
+4. Configure, build and test (adjust the Qt path to your install):
+
+```bash
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release "-DCMAKE_PREFIX_PATH=%CONDA_PREFIX%/Library;C:/Qt/6.8.3/msvc2022_64"
 ```
 
 ```bash
 cmake --build build && ctest --test-dir build
 ```
-
-vcpkg builds Open CASCADE from source the first time. That can take close to an hour;
-later builds reuse vcpkg's binary cache.
 
 ### Build options
 

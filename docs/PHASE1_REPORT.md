@@ -23,7 +23,7 @@ No LOCKED requirement failed a spike.
 | 2 | Sketch solver with live dragging and conflict diagnostics (planegcs vs libslvs) | **planegcs passes** every measured criterion. **libslvs not run** (build blocked in this environment) | `tests/test_solver.cpp` (DOF, conflict, redundant, drag, gap finder, 300-case property test); drag 3.4 ms median on 100 entities |
 | 3 | Persistent naming prototype with regression scenarios | **Pass** for edit-early (four parameters), insert mid-history (two scenarios), combined edit/insert/edit, and removed-geometry reporting. Reorder not yet tested | `tests/test_naming.cpp` (7 tests) |
 | 4 | Feature DAG, incremental recompute and timeline editing, including undo across rollback | **Pass** | `Document.*` tests; editing the last of 51 features rebuilds 1 feature in 51 ms, editing the first rebuilds all in 539 ms; undo/redo 50 steps identical |
-| 5 | Packaging a "hello CAD" app on all three OSes through CI | **Pass on Linux (AppImage) and macOS arm64 + Intel (.dmg)**; Windows portable zip pending its first (cold vcpkg) run | CI runs 2 and 5; `.github/workflows/ci.yml` |
+| 5 | Packaging a "hello CAD" app on all three OSes through CI | **Pass on Linux (AppImage) and macOS arm64 + Intel (.dmg)**; Windows: see STATUS.md (moved to prebuilt conda-forge OCCT after vcpkg took 89+ min, D-013) | CI runs 2 and 5; `.github/workflows/ci.yml` |
 
 ## What is proven (on Linux, in this container and in CI)
 
@@ -59,9 +59,9 @@ No LOCKED requirement failed a spike.
 
 1. **macOS rendering** (OpenGL deprecated): unverified on hardware. Mitigation: B-004
    (RHI/Metal spike) is scheduled before M2's polish.
-2. **Windows build time**: vcpkg builds OCCT from source (cold cache close to an hour).
-   Mitigation: binary cache in CI; a prebuilt-dependency bundle for contributors if the
-   30-minute build promise (A8) cannot be met otherwise.
+2. **Windows build time**: vcpkg compiling OCCT took over 89 minutes and was abandoned.
+   Now prebuilt OCCT 8.0.1 from conda-forge (D-013). Risk left: the Windows package must
+   bundle and audit OCCT's runtime DLLs (B-011).
 3. **OCCT version spread** (7.6 on Linux, 7.9 on macOS, 8.0 on Windows): golden numbers
    may differ slightly; topology counts might differ after `UnifySameDomain`. CI will
    show it.

@@ -4,7 +4,7 @@
 
 Checks:
   * every dependency in tools/dependencies.json has a license on the allow-list;
-  * every dependency named in vcpkg.json and every FetchContent/find_package in
+  * every dependency in packaging/windows/environment.yml and every FetchContent/find_package in
     cmake/Dependencies.cmake is listed in tools/dependencies.json;
   * every dependency has a section in THIRD_PARTY_LICENSES.md.
 Usage: python3 tools/license_audit.py [repo_root]
@@ -24,13 +24,15 @@ for d in data["dependencies"]:
     if d["license"] not in allowed:
         errors.append(f"{d['name']}: license '{d['license']}' is not on the allow-list")
 
-vcpkg = json.loads((root / "vcpkg.json").read_text())
-vcpkg_map = {"opencascade": "opencascade", "eigen3": "eigen3", "boost-graph": "boost",
-             "nlohmann-json": "nlohmann-json", "gtest": "gtest"}
-for dep in vcpkg.get("dependencies", []):
-    name = dep if isinstance(dep, str) else dep["name"]
-    if vcpkg_map.get(name) not in deps:
-        errors.append(f"vcpkg.json dependency '{name}' is not in tools/dependencies.json")
+conda = (root / "packaging/windows/environment.yml").read_text()
+conda_map = {"occt": "opencascade", "eigen": "eigen3", "libboost-headers": "boost",
+             "nlohmann_json": "nlohmann-json", "gtest": "gtest", "cmake": None, "ninja": None}
+for m in re.finditer(r"^\s*-\s*([A-Za-z0-9_.-]+)", conda.split("dependencies:", 1)[1], re.M):
+    name = m.group(1)
+    if name not in conda_map:
+        errors.append(f"packaging/windows/environment.yml dependency '{name}' is unknown to the audit")
+    elif conda_map[name] and conda_map[name] not in deps:
+        errors.append(f"conda dependency '{name}' is not in tools/dependencies.json")
 
 cmake = (root / "cmake/Dependencies.cmake").read_text()
 cmake_map = {"OpenCASCADE": "opencascade", "Eigen3": "eigen3", "Boost": "boost",

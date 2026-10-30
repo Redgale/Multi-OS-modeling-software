@@ -75,6 +75,14 @@ Copyright © Intel Corporation and the UXL Foundation. Apache License 2.0.
 https://github.com/uxlfoundation/oneTBB. Present only when the platform's OCCT build
 was compiled with TBB (for example Debian/Ubuntu packages).
 
+## OCCT runtime libraries on Windows (FreeType, FreeImage and others from conda-forge)
+
+The Windows build takes a prebuilt OCCT 8.0.1 from conda-forge, together with the
+libraries that OCCT build depends on (for example FreeType, FTL or GPL-2.0, used under the
+FTL). **Before the first release** the Windows package must ship only the DLLs Jigsmith
+actually loads, each listed here with its licence (BACKLOG B-011). Until then the CI zip is a
+development artifact, not a release.
+
 ## Assets
 
 The application icon (`packaging/linux/jigsmith.svg`) is an original placeholder

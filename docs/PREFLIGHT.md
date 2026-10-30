@@ -89,7 +89,7 @@ resolved here or in `docs/DECISIONS.md`.*
 |---|---|---|---|
 | 1 | **Persistent naming breaks on real edits** (fillets jump to other edges) | History-based face names, edge names from adjacent faces, fingerprint fallback that *reports* instead of guessing; regression suite. | Spike passes all 7 regression scenarios on the phone stand. Reordering is not yet implemented (BACKLOG). |
 | 2 | **macOS OpenGL deprecation** | Renderer isolated behind `Viewport`; plan a Qt RHI (Metal) backend. | GL 3.3 core works on Linux/Mesa. macOS path compiles in CI; not yet run on a Mac display (no GUI test on macOS runners). |
-| 3 | **Windows build time** (vcpkg builds OCCT from source, around an hour on a cold cache) | vcpkg binary cache in CI; official Qt binaries. | First Windows run in progress; see STATUS.md. |
+| 3 | **Windows build time** (vcpkg builds OCCT from source) | Measured: 89+ min, cancelled. Switched to prebuilt conda-forge OCCT (D-013); official Qt binaries. | See STATUS.md. |
 | 4 | **Solver robustness while dragging** | planegcs with DogLeg then Levenberg-Marquardt; redundant-constraint re-solve; temporary drag constraints. | Drag on 100 entities: 3.4 ms median (budget 16 ms). Interactive drag UI is M1. |
 | 5 | **Kernel failures on fillet/shell** | Validate with BRepCheck, roll back, explain, and search for a working value. | Fillet failure grace passes A5 automatically. Shell is M3. |
 | 6 | **Scope**: v0.1 is large (about 80 tools) | Vertical slices M1 to M8; tools hidden or disabled until they pass their tests. | Registry shows every v0.1 tool with "coming in Mx". |

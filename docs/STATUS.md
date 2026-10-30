@@ -37,7 +37,7 @@ Windows and macOS (Apple silicon and Intel).
 | Linux ASan + UBSan (core) | ✓ passed (runs 1, 2, 5) |
 | macOS 15 Apple silicon (Homebrew, OCCT 7.9.3, Eigen 5): build, 50 tests, bench, .dmg | ✓ passed (run 5), after two portability fixes (Eigen 5 version check; no floating `from_chars` in Apple libc++) |
 | macOS 15 Intel: build, 50 tests, bench, .dmg | ✓ passed (run 5) |
-| Windows 2022 (vcpkg OCCT 8.0.1, Qt 6.8, MSVC) | **pending at end of session**: first run is compiling OCCT from source in vcpkg. Result to be recorded next session (B-010) |
+| Windows 2022 (conda-forge OCCT 8.0.1, Qt 6.8, MSVC) | first vcpkg attempt spent 89+ min compiling OCCT and was cancelled; switched to prebuilt conda-forge OCCT (D-013). Result of the new run: see below |
 
 Also verified locally: the whole tree builds warning-clean and passes all tests with
 Clang 18 as well as GCC 13.
