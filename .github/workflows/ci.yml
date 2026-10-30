@@ -11,12 +11,6 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: ci-${{ github.ref }}
-  # Only cancel superseded PR runs. On pushes, let a running Windows job finish so its
-  # vcpkg binary cache (OCCT built from source, ~1 h cold) gets saved.
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
-
 jobs:
   audit:
     name: License audit
@@ -128,6 +122,11 @@ jobs:
     name: Windows (x64)
     runs-on: windows-2022
     timeout-minutes: 240
+    # Queue (never cancel) Windows runs on the same branch, so a cold vcpkg build of
+    # OCCT (about an hour) can finish and save its binary cache.
+    concurrency:
+      group: windows-${{ github.ref }}
+      cancel-in-progress: false
     env:
       VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}\vcpkg-bincache
     steps:
