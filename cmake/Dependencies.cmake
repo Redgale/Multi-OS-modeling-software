@@ -22,7 +22,12 @@ target_link_libraries(jig_occt INTERFACE ${JIG_OCCT_LIBS})
 target_include_directories(jig_occt SYSTEM INTERFACE ${OpenCASCADE_INCLUDE_DIR})
 
 # --- Eigen (MPL-2.0) and Boost.Graph (BSL-1.0), header-only, used by planegcs -----
-find_package(Eigen3 3.3 REQUIRED NO_MODULE)
+# No version in find_package: Eigen 3.4's config only accepts its own major version,
+# and Homebrew ships Eigen 5 (2026). Check the minimum by hand instead.
+find_package(Eigen3 REQUIRED NO_MODULE)
+if(Eigen3_VERSION VERSION_LESS 3.3)
+    message(FATAL_ERROR "Jigsmith needs Eigen 3.3 or newer (found ${Eigen3_VERSION})")
+endif()
 find_package(Boost 1.70 REQUIRED CONFIG COMPONENTS headers)
 
 # --- nlohmann/json (MIT) -----------------------------------------------------------
