@@ -21,8 +21,6 @@ decision or finding). Move items to STATUS.md when started.
 - **B-007 Flatpak manifest** (brief: AppImage and Flatpak).
 - **B-008 Endpoint tangency** in the solver wrapper via angle-via-point (finding in
   D-004), and collinear/concentric constraints.
-- **B-010 Windows CI result**: first green Windows run with conda-forge OCCT 8.0.1 (D-011
-  revised); fix any MSVC/OCCT 8 issues.
 - **B-012 OCCT 8 deprecations**: `TopTools_*`/`TColStd_*` typedef headers are deprecated in
   8.0 (warnings on Windows). Switch to `NCollection_*` types once 7.6 support is dropped, or
   wrap them in one compatibility header.

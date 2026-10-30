@@ -37,12 +37,12 @@ Windows and macOS (Apple silicon and Intel).
 | Linux ASan + UBSan (core) | ✓ passed (runs 1, 2, 5) |
 | macOS 15 Apple silicon (Homebrew, OCCT 7.9.3, Eigen 5): build, 50 tests, bench, .dmg | ✓ passed (run 5), after two portability fixes (Eigen 5 version check; no floating `from_chars` in Apple libc++) |
 | macOS 15 Intel: build, 50 tests, bench, .dmg | ✓ passed (run 5) |
-| Windows 2022 (conda-forge OCCT 8.0.1, Qt 6.8, MSVC) | first vcpkg attempt spent 89+ min compiling OCCT and was cancelled; switched to prebuilt conda-forge OCCT (D-013). Result of the new run: see below |
+| Windows 2022 (conda-forge OCCT 8.0.1, Qt 6.8.3, MSVC 14.44): build, 50 tests, bench, portable zip | ✓ passed (run 41146742253). First vcpkg attempt spent 89+ min compiling OCCT and was cancelled; switched to prebuilt conda-forge OCCT (D-013, dependencies install in about 3 min). Two fixes on the way: Boost headers without a CMake package; OCCT 8 removed `Standard_Failure::DynamicType()` |
 
 Also verified locally: the whole tree builds warning-clean and passes all tests with
 Clang 18 as well as GCC 13.
 
-"macOS and Windows unverified locally; CI result: see table" (brief 8.7).
+**All six jobs green in a single run** ([run 41146742253](https://github.com/Redgale/Multi-OS-modeling-software/actions/runs/41146742253)): the same 50 tests pass on OCCT 7.6.3 (Linux), 7.9.3 (macOS) and 8.0.1 (Windows). "macOS and Windows unverified locally; CI result: as above" (brief 8.7). GUI rendering is still verified only on Linux.
 
 ## What is stubbed or not started
 
@@ -72,7 +72,7 @@ Clang 18 as well as GCC 13.
    update D-004.
 2. **M1 slice start**: sketch mode (contextual toolbar, look-at, finish), Line and
    Rectangle tools with typed values and Tab, auto-constraints with glyphs, live drag.
-3. Check the Windows CI result (B-010) and fix anything OCCT 8.0 / MSVC specific; add Windows/macOS screenshots (B-003).
+3. Add Windows/macOS GUI screenshots to CI (B-003) and audit the DLLs in the Windows zip (B-011).
 
 ## How to resume
 

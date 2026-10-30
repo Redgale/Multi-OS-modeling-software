@@ -8,9 +8,8 @@ not run is labelled **unverified**. CI results for each platform are recorded in
 ## Verdict
 
 **GO for M1 (sketch core), with three conditions:** (1) the libslvs spike (B-001) runs
-early in M1, before the interactive sketch UI depends on solver specifics; (2) Windows
-CI must be green before M1's slice is called done (Linux and both macOS runners are
-green); (3) the reorder regression
+early in M1, before the interactive sketch UI depends on solver specifics; (2) CI stays green on all four platforms (it is green on Linux, macOS arm64 and Intel,
+and Windows as of the end of session 1); (3) the reorder regression
 tests (B-002) land in M2 with timeline editing.
 
 No LOCKED requirement failed a spike.
@@ -23,7 +22,7 @@ No LOCKED requirement failed a spike.
 | 2 | Sketch solver with live dragging and conflict diagnostics (planegcs vs libslvs) | **planegcs passes** every measured criterion. **libslvs not run** (build blocked in this environment) | `tests/test_solver.cpp` (DOF, conflict, redundant, drag, gap finder, 300-case property test); drag 3.4 ms median on 100 entities |
 | 3 | Persistent naming prototype with regression scenarios | **Pass** for edit-early (four parameters), insert mid-history (two scenarios), combined edit/insert/edit, and removed-geometry reporting. Reorder not yet tested | `tests/test_naming.cpp` (7 tests) |
 | 4 | Feature DAG, incremental recompute and timeline editing, including undo across rollback | **Pass** | `Document.*` tests; editing the last of 51 features rebuilds 1 feature in 51 ms, editing the first rebuilds all in 539 ms; undo/redo 50 steps identical |
-| 5 | Packaging a "hello CAD" app on all three OSes through CI | **Pass on Linux (AppImage) and macOS arm64 + Intel (.dmg)**; Windows: see STATUS.md (moved to prebuilt conda-forge OCCT after vcpkg took 89+ min, D-013) | CI runs 2 and 5; `.github/workflows/ci.yml` |
+| 5 | Packaging a "hello CAD" app on all three OSes through CI | **Pass on Linux (AppImage) and macOS arm64 + Intel (.dmg)**; Windows portable zip (dev artifact) also green, after moving to prebuilt conda-forge OCCT (vcpkg took 89+ min, D-013) | CI runs 2 and 5; `.github/workflows/ci.yml` |
 
 ## What is proven (on Linux, in this container and in CI)
 
