@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+include(GoogleTest)
+function(jig_test name)
+    add_executable(${name} ${ARGN})
+    target_link_libraries(${name} PRIVATE jig_core GTest::gtest GTest::gtest_main)
+    target_compile_definitions(${name} PRIVATE JIG_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
+    jig_set_warnings(${name})
+    gtest_discover_tests(${name} DISCOVERY_TIMEOUT 120 PROPERTIES TIMEOUT 600)
+endfunction()
+
+jig_test(test_expr       test_expr.cpp)
+jig_test(test_solver     test_solver.cpp)
+jig_test(test_document   test_document.cpp)
+jig_test(test_geometry   test_geometry.cpp)
+jig_test(test_naming     test_naming.cpp)
+jig_test(test_commands   test_commands.cpp)
