@@ -28,7 +28,15 @@ find_package(Eigen3 REQUIRED NO_MODULE)
 if(Eigen3_VERSION VERSION_LESS 3.3)
     message(FATAL_ERROR "Jigsmith needs Eigen 3.3 or newer (found ${Eigen3_VERSION})")
 endif()
-find_package(Boost 1.70 REQUIRED CONFIG COMPONENTS headers)
+# Only header-only Boost.Graph is needed. Some distributions (conda-forge's
+# libboost-headers) ship the headers without a CMake package, so fall back to them.
+find_package(Boost 1.70 QUIET CONFIG COMPONENTS headers)
+if(NOT Boost_FOUND)
+    find_path(JIG_BOOST_INCLUDE boost/graph/adjacency_list.hpp REQUIRED)
+    add_library(Boost::headers INTERFACE IMPORTED)
+    set_target_properties(Boost::headers PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${JIG_BOOST_INCLUDE}")
+    message(STATUS "Boost headers (no CMake package) at ${JIG_BOOST_INCLUDE}")
+endif()
 
 # --- nlohmann/json (MIT) -----------------------------------------------------------
 find_package(nlohmann_json 3.10 QUIET CONFIG)
