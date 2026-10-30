@@ -32,12 +32,15 @@ Windows and macOS (Apple silicon and Intel).
 
 | Job | Result |
 |---|---|
-| License audit | ✓ passed (runs 1 and 2) |
-| Linux build + 50 tests + bench + GUI screenshot under Xvfb | ✓ passed (run 1); AppImage step: see run 2 |
-| Linux ASan + UBSan (core) | ✓ passed (run 1) |
-| macOS 15 Apple silicon (Homebrew, OCCT 7.9.3) | run 1 failed at configure (Homebrew ships Eigen 5; fixed); run 2: pending |
-| macOS 15 Intel | pending |
-| Windows 2022 (vcpkg OCCT 8.0.1, Qt 6.8) | pending (first run builds OCCT from source) |
+| License audit | ✓ passed |
+| Linux (Ubuntu 24.04, OCCT 7.6.3): build, 50 tests, bench, GUI screenshot under Xvfb, AppImage | ✓ passed (runs 2 and 5) |
+| Linux ASan + UBSan (core) | ✓ passed (runs 1, 2, 5) |
+| macOS 15 Apple silicon (Homebrew, OCCT 7.9.3, Eigen 5): build, 50 tests, bench, .dmg | ✓ passed (run 5), after two portability fixes (Eigen 5 version check; no floating `from_chars` in Apple libc++) |
+| macOS 15 Intel: build, 50 tests, bench, .dmg | ✓ passed (run 5) |
+| Windows 2022 (vcpkg OCCT 8.0.1, Qt 6.8, MSVC) | **pending at end of session**: first run is compiling OCCT from source in vcpkg. Result to be recorded next session (B-010) |
+
+Also verified locally: the whole tree builds warning-clean and passes all tests with
+Clang 18 as well as GCC 13.
 
 "macOS and Windows unverified locally; CI result: see table" (brief 8.7).
 
@@ -69,7 +72,7 @@ Windows and macOS (Apple silicon and Intel).
    update D-004.
 2. **M1 slice start**: sketch mode (contextual toolbar, look-at, finish), Line and
    Rectangle tools with typed values and Tab, auto-constraints with glyphs, live drag.
-3. Get CI green on all four runners and add Windows/macOS screenshots (B-003).
+3. Check the Windows CI result (B-010) and fix anything OCCT 8.0 / MSVC specific; add Windows/macOS screenshots (B-003).
 
 ## How to resume
 

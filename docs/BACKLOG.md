@@ -21,6 +21,9 @@ decision or finding). Move items to STATUS.md when started.
 - **B-007 Flatpak manifest** (brief: AppImage and Flatpak).
 - **B-008 Endpoint tangency** in the solver wrapper via angle-via-point (finding in
   D-004), and collinear/concentric constraints.
+- **B-010 Windows CI result**: the first Windows run (vcpkg builds OCCT 8.0.1 from source) was
+  still running at the end of session 1. Read it, fix any MSVC/OCCT 8 issues, confirm the vcpkg
+  binary cache is saved.
 - **B-009 Recompute off the UI thread** for long timelines with a progress indicator
   (5.3.6), once any real design exceeds 100 ms.
 
