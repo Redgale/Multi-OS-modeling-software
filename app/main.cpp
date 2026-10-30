@@ -4,6 +4,8 @@
 //   jigsmith [design.jig]
 //   jigsmith --sample phone_stand --screenshot out.png [--size 1360x860] [--theme dark]
 //            (renders the window off-screen-friendly and exits: used for README images and CI)
+#include <cstdio>
+
 #include <QApplication>
 #include <QCommandLineParser>
 #include <QElapsedTimer>

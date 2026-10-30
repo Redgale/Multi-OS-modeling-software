@@ -14,6 +14,7 @@
 //     by fingerprint only when the name no longer matches, never silently.
 #pragma once
 
+#include <cstdint>
 #include <map>
 #include <memory>
 #include <optional>

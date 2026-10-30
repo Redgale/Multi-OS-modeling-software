@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Original Jigsmith placeholder mark: a stepped block on a grid (CC0, see docs/ASSETS.md) -->
+  <rect x="2" y="2" width="60" height="60" rx="12" fill="#2b3a55"/>
+  <path d="M14 46 L14 30 L30 30 L30 18 L50 18 L50 46 Z" fill="#ffbe50"/>
+  <path d="M14 46 L50 46" stroke="#ffffff" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="40" cy="32" r="4.5" fill="#2b3a55"/>
+</svg>
