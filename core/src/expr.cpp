@@ -3,7 +3,7 @@
 
 #include <array>
 #include <cctype>
-#include <charconv>
+#include <locale>
 #include <cmath>
 #include <numbers>
 #include <sstream>
@@ -354,9 +354,13 @@ private:
                 }
             }
             std::string num(s_.substr(b, pos_ - b));
+            // Locale-independent parse ('.' decimal point). std::from_chars for double is
+            // missing from Apple's libc++ (Xcode 16), so use a classic-locale stream.
             double d = 0;
-            auto [ptr, ec] = std::from_chars(num.data(), num.data() + num.size(), d);
-            if (ec != std::errc() || ptr != num.data() + num.size()) {
+            std::istringstream in(num);
+            in.imbue(std::locale::classic());
+            in >> d;
+            if (in.fail() || in.peek() != std::char_traits<char>::eof()) {
                 return fail("'" + num + "' is not a number.");
             }
             return applySuffixUnit(Value {d, Dim::none(), true});
