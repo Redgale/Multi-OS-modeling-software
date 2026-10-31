@@ -12,10 +12,13 @@
 #include <sstream>
 
 #include <BRepBndLib.hxx>
-#include <Bnd_Box.hxx>
-#include <gp_Trsf.hxx>
+#include <BRepGProp_Face.hxx>
 #include <BRepPrimAPI_MakeBox.hxx>
+#include <Bnd_Box.hxx>
+#include <TopExp_Explorer.hxx>
+#include <TopoDS.hxx>
 #include <gp_Ax2.hxx>
+#include <gp_Trsf.hxx>
 
 #include "jig/document.hpp"
 #include "jig/screws.hpp"
@@ -564,6 +567,67 @@ FeatureOutcome applyExtrude(const Document& doc, const Feature& f, const std::sh
         return failed(tool.error());
     }
     return applyTool(f, *op, std::move(tool.value()), in, status);
+}
+
+// ---------------------------------------------------------------- press pull
+
+// Pushes or pulls a flat face straight along its normal: out adds material, in removes it.
+FeatureOutcome applyPressPull(const Document& doc, const Feature& f, const std::shared_ptr<const ModelState>& in)
+{
+    const auto& p = f.params;
+    FeatureStatus status;
+    ShapeRef ref = ShapeRef::fromJson(p.value("face", nlohmann::json::object()));
+    auto bit = in->bodies.find(ref.body);
+    if (bit == in->bodies.end()) {
+        return failed("The body of the face to push or pull no longer exists.", {"Edit the step and click a face."});
+    }
+    Resolution r = resolve(*bit->second, ref);
+    if (r.status == ResolveStatus::Missing || r.status == ResolveStatus::Ambiguous) {
+        return failed("The face to push or pull no longer exists.", {"Edit the step and click a face."});
+    }
+    const TopoDS_Face face = TopoDS::Face(bit->second->face(r.index));
+    if (measureItem(face).kind != "flat face") {
+        return failed("Press pull moves flat faces. To change a rounded edge or a hole, edit the step that made it.");
+    }
+    auto d = doc.evalLength(p.value("distance", std::string("5 mm")));
+    if (!d) {
+        return failed(d.error());
+    }
+    if (std::abs(d.value()) < 1e-9) {
+        return failed("Push or pull by more than zero.");
+    }
+    // the outward normal at the face's centre (the face's orientation says which side is out)
+    BRepGProp_Face gf(face);
+    double u0, u1, v0, v1;
+    gf.Bounds(u0, u1, v0, v1);
+    gp_Pnt c;
+    gp_Vec n;
+    gf.Normal((u0 + u1) / 2, (v0 + v1) / 2, c, n);
+    if (n.Magnitude() < 1e-12) {
+        return failed("The direction of this face could not be found.");
+    }
+    Profile prof;
+    prof.key = "face";
+    prof.face = face;
+    int k = 0;
+    for (TopExp_Explorer e(face, TopAbs_EDGE); e.More(); e.Next()) {
+        if (!prof.edgeEntity.IsBound(e.Current())) {
+            prof.edgeEntity.Bind(e.Current(), ++k);
+        }
+    }
+    ExtrudeInput ei;
+    ei.featureId = f.id;
+    ei.profiles = {&prof};
+    ei.normal = gp_Dir(n);
+    ei.distance = std::abs(d.value());
+    ei.direction = d.value() > 0 ? ExtrudeDirection::OneSide : ExtrudeDirection::Reverse;
+    auto tool = makeExtrusion(ei);
+    if (!tool) {
+        return failed(tool.error());
+    }
+    Feature g = f;
+    g.params["target"] = ref.body;
+    return applyTool(g, d.value() > 0 ? BoolOp::Join : BoolOp::Cut, std::move(tool.value()), in, status);
 }
 
 // ---------------------------------------------------------------- combine, split, move
@@ -1314,6 +1378,8 @@ FeatureOutcome applyFeature(const Document& doc, const Feature& f, const std::sh
                 return applyMove(doc, f, in);
             case FeatureKind::Axis:
                 return applyAxis(doc, f, in);
+            case FeatureKind::PressPull:
+                return applyPressPull(doc, f, in);
         }
     }
     catch (const std::exception& ex) {

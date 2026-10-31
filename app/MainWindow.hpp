@@ -111,6 +111,10 @@ public:
     void openBodyTool(const std::string& tool, const std::string& editId = {});  // combine, split, move
     void openPlane(const std::string& editId = {}, const std::string& kind = "offset");
     void openAxis(const std::string& editId = {});
+    void openPressPull(const std::string& editId = {});
+    // Press pull on a face: a flat face opens the press pull panel; a face made by a fillet,
+    // chamfer or hole opens that step instead. Returns what happened, for the status bar.
+    QString pressPullFace(const std::string& body, const std::string& face);
     void openProperties();
     void openParameters();
     void editFeature(int index);

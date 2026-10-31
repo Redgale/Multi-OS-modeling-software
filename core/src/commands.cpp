@@ -125,7 +125,7 @@ CommandRegistry::CommandRegistry()
     add({"solid.mirror", "Mirror", "Mirror", "CREATE", "Copy a body across a plane, e.g. to make a symmetric part.", "", {"symmetric", "flip copy"}, false, false, false, m3});
     add({"solid.pattern_rect", "Grid copy", "Rectangular Pattern", "CREATE", "Repeat a feature in rows and columns.", "", {"array", "grid", "repeat"}, false, false, false, m3});
     add({"solid.pattern_circ", "Ring copy", "Circular Pattern", "CREATE", "Repeat a feature around an axis.", "", {"array", "repeat around", "spokes"}, true, false, false, m3});
-    add({"solid.presspull", "Press pull", "Press Pull", "MODIFY", "Drag a face to push or pull it; adapts to what you pick.", "Q", {"push", "pull", "drag face"}, false, false, false, m3});
+    add({"solid.presspull", "Press pull", "Press Pull", "MODIFY", "Push or pull a flat face by a distance; on a rounded edge or hole it opens the step that made it.", "Q", {"push", "pull", "drag face"}, false, false, true, m3});
     add({"solid.fillet", "Fillet", "Fillet", "MODIFY", "Round off edges so parts look finished and are comfortable to hold.", "F", {"round the edges", "round", "soften", "radius"}, true, false, true, m3});
     add({"solid.chamfer", "Chamfer", "Chamfer", "MODIFY", "Cut a flat bevel on edges; great for the bottom of 3D prints.", "", {"bevel", "angled edge", "elephant foot"}, true, false, true, m3});
     add({"solid.shell", "Shell", "Shell", "MODIFY", "Hollow out a solid, leaving walls of a set thickness.", "", {"hollow", "wall", "empty inside", "cup"}, true, false, true, m3});
@@ -158,7 +158,7 @@ CommandRegistry::CommandRegistry()
         "constraint.symmetric", "constraint.equal", "solid.extrude", "solid.fillet", "solid.chamfer", "solid.shell",
         "solid.revolve", "solid.hole", "solid.mirror", "solid.pattern_rect", "solid.pattern_circ", "modify.parameters",
         "inspect.measure", "inspect.properties", "file.export_3mf", "construct.offset_plane", "construct.angle_plane",
-        "construct.midplane", "construct.axis", "solid.combine", "solid.split", "solid.move",
+        "construct.midplane", "construct.axis", "solid.presspull", "solid.combine", "solid.split", "solid.move",
         "inspect.section", "insert.dxf", "insert.svg", "help.tutorial"};
     for (auto& c : commands_) {
         if (inApp.count(c.id)) {
@@ -1473,6 +1473,37 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
             f.name = a.get("name", label + " " + f.id.substr(prefix.size()));
             f.kind = kind;
             f.params = params;
+            id = f.id;
+            insertFeature(m, std::move(f));
+            return true;
+        });
+        if (!r) {
+            return r;
+        }
+        return checkFeature(id);
+    }
+    if (a.verb == "presspull") {
+        // presspull [id=pp1] face=<name> distance=<len>   (positive pulls out, negative pushes in)
+        nlohmann::json face;
+        for (auto& [bid, body] : doc.state().bodies) {
+            auto hits = body->findFaces(a.get("face"));
+            if (hits.size() == 1) {
+                face = body->faceRef(bid, hits[0]).toJson();
+            }
+        }
+        if (face.is_null()) {
+            return makeError("script.args", "There is no single face called '" + a.get("face") + "'.");
+        }
+        std::string id;
+        auto r = doc.transact("Press pull", [&](Model& m) -> Result<bool> {
+            Feature f;
+            f.id = a.get("id", Document::newId(m, "pp"));
+            if (findFeature(m, f.id)) {
+                return makeError("script.args", "The id '" + f.id + "' is already used.");
+            }
+            f.name = a.get("name", "Press pull " + f.id.substr(2));
+            f.kind = FeatureKind::PressPull;
+            f.params = {{"face", face}, {"distance", a.get("distance", "5 mm")}};
             id = f.id;
             insertFeature(m, std::move(f));
             return true;

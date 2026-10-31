@@ -60,7 +60,8 @@ enum class FeatureKind
     Combine,
     Split,
     Move,
-    Axis  // construction axis (along an edge, through a round face, where two planes meet)
+    Axis,  // construction axis (along an edge, through a round face, where two planes meet)
+    PressPull  // push or pull a flat face of a body
 };
 
 const char* toString(FeatureKind k);

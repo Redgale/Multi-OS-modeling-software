@@ -1889,6 +1889,81 @@ QString PlanePanel::title() const
     return tr("construction plane");
 }
 
+// ---------------------------------------------------------------- Press pull
+
+PressPullPanel::PressPullPanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent)
+    : FeaturePanel(doc, view, std::move(editId), parent)
+{
+    form_->addWidget(heading(this, tr("Press pull"),
+                             tr("Click a flat face, then type how far to pull it out. A negative distance pushes it "
+                                "in. Clicking a rounded edge or a hole opens the step that made it instead.")));
+    face_ = new QLabel(tr("No face picked yet: click one in the view."), this);
+    face_->setWordWrap(true);
+    distance_ = new ExprField(doc, jig::Dim::len(), this);
+    addRow(tr("Face"), face_);
+    addRow(tr("Distance (out +, in −)"), distance_);
+    if (const jig::Feature* edit = editId_.empty() ? nullptr : doc_.feature(editId_)) {
+        faceRef_ = edit->params.value("face", nlohmann::json());
+        face_->setText(tr("Face %1").arg(q(faceRef_.value("name", std::string {}))));
+        distance_->setText(q(edit->params.value("distance", std::string("5 mm"))));
+    }
+    else {
+        distance_->setText(q(doc_.defaultLength(5, 0.25)));
+    }
+    connect(distance_, &ExprField::changed, this, [this] { schedulePreview(); });
+    if (view_) {
+        connect(view_.data(), &Viewport::faceClicked, this,
+                [this](const QString& b, const QString& n, Qt::KeyboardModifiers) { useFace(b.toStdString(), n.toStdString()); });
+    }
+    if (faceRef_.is_null()) {
+        ok_->setEnabled(false);
+    }
+    else {
+        schedulePreview();
+    }
+}
+
+PressPullPanel::~PressPullPanel()
+{
+    if (view_) {
+        view_->setOverlay({});
+    }
+}
+
+bool PressPullPanel::useFace(const std::string& body, const std::string& name)
+{
+    const auto before = stateBefore();
+    auto it = before->bodies.find(body);
+    if (it == before->bodies.end()) {
+        return false;
+    }
+    auto hits = it->second->findFaces(name);
+    if (hits.empty() || jig::measureItem(it->second->face(hits[0])).kind != "flat face") {
+        status_->setText("<b>✕ " + tr("Press pull moves flat faces. To change a rounded edge or a hole, edit the step "
+                                      "that made it (double-click it in the timeline).") +
+                         "</b>");
+        return false;
+    }
+    faceRef_ = it->second->faceRef(body, hits[0]).toJson();
+    face_->setText(tr("Face %1").arg(q(name)));
+    ok_->setEnabled(true);
+    schedulePreview();
+    return true;
+}
+
+jig::Feature PressPullPanel::draft() const
+{
+    jig::Feature f = startDraft(doc_, editId_, "pp", tr("Press pull"));
+    f.kind = jig::FeatureKind::PressPull;
+    f.params = {{"face", faceRef_}, {"distance", text(distance_, "5 mm")}};
+    return f;
+}
+
+QString PressPullPanel::title() const
+{
+    return tr("press pull");
+}
+
 // ---------------------------------------------------------------- Axis
 
 AxisPanel::AxisPanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent)

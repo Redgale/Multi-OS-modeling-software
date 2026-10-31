@@ -906,6 +906,45 @@ private slots:
         QCOMPARE(regions(), 5);
     }
 
+    // Press pull a flat face; on a hole wall it opens the hole instead.
+    void pressPull()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        {
+            jig::ScriptRunner r(w.document());
+            QVERIFY(r.runText("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=40 h=30\nextrude id=e1 sketch=s1 distance=10\n"
+                              "sketch id=s2 on=e1/end\npoint sketch=s2 at=10,5\nhole id=h1 sketch=s2 diameter=4mm depth=5mm\n").ok());
+        }
+        const double before = volume(w);
+        w.runCommand("solid.presspull");
+        auto* pp = qobject_cast<PressPullPanel*>(w.featurePanel());
+        QVERIFY(pp);
+        QVERIFY(!pp->accept());  // no face yet
+        QVERIFY(pp->useFace("e1", "e1/start"));
+        pp->distance()->setText("3 mm");
+        QTest::qWait(300);
+        QTRY_VERIFY(pp->previewOk());
+        QVERIFY(pp->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        QVERIFY(std::abs(volume(w) - (before + 40 * 30 * 3)) < 1e-6);
+        // the hole's wall is not flat: press pull opens the hole step to change it
+        std::string wall;
+        const auto& body = *w.document().state().bodies.at("e1");
+        for (int i = 0; i < body.faceCount(); ++i) {
+            if (body.faceName(i).rfind("h1/wall", 0) == 0) {
+                wall = body.faceName(i);
+            }
+        }
+        QVERIFY(!wall.empty());
+        QVERIFY(!w.pressPullFace("e1", wall).isEmpty());
+        QVERIFY(qobject_cast<HolePanel*>(w.featurePanel()));
+        qobject_cast<FeaturePanel*>(w.featurePanel())->cancel();
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+    }
+
     // Mirror one step (a hole) across a clicked face's plane; pattern a whole body.
     void mirrorStepAndPatternBody()
     {

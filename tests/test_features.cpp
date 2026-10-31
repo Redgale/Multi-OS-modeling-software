@@ -1162,3 +1162,37 @@ TEST(Pattern, WholeBodiesAndMirroredSteps)
     EXPECT_NEAR(props(*mb).volume, 2000, 1e-6);
     EXPECT_NEAR(props(*mb).zmax, 20, 1e-9);
 }
+
+TEST(PressPull, FlatFacesOutAndIn)
+{
+    const std::string block = "sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=40 h=30\nextrude id=e1 sketch=s1 distance=10\n";
+    // pull the top up 5 mm: one taller block, still one body
+    auto up = build(block + "presspull id=pp1 face=e1/end distance=5mm\n");
+    expectAllOk(*up);
+    EXPECT_EQ(up->state().bodies.size(), 1u);
+    EXPECT_NEAR(props(*up).volume, 40 * 30 * 15, 1e-6);
+    EXPECT_NEAR(props(*up).zmax, 15, 1e-9);
+    // push a side in 4 mm (the bottom face pushed in works the same way)
+    auto in = build(block + "presspull id=pp1 face=e1/start distance=-4mm\n");
+    expectAllOk(*in);
+    EXPECT_NEAR(props(*in).volume, 40 * 30 * 6, 1e-6);
+    EXPECT_NEAR(props(*in).zmin, 4, 1e-9);
+    // a distance from a parameter follows it
+    auto prm = build("param lift = 2 mm\n" + block + "presspull id=pp1 face=e1/end distance=lift\n");
+    run(*prm, "param lift = 7 mm");
+    EXPECT_NEAR(props(*prm).zmax, 17, 1e-9);
+    // curved faces are explained (edit the fillet instead)
+    auto bad = std::make_unique<Document>();
+    ScriptRunner r(*bad);
+    r.runText("sketch id=s1 plane=XY\ncircle sketch=s1 center=0,0 d=20\nextrude id=e1 sketch=s1 distance=10\n");
+    std::string side;
+    for (int i = 0; i < bad->state().bodies.at("e1")->faceCount(); ++i) {
+        if (bad->state().bodies.at("e1")->faceName(i).find("side") != std::string::npos) {
+            side = bad->state().bodies.at("e1")->faceName(i);
+        }
+    }
+    auto res = r.runText("presspull id=pp1 face=" + side + " distance=2mm\n");
+    EXPECT_FALSE(res.ok()) << side;
+    ASSERT_EQ(bad->model().features.size(), 3u) << (res.ok() ? "" : res.error().message);
+    EXPECT_NE(bad->status(2).message.find("flat"), std::string::npos) << bad->status(2).message;
+}

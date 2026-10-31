@@ -313,6 +313,30 @@ private:
     QLabel* points_;
 };
 
+// Press pull: click a flat face, type how far to pull it out (or push it in, negative).
+class PressPullPanel : public FeaturePanel
+{
+    Q_OBJECT
+public:
+    PressPullPanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent = nullptr);
+    ~PressPullPanel() override;
+    // a face click: true when taken (flat), false when another step should handle it
+    bool useFace(const std::string& body, const std::string& name);
+    ExprField* distance() const
+    {
+        return distance_;
+    }
+
+protected:
+    jig::Feature draft() const override;
+    QString title() const override;
+
+private:
+    QLabel* face_;
+    nlohmann::json faceRef_;
+    ExprField* distance_;
+};
+
 // Construction axis: along a straight edge, through a round edge or face, or where two
 // planes meet.
 class AxisPanel : public FeaturePanel

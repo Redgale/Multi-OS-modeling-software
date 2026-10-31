@@ -86,6 +86,7 @@ nothing is committed.
 | `split id=sp1 body=<body> plane=XY\|XZ\|YZ\|<plane id>\|face:<name>` | Cut a body in two; the part on the plane's back side becomes body `sp1` |
 | `move id=mv1 bodies="<body>;…" [dx= dy= dz=] [axis=X\|Y\|Z angle=<angle>] [copy=yes]` | Turn about an origin axis, then shift. `copy=yes` keeps the original |
 | `mirror id=m1 [body=<id> \| feature=<id>] plane=YZ\|XZ\|XY\|<plane id>\|face:<name> [op=join\|new]` | Mirror a body (joined to the original or as a new body), or one step (its copy adds or removes material the same way), across a plane or flat face |
+| `presspull [id=pp1] face=<name> distance=<len>` | Pull a flat face straight out (positive, adds material) or push it in (negative, removes it) |
 
 Profile keys are the sorted ids of the sketch curves around a closed area, e.g. `3,4,5,6`.
 

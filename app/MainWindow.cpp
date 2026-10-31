@@ -138,6 +138,8 @@ QString kindWord(jig::FeatureKind k)
             return MainWindow::tr("Plane");
         case jig::FeatureKind::Axis:
             return MainWindow::tr("Axis");
+        case jig::FeatureKind::PressPull:
+            return MainWindow::tr("Press pull");
         case jig::FeatureKind::Combine:
             return MainWindow::tr("Combine");
         case jig::FeatureKind::Split:
@@ -1249,6 +1251,9 @@ void MainWindow::runCommand(const QString& id)
     else if (id == "construct.axis") {
         openAxis();
     }
+    else if (id == "solid.presspull") {
+        openPressPull();
+    }
     else if (id == "inspect.properties") {
         openProperties();
     }
@@ -2082,6 +2087,51 @@ void MainWindow::openAxis(const std::string& editId)
     showPanel(new AxisPanel(*doc_, view_, editId, panelHost_));
 }
 
+void MainWindow::openPressPull(const std::string& editId)
+{
+    if (sketch_) {
+        exitSketch();
+    }
+    cancelPicker();
+    auto* pp = new PressPullPanel(*doc_, view_, editId, panelHost_);
+    showPanel(pp);
+    if (editId.empty()) {
+        // a clicked face that is not flat: open the step that made it, when there is one
+        connect(view_, &Viewport::faceClicked, pp, [this, pp](const QString& b, const QString& n, Qt::KeyboardModifiers) {
+            if (featurePanel() == pp && !pp->previewOk()) {
+                const QString what = pressPullFace(b.toStdString(), n.toStdString());
+                if (!what.isEmpty()) {
+                    statusBar()->showMessage(what, 6000);
+                }
+            }
+        });
+    }
+}
+
+QString MainWindow::pressPullFace(const std::string& body, const std::string& face)
+{
+    auto it = doc_->state().bodies.find(body);
+    if (it == doc_->state().bodies.end()) {
+        return {};
+    }
+    auto hits = it->second->findFaces(face);
+    if (hits.empty() || jig::measureItem(it->second->face(hits[0])).kind == "flat face") {
+        return {};
+    }
+    // face names start with the id of the step that made them: "<step>/…"
+    const std::string owner = face.substr(0, face.find('/'));
+    const int idx = doc_->featureIndex(owner);
+    if (idx < 0) {
+        return {};
+    }
+    const auto kind = doc_->model().features[size_t(idx)].kind;
+    if (kind != jig::FeatureKind::Fillet && kind != jig::FeatureKind::Chamfer && kind != jig::FeatureKind::Hole) {
+        return {};
+    }
+    editFeature(idx);
+    return tr("That face was made by %1: change its size here.").arg(q(doc_->model().features[size_t(idx)].name));
+}
+
 void MainWindow::importDxf()
 {
     const QString path = QFileDialog::getOpenFileName(this, tr("Import DXF"), {}, tr("DXF drawings (*.dxf)"));
@@ -2301,6 +2351,9 @@ void MainWindow::editFeature(int index)
             break;
         case jig::FeatureKind::Axis:
             openAxis(f.id);
+            break;
+        case jig::FeatureKind::PressPull:
+            openPressPull(f.id);
             break;
         case jig::FeatureKind::Combine:
             openBodyTool("solid.combine", f.id);

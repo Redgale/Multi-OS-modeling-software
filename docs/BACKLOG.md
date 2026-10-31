@@ -57,7 +57,7 @@ timeline edit/rename/suppress/roll back/delete with dependents warning, Paramete
 
 - M3 (done in session 2: Fillet, Chamfer, Shell, Hole, Mirror of bodies, Patterns of
   features; hole clearance table and drill point; pattern of bodies; mirror of steps):
-  variable fillet, Press Pull.
+  variable fillet, press pull of curved faces (offset face).
 - M4 (Revolve, construction planes and axes, Combine, Split, Move/Copy done): revolve to
   object, construction point.
 - M5 (Parameters, Text, Project, SVG and DXF import done): linked (associative) Project.

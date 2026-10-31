@@ -97,8 +97,8 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Extrude ops: join, cut, new body, intersect | 14 | v0.1 M2 | **app**: all four | |
 | Extrude new component | 14 | v0.2 | — | Components |
 | Auto join/cut from drag direction | 14 | v0.1 M2 | **app** (Auto: from the typed direction; drag handle not yet) | Principle 10 |
-| Extrude from selected face | 14 | v0.1 M3 (via Press Pull) | — | |
-| Press Pull | 14, 17 | v0.1 M3 | — | |
+| Extrude from selected face | 14 | v0.1 M3 (via Press Pull) | **app** + scripts via Press Pull (flat faces, straight out or in) | |
+| Press Pull | 14, 17 | v0.1 M3 | **app** + scripts (`presspull`): flat faces out (join) or in (cut); a fillet, chamfer or hole face opens that step; offsetting curved faces not yet | |
 | Revolve (full, angle, to object) | 15 | v0.1 M4 | **app** + scripts: full and angle, origin axis, sketch line or construction axis; to object not yet | |
 | Sweep, Loft, Rib, Web, Emboss, Coil, Pipe | 15 | v0.2 (Web v0.3+) | — | Brief v0.2 list |
 | Thicken, Boundary fill | 15 | v0.3+ | — | Surface workflows |
