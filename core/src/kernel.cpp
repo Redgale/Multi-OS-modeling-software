@@ -22,6 +22,7 @@
 #include <BRepBuilderAPI_MakeFace.hxx>
 #include <BRepBuilderAPI_Transform.hxx>
 #include <BRepCheck_Analyzer.hxx>
+#include <BRepClass3d_SolidClassifier.hxx>
 #include <BRepFilletAPI_MakeFillet.hxx>
 #include <BRepGProp.hxx>
 #include <BRepLProp_SLProps.hxx>
@@ -1013,6 +1014,69 @@ Result<NamedShape> filletEdges(const std::string& featureId,
     }
     nameLeftovers(out, featureId);
     return out;
+}
+
+// ---------------------------------------------------------------- queries
+
+bool pointInside(const TopoDS_Shape& solid, double x, double y, double z)
+{
+    try {
+        BRepClass3d_SolidClassifier c(solid, gp_Pnt(x, y, z), 1e-6);
+        return c.State() == TopAbs_IN;
+    }
+    catch (const Standard_Failure&) {
+        return false;
+    }
+}
+
+std::vector<int> tangentChain(const NamedShape& body, int start, double angleTolDeg)
+{
+    std::vector<int> chain {start};
+    if (start < 0 || start >= body.edgeCount()) {
+        return chain;
+    }
+    TopTools_IndexedDataMapOfShapeListOfShape v2e;
+    TopExp::MapShapesAndAncestors(body.shape(), TopAbs_VERTEX, TopAbs_EDGE, v2e);
+    const double tol = std::cos(angleTolDeg * std::numbers::pi / 180);
+    auto tangentAt = [](const TopoDS_Edge& e, const TopoDS_Vertex& v) -> std::optional<gp_Dir> {
+        BRepAdaptor_Curve c(e);
+        const double u = BRep_Tool::Parameter(v, e);
+        gp_Pnt p;
+        gp_Vec d;
+        c.D1(u, p, d);
+        if (d.Magnitude() < 1e-12) {
+            return std::nullopt;
+        }
+        return gp_Dir(d);
+    };
+    std::vector<int> todo {start};
+    std::set<int> seen {start};
+    while (!todo.empty()) {
+        const int cur = todo.back();
+        todo.pop_back();
+        const TopoDS_Edge& ce = TopoDS::Edge(body.edge(cur));
+        for (TopExp_Explorer vx(ce, TopAbs_VERTEX); vx.More(); vx.Next()) {
+            const TopoDS_Vertex& v = TopoDS::Vertex(vx.Current());
+            const int k = v2e.FindIndex(v);
+            if (k <= 0) {
+                continue;
+            }
+            auto t0 = tangentAt(ce, v);
+            for (TopTools_ListIteratorOfListOfShape it(v2e(k)); it.More(); it.Next()) {
+                const int other = body.edgeIndex(it.Value());
+                if (other < 0 || seen.count(other)) {
+                    continue;
+                }
+                auto t1 = tangentAt(TopoDS::Edge(it.Value()), v);
+                if (t0 && t1 && std::abs(t0->Dot(*t1)) >= tol) {
+                    seen.insert(other);
+                    chain.push_back(other);
+                    todo.push_back(other);
+                }
+            }
+        }
+    }
+    return chain;
 }
 
 // ---------------------------------------------------------------- inspect

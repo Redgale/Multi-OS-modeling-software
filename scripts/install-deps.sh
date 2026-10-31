@@ -46,7 +46,7 @@ elif command -v dnf >/dev/null 2>&1; then
 elif command -v pacman >/dev/null 2>&1; then
     cmd="pacman -S --needed --noconfirm base-devel cmake ninja opencascade qt6-base eigen boost nlohmann-json gtest onetbb"
 elif command -v zypper >/dev/null 2>&1; then
-    cmd="zypper --non-interactive install gcc-c++ cmake ninja occt-devel qt6-base-devel qt6-opengl-devel qt6-openglwidgets-devel eigen3-devel boost-devel nlohmann_json-devel googletest-devel tbb-devel Mesa-libGL-devel"
+    cmd="zypper --non-interactive install gcc-c++ cmake ninja occt-devel qt6-base-devel qt6-opengl-devel qt6-openglwidgets-devel qt6-test-devel eigen3-devel boost-devel nlohmann_json-devel googletest-devel tbb-devel Mesa-libGL-devel"
 else
     echo "Sorry, this script does not know your package manager." >&2
     echo "See the comment at the top of $0 for what to install by hand." >&2

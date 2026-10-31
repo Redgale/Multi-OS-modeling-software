@@ -151,6 +151,12 @@ public:
 
     // New stable id with a prefix ("s", "e", "f"): s1, s2, ...
     static std::string newId(Model& m, const std::string& prefix);
+    // Inserts a feature at the rollback marker (end of the timeline when not rolled back).
+    static void insertAtMarker(Model& m, Feature f);
+    static Feature* findFeature(Model& m, const std::string& id);
+    // Ids of later features that refer to `id` (by sketch id, body id or face names
+    // made by it). Used to warn before deleting or reordering.
+    std::vector<std::string> dependents(const std::string& id) const;
 
     // ---- recompute --------------------------------------------------------
     void recompute();

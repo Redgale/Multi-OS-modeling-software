@@ -6,11 +6,15 @@ telemetry, no paywall. Your designs are files on your computer.
 
 ![The phone stand sample in Jigsmith](docs/images/phone_stand_light.png)
 
-> **Status: early development (pre-v0.1, "walking skeleton").** The modelling engine,
-> file format and a viewer-style app work; interactive sketching and feature dialogs
-> are being built milestone by milestone. See [docs/STATUS.md](docs/STATUS.md) for
-> exactly what works today and how it was verified. Tools that are not ready are shown
-> disabled with the milestone they arrive in.
+| Sketching | Fillet with live preview |
+|---|---|
+| ![Sketch mode](docs/images/sketch_mode.png) | ![Fillet panel](docs/images/fillet_panel.png) |
+
+> **Status: early development (pre-v0.1).** You can sketch, extrude and fillet a part in
+> the app, edit any step later, and export it. Many v0.1 tools (Revolve, Hole, Shell,
+> patterns…) are still being built. See [docs/STATUS.md](docs/STATUS.md) for exactly what
+> works today and how it was verified. Tools that are not ready are shown disabled with
+> the milestone they arrive in.
 
 ## Download a development build
 
@@ -31,8 +35,19 @@ run, build from source; it takes a few minutes.
 
 ## What works today
 
-- Open the built-in **phone stand** sample (File ▸ Open a sample): parameters, a
-  10-step timeline, rollback marker, undo/redo, face picking with persistent face names.
+- **Sketch** on a plane or a flat face: Line, Rectangle (corner or centre), Circle, Point,
+  Dimension, construction lines, and constraints (coincident, horizontal/vertical, parallel,
+  perpendicular, tangent, equal, midpoint, symmetry, fix). Type sizes while drawing (Tab
+  between fields), drag geometry with the live solver, and see what is still free: hollow
+  points can move, filled squares are fixed. Gaps in an outline are ringed in red.
+- **Extrude** with a live preview: distance or through everything, one side, other side or
+  symmetric, and Join / Cut / New body / Intersect, with **Auto** choosing Join or Cut.
+- **Fillet** by clicking edges (tangent chains in one click). A radius that is too big is
+  explained, with a one-click working value.
+- **Edit any step** later (double-click it in the timeline), rename, suppress, roll back,
+  delete with a warning about steps that depend on it; **Parameters** table with units and
+  expressions; unlimited undo.
+- Open the built-in **phone stand** sample (File ▸ Open a sample).
 - Save and open `.jig` designs; export **STL** (binary) and **STEP**.
 - Find any tool by intent: **Ctrl+K** (⌘K on macOS) or **S**, then type “round the edges”.
 - Headless modelling with scripts: `jigsmith-cli --run samples/phone_stand.jigs --report -`.

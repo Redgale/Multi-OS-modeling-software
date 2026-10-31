@@ -1,15 +1,24 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # The desktop application: a thin Qt layer over jig_core (architecture rule 1).
+# Built as a library (jigsmith_ui) plus a small executable, so UI tests can drive
+# the real windows and tools.
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
-qt_add_executable(jigsmith WIN32 MACOSX_BUNDLE
-    main.cpp
+add_library(jigsmith_ui STATIC
     MainWindow.cpp MainWindow.hpp
     Viewport.cpp Viewport.hpp
+    Icons.cpp Icons.hpp
+    SketchEditor.cpp SketchEditor.hpp
+    FeaturePanels.cpp FeaturePanels.hpp
     resources.qrc
 )
-target_link_libraries(jigsmith PRIVATE jig_core Qt6::Core Qt6::Gui Qt6::Widgets Qt6::OpenGL Qt6::OpenGLWidgets)
+target_include_directories(jigsmith_ui PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(jigsmith_ui PUBLIC jig_core Qt6::Core Qt6::Gui Qt6::Widgets Qt6::OpenGL Qt6::OpenGLWidgets)
+jig_set_warnings(jigsmith_ui)
+
+qt_add_executable(jigsmith WIN32 MACOSX_BUNDLE main.cpp)
+target_link_libraries(jigsmith PRIVATE jigsmith_ui)
 jig_set_warnings(jigsmith)
 set_target_properties(jigsmith PROPERTIES
     MACOSX_BUNDLE_BUNDLE_NAME "Jigsmith"

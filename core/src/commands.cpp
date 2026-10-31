@@ -138,6 +138,20 @@ CommandRegistry::CommandRegistry()
     add({"modify.parameters", "Parameters", "Change Parameters", "MODIFY", "Name sizes like width or wall and use them in any field.", "", {"variables", "named values", "change size"}, true, false, true, m5});
     add({"help.tutorial", "Your first part (15 min)", "Tutorial", "HELP", "A guided tour that builds a phone stand with you.", "", {"learn", "tutorial", "getting started", "help"}, true, false, false, m7});
     // clang-format on
+
+    // Usable from the desktop app as of milestone M1/M2 (sketching, extrude, fillet,
+    // parameters). Everything else above keeps its "coming in" note.
+    static const std::set<std::string> inApp {
+        "sketch.create", "sketch.finish", "sketch.line", "sketch.rectangle", "sketch.circle", "sketch.point",
+        "sketch.dimension", "sketch.construction", "constraint.coincident", "constraint.midpoint", "constraint.fix",
+        "constraint.parallel", "constraint.perpendicular", "constraint.horizontal", "constraint.tangent",
+        "constraint.symmetric", "constraint.equal", "solid.extrude", "solid.fillet", "modify.parameters"};
+    for (auto& c : commands_) {
+        if (inApp.count(c.id)) {
+            c.available = true;
+            c.comingIn.clear();
+        }
+    }
 }
 
 const CommandRegistry& CommandRegistry::instance()
@@ -343,23 +357,12 @@ Result<std::pair<std::string, std::string>> parsePairExpr(const std::string& s)
 
 Feature* findFeature(Model& m, const std::string& id)
 {
-    for (auto& f : m.features) {
-        if (f.id == id) {
-            return &f;
-        }
-    }
-    return nullptr;
+    return Document::findFeature(m, id);
 }
 
-// Inserts a feature at the rollback marker (end of timeline when not rolled back).
 void insertFeature(Model& m, Feature f)
 {
-    int n = int(m.features.size());
-    int at = m.rollback < 0 ? n : std::min(m.rollback, n);
-    m.features.insert(m.features.begin() + at, std::move(f));
-    if (m.rollback >= 0) {
-        m.rollback = at + 1;
-    }
+    Document::insertAtMarker(m, std::move(f));
 }
 
 }  // namespace

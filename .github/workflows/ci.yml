@@ -36,8 +36,10 @@ jobs:
         run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
       - name: Build
         run: cmake --build build
-      - name: Test
-        run: ctest --test-dir build --output-on-failure -j4
+      - name: Test (including UI workflow tests under Xvfb)
+        run: |
+          export XDG_RUNTIME_DIR=$(mktemp -d)
+          xvfb-run -a -s "-screen 0 1600x1000x24" ctest --test-dir build --output-on-failure -j4
       - name: Benchmarks
         run: ./build/bench/jigsmith-bench | tee bench-linux.json
       - name: GUI smoke test and screenshot
@@ -65,6 +67,7 @@ jobs:
           path: |
             *.AppImage
             screenshot-linux.png
+            build/ui-*.png
             bench-linux.json
 
   sanitizers:
@@ -103,8 +106,8 @@ jobs:
         run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$(brew --prefix qt);$(brew --prefix)"
       - name: Build
         run: cmake --build build
-      - name: Test
-        run: ctest --test-dir build --output-on-failure -j3
+      - name: Test (UI tests need a display session; they run in the Linux job)
+        run: ctest --test-dir build --output-on-failure -j3 -LE ui
       - name: Benchmarks
         run: ./build/bench/jigsmith-bench | tee bench-macos.json
       - name: Package .dmg (unsigned)
@@ -143,8 +146,8 @@ jobs:
         run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release "-DCMAKE_PREFIX_PATH=%CONDA_PREFIX%\Library;%QT_ROOT_DIR%"
       - name: Build
         run: cmake --build build
-      - name: Test
-        run: ctest --test-dir build --output-on-failure -j4
+      - name: Test (UI tests run in the Linux job)
+        run: ctest --test-dir build --output-on-failure -j4 -LE ui
       - name: Benchmarks
         run: build\bench\jigsmith-bench.exe > bench-windows.json && type bench-windows.json
       - name: Package portable zip (unverified on a clean machine)
@@ -206,8 +209,8 @@ jobs:
         run: cd src && cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
       - name: Build
         run: cd src && cmake --build build
-      - name: Test
-        run: cd src && ctest --test-dir build --output-on-failure -j4
+      - name: Test (headless; UI tests run in the Linux job)
+        run: cd src && ctest --test-dir build --output-on-failure -j4 -LE ui
 
   occt-from-source:
     # For distributions without an OCCT package: scripts/build-occt.sh, then Jigsmith.
@@ -219,7 +222,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends ninja-build libeigen3-dev libboost-dev \
-            nlohmann-json3-dev libgtest-dev
+            nlohmann-json3-dev libgtest-dev libx11-dev libgl-dev
       - name: Cache OCCT build
         id: occt-cache
         uses: actions/cache@v4

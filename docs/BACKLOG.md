@@ -28,22 +28,26 @@ decision or finding). Move items to STATUS.md when started.
 - **B-009 Recompute off the UI thread** for long timelines with a progress indicator
   (5.3.6), once any real design exceeds 100 ms.
 
-## M1 Sketch core and solver (next)
+## M1 Sketch core and solver (in progress: core done in session 2)
 
-- Sketch mode (contextual toolbar, look-at, finish), entity drawing tools with typed
-  values and Tab, auto-constraints with glyphs and a modifier override, Dimension tool,
-  constraint tools, drag with live solve, DOF display and free-geometry styling (not by
-  colour alone), conflict panel with "remove this constraint", gap finder overlay,
-  Trim/Extend/Break/Offset/Fillet/Mirror/patterns, construction toggle, undo per action.
+Done: sketch mode, plane/face picker, look-at, Line/Rectangle/Centre rectangle/Circle/Point,
+Dimension, typed values, snapping, automatic H/V, constraint commands, drag, DOF display,
+conflict refusal, gap rings, profiles, construction toggle, delete.
 
-## M2 Extrude and the timeline
+- B-013 Arc (3-point, tangent, centre), Polygon, Ellipse, Slot, Fit-point spline tools.
+- B-014 Trim, Extend, Break, Offset, sketch Fillet, Mirror, patterns, Move/Copy.
+- B-016 Select and delete individual constraints (click a glyph); window selection; collinear,
+  concentric; point-on-curve snapping while drawing; endpoint tangency via angle-via-point.
 
-- Extrude dialog: live preview, drag handle, OK/Cancel, values remembered per session,
-  two-sides, to-object, taper, thin, auto join/cut from drag direction.
-- Timeline editing: double-click edit, rename, group, delete with dependency warning,
-  reorder with validation, "fix this" popover with one-click actions.
-- Browser: visibility, isolate, rename, find in timeline. Selection filters, window
-  selection, Select Other.
+## M2 Extrude and the timeline (in progress: core done in session 2)
+
+Done: Extrude and Fillet panels with live preview, Auto join/cut, edge picking, tangent chain,
+timeline edit/rename/suppress/roll back/delete with dependents warning, Parameters dialog.
+
+- B-015 UI test for the Parameters dialog and timeline context menu.
+- B-017 Extrude drag handle on the canvas; two sides, to object, taper, thin.
+- B-018 Timeline reorder (validated) and groups; Browser visibility/isolate/rename/find in timeline.
+- B-019 Selection filters, window selection, Select Other.
 
 ## Later v0.1 milestones
 

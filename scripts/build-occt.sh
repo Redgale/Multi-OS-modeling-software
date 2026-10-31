@@ -3,8 +3,11 @@
 #
 # Builds Open CASCADE Technology from source into ./deps/occt, for distributions
 # that do not package OCCT (or package one older than 7.6). Only the modules
-# Jigsmith uses are built (no Draw, no Visualization, no VTK), release mode only,
-# so it needs just a C++ compiler, CMake and Ninja.
+# Jigsmith uses are built (no Draw test harness, no OpenGL viewer, no VTK), release only,
+# so it needs a C++ compiler, CMake, Ninja, and the X11 and OpenGL development
+# headers (OCCT's data-exchange toolkits pull in its basic visualization layer):
+#   Debian/Ubuntu: libx11-dev libgl-dev   Void: libX11-devel MesaLib-devel
+#   Fedora: libX11-devel mesa-libGL-devel  Arch: libx11 mesa
 #
 # Usage:  scripts/build-occt.sh [version]      default version: 7.9.3
 # Then:   cmake -S . -B build -G Ninja -DCMAKE_PREFIX_PATH="$PWD/deps/occt"

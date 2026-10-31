@@ -72,4 +72,7 @@ endif()
 # --- Qt 6 (LGPL-3.0 modules only: Core, Gui, Widgets, OpenGL, OpenGLWidgets) -------
 if(JIG_BUILD_GUI)
     find_package(Qt6 6.4 REQUIRED COMPONENTS Core Gui Widgets OpenGL OpenGLWidgets)
+    if(JIG_BUILD_TESTS)
+        find_package(Qt6 6.4 REQUIRED COMPONENTS Test)  # UI tests drive the real windows
+    endif()
 endif()

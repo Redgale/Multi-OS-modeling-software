@@ -223,6 +223,12 @@ Result<NamedShape> filletEdges(const std::string& featureId,
                                const std::vector<int>& edgeIndices,
                                double radius);
 
+// True when the point lies strictly inside the solid (used to choose Join or Cut).
+bool pointInside(const TopoDS_Shape& solid, double x, double y, double z);
+
+// Edges connected to `edge` through smooth (tangent) joins, including `edge` itself.
+std::vector<int> tangentChain(const NamedShape& body, int edge, double angleTolDeg = 2.0);
+
 // ---------------------------------------------------------------- inspect
 
 struct MassProperties

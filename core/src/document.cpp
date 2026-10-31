@@ -226,6 +226,46 @@ std::string Document::newId(Model& m, const std::string& prefix)
     return prefix + std::to_string(n++);
 }
 
+void Document::insertAtMarker(Model& m, Feature f)
+{
+    const int n = int(m.features.size());
+    const int at = m.rollback < 0 ? n : std::min(m.rollback, n);
+    m.features.insert(m.features.begin() + at, std::move(f));
+    if (m.rollback >= 0) {
+        m.rollback = at + 1;
+    }
+}
+
+Feature* Document::findFeature(Model& m, const std::string& id)
+{
+    for (auto& f : m.features) {
+        if (f.id == id) {
+            return &f;
+        }
+    }
+    return nullptr;
+}
+
+std::vector<std::string> Document::dependents(const std::string& id) const
+{
+    std::vector<std::string> out;
+    const int i = featureIndex(id);
+    if (i < 0) {
+        return out;
+    }
+    const std::string quoted = "\"" + id + "\"", prefix = "\"" + id + "/", inName = "|" + id + "/",
+                      inEdge = "[" + id + "/", inFillet = ":" + id + "/";
+    for (size_t k = size_t(i) + 1; k < model_.features.size(); ++k) {
+        const std::string d = model_.features[k].params.dump();
+        if (d.find(quoted) != std::string::npos || d.find(prefix) != std::string::npos
+            || d.find(inName) != std::string::npos || d.find(inEdge) != std::string::npos
+            || d.find(inFillet) != std::string::npos) {
+            out.push_back(model_.features[k].id);
+        }
+    }
+    return out;
+}
+
 Result<bool> Document::transact(const std::string& label, const Edit& edit)
 {
     Model next = model_;

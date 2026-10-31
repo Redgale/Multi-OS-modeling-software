@@ -181,3 +181,20 @@ TEST(Display, TessellationHasFaceIds)
     EXPECT_EQ(int(maxFace) + 1, props(*doc).faces);
     EXPECT_FALSE(m.edgeLines.empty());
 }
+
+TEST(Queries, PointInsideAndTangentChain)
+{
+    auto doc = build("sketch id=s1\nrect center=0,0 w=60 h=40\nextrude sketch=s1 distance=10\n"
+                     "fillet edges=all radius=3mm\n");
+    const auto& body = *doc->state().bodies.begin()->second;
+    EXPECT_TRUE(pointInside(body.shape(), 0, 0, 5));
+    EXPECT_FALSE(pointInside(body.shape(), 0, 0, 15));
+    // with every edge rounded, the top face is a rounded rectangle: its outline is one
+    // tangent-continuous loop, so the chain is at least that loop
+    int topEdge = body.edgesOfFace(body.findFaces("e1/end")[0])[0];
+    EXPECT_GE(tangentChain(body, topEdge).size(), body.edgesOfFace(body.findFaces("e1/end")[0]).size());
+    // on the plain block, edges meet at right angles: no chain
+    auto plain = build("sketch id=s1\nrect center=0,0 w=60 h=40\nextrude sketch=s1 distance=10\n");
+    const auto& pb = *plain->state().bodies.begin()->second;
+    EXPECT_EQ(tangentChain(pb, 0).size(), 1u);
+}

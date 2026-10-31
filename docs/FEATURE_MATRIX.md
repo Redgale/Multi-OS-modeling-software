@@ -21,7 +21,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Contextual sketch tab | 4, 9 | v0.1 M1 | — | Behaviour "implement exactly" |
 | Browser tree (settings, named views, origin, bodies, sketches) | 4, 7 | v0.1 | settings, origin, sketches, bodies, parameters | Named views in M8 |
 | Browser visibility, isolate, rename, find in timeline | 7 | v0.1 M2 | — | |
-| Timeline with icons, edit, rollback, reorder, group, playback | 4 | v0.1 (playback v0.2) | list, status glyphs, rollback marker, details | Principle 6 |
+| Timeline with icons, edit, rollback, reorder, group, playback | 4 | v0.1 (playback v0.2) | **app**: icons, edit, rename, suppress, roll back, delete; reorder/group not yet | Principle 6 |
 | Marking menu | 4 | v0.1 SHOULD (M7), v0.2 MUST | — | Brief |
 | Quick-access search (S) | 4 | v0.1 | yes: Ctrl/Cmd+K and S, alias search | Principle 9 |
 | Data panel, hubs, projects (cloud) | 3 | never | — | Local-first; replaced by files + local versions |
@@ -43,17 +43,17 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 
 | Feature | Ch. | Release | Now | Rationale |
 |---|---|---|---|---|
-| Create sketch on plane | 9 | v0.1 M1 | scripts | |
-| Sketch on planar face (parametrically attached) | 9 | v0.1 M1 | scripts (`sketch on=<face>`), stays attached in tests | Naming spike |
-| Finish sketch | 9 | v0.1 M1 | — | |
-| Look At | 9 | v0.1 M1 | — | |
+| Create sketch on plane | 9 | v0.1 M1 | **app** (click a plane) + scripts | |
+| Sketch on planar face (parametrically attached) | 9 | v0.1 M1 | **app** (click a flat face) + scripts; stays attached in tests | Naming spike |
+| Finish sketch | 9 | v0.1 M1 | **app** | |
+| Look At | 9 | v0.1 M1 | **app** (automatic on entering a sketch, and a button) | |
 | Slice | 9 | v0.1 M1 | — | |
-| Show profile, points, dimensions, constraints | 9 | v0.1 M1 | profiles computed | |
+| Show profile, points, dimensions, constraints | 9 | v0.1 M1 | **app** (toggles in the sketch panel) | |
 | 3D sketch | 9 | v0.3+ | — | Sweep paths are v0.2 |
-| Typed values with Tab while drawing | 9 | v0.1 M1 | expression engine ready | Principle 3 |
-| Line (with drag-to-tangent-arc) | 10 | v0.1 M1 | scripts (`polyline`) | |
-| Rectangle 2-point, 3-point, center | 10 | v0.1 M1 | scripts (corner, center) | |
-| Circle center, 2-point, 3-point, 2/3-tangent | 10 | v0.1 M1 (3-tangent v0.2) | scripts (center) | Brief lists "tangent" |
+| Typed values with Tab while drawing | 9 | v0.1 M1 | **app** | Principle 3 |
+| Line (with drag-to-tangent-arc) | 10 | v0.1 M1 | **app** (chains; tangent-arc drag not yet) | |
+| Rectangle 2-point, 3-point, center | 10 | v0.1 M1 | **app** (corner, centre); 3-point not yet | |
+| Circle center, 2-point, 3-point, 2/3-tangent | 10 | v0.1 M1 (3-tangent v0.2) | **app** (centre) | Brief lists "tangent" |
 | Arc 3-point, tangent, center | 10 | v0.1 M1 | solver supports arcs | |
 | Polygon (inscribed, circumscribed, edge) | 10 | v0.1 M1 | — | |
 | Ellipse | 10 | v0.1 M1 | — | Needs solver ellipse entities |
@@ -61,7 +61,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Fit-point spline | 10 | v0.1 M1 | — | |
 | Control-point spline | 10 | v0.2 | — | Not in brief's v0.1 list |
 | Conic curve | 10 | v0.2 | — | Not in brief's v0.1 list |
-| Point | 10 | v0.1 M1 | solver supports points | |
+| Point | 10 | v0.1 M1 | **app** | |
 | Text (font, height, alignment) | 10 | v0.1 M5 | — | Fonts spike (5.4f) |
 | Text on path | 10 | v0.2 | — | |
 | Sketch mirror, circular and rectangular pattern | 10 | v0.1 M1 | — | |
@@ -73,30 +73,30 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Offset (chains) | 11 | v0.1 M1 | — | |
 | Move/Copy (sketch) | 11 | v0.1 M1 | — | |
 | Stretch | 11 | v0.2 | — | |
-| Delete | 11 | v0.1 M1 | core `Sketch::remove` | |
+| Delete | 11 | v0.1 M1 | **app** | |
 | Change parameters from sketch | 11 | v0.1 M5 | — | |
-| Constraints: coincident, collinear, concentric, midpoint, fix, parallel, perpendicular, horizontal/vertical, tangent, symmetry, equal | 12 | v0.1 M1 | all but collinear and concentric in the solver wrapper | |
+| Constraints: coincident, collinear, concentric, midpoint, fix, parallel, perpendicular, horizontal/vertical, tangent, symmetry, equal | 12 | v0.1 M1 | **app**: all but collinear and concentric | |
 | Smooth (G2) | 12 | v0.2 | — | Needs splines |
-| Auto-constraints with glyphs, override with modifier | 12 | v0.1 M1 | — | Principle 5 |
-| Sketch dimension (length, angle, diameter, radius, point-line) | 12 | v0.1 M1 | solver: all of these | |
+| Auto-constraints with glyphs, override with modifier | 12 | v0.1 M1 | **app**: coincident (snap) and H/V, Ctrl overrides | Principle 5 |
+| Sketch dimension (length, angle, diameter, radius, point-line) | 12 | v0.1 M1 | **app**: all but angle | |
 | Driven (reference) dimensions | 12 | v0.1 M1 | model field exists | |
-| Under/fully constrained display, not by colour alone | 12 | v0.1 M1 | DOF count and free-entity list computed | Principle 4 |
-| Over-constrained diagnosis (which constraints) | 12 | v0.1 M1 | conflicting and redundant ids reported | 5.4c |
-| Gap finder | 12, 46 | v0.1 M1 | core `openEndpoints`, sketch status message | Beginner trap |
+| Under/fully constrained display, not by colour alone | 12 | v0.1 M1 | **app** (marker shapes + DOF in words) | Principle 4 |
+| Over-constrained diagnosis (which constraints) | 12 | v0.1 M1 | **app** refuses conflicting constraints with a message | 5.4c |
+| Gap finder | 12, 46 | v0.1 M1 | **app** (red rings with gap size) | Beginner trap |
 
 ## Solid modelling (PDF ch. 13 to 23)
 
 | Feature | Ch. | Release | Now | Rationale |
 |---|---|---|---|---|
 | New component | 13 | v0.2 | — | Parts model (PREFLIGHT A-3) |
-| Extrude: one side, two sides, symmetric | 14 | v0.1 M2 | scripts: one side, reverse, symmetric | Two sides in M2 |
+| Extrude: one side, two sides, symmetric | 14 | v0.1 M2 | **app**: one side, other side, symmetric | Two sides in M2 |
 | Extrude extents: distance, to object, all | 14 | v0.1 M2 | distance, all | |
 | Extrude start: profile plane, offset, object | 14 | v0.1 M2 | profile plane | |
 | Extrude taper | 14 | v0.1 M2 | — | |
 | Extrude thin | 14 | v0.1 M2 | — | |
-| Extrude ops: join, cut, new body, intersect | 14 | v0.1 M2 | all four | |
+| Extrude ops: join, cut, new body, intersect | 14 | v0.1 M2 | **app**: all four | |
 | Extrude new component | 14 | v0.2 | — | Components |
-| Auto join/cut from drag direction | 14 | v0.1 M2 | — | Principle 10 |
+| Auto join/cut from drag direction | 14 | v0.1 M2 | **app** (Auto: from the typed direction; drag handle not yet) | Principle 10 |
 | Extrude from selected face | 14 | v0.1 M3 (via Press Pull) | — | |
 | Press Pull | 14, 17 | v0.1 M3 | — | |
 | Revolve (full, angle, to object) | 15 | v0.1 M4 | — | |
@@ -111,10 +111,10 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Hole from sketch points | 16 | v0.1 M3 | — | |
 | Clearance hole sizes | 16 | v0.1 M3 | — | Hobby tip table |
 | Tapped holes, Thread (modelled/cosmetic) | 16 | v0.2 | — | |
-| Fillet constant | 18 | v0.1 M3 | scripts, with failure explanation and working-radius search | |
+| Fillet constant | 18 | v0.1 M3 | **app** (edge picking, preview, one-click fix) + scripts | |
 | Fillet variable | 18 | v0.1 M3 | — | |
 | Fillet chord length, setback corners, G2 | 18 | v0.2 | — | |
-| Tangent chain selection | 18, 23 | v0.1 M3 | — | |
+| Tangent chain selection | 18, 23 | v0.1 M3 | **app** | |
 | Chamfer: equal, two distances, distance+angle | 18 | v0.1 M3 | — | |
 | Shell (inside/outside, openings) | 18 | v0.1 M3 | — | |
 | Draft | 18 | v0.2 | — | |
