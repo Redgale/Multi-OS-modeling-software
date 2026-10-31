@@ -45,6 +45,55 @@ QString fmt(double v)
     return QString::number(v, 'g', 5);
 }
 
+// The circle through three points (none if they are in a straight line).
+struct Circ
+{
+    double cx = 0, cy = 0, r = 0;
+};
+std::optional<Circ> circleThrough(QPointF a, QPointF e, QPointF m)
+{
+    const double d = 2 * (a.x() * (e.y() - m.y()) + e.x() * (m.y() - a.y()) + m.x() * (a.y() - e.y()));
+    if (std::abs(d) < 1e-9) {
+        return std::nullopt;
+    }
+    const double a2 = a.x() * a.x() + a.y() * a.y(), e2 = e.x() * e.x() + e.y() * e.y(),
+                 m2 = m.x() * m.x() + m.y() * m.y();
+    Circ c;
+    c.cx = (a2 * (e.y() - m.y()) + e2 * (m.y() - a.y()) + m2 * (a.y() - e.y())) / d;
+    c.cy = (a2 * (m.x() - e.x()) + e2 * (a.x() - m.x()) + m2 * (e.x() - a.x())) / d;
+    c.r = std::hypot(a.x() - c.cx, a.y() - c.cy);
+    return c;
+}
+
+// An arc leaving S in direction t and ending at E (counter-clockwise from a0 to a1;
+// startAtS: S is the arc's start rather than its end).
+struct TangentArc
+{
+    double cx = 0, cy = 0, r = 0, a0 = 0, a1 = 0;
+    bool startAtS = true;
+};
+std::optional<TangentArc> tangentArc(QPointF S, QPointF t, QPointF E)
+{
+    const QPointF n(-t.y(), t.x()), d = E - S;
+    const double denom = 2 * (d.x() * n.x() + d.y() * n.y());
+    if (std::abs(denom) < 1e-9 || QLineF(S, E).length() < 1e-9) {
+        return std::nullopt;  // straight ahead: that is a line
+    }
+    const double rs = (d.x() * d.x() + d.y() * d.y()) / denom;
+    TangentArc a;
+    a.cx = S.x() + n.x() * rs;
+    a.cy = S.y() + n.y() * rs;
+    a.r = std::abs(rs);
+    const double as = std::atan2(S.y() - a.cy, S.x() - a.cx), ae = std::atan2(E.y() - a.cy, E.x() - a.cx);
+    a.startAtS = rs > 0;  // turning left: counter-clockwise from S
+    a.a0 = a.startAtS ? as : ae;
+    a.a1 = a.startAtS ? ae : as;
+    while (a.a1 <= a.a0) {
+        a.a1 += 2 * kPi;
+    }
+    return a;
+}
+
 }  // namespace
 
 SketchEditor::SketchEditor(Viewport* view, jig::Document& doc, std::string featureId, QObject* parent)
@@ -412,6 +461,20 @@ QString SketchEditor::toolHint() const
             return second_ ? tr("Click a point the arc passes through (this sets how much it bends).")
                  : first_  ? tr("Click where the arc ends.")
                            : tr("Click where the arc starts.");
+        case Tool::TangentArc:
+            return first_ ? tr("Click where the arc ends. It leaves the curve smoothly.")
+                          : tr("Click the loose end of a line or arc to continue from.");
+        case Tool::Circle2:
+            return first_ ? tr("Click the other end of the diameter, or type the diameter and press Enter.")
+                          : tr("Click one end of the circle's diameter.");
+        case Tool::Circle3:
+            return second_ ? tr("Click a third point on the circle.")
+                 : first_  ? tr("Click a second point on the circle.")
+                           : tr("Click a point on the circle.");
+        case Tool::Rect3:
+            return second_ ? tr("Click to set the depth, or type it and press Enter.")
+                 : first_  ? tr("Click the other end of the first side, or type its length and press Enter.")
+                           : tr("Click the first corner.");
         case Tool::Ellipse:
             return second_ ? tr("Click to set the other radius, or type it and press Enter.")
                  : first_  ? tr("Click the end of the long axis, or type its radius and press Enter.")
@@ -735,6 +798,120 @@ void SketchEditor::placeSecond(const Snap& cur, const QStringList& rawTyped)
         return int(std::lround(q->value));
     };
     switch (tool_) {
+        case Tool::TangentArc: {
+            const jig::SketchEntity* from = s.entity(tangentFrom_);
+            if (!from) {
+                return;
+            }
+            auto ta = tangentArc(a, tangentDir_, b);
+            if (!ta) {
+                message_ = tr("That is straight ahead of the curve: use a line, or click off to one side.");
+                break;
+            }
+            const int arc = s.addArc(ta->cx, ta->cy, ta->r, ta->a0, ta->a1);
+            const jig::SketchEntity A = *s.entity(arc);
+            const int sPt = ta->startAtS ? A.p1 : A.p2, ePt = ta->startAtS ? A.p2 : A.p1;
+            s.addConstraint(jig::ConstraintType::Coincident, sPt, first_->point);
+            s.addConstraint(jig::ConstraintType::Tangent, tangentFrom_, arc);
+            if (cur.point && cur.point != first_->point) {
+                s.addConstraint(jig::ConstraintType::Coincident, ePt, cur.point);
+            }
+            if (commit(tr("Tangent arc"), s)) {
+                resetToolState();
+            }
+            break;
+        }
+        case Tool::Circle2: {
+            auto d = typedLen(0);
+            const double L = std::hypot(dir.x(), dir.y());
+            const double D = d ? *d : L;
+            if (D < 1e-9) {
+                return;
+            }
+            const QPointF u = L > 1e-9 ? dir / L : QPointF(1, 0);
+            const QPointF far = a + u * D, mid = (a + far) / 2;
+            const int c = s.addCircle(mid.x(), mid.y(), D / 2);
+            if (first_->point) {
+                s.addConstraint(jig::ConstraintType::PointOnCurve, first_->point, c);
+            }
+            if (!d && cur.point && cur.point != first_->point) {
+                s.addConstraint(jig::ConstraintType::PointOnCurve, cur.point, c);
+            }
+            if (d) {
+                s.addConstraint(jig::ConstraintType::Diameter, c, 0, 0, typed[0].toStdString());
+            }
+            if (commit(tr("2-point circle"), s)) {
+                resetToolState();
+            }
+            break;
+        }
+        case Tool::Circle3: {
+            if (!second_) {
+                if (QLineF(a, b).length() < 1e-9) {
+                    return;
+                }
+                second_ = cur;
+                break;
+            }
+            auto ci = circleThrough(a, second_->local, b);
+            if (!ci) {
+                message_ = tr("The three points are in a straight line: click to one side.");
+                break;
+            }
+            const int c = s.addCircle(ci->cx, ci->cy, ci->r);
+            for (int pid : {first_->point, second_->point, cur.point}) {
+                if (pid) {
+                    s.addConstraint(jig::ConstraintType::PointOnCurve, pid, c);
+                }
+            }
+            if (commit(tr("3-point circle"), s)) {
+                resetToolState();
+            }
+            break;
+        }
+        case Tool::Rect3: {
+            if (!second_) {
+                auto w = typedLen(0);
+                const double L = std::hypot(dir.x(), dir.y());
+                const double W = w ? *w : L;
+                if (W < 1e-9) {
+                    return;
+                }
+                const QPointF u = L > 1e-9 ? dir / L : QPointF(1, 0);
+                second_ = Snap {a + u * W, w ? 0 : cur.point};
+                arcRadiusExpr_ = w ? typed[0] : QString();  // the first side's length, used below
+                showInput({tr("Depth")});
+                break;
+            }
+            const QPointF B = second_->local;
+            const QPointF u = (B - a) / QLineF(a, B).length(), n(-u.y(), u.x());
+            auto h = typedLen(0);
+            double H = QPointF::dotProduct(b - B, n);
+            if (h) {
+                H = H < 0 ? -*h : *h;
+            }
+            if (std::abs(H) < 1e-9) {
+                return;
+            }
+            const QPointF C = B + n * H, D = a + n * H;
+            const int pa = first_->point ? first_->point : s.addPoint(a.x(), a.y(), true);
+            const int pb = second_->point ? second_->point : s.addPoint(B.x(), B.y(), true);
+            const int pc = s.addPoint(C.x(), C.y(), true), pd = s.addPoint(D.x(), D.y(), true);
+            const int ab = s.addLine(pa, pb), bc = s.addLine(pb, pc), cd = s.addLine(pc, pd), da = s.addLine(pd, pa);
+            s.addConstraint(jig::ConstraintType::Perpendicular, ab, bc);
+            s.addConstraint(jig::ConstraintType::Parallel, ab, cd);
+            s.addConstraint(jig::ConstraintType::Parallel, bc, da);
+            if (!arcRadiusExpr_.isEmpty()) {
+                s.addConstraint(jig::ConstraintType::Distance, ab, 0, 0, arcRadiusExpr_.toStdString());
+            }
+            if (h) {
+                s.addConstraint(jig::ConstraintType::Distance, bc, 0, 0, typed[0].toStdString());
+            }
+            if (commit(tr("3-point rectangle"), s)) {
+                resetToolState();
+            }
+            break;
+        }
         case Tool::Ellipse: {
             if (!second_) {
                 auto ra = typedLen(0);
@@ -1581,11 +1758,57 @@ bool SketchEditor::mouseRelease(QMouseEvent* e)
                 }
                 break;
             }
+            if (tool_ == Tool::TangentArc && !first_) {
+                // the loose end of exactly one line or arc
+                tangentFrom_ = 0;
+                if (cursor_.point) {
+                    int owners = 0;
+                    for (auto& [id, en] : work_.entities()) {
+                        if ((en.type == jig::EntityType::Line || en.type == jig::EntityType::Arc) && !en.construction &&
+                            (en.p1 == cursor_.point || en.p2 == cursor_.point)) {
+                            ++owners;
+                            tangentFrom_ = id;
+                        }
+                    }
+                    if (owners != 1) {
+                        tangentFrom_ = 0;
+                    }
+                }
+                const jig::SketchEntity* from = work_.entity(tangentFrom_);
+                if (!from) {
+                    message_ = tr("Click the loose end of a line or arc to continue from it.");
+                    break;
+                }
+                if (from->type == jig::EntityType::Line) {
+                    auto [x1, y1] = work_.pointXY(from->p1);
+                    auto [x2, y2] = work_.pointXY(from->p2);
+                    QPointF t = from->p2 == cursor_.point ? QPointF(x2 - x1, y2 - y1) : QPointF(x1 - x2, y1 - y2);
+                    tangentDir_ = t / std::max(1e-12, QLineF(QPointF(), t).length());
+                }
+                else {
+                    const bool atEnd = from->p2 == cursor_.point;
+                    const double ang = atEnd ? from->a1 : from->a0;
+                    tangentDir_ = atEnd ? QPointF(-std::sin(ang), std::cos(ang)) : QPointF(std::sin(ang), -std::cos(ang));
+                }
+                message_.clear();
+                first_ = cursor_;
+                hideInput();
+                break;
+            }
             if (!first_) {
                 first_ = cursor_;
                 const bool two = tool_ != Tool::Circle;
                 (void)two;
-                if (tool_ == Tool::Move) {
+                if (tool_ == Tool::Circle3) {
+                    hideInput();  // three clicks, nothing to type
+                }
+                else if (tool_ == Tool::Circle2) {
+                    showInput({tr("Diameter")});
+                }
+                else if (tool_ == Tool::Rect3) {
+                    showInput({tr("Length")});
+                }
+                else if (tool_ == Tool::Move) {
                     showInput({tr("Across"), tr("Up")});
                 }
                 else if (tool_ == Tool::Ellipse) {
@@ -2214,6 +2437,46 @@ void SketchEditor::rebuildOverlay()
             jig::Sketch tmp;
             const int cid = tmp.addCircle(a.x(), a.y(), std::max(1e-6, QLineF(a, b).length()));
             addPoly(polyline(tmp, *tmp.entity(cid)), kAccent, false);
+        }
+        else if (tool_ == Tool::TangentArc) {
+            if (auto ta = tangentArc(a, tangentDir_, b)) {
+                jig::Sketch tmp;
+                addPoly(polyline(tmp, *tmp.entity(tmp.addArc(ta->cx, ta->cy, ta->r, ta->a0, ta->a1))), kAccent, false);
+            }
+            else {
+                addPoly({a, b}, kAccent, true);
+            }
+        }
+        else if (tool_ == Tool::Circle2) {
+            jig::Sketch tmp;
+            const QPointF mid = (a + b) / 2;
+            const double r = QLineF(a, b).length() / 2;
+            if (r > 1e-9) {
+                addPoly(polyline(tmp, *tmp.entity(tmp.addCircle(mid.x(), mid.y(), r))), kAccent, false);
+            }
+        }
+        else if (tool_ == Tool::Circle3) {
+            if (!second_) {
+                addPoly({a, b}, kAccent, true);
+            }
+            else if (auto ci = circleThrough(a, second_->local, b)) {
+                jig::Sketch tmp;
+                addPoly(polyline(tmp, *tmp.entity(tmp.addCircle(ci->cx, ci->cy, ci->r))), kAccent, false);
+            }
+        }
+        else if (tool_ == Tool::Rect3) {
+            if (!second_) {
+                addPoly({a, b}, kAccent, false);
+            }
+            else {
+                const QPointF B = second_->local;
+                const double L = QLineF(a, B).length();
+                if (L > 1e-9) {
+                    const QPointF u = (B - a) / L, n(-u.y(), u.x());
+                    const double H = QPointF::dotProduct(b - B, n);
+                    addPoly({a, B, B + n * H, a + n * H, a}, kAccent, false);
+                }
+            }
         }
         else if (tool_ == Tool::Spline && !splinePts_.empty()) {
             jig::Sketch tmp;

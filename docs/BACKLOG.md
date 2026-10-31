@@ -19,8 +19,7 @@ decision or finding). Move items to STATUS.md when started.
   `lipo`-merged universal .dmg and document signing/notarisation (secrets never in repo).
 - **B-006 Windows installer** (brief: installer + portable zip): WiX or Inno Setup.
 - **B-007 Flatpak manifest** (brief: AppImage and Flatpak).
-- **B-008 Endpoint tangency** in the solver wrapper via angle-via-point (finding in
-  D-004), and collinear/concentric constraints.
+- ~~B-008 Endpoint tangency~~ done (angle via the shared point); collinear/concentric done.
 - **B-012 OCCT 8 deprecations**: `TopTools_*`/`TColStd_*` typedef headers are deprecated in
   8.0 (warnings on Windows). Switch to `NCollection_*` types once 7.6 support is dropped, or
   wrap them in one compatibility header.
@@ -34,7 +33,7 @@ Done: sketch mode, plane/face picker, look-at, Line/Rectangle/Centre rectangle/C
 Dimension, typed values, snapping, automatic H/V, constraint commands, drag, DOF display,
 conflict refusal, gap rings, profiles, construction toggle, delete.
 
-- B-013 (3-point and centre arc, Polygon, Ellipse, Slot, fit-point spline done) tangent arc; constraints along
+- B-013 (all v0.1 drawing tools done, incl. tangent arc, 2/3-point circle, 3-point rectangle) constraints along
   ellipses and splines; trim/extend/break of them.
 - B-014 (Trim, Extend, Break, Offset, sketch Fillet, Mirror, Move/Copy, Grid/Ring copy done) linked sketch
   patterns, rotate in the Move tool.

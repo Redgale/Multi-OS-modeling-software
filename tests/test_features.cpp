@@ -1030,3 +1030,24 @@ TEST(SketchCurves, EllipsesAndSmoothCurves)
     s.remove(c);
     EXPECT_EQ(s.entities().size(), before - 5);
 }
+
+TEST(SketchTangent, MeetingAtAnEndIsNotSaidTwice)
+{
+    // a line and an arc that share an end and are tangent there (B-008)
+    Sketch s;
+    const int l = s.addLine(-20, 0, 0, 0);
+    const int arc = s.addArc(0, 10, 10, -pi / 2, pi / 2);  // starts at (0, 0), heading +x
+    s.addConstraint(ConstraintType::Coincident, s.entity(arc)->p1, s.entity(l)->p2);
+    s.addConstraint(ConstraintType::Tangent, l, arc);
+    auto r = s.solve();
+    ASSERT_NE(r.state, SolveState::Failed) << r.message;
+    EXPECT_TRUE(r.redundant.empty());
+    // drag the line's far end down: the arc turns with it and stays tangent
+    s.drag(s.entity(l)->p1, -20, -8);
+    auto [x1, y1] = s.pointXY(s.entity(l)->p1);
+    auto [x2, y2] = s.pointXY(s.entity(l)->p2);
+    auto [cx, cy] = s.pointXY(s.entity(arc)->center);
+    const double dx = x2 - x1, dy = y2 - y1;
+    // the radius at the shared end is perpendicular to the line
+    EXPECT_NEAR(dx * (cx - x2) + dy * (cy - y2), 0, 1e-6);
+}

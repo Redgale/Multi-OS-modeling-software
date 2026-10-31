@@ -41,6 +41,10 @@ public:
         Circle,
         Arc,      // centre, start, end (counter-clockwise)
         Arc3,     // start, end, then a point the arc passes through
+        TangentArc,  // the loose end of a line or arc, then where the arc ends
+        Circle2,  // the two ends of a diameter
+        Circle3,  // three points on the circle
+        Rect3,    // one side (two corners), then the depth
         Slot,     // centre, centre, width
         Ellipse,  // centre, end of the major axis, then the minor radius
         Spline,   // click the points it passes through; Enter, Esc or double-click ends, first point closes
@@ -187,7 +191,9 @@ private:
     int editText_ = 0;
     int editArtwork_ = 0;
     std::optional<jig::Sketch::TrimPiece> trimHover_;
-    std::vector<Snap> splinePts_;  // Spline: the points clicked so far
+    std::vector<Snap> splinePts_;
+    int tangentFrom_ = 0;   // Tangent arc: the curve it continues
+    QPointF tangentDir_;    // and the direction it leaves in  // Spline: the points clicked so far
     void finishSpline(bool closed);
     int gridCols_ = 0;     // Grid copy: columns typed in the first step
     double gridDx_ = 0;    // and their spacing  // the piece Trim would remove

@@ -906,6 +906,81 @@ private slots:
         QCOMPARE(regions(), 5);
     }
 
+    // Tangent arc from a line's end, 2- and 3-point circles, a rectangle at an angle.
+    void moreShapes()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        Viewport* view = w.viewport();
+        QVERIFY(w.createSketchOn("XY"));
+        SketchEditor* sk = w.sketchEditor();
+        auto click = [&](double x, double y) {
+            QTest::mouseMove(view, sk->screenOf(x, y));
+            QTest::mouseClick(view, Qt::LeftButton, Qt::NoModifier, sk->screenOf(x, y));
+        };
+        auto count = [&](jig::EntityType t) {
+            int n = 0;
+            for (auto& [id, e] : sk->sketch().entities()) {
+                n += e.type == t && !e.construction;
+            }
+            return n;
+        };
+        auto regions = [&] { return w.document().state().sketches.begin()->second->profiles.regions; };
+        // a line, then a tangent arc from its right end turning up and back
+        sk->setTool(SketchEditor::Tool::Line);
+        click(-40, 0);
+        click(-20, 0);
+        QTest::keyClick(view, Qt::Key_Escape);
+        w.runCommand("sketch.arc_tangent");
+        QCOMPARE(int(sk->tool()), int(SketchEditor::Tool::TangentArc));
+        click(-20, 0);
+        QVERIFY2(sk->message().isEmpty(), qPrintable(sk->message()));
+        click(-20, 20);  // a half circle of radius 10, centre (-20, 10)
+        QVERIFY2(sk->message().isEmpty(), qPrintable(sk->message()));
+        QCOMPARE(count(jig::EntityType::Arc), 1);
+        for (auto& [id, e] : sk->sketch().entities()) {
+            if (e.type == jig::EntityType::Arc) {
+                QVERIFY(std::abs(e.r - 10) < 1e-6);
+                QVERIFY(std::abs(sk->sketch().pointXY(e.center).second - 10) < 1e-6);
+            }
+        }
+        QVERIFY(sk->report().redundant.empty());
+
+        // 2-point circle across (0,0)-(20,0); 3-point circle through three grid points
+        w.runCommand("sketch.circle2");
+        click(0, -30);
+        click(20, -30);
+        w.runCommand("sketch.circle3");
+        click(40, -30);
+        click(50, -20);
+        click(60, -30);
+        QCOMPARE(count(jig::EntityType::Circle), 2);
+        bool r10 = false, r10b = false;
+        for (auto& [id, e] : sk->sketch().entities()) {
+            if (e.type == jig::EntityType::Circle) {
+                (sk->sketch().pointXY(e.center).first < 30 ? r10 : r10b) = std::abs(e.r - 10) < 1e-6;
+            }
+        }
+        QVERIFY(r10 && r10b);
+
+        // 3-point rectangle: a side at 45°, then 10 mm deep
+        const size_t before = regions().size();
+        w.runCommand("sketch.rect3");
+        click(0, 20);
+        click(20, 40);
+        QTest::mouseMove(view, sk->screenOf(10, 50));
+        sk->typeValues({"10 mm"});
+        QVERIFY2(sk->message().isEmpty(), qPrintable(sk->message()));
+        QCOMPARE(regions().size(), before + 1);
+        double area = 0;
+        for (auto& r : regions()) {
+            area = std::max(area, std::abs(r.area - 10 * std::sqrt(800.0)) < 1e-6 ? r.area : area);
+        }
+        QVERIFY(area > 0);
+    }
+
     // Ellipse by clicks and typing; a closed smooth curve by clicking round and back to the start.
     void ellipseAndSpline()
     {

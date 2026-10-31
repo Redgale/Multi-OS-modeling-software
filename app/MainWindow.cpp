@@ -719,6 +719,21 @@ void MainWindow::buildToolbar()
                            "sketch.pattern_rect", "sketch.pattern_circ", "sketch.project"}) {
         sketchBar_->addAction(registryAction(id));
     }
+    // other ways to draw the same shape: on a drop-down beside its button
+    const std::pair<const char*, std::vector<const char*>> variants[] = {
+        {"sketch.rectangle", {"sketch.rect3"}},
+        {"sketch.circle", {"sketch.circle2", "sketch.circle3"}},
+        {"sketch.arc", {"sketch.arc_tangent"}}};
+    for (const auto& [base, more] : variants) {
+        if (auto* b = qobject_cast<QToolButton*>(sketchBar_->widgetForAction(registryAction(base)))) {
+            auto* m = new QMenu(b);
+            for (const char* id : more) {
+                m->addAction(registryAction(id));
+            }
+            b->setMenu(m);
+            b->setPopupMode(QToolButton::MenuButtonPopup);
+        }
+    }
     sketchBar_->addSeparator();
     title(tr("CONSTRAIN"));
     for (const char* id : {"constraint.coincident", "constraint.collinear", "constraint.concentric", "constraint.horizontal",
@@ -1248,6 +1263,8 @@ void MainWindow::runCommand(const QString& id)
             {"sketch.line", T::Line},       {"sketch.rectangle", T::Rectangle}, {"sketch.circle", T::Circle},
             {"sketch.arc", T::Arc},         {"sketch.arc3", T::Arc3},         {"sketch.slot", T::Slot},           {"sketch.polygon", T::Polygon},
             {"sketch.ellipse", T::Ellipse}, {"sketch.spline", T::Spline},
+            {"sketch.arc_tangent", T::TangentArc}, {"sketch.circle2", T::Circle2}, {"sketch.circle3", T::Circle3},
+            {"sketch.rect3", T::Rect3},
             {"sketch.text", T::Text},       {"sketch.trim", T::Trim},
             {"sketch.offset", T::Offset},   {"sketch.fillet", T::Round},
             {"sketch.project", T::Project}, {"sketch.extend", T::Extend},     {"sketch.break", T::Break},

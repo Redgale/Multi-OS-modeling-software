@@ -1324,7 +1324,53 @@ SolveReport Sketch::runSolver(const ParamLookup& lookup, const int* dragPoint, d
                     double ax = *l.p2.x - *l.p1.x, ay = *l.p2.y - *l.p1.y;
                     return ax * (*c.y - *l.p1.y) - ay * (*c.x - *l.p1.x) >= 0;
                 };
-                if (isLine(k.a) && isCircle(k.b)) {
+                // Curves that meet at an end: tangent there (angle via that point). The plain
+                // tangent form plus the shared end would say one thing twice (B-008).
+                auto curveOf = [&](int id) -> GCS::Curve* {
+                    if (isLine(id)) {
+                        return &lines[id];
+                    }
+                    if (isArc(id)) {
+                        return &arcs[id];
+                    }
+                    return nullptr;
+                };
+                auto endsOf = [&](int id) {
+                    const SketchEntity* e = entity(id);
+                    return e ? std::vector<int> {e->p1, e->p2} : std::vector<int> {};
+                };
+                auto joined = [&](int p, int q) {
+                    if (p == q) {
+                        return true;
+                    }
+                    for (auto& [oid, o] : constraints_) {
+                        if (o.type == ConstraintType::Coincident && ((o.a == p && o.b == q) || (o.a == q && o.b == p))) {
+                            return true;
+                        }
+                    }
+                    return false;
+                };
+                int shared = 0;
+                if (curveOf(k.a) && curveOf(k.b)) {
+                    for (int p : endsOf(k.a)) {
+                        for (int q : endsOf(k.b)) {
+                            if (!shared && p && q && joined(p, q)) {
+                                shared = p;
+                            }
+                        }
+                    }
+                }
+                if (shared) {
+                    GCS::Curve* ca = curveOf(k.a);
+                    GCS::Curve* cb = curveOf(k.b);
+                    // keep the way they meet now: running on (0) or doubling back (pi)
+                    const double now = sys.calculateAngleViaPoint(*ca, *cb, pts[shared]);
+                    double* ang = slot(std::abs(std::remainder(now, 2 * std::numbers::pi)) > std::numbers::pi / 2
+                                           ? std::numbers::pi
+                                           : 0.0);
+                    sys.addConstraintAngleViaPoint(*ca, *cb, pts[shared], ang, tag);
+                }
+                else if (isLine(k.a) && isCircle(k.b)) {
                     sys.addConstraintTangent(lines[k.a], circles[k.b],
                                              leftOf(lines[k.a], circles[k.b].center), tag);
                 }

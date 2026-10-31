@@ -84,6 +84,10 @@ CommandRegistry::CommandRegistry()
     add({"sketch.circle", "Circle", "Circle", "SKETCH CREATE", "Draw a circle from its center and diameter.", "C", {"round", "hole outline", "disc"}, true, false, true, m1});
     add({"sketch.arc", "Arc", "Arc", "SKETCH CREATE", "Draw part of a circle from its center, start and end.", "", {"curve", "bend"}, false, false, false, m1});
     add({"sketch.arc3", "3-point arc", "3-Point Arc", "SKETCH CREATE", "Draw an arc through its two ends and one point on it.", "", {"curve through points", "bend"}, false, false, false, m1});
+    add({"sketch.arc_tangent", "Tangent arc", "Tangent Arc", "SKETCH CREATE", "Continue from the end of a line or arc with an arc that leaves it smoothly.", "", {"smooth turn", "continue curve"}, false, false, false, m1});
+    add({"sketch.circle2", "2-point circle", "2-Point Circle", "SKETCH CREATE", "Draw a circle across its diameter by clicking both ends.", "", {"circle by diameter"}, false, false, false, m1});
+    add({"sketch.circle3", "3-point circle", "3-Point Circle", "SKETCH CREATE", "Draw a circle through three points.", "", {"circle through points"}, false, false, false, m1});
+    add({"sketch.rect3", "3-point rectangle", "3-Point Rectangle", "SKETCH CREATE", "Draw a rectangle at any angle: one side, then its depth.", "", {"rotated rectangle", "angled box"}, false, false, false, m1});
     add({"sketch.polygon", "Polygon", "Polygon", "SKETCH CREATE", "Draw a shape with equal sides, like a hex nut.", "", {"hexagon", "nut"}, false, false, false, m1});
     add({"sketch.ellipse", "Ellipse", "Ellipse", "SKETCH CREATE", "Draw an oval from its center and two axes.", "", {"oval"}, false, false, true, m1});
     add({"sketch.slot", "Slot", "Slot", "SKETCH CREATE", "Draw a rounded-end slot, ideal for adjustable screws.", "", {"oblong", "obround"}, false, false, true, m1});
@@ -147,7 +151,7 @@ CommandRegistry::CommandRegistry()
     // shell, revolve, hole, patterns, mirror, parameters). Everything else above keeps its "coming in" note.
     static const std::set<std::string> inApp {
         "sketch.create", "sketch.finish", "sketch.line", "sketch.rectangle", "sketch.circle", "sketch.point",
-        "sketch.arc", "sketch.arc3", "sketch.slot", "sketch.polygon", "sketch.ellipse", "sketch.spline", "sketch.text", "sketch.trim", "sketch.offset", "sketch.fillet", "sketch.project", "sketch.extend", "sketch.break", "sketch.mirror", "sketch.move", "sketch.pattern_rect", "sketch.pattern_circ",
+        "sketch.arc", "sketch.arc3", "sketch.arc_tangent", "sketch.circle2", "sketch.circle3", "sketch.rect3", "sketch.slot", "sketch.polygon", "sketch.ellipse", "sketch.spline", "sketch.text", "sketch.trim", "sketch.offset", "sketch.fillet", "sketch.project", "sketch.extend", "sketch.break", "sketch.mirror", "sketch.move", "sketch.pattern_rect", "sketch.pattern_circ",
         "sketch.dimension", "sketch.construction", "constraint.coincident", "constraint.collinear", "constraint.concentric",
         "constraint.midpoint", "constraint.fix",
         "constraint.parallel", "constraint.perpendicular", "constraint.horizontal", "constraint.tangent",
