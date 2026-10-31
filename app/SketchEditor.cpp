@@ -118,6 +118,20 @@ SketchEditor::SketchEditor(Viewport* view, jig::Document& doc, std::string featu
         inputLabels_.push_back(l);
         inputFields_.push_back(f);
         connect(f, &QLineEdit::returnPressed, this, [this] {
+            if (startInput_) {  // a first point typed as X, Y
+                const QStringList v = inputValues();
+                auto x = doc_.evalLength(doc_.lengthInput(v.value(0).isEmpty() ? "0" : v.value(0).toStdString()));
+                auto y = doc_.evalLength(doc_.lengthInput(v.value(1).isEmpty() ? "0" : v.value(1).toStdString()));
+                if (!x || !y) {
+                    message_ = QString::fromStdString((!x ? x.error() : y.error()).message);
+                    emit stateChanged();
+                    return;
+                }
+                startInput_ = false;
+                hideInput();
+                startAtTyped(x.value(), y.value());
+                return;
+            }
             if (dimTarget_ || editText_ || editArtwork_ || editConstraint_ || roundAt_ || !offsetChain_.empty()) {
                 placeSecond(cursor_, inputValues());
                 return;
@@ -425,6 +439,7 @@ void SketchEditor::resetToolState()
     gridCols_ = 0;
     gridDx_ = 0;
     splinePts_.clear();
+    startInput_ = false;
     offsetHover_.clear();
     offsetChain_.clear();
     first_.reset();
@@ -1494,6 +1509,11 @@ bool SketchEditor::mouseRelease(QMouseEvent* e)
     cursor_ = snapAt(pos, tool_ == Tool::Line || tool_ == Tool::Rectangle, e->modifiers());
     // a click without a mouse move before it (a tablet tap, or the cursor already there)
     cursorValid_ = toLocal(pos).has_value();
+    if (forcedCursor_) {  // a point typed on the keyboard, exactly where it was typed
+        cursor_ = *forcedCursor_;
+        cursorValid_ = true;
+        forcedCursor_.reset();
+    }
     switch (tool_) {
         case Tool::Select: {
             const bool add = e->modifiers() & (Qt::ShiftModifier | Qt::ControlModifier | Qt::MetaModifier);
@@ -1991,6 +2011,28 @@ bool SketchEditor::editTextAt(int anchorPoint)
     return false;
 }
 
+void SketchEditor::startAtTyped(double x, double y)
+{
+    Snap at;
+    at.local = QPointF(x, y);
+    // an existing point exactly there is used, as a click on it would
+    for (auto& [id, e] : work_.entities()) {
+        if (e.type == jig::EntityType::Point && std::hypot(e.x - x, e.y - y) < 1e-9) {
+            at.point = id;
+        }
+    }
+    forcedCursor_ = at;
+    message_.clear();
+    const QPointF screen = screenOf(x, y);
+    QMouseEvent press(QEvent::MouseButtonPress, screen, view_->mapToGlobal(screen), Qt::LeftButton, Qt::LeftButton,
+                      Qt::NoModifier);
+    QMouseEvent release(QEvent::MouseButtonRelease, screen, view_->mapToGlobal(screen), Qt::LeftButton, Qt::NoButton,
+                        Qt::NoModifier);
+    mousePress(&press);
+    forcedCursor_ = at;
+    mouseRelease(&release);
+}
+
 void SketchEditor::finishSpline(bool closed)
 {
     if (splinePts_.size() < 2) {
@@ -2077,6 +2119,23 @@ bool SketchEditor::key(QKeyEvent* e)
     }
     if (e->key() == Qt::Key_Delete || e->key() == Qt::Key_Backspace) {
         deleteSelection();
+        return true;
+    }
+    // Typing a number before the first click: the first point as X, Y (no mouse needed).
+    static const std::set<Tool> drawing {Tool::Line,   Tool::Rectangle, Tool::CenterRectangle, Tool::Circle,
+                                         Tool::Arc,    Tool::Arc3,      Tool::Slot,            Tool::Polygon,
+                                         Tool::Ellipse, Tool::Spline,   Tool::Circle2,         Tool::Circle3,
+                                         Tool::Rect3,  Tool::Point,     Tool::Text};
+    if (!first_ && !startInput_ && splinePts_.empty() && drawing.count(tool_) && !e->text().isEmpty() &&
+        (e->text()[0].isDigit() || e->text()[0] == '.' || e->text()[0] == '-')) {
+        startInput_ = true;
+        showInput({tr("X"), tr("Y")}, {e->text(), "0"});
+        inputFields_[0]->setFocus();
+        inputFields_[0]->deselect();
+        inputFields_[0]->setCursorPosition(int(e->text().size()));
+        inputBox_->move(QPoint(24, 24));
+        message_ = tr("Type where the first point goes (X, Tab, Y) and press Enter.");
+        emit stateChanged();
         return true;
     }
     // Typing a number while a tool waits for its second click goes into the value box.

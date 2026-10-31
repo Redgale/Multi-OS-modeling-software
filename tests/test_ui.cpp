@@ -12,6 +12,7 @@
 #include <QSettings>
 #include <QTableWidget>
 #include <QToolButton>
+#include <QTimer>
 #include <QTreeWidget>
 #include <QtTest>
 
@@ -938,6 +939,69 @@ private slots:
         for (auto& [id, b] : st.bodies) {
             QVERIFY(std::abs(jig::massProperties(b->shape()).zmax - 12) < 1e-9);
         }
+    }
+
+    // Keyboard only: find Sketch by typing, pick the floor with 1, type a rectangle from a
+    // typed first corner, finish, extrude with Enter. No mouse.
+    void keyboardOnlyPart()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        w.activateWindow();
+        QVERIFY(QTest::qWaitForWindowActive(&w));  // shortcuts go to the active window
+        Viewport* view = w.viewport();
+        auto palette = [&](const char* words) {
+            QTimer::singleShot(150, [words] {
+                QWidget* pop = QApplication::activePopupWidget() ? QApplication::activePopupWidget()
+                                                                 : QApplication::activeModalWidget();
+                QLineEdit* f = pop ? pop->findChild<QLineEdit*>() : nullptr;  // the search box
+                if (!f) {
+                    qWarning() << "no palette" << pop << QApplication::focusWidget();
+                    if (pop) {
+                        pop->close();
+                    }
+                    return;
+                }
+                QTest::keyClicks(f, words);
+                QTest::keyClick(f, Qt::Key_Return);
+            });
+            QTest::keyClick(&w, Qt::Key_K, Qt::ControlModifier);
+        };
+        palette("create sketch");
+        QTest::keyClick(view, Qt::Key_1);  // the floor
+        QTRY_VERIFY(w.sketchEditor() != nullptr);
+        SketchEditor* sk = w.sketchEditor();
+        QTest::keyClick(view, Qt::Key_R);  // Rectangle
+        QTRY_COMPARE(int(sk->tool()), int(SketchEditor::Tool::Rectangle));
+        QTest::keyClick(view, Qt::Key_5);  // first corner X...
+        QVERIFY(QApplication::focusWidget());
+        QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
+        QTest::keyClicks(QApplication::focusWidget(), "5");
+        QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
+        QTest::keyClick(view, Qt::Key_4);  // ...then width 40 and height 30
+        QTest::keyClicks(QApplication::focusWidget(), "0");
+        QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
+        QTest::keyClicks(QApplication::focusWidget(), "30");
+        QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
+        QVERIFY2(sk->message().isEmpty(), qPrintable(sk->message()));
+        const auto& regions = w.document().state().sketches.begin()->second->profiles.regions;
+        QCOMPARE(int(regions.size()), 1);
+        QVERIFY(std::abs(regions[0].area - 1200) < 1e-6);
+        palette("finish sketch");
+        QTRY_VERIFY(w.sketchEditor() == nullptr);
+        QTest::keyClick(&w, Qt::Key_E);  // Extrude
+        QTRY_VERIFY(qobject_cast<ExtrudePanel*>(w.featurePanel()));
+        auto* ep = qobject_cast<ExtrudePanel*>(w.featurePanel());
+        ep->distance()->setFocus();
+        QTRY_VERIFY(ep->previewOk());
+        QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        QVERIFY(volume(w) > 0);
+        // the corner went exactly where it was typed
+        const auto mp = jig::massProperties(w.document().state().bodies.begin()->second->shape());
+        QVERIFY(std::abs(mp.xmin - 5) < 1e-9 && std::abs(mp.ymin - 5) < 1e-9);
     }
 
     // Accessibility: every control in every tool panel, and every toolbar button, has a

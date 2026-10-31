@@ -94,6 +94,8 @@ public:
     }
 
 protected:
+    // Enter presses OK (when the preview is good), Esc cancels: no mouse needed.
+    void keyPressEvent(QKeyEvent* e) override;
     virtual jig::Feature draft() const = 0;
     virtual QString title() const = 0;
     virtual void rememberValues() {}

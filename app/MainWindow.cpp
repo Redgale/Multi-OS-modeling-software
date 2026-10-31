@@ -305,6 +305,17 @@ public:
         }
         return true;
     }
+    bool key(QKeyEvent* e) override
+    {
+        // without the mouse: 1 floor, 2 front, 3 side
+        static const char* planes[] = {"XY", "XZ", "YZ"};
+        const int n = e->key() - Qt::Key_1;
+        if (n >= 0 && n < 3) {
+            w_->createSketchOn(planes[n]);
+            return true;
+        }
+        return false;
+    }
     bool mouseRelease(QMouseEvent* e) override
     {
         const Hit h = hitAt(e->position());
@@ -321,7 +332,8 @@ public:
         QFont f = p.font();
         f.setBold(true);
         p.setFont(f);
-        const QString msg = QObject::tr("Click a plane, a construction plane or a flat face to sketch on.  Esc cancels.");
+        const QString msg = QObject::tr("Click a plane, a construction plane or a flat face to sketch on, or press 1 (floor), 2 (front) "
+                                           "or 3 (side).  Esc cancels.");
         const QRectF box(10, 10, p.fontMetrics().horizontalAdvance(msg) + 20, 26);
         QColor bg = v_->colors().background;
         bg.setAlpha(230);
@@ -331,9 +343,9 @@ public:
         p.setPen(v_->colors().text);
         p.drawText(box, Qt::AlignCenter, msg);
         const float s = size();
-        const std::pair<QString, QVector3D> labels[] = {{QObject::tr("XY · floor"), {s * 0.75f, -s * 0.75f, 0}},
-                                                         {QObject::tr("XZ · front"), {s * 0.75f, 0, s * 0.85f}},
-                                                         {QObject::tr("YZ · side"), {0, s * 0.75f, s * 0.85f}}};
+        const std::pair<QString, QVector3D> labels[] = {{QObject::tr("1 · XY · floor"), {s * 0.75f, -s * 0.75f, 0}},
+                                                         {QObject::tr("2 · XZ · front"), {s * 0.75f, 0, s * 0.85f}},
+                                                         {QObject::tr("3 · YZ · side"), {0, s * 0.75f, s * 0.85f}}};
         for (auto& [t, w] : labels) {
             p.drawText(v_->project(w), t);
         }

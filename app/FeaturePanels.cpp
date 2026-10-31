@@ -18,6 +18,7 @@
 #include <QDialogButtonBox>
 #include <QHBoxLayout>
 #include <QHeaderView>
+#include <QKeyEvent>
 #include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
@@ -284,6 +285,20 @@ FeaturePanel::~FeaturePanel()
     if (view_) {
         view_->setModelTint(std::nullopt);
     }
+}
+
+void FeaturePanel::keyPressEvent(QKeyEvent* e)
+{
+    if ((e->key() == Qt::Key_Return || e->key() == Qt::Key_Enter) && ok_->isEnabled()) {
+        timer_->stop();
+        accept();
+        return;
+    }
+    if (e->key() == Qt::Key_Escape) {
+        cancel();
+        return;
+    }
+    ToolPanel::keyPressEvent(e);
 }
 
 void nameInputsFromLabels(QWidget* root)

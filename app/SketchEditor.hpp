@@ -190,13 +190,16 @@ private:
     QString arcRadiusExpr_;          // typed at the second step (arc radius, slot length)
     int editText_ = 0;
     int editArtwork_ = 0;
-    std::optional<jig::Sketch::TrimPiece> trimHover_;
-    std::vector<Snap> splinePts_;
+    std::optional<jig::Sketch::TrimPiece> trimHover_;  // the piece Trim would remove
+    std::vector<Snap> splinePts_;  // Spline: the points clicked so far
+    bool startInput_ = false;           // the X, Y box for a first point typed instead of clicked
+    std::optional<Snap> forcedCursor_;  // a typed point standing in for the cursor
+    void startAtTyped(double x, double y);
     int tangentFrom_ = 0;   // Tangent arc: the curve it continues
-    QPointF tangentDir_;    // and the direction it leaves in  // Spline: the points clicked so far
+    QPointF tangentDir_;    // and the direction it leaves in
     void finishSpline(bool closed);
     int gridCols_ = 0;     // Grid copy: columns typed in the first step
-    double gridDx_ = 0;    // and their spacing  // the piece Trim would remove
+    double gridDx_ = 0;    // and their spacing
     std::vector<int> offsetHover_, offsetChain_;        // Offset: under the cursor / chosen
     std::vector<std::pair<int, QRectF>> glyphBoxes_;     // constraint glyphs as last painted
     std::set<int> selectedConstraints_;
