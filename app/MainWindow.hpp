@@ -22,6 +22,7 @@ class QSlider;
 class QTextBrowser;
 class QTimer;
 class QTreeWidget;
+class QComboBox;
 
 namespace jigapp
 {
@@ -115,6 +116,10 @@ public:
     void openAxis(const std::string& editId = {});
     // Browser: which bodies are drawn (a view setting, not part of the design or its undo)
     void setBodyVisible(const std::string& body, bool on);
+    // What a plain click picks when no tool is open: "faces", "edges" or "bodies".
+    void setSelectFilter(const QString& what);
+    QString selectFilter() const;
+    QString detailsText() const;
     void isolateBody(const std::string& body);
     void showAllBodies();
     bool bodyVisible(const std::string& body) const
@@ -174,6 +179,7 @@ private:
     Viewport* view_ = nullptr;
     QTreeWidget* browser_ = nullptr;
     std::set<std::string> hiddenBodies_;
+    QPointer<QComboBox> selectFilter_;  // (a QPointer: panels may be destroyed after it on exit)
     QListWidget* timeline_ = nullptr;
     QSlider* rollback_ = nullptr;
     QTextBrowser* details_ = nullptr;

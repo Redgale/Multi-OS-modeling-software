@@ -39,6 +39,7 @@
 #include <QStatusBar>
 #include <QStyleFactory>
 #include <QTextBrowser>
+#include <QPointer>
 #include <QTimer>
 #include <QToolBar>
 #include <QToolButton>
@@ -459,6 +460,34 @@ MainWindow::MainWindow()
     statusBar()->addWidget(statusSel_, 1);
     statusBar()->addPermanentWidget(statusInfo_);
     connect(view_, &Viewport::hovered, this, [this](const QString& d) { statusSel_->setText(d); });
+    selectFilter_ = new QComboBox(this);
+    selectFilter_->addItem(tr("Pick faces"), "faces");
+    selectFilter_->addItem(tr("Pick edges"), "edges");
+    selectFilter_->addItem(tr("Pick bodies"), "bodies");
+    selectFilter_->setAccessibleName(tr("Selection filter"));
+    selectFilter_->setToolTip(tr("What a click in the view picks when no tool is open."));
+    statusBar()->addPermanentWidget(selectFilter_);
+    connect(selectFilter_, &QComboBox::currentIndexChanged, this, [this] { setSelectFilter(selectFilter()); });
+    connect(view_, &Viewport::edgeClicked, this, [this](const QString& body, const QString& name, Qt::KeyboardModifiers) {
+        if (panel_ || sketch_ || selectFilter() != "edges" || !doc_) {
+            return;
+        }
+        auto it = doc_->state().bodies.find(body.toStdString());
+        if (it == doc_->state().bodies.end()) {
+            return;
+        }
+        auto hits = it->second->findEdges(name.toStdString());
+        if (hits.empty()) {
+            return;
+        }
+        const jig::MeasureItem m = jig::measureItem(it->second->edge(hits[0]));
+        QString html = tr("<h3>Edge</h3><p><b>Name:</b> %1<br><b>Kind:</b> %2<br><b>Length:</b> %3")
+                           .arg(name.toHtmlEscaped(), q(m.kind), q(doc_->fmtLength(m.size)));
+        if (m.radius) {
+            html += tr("<br><b>Diameter:</b> %1").arg(q(doc_->fmtLength(2 * *m.radius)));
+        }
+        details_->setHtml(html + tr("<br><b>Body:</b> %1</p>").arg(body));
+    });
     connect(view_, &Viewport::selectionChanged, this, [this](const QString& body, int face) {
         if (face < 0 || !doc_) {
             details_->setHtml(tr("<p>Nothing selected.</p>"));
@@ -466,6 +495,23 @@ MainWindow::MainWindow()
         }
         auto it = doc_->state().bodies.find(body.toStdString());
         if (it == doc_->state().bodies.end()) {
+            return;
+        }
+        if (!panel_ && selectFilter() == "bodies") {
+            // the whole body the face belongs to
+            const auto mp = jig::massProperties(it->second->shape());
+            const jig::Feature* f = doc_->feature(body.toStdString());
+            details_->setHtml(tr("<h3>Body</h3><p><b>Name:</b> %1<br><b>Volume:</b> %2<br><b>Size:</b> %3 × %4 × %5<br>"
+                                 "<b>Faces:</b> %6</p><p>Right-click it in the Browser to hide, isolate or rename it.</p>")
+                                  .arg(f ? q(f->name).toHtmlEscaped() : body, q(jig::formatVolume(mp.volume, doc_->units())),
+                                       q(doc_->fmtLength(mp.xmax - mp.xmin)), q(doc_->fmtLength(mp.ymax - mp.ymin)),
+                                       q(doc_->fmtLength(mp.zmax - mp.zmin)))
+                                  .arg(it->second->faceCount()));
+            for (QTreeWidgetItemIterator bi(browser_); *bi; ++bi) {
+                if ((*bi)->data(0, Qt::UserRole).toString() == body) {
+                    browser_->setCurrentItem(*bi);
+                }
+            }
             return;
         }
         auto fp = it->second->faceFingerprint(face);
@@ -1085,6 +1131,29 @@ void MainWindow::setBodyVisible(const std::string& body, bool on)
         hiddenBodies_.insert(body);
     }
     refreshAll();
+}
+
+void MainWindow::setSelectFilter(const QString& what)
+{
+    const int i = selectFilter_->findData(what);
+    if (i >= 0 && i != selectFilter_->currentIndex()) {
+        selectFilter_->setCurrentIndex(i);  // comes back here through the signal
+        return;
+    }
+    if (!panel_ && !sketch_) {
+        view_->setPickMode(what == "edges" ? PickMode::Edges : PickMode::Faces);
+    }
+    details_->setHtml(tr("<p>Nothing selected.</p>"));
+}
+
+QString MainWindow::selectFilter() const
+{
+    return selectFilter_ ? selectFilter_->currentData().toString() : QString("faces");
+}
+
+QString MainWindow::detailsText() const
+{
+    return details_->toPlainText();
 }
 
 void MainWindow::isolateBody(const std::string& body)
@@ -2018,6 +2087,12 @@ void MainWindow::closePanel()
         return;
     }
     panel_->hide();
+    // back to the selection filter once the panel is gone (its destructor resets the view)
+    connect(panel_, &QObject::destroyed, this, [this, view = QPointer<Viewport>(view_)] {
+        if (view && !panel_ && !sketch_ && selectFilter_) {
+            view->setPickMode(selectFilter() == "edges" ? PickMode::Edges : PickMode::Faces);
+        }
+    });
     panel_->deleteLater();
     panel_ = nullptr;
     sideStack_->setCurrentWidget(details_);

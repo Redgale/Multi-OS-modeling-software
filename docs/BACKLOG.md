@@ -49,7 +49,7 @@ timeline edit/rename/suppress/roll back/delete with dependents warning, Paramete
 - B-017 Extrude drag handle on the canvas; two sides, to object, taper, thin.
 - B-018 (reorder; Browser visibility, isolate, rename done) Timeline groups; find in timeline;
   saving visibility with the design.
-- B-019 (sketch window selection done) Selection filters, Select Other.
+- B-019 (sketch window selection, selection filter done) Select Other; window selection in 3D.
 
 - B-020 Text: pick installed fonts by family name (fontconfig / DirectWrite / CoreText),
   bold/italic, multi-line, HarfBuzz shaping for complex scripts, text along a path.

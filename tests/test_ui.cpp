@@ -937,6 +937,38 @@ private slots:
         }
     }
 
+    // Selection filter: click a body's face with "Pick bodies" and the details describe the body.
+    void selectionFilter()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        {
+            jig::ScriptRunner r(w.document());
+            QVERIFY(r.runText("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=40 h=30\nextrude id=e1 sketch=s1 distance=10\n").ok());
+        }
+        w.showAllBodies();
+        Viewport* view = w.viewport();
+        QTRY_VERIFY(view->meshesReady());
+        view->homeView();
+        const QPoint top = view->project(QVector3D(0, 0, 10)).toPoint();
+        QTest::mouseClick(view, Qt::LeftButton, Qt::NoModifier, top);
+        QTRY_VERIFY(w.detailsText().contains("Face"));
+        w.setSelectFilter("bodies");
+        QTest::mouseClick(view, Qt::LeftButton, Qt::NoModifier, top);
+        QTRY_VERIFY(w.detailsText().contains("Body"));
+        QVERIFY(w.detailsText().contains("Volume"));
+        w.setSelectFilter("edges");
+        QCOMPARE(int(view->pickMode()), int(PickMode::Edges));
+        // a tool takes over picking and gives it back when closed
+        w.runCommand("solid.fillet");
+        QVERIFY(w.featurePanel());
+        qobject_cast<FeaturePanel*>(w.featurePanel())->cancel();
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        QTRY_COMPARE(int(view->pickMode()), int(PickMode::Edges));
+    }
+
     // A sketch of open lines: Extrude offers them as a wall and makes it.
     void extrudeOpenCurvesAsWall()
     {
