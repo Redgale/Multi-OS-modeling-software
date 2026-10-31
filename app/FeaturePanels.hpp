@@ -623,12 +623,19 @@ private:
     QComboBox *body_, *plane_;
 };
 
+class MoveHandle;
+
 // Move / copy bodies: shift along X, Y, Z and turn around an origin axis.
 class MovePanel : public FeaturePanel
 {
     Q_OBJECT
 public:
     MovePanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent = nullptr);
+    ~MovePanel() override;
+    // The three arrows on the canvas (X, Y, Z): where each grip is on screen, and dragging
+    // one from a screen point to another (the field along it changes by that much).
+    std::optional<QPointF> arrowTip(int axis) const;
+    void dragArrow(int axis, const QPointF& from, const QPointF& to, double startValue);
     QListWidget* bodies() const
     {
         return bodies_;
@@ -667,6 +674,11 @@ protected:
     QString title() const override;
 
 private:
+    friend class MoveHandle;
+    std::optional<QVector3D> arrowBase() const;  // the chosen bodies' centre, moved by the typed shift
+    std::unique_ptr<MoveHandle> handle_;
+    mutable std::string centreFor_;               // the bodies the cached centre belongs to
+    mutable std::optional<QVector3D> centre_;
     QListWidget* bodies_;
     ExprField* d_[3];
     QComboBox *axis_, *from_, *to_;

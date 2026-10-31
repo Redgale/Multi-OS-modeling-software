@@ -5858,7 +5858,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
 <context>
     <name>jigapp::MovePanel</name>
     <message>
-        <location line="+991" />
+        <location line="+1140" />
         <source>Move / copy</source>
         <translation>[Mövé / çöpý~~]</translation>
     </message>
@@ -5928,7 +5928,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
         <translation>[Tö pöîñt~~]</translation>
     </message>
     <message>
-        <location line="+33" />
+        <location line="+37" />
         <source>There is no body to move yet.</source>
         <translation>[Théré îs ñö bödý tö mövé ýét.~~~~~~~]</translation>
     </message>
@@ -6044,7 +6044,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
 <context>
     <name>jigapp::PatternPanel</name>
     <message>
-        <location line="-1551" />
+        <location line="-1704" />
         <location line="+154" />
         <source>Pattern</source>
         <translation>[Páttérñ~~]</translation>

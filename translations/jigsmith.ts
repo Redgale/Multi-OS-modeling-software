@@ -5862,7 +5862,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::MovePanel</name>
     <message>
-        <location line="+991"/>
+        <location line="+1140"/>
         <source>Move / copy</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5932,7 +5932,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+33"/>
+        <location line="+37"/>
         <source>There is no body to move yet.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6050,7 +6050,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::PatternPanel</name>
     <message>
-        <location line="-1551"/>
+        <location line="-1704"/>
         <location line="+154"/>
         <source>Pattern</source>
         <translation type="unfinished"></translation>

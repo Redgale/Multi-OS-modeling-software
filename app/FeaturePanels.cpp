@@ -3122,6 +3122,155 @@ QString SplitPanel::title() const
 
 // ---------------------------------------------------------------- Move
 
+// Three arrows (X, Y, Z) from the bodies' centre; drag a grip to move along that axis.
+class MoveHandle : public Interactor
+{
+public:
+    explicit MoveHandle(MovePanel* p)
+        : p_(p)
+    {}
+    int gripAt(const QPointF& pos) const
+    {
+        for (int k = 0; k < 3; ++k) {
+            if (auto tip = p_->arrowTip(k); tip && QLineF(*tip, pos).length() <= 10) {
+                return k;
+            }
+        }
+        return -1;
+    }
+    bool mousePress(QMouseEvent* e) override
+    {
+        drag_ = gripAt(e->position());
+        if (drag_ >= 0) {
+            from_ = e->position();
+            start_ = p_->d_[drag_]->valid() ? p_->d_[drag_]->value() : 0;
+        }
+        return drag_ >= 0;
+    }
+    bool mouseMove(QMouseEvent* e) override
+    {
+        if (drag_ >= 0) {
+            p_->dragArrow(drag_, from_, e->position(), start_);
+            return true;
+        }
+        const int over = gripAt(e->position());
+        if (over != hover_ && p_->view_) {
+            hover_ = over;
+            p_->view_->setCursor(over >= 0 ? Qt::SizeAllCursor : Qt::ArrowCursor);
+            p_->view_->update();
+        }
+        return false;
+    }
+    bool mouseRelease(QMouseEvent*) override
+    {
+        const bool was = drag_ >= 0;
+        drag_ = -1;
+        return was;
+    }
+    void paint(QPainter& g) override
+    {
+        auto base = p_->arrowBase();
+        if (!base || !p_->view_) {
+            return;
+        }
+        const QPointF b = p_->view_->project(*base);
+        // red, green, blue as usual, and each labelled X, Y, Z (not colour alone)
+        const QColor cols[3] = {QColor(230, 80, 80), QColor(90, 190, 90), QColor(90, 140, 240)};
+        const char* names[3] = {"X", "Y", "Z"};
+        g.setRenderHint(QPainter::Antialiasing);
+        for (int k = 0; k < 3; ++k) {
+            auto tip = p_->arrowTip(k);
+            if (!tip) {
+                continue;
+            }
+            g.setPen(QPen(cols[k], 2.5));
+            g.setBrush(Qt::NoBrush);
+            g.drawLine(b, *tip);
+            g.setBrush(hover_ == k || drag_ == k ? QBrush(cols[k]) : QBrush(Qt::NoBrush));
+            g.drawEllipse(*tip, 6, 6);
+            g.setPen(p_->view_->colors().text);
+            g.drawText(*tip + QPointF(9, -7), QString("%1 %2").arg(names[k], p_->d_[k]->text()));
+        }
+    }
+
+private:
+    MovePanel* p_;
+    int drag_ = -1, hover_ = -1;
+    QPointF from_;
+    double start_ = 0;
+};
+
+MovePanel::~MovePanel()
+{
+    if (view_ && view_->interactor() == handle_.get()) {
+        view_->setInteractor(nullptr);
+    }
+}
+
+std::optional<QVector3D> MovePanel::arrowBase() const
+{
+    const nlohmann::json chosen = checkedBodies(bodies_);
+    if (chosen.dump() != centreFor_) {  // the bounds are worked out once per choice of bodies
+        centreFor_ = chosen.dump();
+        centre_.reset();
+        const auto before = stateBefore();
+        double x0 = 1e300, y0 = 1e300, z0 = 1e300, x1 = -1e300, y1 = -1e300, z1 = -1e300;
+        for (const auto& j : chosen) {
+            if (auto it = before->bodies.find(j.get<std::string>()); it != before->bodies.end()) {
+                const auto mp = jig::massProperties(it->second->shape());
+                x0 = std::min(x0, mp.xmin), y0 = std::min(y0, mp.ymin), z0 = std::min(z0, mp.zmin);
+                x1 = std::max(x1, mp.xmax), y1 = std::max(y1, mp.ymax), z1 = std::max(z1, mp.zmax);
+            }
+        }
+        if (x0 <= x1) {
+            centre_ = QVector3D(float((x0 + x1) / 2), float((y0 + y1) / 2), float((z0 + z1) / 2));
+        }
+    }
+    if (!centre_) {
+        return std::nullopt;
+    }
+    QVector3D c = *centre_;
+    for (int k = 0; k < 3; ++k) {
+        if (d_[k]->valid()) {
+            c[k] += float(d_[k]->value());
+        }
+    }
+    return c;
+}
+
+std::optional<QPointF> MovePanel::arrowTip(int axis) const
+{
+    auto base = arrowBase();
+    if (!view_ || !base) {
+        return std::nullopt;
+    }
+    QVector3D dir;
+    dir[axis] = 1;
+    return view_->project(*base + dir * (60 * view_->worldPerPixel()));  // about 60 pixels long
+}
+
+void MovePanel::dragArrow(int axis, const QPointF& from, const QPointF& to, double startValue)
+{
+    auto base = arrowBase();
+    if (!view_ || !base) {
+        return;
+    }
+    QVector3D dir;
+    dir[axis] = 1;
+    // how many pixels one millimetre along this arrow covers on screen
+    const QPointF s0 = view_->project(*base), s1 = view_->project(*base + dir * 10.0f);
+    const QPointF ax = s1 - s0;
+    const double len2 = QPointF::dotProduct(ax, ax);
+    if (len2 < 1e-6) {
+        return;  // looking straight down this arrow: use the field instead
+    }
+    double d = startValue + QPointF::dotProduct(to - from, ax) / len2 * 10.0;
+    const bool inch = doc_.units() == jig::LengthUnit::Inch || doc_.units() == jig::LengthUnit::Foot;
+    const double step = inch ? 25.4 / 32 : 0.5;  // snaps: 1/32 in or 0.5 mm
+    d = std::round(d / step) * step;
+    d_[axis]->setText(QString::fromStdString(doc_.fmtLength(d)));
+}
+
 MovePanel::MovePanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent)
     : FeaturePanel(doc, view, std::move(editId), parent)
 {
@@ -3186,6 +3335,10 @@ MovePanel::MovePanel(jig::Document& doc, Viewport* view, std::string editId, QWi
     connect(angle_, &ExprField::changed, this, [this] { schedulePreview(); });
     for (auto* c : {axis_, from_, to_}) {
         connect(c, &QComboBox::currentIndexChanged, this, [this] { schedulePreview(); });
+    }
+    if (view_) {
+        handle_ = std::make_unique<MoveHandle>(this);
+        view_->setInteractor(handle_.get());
     }
     connect(bodies_, &QListWidget::itemChanged, this, [this] { schedulePreview(); });
     connect(copy_, &QCheckBox::toggled, this, [this] { schedulePreview(); });

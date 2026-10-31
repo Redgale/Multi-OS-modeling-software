@@ -2125,6 +2125,44 @@ private slots:
         QCOMPARE(int(w.document().model().features.size()), 0);
     }
 
+    // Move by dragging: the X arrow's grip pulled along X moves the body that way.
+    void moveByDragging()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        {
+            jig::ScriptRunner r(w.document());
+            QVERIFY(r.runText("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=20 h=20\nextrude id=e1 sketch=s1 distance=10\n").ok());
+        }
+        Viewport* view = w.viewport();
+        w.runCommand("solid.move");
+        auto* mv = qobject_cast<MovePanel*>(w.featurePanel());
+        QVERIFY(mv);
+        QTRY_VERIFY(view->meshesReady());
+        auto tip = mv->arrowTip(0);
+        QVERIFY(tip);
+        // drag the grip 25 mm further along X, measured on screen
+        QVector3D base(0, 0, 5);
+        const QPointF perMm = (view->project(base + QVector3D(10, 0, 0)) - view->project(base)) / 10.0;
+        const QPoint from = tip->toPoint(), to = (*tip + perMm * 25).toPoint();
+        QTest::mousePress(view, Qt::LeftButton, Qt::NoModifier, from);
+        QTest::mouseMove(view, (from + to) / 2);
+        QTest::mouseMove(view, to);
+        QTest::mouseRelease(view, Qt::LeftButton, Qt::NoModifier, to);
+        QVERIFY(mv->dx()->valid());
+        QVERIFY2(std::abs(mv->dx()->value() - 25) <= 1.0, qPrintable(mv->dx()->text()));  // within a snap or a pixel
+        QCOMPARE(mv->dy()->value(), 0.0);
+        const double dx = mv->dx()->value();
+        QTest::qWait(300);
+        QTRY_VERIFY(mv->previewOk());
+        QVERIFY(mv->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        const auto mp = jig::massProperties(w.document().state().bodies.at("e1")->shape());
+        QVERIFY2(std::abs(mp.xmin - (-10 + dx)) < 1e-6, qPrintable(QString::number(mp.xmin)));
+    }
+
     // Move a body from one construction point to another.
     void movePointToPoint()
     {
