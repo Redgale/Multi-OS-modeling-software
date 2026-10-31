@@ -2145,6 +2145,7 @@ void MainWindow::showPanel(ToolPanel* p)
     if (panel_) {
         panel_->cancel();
     }
+    nameInputsFromLabels(p);  // screen readers say each field's label
     panel_ = p;
     panelHost_->layout()->addWidget(p);
     sideStack_->setCurrentWidget(panelHost_);

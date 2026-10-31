@@ -11,6 +11,8 @@
 
 #include <BRepGProp.hxx>
 #include <GProp_GProps.hxx>
+#include <QAbstractItemView>
+#include <QAbstractSpinBox>
 #include <QCheckBox>
 #include <QComboBox>
 #include <QDialogButtonBox>
@@ -22,6 +24,7 @@
 #include <QMessageBox>
 #include <QPushButton>
 #include <QTableWidget>
+#include <QTextDocumentFragment>
 #include <QTimer>
 #include <QVBoxLayout>
 
@@ -280,6 +283,65 @@ FeaturePanel::~FeaturePanel()
 {
     if (view_) {
         view_->setModelTint(std::nullopt);
+    }
+}
+
+void nameInputsFromLabels(QWidget* root)
+{
+    auto plain = [](const QLabel* l) { return QTextDocumentFragment::fromHtml(l->text()).toPlainText().trimmed(); };
+    auto isInput = [](QWidget* w) {
+        return qobject_cast<QLineEdit*>(w) || qobject_cast<QComboBox*>(w) || qobject_cast<QAbstractSpinBox*>(w) ||
+               qobject_cast<QAbstractItemView*>(w) || qobject_cast<ExprField*>(w);
+    };
+    auto name = [&](QWidget* w, const QString& text) {
+        if (text.isEmpty()) {
+            return;
+        }
+        if (w->accessibleName().isEmpty()) {
+            w->setAccessibleName(text);
+        }
+        for (auto* e : w->findChildren<QLineEdit*>()) {  // the edit inside a size field
+            if (e->accessibleName().isEmpty()) {
+                e->setAccessibleName(text);
+            }
+        }
+    };
+    for (auto* l : root->findChildren<QLabel*>()) {
+        if (l->buddy()) {
+            name(l->buddy(), plain(l));
+        }
+    }
+    // a label followed by an input in the same layout
+    std::function<void(QLayout*)> walk = [&](QLayout* lay) {
+        QLabel* pending = nullptr;
+        for (int i = 0; i < lay->count(); ++i) {
+            QLayoutItem* it = lay->itemAt(i);
+            if (it->layout()) {
+                walk(it->layout());
+                pending = nullptr;
+                continue;
+            }
+            QWidget* w = it->widget();
+            if (!w) {
+                continue;
+            }
+            if (auto* l = qobject_cast<QLabel*>(w)) {
+                pending = l;
+                continue;
+            }
+            if (pending && isInput(w)) {
+                name(w, plain(pending));
+            }
+            pending = nullptr;
+        }
+    };
+    if (root->layout()) {
+        walk(root->layout());
+    }
+    for (auto* child : root->findChildren<QWidget*>()) {
+        if (child->layout()) {
+            walk(child->layout());
+        }
     }
 }
 

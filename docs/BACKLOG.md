@@ -65,7 +65,7 @@ timeline edit/rename/suppress/roll back/delete with dependents warning, Paramete
 - M6: Measure, Section, Properties with density; 3MF export; local versions; autosave
   preferences; STEP import UI with unit correction; parser fuzzing (SVG, DXF, STEP).
 - M7 (tutorial, marking menu, navigation settings done): tooltips audit, error-explanation actions.
-- M8: accessibility pass (keyboard, screen-reader labels, scaling, reduced motion),
+- M8 (screen-reader names done): accessibility pass (keyboard-only walkthrough, scaling),
   localisation (Qt Linguist), performance, installers, v0.1.
 
 ## Ideas (unscheduled)

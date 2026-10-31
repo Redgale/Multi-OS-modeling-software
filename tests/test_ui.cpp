@@ -4,6 +4,7 @@
 // Brief 7.1: "UI smoke and workflow tests that drive the real app", with screenshots.
 #include <BRepGProp.hxx>
 #include <GProp_GProps.hxx>
+#include <QAbstractSpinBox>
 #include <QComboBox>
 #include <QCheckBox>
 #include <QListWidget>
@@ -937,6 +938,55 @@ private slots:
         for (auto& [id, b] : st.bodies) {
             QVERIFY(std::abs(jig::massProperties(b->shape()).zmax - 12) < 1e-9);
         }
+    }
+
+    // Accessibility: every control in every tool panel, and every toolbar button, has a
+    // name a screen reader can say (its own text, or an accessible name).
+    void accessibleNames()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        QVERIFY(w.openSample("knob"));
+        QStringList missing;
+        auto check = [&](QWidget* root, const QString& where) {
+            for (QWidget* c : root->findChildren<QWidget*>()) {
+                if (!c->isVisibleTo(root)) {
+                    continue;
+                }
+                const bool input = qobject_cast<QLineEdit*>(c) || qobject_cast<QComboBox*>(c) ||
+                                   qobject_cast<QAbstractSpinBox*>(c) || qobject_cast<QListWidget*>(c) ||
+                                   qobject_cast<QTreeWidget*>(c) || qobject_cast<QAbstractButton*>(c);
+                if (!input || qobject_cast<QComboBox*>(c->parentWidget())) {
+                    continue;  // (a combo box's own line edit speaks through the combo)
+                }
+                QString name = c->accessibleName();
+                if (auto* b = qobject_cast<QAbstractButton*>(c)) {
+                    name += b->text();
+                    if (auto* tb = qobject_cast<QToolButton*>(c); tb && tb->defaultAction()) {
+                        name += tb->defaultAction()->text();
+                    }
+                }
+                if (name.trimmed().isEmpty()) {
+                    missing << where + ": " + c->metaObject()->className() + " " + c->objectName();
+                }
+            }
+        };
+        check(&w, "window");
+        for (const char* cmd : {"solid.extrude", "solid.fillet", "solid.chamfer", "solid.shell", "solid.revolve",
+                                "solid.hole", "solid.pattern_circ", "solid.mirror", "construct.offset_plane",
+                                "construct.axis", "solid.combine", "solid.split", "solid.move", "solid.presspull",
+                                "inspect.measure", "inspect.section"}) {
+            w.runCommand(cmd);
+            if (auto* panel = w.featurePanel()) {
+                check(panel, cmd);
+                panel->cancel();
+                QTRY_VERIFY(w.featurePanel() == nullptr);
+            }
+        }
+        missing.removeDuplicates();
+        QVERIFY2(missing.isEmpty(), qPrintable(missing.join("\n")));
     }
 
     // Navigation settings: preset, zoom direction and orbit speed apply and are remembered.

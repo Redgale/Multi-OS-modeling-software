@@ -58,6 +58,10 @@ private:
     double value_ = 0;
 };
 
+// Gives every input under `root` the text of the label shown just before it (or the label
+// that names it as its buddy) as its accessible name, so screen readers say what it is.
+void nameInputsFromLabels(QWidget* root);
+
 // Anything shown in the side dock while a tool runs (feature panels, Measure).
 class ToolPanel : public QWidget
 {
