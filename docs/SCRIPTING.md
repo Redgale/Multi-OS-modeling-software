@@ -76,7 +76,7 @@ nothing is committed.
 | `shell id=sh1 faces="face:<name>;…" thickness=<len> [body=<id>]` | Hollow a body leaving walls; the listed faces are removed (left open). `faces=none` makes a closed hollow |
 | `revolve id=r1 sketch=s1 axis=X\|Y\|Z\|line:<name> [angle=<angle>] [op=new\|join\|cut\|intersect] [profiles=…]` | Spin closed areas around an axis (default a full turn). The outline must stay on one side of the axis |
 | `hole id=h1 sketch=s2 diameter=<len> (depth=<len> \| extent=all) [type=simple\|counterbore\|countersink]` | A hole at every free point of the sketch, drilled into the face the sketch sits on. Counterbore: `cbore_diameter= cbore_depth=`; countersink: `csink_diameter= csink_angle=`. `size=M3` (M2–M12, #4–#10, 1/4, 5/16, 3/8, 1/2) with `fit=close\|normal\|loose` takes the sizes from the clearance table (typed sizes still win); `tip=118deg` ends a blind hole in a drill point |
-| `pattern id=p1 feature=<id> kind=circular axis=X\|Y\|Z count=<n> [angle=<angle>]` | Repeat an Extrude, Revolve or Hole around an origin axis. A full turn spaces the copies evenly |
+| `pattern id=p1 feature=<id> kind=circular axis=X\|Y\|Z\|<axis id> count=<n> [angle=<angle>]` | Repeat an Extrude, Revolve or Hole around an axis. A full turn spaces the copies evenly. `body=<id> [op=new\|join]` instead of `feature=` repeats a whole body (separate bodies, or joined one by one) |
 | `pattern id=p1 feature=<id> kind=rectangular dir1=X count1=<n> spacing1=<len> [dir2=Y count2=<n> spacing2=<len>]` | Repeat it in rows and columns |
 | `plane id=pl1 base=XY\|<plane id>\|face:<name> distance=<len>` | Construction plane parallel to a plane or flat face |
 | `plane id=pl2 kind=angle base=… axis=X\|Y\|Z\|edge:<name> angle=<angle>` | Plane turned around an axis or straight edge lying in the base plane |
@@ -85,7 +85,7 @@ nothing is committed.
 | `combine id=cb1 target=<body> tools="<body>;…" [op=join\|cut\|intersect] [keep=yes]` | Combine bodies into the target; the tools are used up unless `keep=yes` |
 | `split id=sp1 body=<body> plane=XY\|XZ\|YZ\|<plane id>\|face:<name>` | Cut a body in two; the part on the plane's back side becomes body `sp1` |
 | `move id=mv1 bodies="<body>;…" [dx= dy= dz=] [axis=X\|Y\|Z angle=<angle>] [copy=yes]` | Turn about an origin axis, then shift. `copy=yes` keeps the original |
-| `mirror id=m1 [body=<id>] plane=YZ\|XZ\|XY [op=join\|new]` | Mirror a body across an origin plane, joined to the original or as a new body |
+| `mirror id=m1 [body=<id> \| feature=<id>] plane=YZ\|XZ\|XY\|<plane id>\|face:<name> [op=join\|new]` | Mirror a body (joined to the original or as a new body), or one step (its copy adds or removes material the same way), across a plane or flat face |
 
 Profile keys are the sorted ids of the sketch curves around a closed area, e.g. `3,4,5,6`.
 

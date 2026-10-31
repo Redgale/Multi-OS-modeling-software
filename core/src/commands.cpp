@@ -1547,7 +1547,8 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
         //      [cbore_diameter= cbore_depth= | csink_diameter= csink_angle=] [size=M3|#6|1/4 [fit=close|normal|loose]] [tip=118deg]
         // pattern feature=e2 kind=circular axis=Z count=12 [angle=360deg]
         // pattern feature=h1 kind=rectangular dir1=X count1=3 spacing1=20mm [dir2=Y count2=2 spacing2=15mm]
-        // mirror [body=e1] plane=YZ|XZ|XY [op=join|new]
+        // mirror [body=e1 | feature=e2] plane=YZ|XZ|XY|<plane id>|face:<name> [op=join|new]
+        // pattern body=e1 … [op=new|join]   (whole bodies; dir1/dir2/axis may be construction axes)
         static const std::map<std::string, std::pair<FeatureKind, std::string>> kinds {
             {"revolve", {FeatureKind::Revolve, "r"}}, {"hole", {FeatureKind::Hole, "h"}},
             {"pattern", {FeatureKind::Pattern, "p"}}, {"mirror", {FeatureKind::Mirror, "m"}}};
@@ -1556,6 +1557,19 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
         for (auto& [k, v] : a.kv) {
             if (k != "id" && k != "name") {
                 params[k] = v;
+            }
+        }
+        if (a.verb == "mirror" && a.get("plane", "").rfind("face:", 0) == 0) {
+            const std::string name = a.get("plane").substr(5);
+            params["plane"] = nullptr;
+            for (auto& [bid, body] : doc.state().bodies) {
+                auto hits = body->findFaces(name);
+                if (hits.size() == 1) {
+                    params["plane"] = {{"face", body->faceRef(bid, hits[0]).toJson()}};
+                }
+            }
+            if (params["plane"].is_null()) {
+                return makeError("script.args", "There is no single face called '" + name + "'.");
             }
         }
         if (a.verb == "revolve") {

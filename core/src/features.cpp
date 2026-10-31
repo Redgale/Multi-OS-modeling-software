@@ -900,16 +900,32 @@ FeatureOutcome applyPattern(const Document& doc, const Feature& f, const std::sh
 {
     const auto& p = f.params;
     FeatureStatus status;
-    const std::string src = p.value("feature", std::string {});
-    auto rit = in->tools.find(src);
-    if (rit == in->tools.end()) {
-        return failed("The step this pattern repeats (" + src + ") is missing, after the pattern, or has a problem.",
-                      {"Pattern an Extrude, Revolve or Hole that comes earlier in the timeline."});
+    // what is repeated: the shape a step added or removed, or a whole body
+    const std::string bodyId = p.value("body", std::string {});
+    ToolRecord rec;
+    if (!bodyId.empty()) {
+        auto bit = in->bodies.find(bodyId);
+        if (bit == in->bodies.end()) {
+            return failed("The body this pattern repeats (" + bodyId + ") no longer exists.",
+                          {"Edit the pattern and pick a body."});
+        }
+        rec.tool = bit->second;
+        rec.op = p.value("op", std::string("new")) == "join" ? BoolOp::Join : BoolOp::NewBody;
+        rec.target = bodyId;
     }
-    const ToolRecord& rec = rit->second;
+    else {
+        const std::string src = p.value("feature", std::string {});
+        auto rit = in->tools.find(src);
+        if (rit == in->tools.end()) {
+            return failed("The step this pattern repeats (" + src + ") is missing, after the pattern, or has a problem.",
+                          {"Pattern an Extrude, Revolve or Hole that comes earlier in the timeline, or a body."});
+        }
+        rec = rit->second;
+    }
     const std::string kind = p.value("kind", std::string("circular"));
-    auto dirOf = [](const std::string& n) {
-        return n == "X" ? gp_Dir(1, 0, 0) : n == "Y" ? gp_Dir(0, 1, 0) : gp_Dir(0, 0, 1);
+    auto dirOf = [&](const std::string& n) {
+        auto na = namedAxis(n, in);  // an origin axis or a construction axis's direction
+        return na ? na->Direction() : gp_Dir(1, 0, 0);
     };
     std::vector<gp_Trsf> moves;
     if (kind == "circular") {
@@ -953,6 +969,12 @@ FeatureOutcome applyPattern(const Document& doc, const Feature& f, const std::sh
         if (!s1 || !s2) {
             return failed(!s1 ? s1.error() : s2.error());
         }
+        for (const char* key : {"dir1", "dir2"}) {
+            const std::string n = p.value(key, std::string(key[3] == '1' ? "X" : "Y"));
+            if (!namedAxis(n, in)) {
+                return missingAxis(n);
+            }
+        }
         const gp_Dir d1 = dirOf(p.value("dir1", std::string("X"))), d2 = dirOf(p.value("dir2", std::string("Y")));
         for (int i = 0; i < *n1; ++i) {
             for (int j = 0; j < *n2; ++j) {
@@ -984,6 +1006,26 @@ FeatureOutcome applyPattern(const Document& doc, const Feature& f, const std::sh
     if (bit == in->bodies.end()) {
         return failed("The body the pattern should change no longer exists.");
     }
+    if (!bodyId.empty()) {
+        // copies of a body joined one by one: each needs to touch the ones before it, not
+        // necessarily the original
+        NamedShape acc = *bit->second;
+        for (auto& c : copies) {
+            auto step = booleanOp(f.id, BoolOp::Join, acc, c);
+            if (!step) {
+                Error e = step.error();
+                if (e.code == "boolean.not_touching") {
+                    e.message = "Some copies do not touch the others, so they cannot be joined into one body.";
+                    e.suggestions = {"Make them new bodies instead.", "Use a smaller spacing."};
+                }
+                return failed(e);
+            }
+            acc = std::move(step.value());
+        }
+        auto out = copyState(in);
+        out->bodies[rec.target] = std::make_shared<NamedShape>(std::move(acc));
+        return {out, status};
+    }
     auto res = booleanOp(f.id, rec.op, *bit->second, all);
     if (!res) {
         Error e = res.error();
@@ -1004,6 +1046,44 @@ FeatureOutcome applyMirror(const Document&, const Feature& f, const std::shared_
 {
     const auto& p = f.params;
     FeatureStatus status;
+    // the mirror plane: an origin plane, a construction plane or a flat face
+    auto frame = planeFrame(p.value("plane", nlohmann::json("YZ")), in, status);
+    if (!frame) {
+        return failed(frame.error());
+    }
+    gp_Trsf t;
+    t.SetMirror(gp_Ax2(frame->Location(), frame->Direction()));
+    auto out = copyState(in);
+    if (p.contains("feature")) {
+        // mirror what a step added or removed, and do the same with the copy
+        const std::string src = p.value("feature", std::string {});
+        auto rit = in->tools.find(src);
+        if (rit == in->tools.end()) {
+            return failed("The step this mirror copies (" + src + ") is missing, after the mirror, or has a problem.",
+                          {"Mirror an Extrude, Revolve or Hole that comes earlier in the timeline."});
+        }
+        const ToolRecord& rec = rit->second;
+        NamedShape copy = transformedCopy(*rec.tool, t, f.id + "/mirror:");
+        if (rec.op == BoolOp::NewBody) {
+            out->bodies[f.id] = std::make_shared<NamedShape>(std::move(copy));
+            return {out, status};
+        }
+        auto bit = in->bodies.find(rec.target);
+        if (bit == in->bodies.end()) {
+            return failed("The body the mirrored step should change no longer exists.");
+        }
+        auto res = booleanOp(f.id, rec.op, *bit->second, copy);
+        if (!res) {
+            Error e = res.error();
+            if (e.code == "boolean.not_touching") {
+                e.message = "The mirrored copy does not touch the body, so it cannot be joined.";
+                e.suggestions = {"Check the mirror plane."};
+            }
+            return failed(e);
+        }
+        out->bodies[rec.target] = std::make_shared<NamedShape>(std::move(res.value()));
+        return {out, status};
+    }
     std::string bodyId = p.value("body", std::string {});
     if (bodyId.empty() && in->bodies.size() == 1) {
         bodyId = in->bodies.begin()->first;
@@ -1012,12 +1092,7 @@ FeatureOutcome applyMirror(const Document&, const Feature& f, const std::shared_
     if (bit == in->bodies.end()) {
         return failed("There is no body to mirror.", {"Edit the mirror and choose a body."});
     }
-    const std::string plane = p.value("plane", std::string("YZ"));
-    const gp_Dir n = plane == "XY" ? gp_Dir(0, 0, 1) : plane == "XZ" ? gp_Dir(0, 1, 0) : gp_Dir(1, 0, 0);
-    gp_Trsf t;
-    t.SetMirror(gp_Ax2(gp_Pnt(0, 0, 0), n));
     NamedShape copy = transformedCopy(*bit->second, t, f.id + "/mirror:");
-    auto out = copyState(in);
     if (p.value("op", std::string("join")) == "new") {
         out->bodies[f.id] = std::make_shared<NamedShape>(std::move(copy));
         return {out, status};

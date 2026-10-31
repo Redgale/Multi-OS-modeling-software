@@ -906,6 +906,41 @@ private slots:
         QCOMPARE(regions(), 5);
     }
 
+    // Mirror one step (a hole) across a clicked face's plane; pattern a whole body.
+    void mirrorStepAndPatternBody()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        {
+            jig::ScriptRunner r(w.document());
+            QVERIFY(r.runText("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=40 h=30\nextrude id=e1 sketch=s1 distance=10\n"
+                              "sketch id=s2 on=e1/end\npoint sketch=s2 at=10,5\nhole id=h1 sketch=s2 diameter=4mm extent=all\n"
+                              "plane id=pl1 base=YZ distance=0mm\n").ok());
+        }
+        w.runCommand("solid.mirror");
+        auto* mp = qobject_cast<MirrorPanel*>(w.featurePanel());
+        QVERIFY(mp);
+        mp->what()->setCurrentIndex(mp->what()->findData("step:h1"));
+        mp->plane()->setCurrentIndex(mp->plane()->findData("pl1"));
+        QTest::qWait(300);
+        QTRY_VERIFY(mp->previewOk());
+        QVERIFY(mp->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        QVERIFY(std::abs(volume(w) - (12000 - 2 * M_PI * 4 * 10)) < 1e-3);
+
+        w.runCommand("solid.pattern_rect");
+        auto* pp = qobject_cast<PatternPanel*>(w.featurePanel());
+        QVERIFY(pp);
+        pp->source()->setCurrentIndex(pp->source()->findData("body:e1"));
+        QTest::qWait(300);
+        QTRY_VERIFY(pp->previewOk());
+        QVERIFY(pp->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        QCOMPARE(int(w.document().state().bodies.size()), 3);  // 3 columns by default, separate bodies
+    }
+
     // Construction axis from a clicked edge; the move panel then offers it to turn around.
     void constructionAxis()
     {

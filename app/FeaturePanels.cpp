@@ -1377,11 +1377,14 @@ PatternPanel::PatternPanel(jig::Document& doc, Viewport* view, std::string editI
     : FeaturePanel(doc, view, std::move(editId), parent)
 {
     form_->addWidget(heading(this, tr("Pattern"),
-                             tr("Repeat an earlier Extrude, Revolve or Hole around an axis (ring) or in rows and "
-                                "columns (grid). Each copy adds or removes material the same way.")));
+                             tr("Repeat an earlier Extrude, Revolve or Hole, or a whole body, around an axis (ring) "
+                                "or in rows and columns (grid). Each copy of a step adds or removes material the "
+                                "same way.")));
     source_ = new QComboBox(this);
     kind_ = combo(this, {{tr("Ring (around an axis)"), "circular"}, {tr("Grid (rows and columns)"), "rectangular"}});
-    addRow(tr("Step to repeat"), source_);
+    bodyOp_ = combo(this, {{tr("Separate bodies"), "new"}, {tr("Join into one body"), "join"}});
+    addRow(tr("What to repeat"), source_);
+    addRow(tr("Copies of a body"), bodyOp_);
     addRow(tr("Kind"), kind_);
 
     circular_ = new QWidget(this);
@@ -1402,6 +1405,9 @@ PatternPanel::PatternPanel(jig::Document& doc, Viewport* view, std::string editI
     gl->setContentsMargins(0, 0, 0, 0);
     dir1_ = combo(grid_, {{tr("X"), "X"}, {tr("Y"), "Y"}, {tr("Z"), "Z"}});
     dir2_ = combo(grid_, {{tr("Y"), "Y"}, {tr("X"), "X"}, {tr("Z"), "Z"}});
+    for (auto* c : {dir1_, dir2_}) {
+        addConstructionAxes(c, doc_, *stateBefore(), insertIndex(), [](const std::string& id) { return q(id); });
+    }
     count1_ = new ExprField(doc, jig::Dim::none(), grid_);
     spacing1_ = new ExprField(doc, jig::Dim::len(), grid_);
     count2_ = new ExprField(doc, jig::Dim::none(), grid_);
@@ -1420,6 +1426,10 @@ PatternPanel::PatternPanel(jig::Document& doc, Viewport* view, std::string editI
 
     const auto before = stateBefore();
     const int limit = insertIndex();
+    for (auto& [id, b] : before->bodies) {  // whole bodies first, then the steps
+        const jig::Feature* bf = doc_.feature(id);
+        source_->addItem(tr("Body: %1").arg(bf ? q(bf->name) : q(id)), q("body:" + id));
+    }
     for (int i = 0; i < limit; ++i) {
         const auto& f = doc_.model().features[size_t(i)];
         if (before->tools.count(f.id)) {
@@ -1429,7 +1439,13 @@ PatternPanel::PatternPanel(jig::Document& doc, Viewport* view, std::string editI
     const jig::Feature* edit = editId_.empty() ? nullptr : doc_.feature(editId_);
     auto value = [&](const char* key, const char* def) { return q(edit ? edit->params.value(key, std::string(def)) : def); };
     if (edit) {
-        select(source_, edit->params.value("feature", std::string {}));
+        if (edit->params.contains("body")) {
+            select(source_, "body:" + edit->params.value("body", std::string {}));
+            select(bodyOp_, edit->params.value("op", std::string("new")));
+        }
+        else {
+            select(source_, edit->params.value("feature", std::string {}));
+        }
         select(kind_, edit->params.value("kind", std::string("circular")));
     }
     else {
@@ -1445,7 +1461,7 @@ PatternPanel::PatternPanel(jig::Document& doc, Viewport* view, std::string editI
     spacing1_->setText(value("spacing1", doc_.defaultLength(10, 0.5).c_str()));
     count2_->setText(value("count2", "1"));
     spacing2_->setText(value("spacing2", doc_.defaultLength(10, 0.5).c_str()));
-    for (auto* c : {source_, kind_, axis_, dir1_, dir2_}) {
+    for (auto* c : {source_, kind_, axis_, dir1_, dir2_, bodyOp_}) {
         connect(c, &QComboBox::currentIndexChanged, this, [this] {
             updateVisibility();
             schedulePreview();
@@ -1456,7 +1472,7 @@ PatternPanel::PatternPanel(jig::Document& doc, Viewport* view, std::string editI
     }
     updateVisibility();
     if (source_->count() == 0) {
-        status_->setText("<b>✕ " + tr("There is no Extrude, Revolve or Hole to repeat yet.") + "</b>");
+        status_->setText("<b>✕ " + tr("There is no body or step to repeat yet.") + "</b>");
         ok_->setEnabled(false);
     }
     else {
@@ -1469,13 +1485,26 @@ void PatternPanel::updateVisibility()
     const bool circ = current(kind_) == "circular";
     circular_->setVisible(circ);
     grid_->setVisible(!circ);
+    const bool body = current(source_).rfind("body:", 0) == 0;
+    bodyOp_->setVisible(body);
+    if (const int i = form_->indexOf(bodyOp_); i > 0) {
+        if (auto* item = form_->itemAt(i - 1); item && item->widget()) {
+            item->widget()->setVisible(body);
+        }
+    }
 }
 
 jig::Feature PatternPanel::draft() const
 {
     jig::Feature f = startDraft(doc_, editId_, "p", tr("Pattern"));
     f.kind = jig::FeatureKind::Pattern;
-    f.params = {{"feature", current(source_)}, {"kind", current(kind_)}};
+    const std::string src = current(source_);
+    if (src.rfind("body:", 0) == 0) {
+        f.params = {{"body", src.substr(5)}, {"op", current(bodyOp_)}, {"kind", current(kind_)}};
+    }
+    else {
+        f.params = {{"feature", src}, {"kind", current(kind_)}};
+    }
     if (current(kind_) == "circular") {
         f.params["axis"] = current(axis_);
         f.params["count"] = text(count_, "6");
@@ -1503,14 +1532,15 @@ MirrorPanel::MirrorPanel(jig::Document& doc, Viewport* view, std::string editId,
     : FeaturePanel(doc, view, std::move(editId), parent)
 {
     form_->addWidget(heading(this, tr("Mirror"),
-                             tr("Copy a body across an origin plane. Model one half up to the plane, then mirror "
-                                "and join for a symmetric part.")));
+                             tr("Copy a body, or one step (an extrude, a hole), across a plane. Model one half up "
+                                "to the plane, then mirror and join for a symmetric part. Click a flat face to "
+                                "mirror across it.")));
     body_ = new QComboBox(this);
     plane_ = combo(this, {{tr("Side plane (YZ): flips left and right"), "YZ"},
                           {tr("Front plane (XZ): flips front and back"), "XZ"},
                           {tr("Floor plane (XY): flips up and down"), "XY"}});
     op_ = combo(this, {{tr("Join to the original"), "join"}, {tr("New body"), "new"}});
-    addRow(tr("Body"), body_);
+    addRow(tr("What to mirror"), body_);
     addRow(tr("Mirror plane"), plane_);
     addRow(tr("Result"), op_);
     const auto before = stateBefore();
@@ -1518,13 +1548,48 @@ MirrorPanel::MirrorPanel(jig::Document& doc, Viewport* view, std::string editId,
         const jig::Feature* bf = doc_.feature(id);
         body_->addItem(bf ? q(bf->name) : q(id), q(id));
     }
-    if (const jig::Feature* edit = editId_.empty() ? nullptr : doc_.feature(editId_)) {
-        select(body_, edit->params.value("body", std::string {}));
-        select(plane_, edit->params.value("plane", std::string("YZ")));
-        select(op_, edit->params.value("op", std::string("join")));
+    for (int i = 0; i < insertIndex(); ++i) {
+        const auto& f = doc_.model().features[size_t(i)];
+        if (before->tools.count(f.id)) {
+            body_->addItem(tr("Step: %1").arg(q(f.name)), q("step:" + f.id));
+        }
+        if (f.kind == jig::FeatureKind::Plane && before->planes.count(f.id)) {
+            plane_->addItem(q(f.name), q(f.id));
+        }
     }
+    if (const jig::Feature* edit = editId_.empty() ? nullptr : doc_.feature(editId_)) {
+        const auto& p = edit->params;
+        select(body_, p.contains("feature") ? "step:" + p.value("feature", std::string {}) : p.value("body", std::string {}));
+        const auto pl = p.value("plane", nlohmann::json("YZ"));
+        if (pl.is_string()) {
+            select(plane_, pl.get<std::string>());
+        }
+        else {
+            plane_->addItem(tr("Face %1").arg(q(pl.value("face", nlohmann::json::object()).value("name", std::string {}))),
+                            q(pl.dump()));
+            plane_->setCurrentIndex(plane_->count() - 1);
+        }
+        select(op_, p.value("op", std::string("join")));
+    }
+    auto sync = [this] {
+        const bool step = current(body_).rfind("step:", 0) == 0;  // a step does what it did: no join/new choice
+        op_->setVisible(!step);
+        if (const int i = form_->indexOf(op_); i > 0) {
+            if (auto* item = form_->itemAt(i - 1); item && item->widget()) {
+                item->widget()->setVisible(!step);
+            }
+        }
+    };
+    sync();
     for (auto* c : {body_, plane_, op_}) {
-        connect(c, &QComboBox::currentIndexChanged, this, [this] { schedulePreview(); });
+        connect(c, &QComboBox::currentIndexChanged, this, [this, sync] {
+            sync();
+            schedulePreview();
+        });
+    }
+    if (view_) {
+        connect(view_.data(), &Viewport::faceClicked, this,
+                [this](const QString& b, const QString& n, Qt::KeyboardModifiers) { useFace(b.toStdString(), n.toStdString()); });
     }
     if (body_->count() == 0) {
         status_->setText("<b>✕ " + tr("There is no body to mirror yet.") + "</b>");
@@ -1535,11 +1600,45 @@ MirrorPanel::MirrorPanel(jig::Document& doc, Viewport* view, std::string editId,
     }
 }
 
+MirrorPanel::~MirrorPanel() = default;
+
+void MirrorPanel::useFace(const std::string& body, const std::string& name)
+{
+    const auto before = stateBefore();
+    auto it = before->bodies.find(body);
+    if (it == before->bodies.end()) {
+        return;
+    }
+    auto hits = it->second->findFaces(name);
+    if (hits.empty()) {
+        return;
+    }
+    if (jig::measureItem(it->second->face(hits[0])).kind != "flat face") {
+        status_->setText("<b>✕ " + tr("That face is curved. Click a flat face to mirror across.") + "</b>");
+        return;
+    }
+    const QString key = q(nlohmann::json {{"face", it->second->faceRef(body, hits[0]).toJson()}}.dump());
+    int i = plane_->findData(key);
+    if (i < 0) {
+        plane_->addItem(tr("Face %1").arg(q(name)), key);
+        i = plane_->count() - 1;
+    }
+    plane_->setCurrentIndex(i);
+}
+
 jig::Feature MirrorPanel::draft() const
 {
     jig::Feature f = startDraft(doc_, editId_, "m", tr("Mirror"));
     f.kind = jig::FeatureKind::Mirror;
-    f.params = {{"body", current(body_)}, {"plane", current(plane_)}, {"op", current(op_)}};
+    const std::string pl = current(plane_);
+    const nlohmann::json plane = !pl.empty() && pl[0] == '{' ? nlohmann::json::parse(pl, nullptr, false) : nlohmann::json(pl);
+    const std::string what = current(body_);
+    if (what.rfind("step:", 0) == 0) {
+        f.params = {{"feature", what.substr(5)}, {"plane", plane}};
+    }
+    else {
+        f.params = {{"body", what}, {"plane", plane}, {"op", current(op_)}};
+    }
     return f;
 }
 

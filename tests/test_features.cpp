@@ -1133,3 +1133,32 @@ TEST(Axis, EdgesRoundFacesAndCrossingPlanes)
     r2.runText("sketch id=s1 plane=XZ\nrect sketch=s1 corner=10,0 w=10 h=5\nrevolve id=r1 sketch=s1 axis=a9\n");
     EXPECT_NE(none->status(1).message.find("a9"), std::string::npos);
 }
+
+TEST(Pattern, WholeBodiesAndMirroredSteps)
+{
+    // a 10 mm cube copied 3 times along X, 20 apart, as new bodies; then joined into one
+    const std::string cube = "sketch id=s1 plane=XY\nrect sketch=s1 corner=0,0 w=10 h=10\nextrude id=e1 sketch=s1 distance=10\n";
+    auto sep = build(cube + "pattern id=p1 body=e1 kind=rectangular dir1=X count1=3 spacing1=20mm\n");
+    expectAllOk(*sep);
+    EXPECT_EQ(sep->state().bodies.size(), 3u);
+    auto joined = build(cube + "pattern id=p1 body=e1 kind=rectangular dir1=X count1=3 spacing1=10mm op=join\n");
+    expectAllOk(*joined);
+    EXPECT_EQ(joined->state().bodies.size(), 1u);
+    EXPECT_NEAR(props(*joined).volume, 3000, 1e-6);
+    // a ring of bodies around a construction axis at x = 30
+    auto ring = build(cube + "axis id=a1 base=YZ base2=XZ\npattern id=p1 body=e1 axis=a1 count=4\n");
+    expectAllOk(*ring);
+    EXPECT_EQ(ring->state().bodies.size(), 4u);
+    EXPECT_NEAR(props(*ring).xmin, -10, 1e-6);  // the copy turned half a turn about Z
+    // mirror one step (a hole) across a construction plane: the same op on the copy
+    auto mf = build("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=40 h=30\nextrude id=e1 sketch=s1 distance=10\n"
+                    "sketch id=s2 on=e1/end\npoint sketch=s2 at=10,5\nhole id=h1 sketch=s2 diameter=4mm extent=all\n"
+                    "plane id=pl1 base=YZ distance=0mm\nmirror id=m1 feature=h1 plane=pl1\n");
+    expectAllOk(*mf);
+    EXPECT_NEAR(props(*mf).volume, 12000 - 2 * pi * 4 * 10, 1e-3);
+    // a body mirrored across a flat face of its own: doubles it
+    auto mb = build(cube + "mirror id=m1 body=e1 plane=face:e1/end\n");
+    expectAllOk(*mb);
+    EXPECT_NEAR(props(*mb).volume, 2000, 1e-6);
+    EXPECT_NEAR(props(*mb).zmax, 20, 1e-9);
+}

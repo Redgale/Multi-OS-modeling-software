@@ -365,7 +365,7 @@ protected:
 
 private:
     void updateVisibility();
-    QComboBox *source_, *kind_, *axis_, *dir1_, *dir2_;
+    QComboBox *source_, *kind_, *axis_, *dir1_, *dir2_, *bodyOp_;
     ExprField *count_, *angle_, *count1_, *spacing1_, *count2_, *spacing2_;
     QWidget *circular_, *grid_;
 };
@@ -376,10 +376,16 @@ class MirrorPanel : public FeaturePanel
     Q_OBJECT
 public:
     MirrorPanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent = nullptr);
+    ~MirrorPanel() override;
     QComboBox* plane() const
     {
         return plane_;
     }
+    QComboBox* what() const
+    {
+        return body_;
+    }
+    void useFace(const std::string& body, const std::string& name);  // a flat face to mirror across
 
 protected:
     jig::Feature draft() const override;
