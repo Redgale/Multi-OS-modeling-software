@@ -148,6 +148,15 @@ public:
     {
         return thin_;
     }
+    QComboBox* extent() const
+    {
+        return extent_;
+    }
+    QComboBox* upTo() const
+    {
+        return to_;
+    }
+    void useFace(const std::string& body, const std::string& name);  // "up to" this face
 
 protected:
     jig::Feature draft() const override;
@@ -158,7 +167,8 @@ private:
     void fillProfiles();
     void updateVisibility();
     QString autoOperation() const;
-    QComboBox *sketch_, *extent_, *direction_, *op_, *thinSide_;
+    QComboBox *sketch_, *extent_, *direction_, *op_, *thinSide_, *to_;
+    ExprField* toOffset_;
     QListWidget* profiles_;
     ExprField *distance_, *distance2_, *taper_, *thin_;
     QCheckBox* thinOn_;

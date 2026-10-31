@@ -907,6 +907,36 @@ private slots:
         QCOMPARE(regions(), 5);
     }
 
+    // Extrude up to a clicked face: the new body ends at that face.
+    void extrudeUpToFace()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        {
+            jig::ScriptRunner r(w.document());
+            QVERIFY(r.runText("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=40 h=30\nextrude id=e1 sketch=s1 distance=12\n"
+                              "sketch id=s2 plane=XY\ncircle sketch=s2 center=40,0 d=10\n").ok());
+        }
+        w.runCommand("solid.extrude");
+        auto* ep = qobject_cast<ExtrudePanel*>(w.featurePanel());
+        QVERIFY(ep);
+        ep->useFace("e1", "e1/end");
+        QCOMPARE(ep->extent()->currentData().toString(), QString("to"));
+        QVERIFY(!ep->distance()->isVisible());  // the face decides how far
+        ep->operation()->setCurrentIndex(ep->operation()->findData("new"));
+        QTest::qWait(300);
+        QTRY_VERIFY(ep->previewOk());
+        QVERIFY(ep->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        const auto& st = w.document().state();
+        QCOMPARE(int(st.bodies.size()), 2);
+        for (auto& [id, b] : st.bodies) {
+            QVERIFY(std::abs(jig::massProperties(b->shape()).zmax - 12) < 1e-9);
+        }
+    }
+
     // Browser: untick a body to hide it, isolate one, show all again.
     void browserVisibility()
     {

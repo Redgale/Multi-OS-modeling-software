@@ -442,6 +442,12 @@ ExtrudePanel::ExtrudePanel(jig::Document& doc, Viewport* view, std::string editI
     extent_ = new QComboBox(this);
     extent_->addItem(tr("Distance"), "distance");
     extent_->addItem(tr("Through everything"), "all");
+    extent_->addItem(tr("Up to a face or plane"), "to");
+    to_ = new QComboBox(this);
+    to_->addItem(tr("Floor (XY)"), "\"XY\"");
+    to_->addItem(tr("Front (XZ)"), "\"XZ\"");
+    to_->addItem(tr("Side (YZ)"), "\"YZ\"");
+    toOffset_ = new ExprField(doc, jig::Dim::len(), this);
     distance_ = new ExprField(doc, jig::Dim::len(), this);
     direction_ = new QComboBox(this);
     direction_->addItem(tr("One side"), "one");
@@ -465,6 +471,8 @@ ExtrudePanel::ExtrudePanel(jig::Document& doc, Viewport* view, std::string editI
     addRow(tr("Sketch"), sketch_);
     addRow(tr("Closed areas (profiles)"), profiles_);
     addRow(tr("Extent"), extent_);
+    addRow(tr("Up to (click a flat face)"), to_);
+    addRow(tr("Beyond it by"), toOffset_);
     addRow(tr("Distance"), distance_);
     addRow(tr("Direction"), direction_);
     addRow(tr("Other side distance"), distance2_);
@@ -482,10 +490,25 @@ ExtrudePanel::ExtrudePanel(jig::Document& doc, Viewport* view, std::string editI
         if (f.kind == jig::FeatureKind::Sketch && before->sketches.count(f.id)) {
             sketch_->addItem(q(f.name), q(f.id));
         }
+        if (f.kind == jig::FeatureKind::Plane && before->planes.count(f.id)) {
+            to_->addItem(q(f.name), q(nlohmann::json(f.id).dump()));
+        }
     }
+    toOffset_->setText("0 mm");
     const jig::Feature* edit = editId_.empty() ? nullptr : doc_.feature(editId_);
     if (edit) {
         const auto& p = edit->params;
+        if (p.contains("to")) {
+            const QString key = q(p["to"].dump());
+            if (to_->findData(key) < 0) {
+                to_->addItem(p["to"].is_object() ? tr("Face %1").arg(q(p["to"].value("face", nlohmann::json::object())
+                                                                         .value("name", std::string {})))
+                                                 : key,
+                             key);
+            }
+            to_->setCurrentIndex(to_->findData(key));
+        }
+        toOffset_->setText(q(p.value("to_offset", std::string("0 mm"))));
         sketch_->setCurrentIndex(std::max(0, sketch_->findData(q(p.value("sketch", std::string {})))));
         extent_->setCurrentIndex(std::max(0, extent_->findData(q(p.value("extent", std::string("distance"))))));
         distance_->setText(q(p.value("distance", std::string("10 mm"))));
@@ -520,11 +543,21 @@ ExtrudePanel::ExtrudePanel(jig::Document& doc, Viewport* view, std::string editI
         schedulePreview();
     });
     connect(profiles_, &QListWidget::itemChanged, this, [this] { schedulePreview(); });
-    for (auto* c : {extent_, direction_, op_}) {
+    for (auto* c : {extent_, direction_, op_, to_}) {
         connect(c, &QComboBox::currentIndexChanged, this, [this] { schedulePreview(); });
     }
-    connect(extent_, &QComboBox::currentIndexChanged, this,
-            [this] { distance_->setEnabled(extent_->currentData().toString() == "distance"); });
+    connect(toOffset_, &ExprField::changed, this, [this] { schedulePreview(); });
+    connect(extent_, &QComboBox::currentIndexChanged, this, [this] {
+        distance_->setEnabled(extent_->currentData().toString() == "distance");
+        updateVisibility();
+    });
+    if (view_) {
+        connect(view_.data(), &Viewport::faceClicked, this, [this](const QString& b, const QString& n, Qt::KeyboardModifiers) {
+            if (extent_->currentData().toString() == "to") {
+                useFace(b.toStdString(), n.toStdString());
+            }
+        });
+    }
     connect(distance_, &ExprField::changed, this, [this] { schedulePreview(); });
     for (auto* f : {distance2_, taper_, thin_}) {
         connect(f, &ExprField::changed, this, [this] { schedulePreview(); });
@@ -547,6 +580,31 @@ ExtrudePanel::ExtrudePanel(jig::Document& doc, Viewport* view, std::string editI
     distance_->edit()->selectAll();
 }
 
+void ExtrudePanel::useFace(const std::string& body, const std::string& name)
+{
+    const auto before = stateBefore();
+    auto it = before->bodies.find(body);
+    if (it == before->bodies.end()) {
+        return;
+    }
+    auto hits = it->second->findFaces(name);
+    if (hits.empty()) {
+        return;
+    }
+    if (jig::measureItem(it->second->face(hits[0])).kind != "flat face") {
+        status_->setText("<b>✕ " + tr("Click a flat face to extrude up to.") + "</b>");
+        return;
+    }
+    extent_->setCurrentIndex(extent_->findData("to"));
+    const QString key = q(nlohmann::json {{"face", it->second->faceRef(body, hits[0]).toJson()}}.dump());
+    int i = to_->findData(key);
+    if (i < 0) {
+        to_->addItem(tr("Face %1").arg(q(name)), key);
+        i = to_->count() - 1;
+    }
+    to_->setCurrentIndex(i);
+}
+
 void ExtrudePanel::updateVisibility()
 {
     auto show = [this](QWidget* w, bool on) {
@@ -558,7 +616,12 @@ void ExtrudePanel::updateVisibility()
             }
         }
     };
-    show(distance2_, direction_->currentData().toString() == "two");
+    const bool upTo = extent_->currentData().toString() == "to";
+    show(to_, upTo);
+    show(toOffset_, upTo);
+    show(distance_, !upTo);
+    show(direction_, !upTo);
+    show(distance2_, !upTo && direction_->currentData().toString() == "two");
     show(thin_, thinOn_->isChecked());
     show(thinSide_, thinOn_->isChecked());
 }
@@ -650,6 +713,13 @@ jig::Feature ExtrudePanel::draft() const
     }
     p["profiles"] = all ? nlohmann::json("all") : keys;
     p["extent"] = extent_->currentData().toString().toStdString();
+    if (p["extent"] == "to") {
+        const std::string d = to_->currentData().toString().toStdString();
+        p["to"] = nlohmann::json::parse(d.empty() ? "\"XY\"" : d, nullptr, false);
+        if (toOffset_->valid() && std::abs(toOffset_->value()) > 1e-12) {
+            p["to_offset"] = toOffset_->text().toStdString();
+        }
+    }
     p["distance"] = distance_->text().isEmpty() ? std::string("10 mm") : distance_->text().toStdString();
     p["direction"] = direction_->currentData().toString().toStdString();
     if (p["direction"] == "two") {

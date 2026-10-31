@@ -90,7 +90,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 |---|---|---|---|---|
 | New component | 13 | v0.2 | — | Parts model (PREFLIGHT A-3) |
 | Extrude: one side, two sides, symmetric | 14 | v0.1 M2 | **app** + scripts: one side, other side, symmetric, two sides | |
-| Extrude extents: distance, to object, all | 14 | v0.1 M2 | distance, all | |
+| Extrude extents: distance, to object, all | 14 | v0.1 M2 | **app** + scripts: distance, all, up to a parallel plane or flat face (with an offset beyond it); up to curved or slanted faces not yet | |
 | Extrude start: profile plane, offset, object | 14 | v0.1 M2 | profile plane | |
 | Extrude taper | 14 | v0.1 M2 | **app** + scripts | |
 | Extrude thin | 14 | v0.1 M2 | **app** + scripts: closed areas (open curves not yet) | |

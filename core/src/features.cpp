@@ -536,7 +536,32 @@ FeatureOutcome applyExtrude(const Document& doc, const Feature& f, const std::sh
         const std::string side = p.value("thin_side", std::string("center"));
         ei.thinSide = side == "inside" ? -1 : side == "outside" ? 1 : 0;
     }
-    if (p.value("extent", std::string("distance")) == "all") {
+    if (p.value("extent", std::string("distance")) == "to") {
+        // up to a plane or flat face parallel to the sketch: the distance follows it
+        auto to = planeFrame(p.value("to", nlohmann::json("XY")), in, status);
+        if (!to) {
+            return failed(to.error());
+        }
+        const gp_Vec n(sk.frame.Direction());
+        if (!to->Direction().IsParallel(sk.frame.Direction(), 1e-6)) {
+            return failed("Extrude can only go up to a plane or flat face parallel to the sketch.",
+                          {"Pick a face that faces the sketch, or type a distance."});
+        }
+        double d = gp_Vec(sk.frame.Location(), to->Location()).Dot(n);
+        if (p.contains("to_offset")) {
+            auto off = doc.evalLength(p.value("to_offset", std::string("0 mm")));
+            if (!off) {
+                return failed(off.error());
+            }
+            d += d >= 0 ? off.value() : -off.value();
+        }
+        if (std::abs(d) < 1e-7) {
+            return failed("That face or plane is in the sketch's own plane, so there is nothing to extrude up to.");
+        }
+        ei.distance = std::abs(d);
+        ei.direction = d > 0 ? ExtrudeDirection::OneSide : ExtrudeDirection::Reverse;
+    }
+    else if (p.value("extent", std::string("distance")) == "all") {
         Bnd_Box all;
         for (auto& [id, b] : in->bodies) {
             all.Add(boxOf(b->shape()));

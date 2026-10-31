@@ -1196,3 +1196,28 @@ TEST(PressPull, FlatFacesOutAndIn)
     ASSERT_EQ(bad->model().features.size(), 3u) << (res.ok() ? "" : res.error().message);
     EXPECT_NE(bad->status(2).message.find("flat"), std::string::npos) << bad->status(2).message;
 }
+
+TEST(Extrude, UpToAFaceOrPlane)
+{
+    // a 10 mm high block; a second sketch on the floor extruded up to the block's top follows it
+    const std::string base = "param h = 10 mm\nsketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=40 h=30\n"
+                             "extrude id=e1 sketch=s1 distance=h\n"
+                             "sketch id=s2 plane=XY\ncircle sketch=s2 center=40,0 d=10\n";
+    auto doc = build(base + "extrude id=e2 sketch=s2 extent=to to=face:e1/end op=new\n");
+    expectAllOk(*doc);
+    EXPECT_NEAR(props(*doc).zmax, 10, 1e-9);
+    run(*doc, "param h = 25 mm");
+    expectAllOk(*doc);
+    EXPECT_NEAR(massProperties(doc->state().bodies.at("e2")->shape()).zmax, 25, 1e-9);
+    // up to a construction plane, with an offset beyond it; and downwards (the plane below)
+    auto pl = build("plane id=pl1 base=XY distance=12mm\nsketch id=s1 plane=XY offset=30mm\n"
+                    "circle sketch=s1 center=0,0 d=10\nextrude id=e1 sketch=s1 extent=to to=pl1 to_offset=3mm\n");
+    expectAllOk(*pl);
+    EXPECT_NEAR(props(*pl).zmin, 9, 1e-9);
+    EXPECT_NEAR(props(*pl).zmax, 30, 1e-9);
+    // a face that is not parallel is explained
+    auto bad = std::make_unique<Document>();
+    ScriptRunner r(*bad);
+    r.runText("sketch id=s1 plane=XY\ncircle sketch=s1 center=0,0 d=10\nextrude id=e1 sketch=s1 extent=to to=YZ\n");
+    EXPECT_NE(bad->status(1).message.find("parallel"), std::string::npos) << bad->status(1).message;
+}

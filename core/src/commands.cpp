@@ -464,7 +464,7 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
     if (doc.units() != LengthUnit::Millimetre) {
         static const std::set<std::string> lengthKeys {
             "w", "h", "d", "r", "width", "height", "distance", "depth", "diameter", "thickness", "radius",
-            "offset", "dx", "dy", "dz", "distance2", "thin", "r", "radius", "radius2", "spacing1", "spacing2", "cbore_diameter", "cbore_depth", "csink_diameter",
+            "offset", "dx", "dy", "dz", "distance2", "to_offset", "thin", "r", "radius", "radius2", "spacing1", "spacing2", "cbore_diameter", "cbore_depth", "csink_diameter",
             "center", "corner", "points", "c1", "c2", "p1", "p2", "at", "by", "about", "spacing", "axis"};
         for (auto& [k, v] : a.kv) {
             const bool ellipseRadius = a.verb == "ellipse" && (k == "a" || k == "b");
@@ -1248,9 +1248,25 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
             f.params["extent"] = a.get("extent", "distance");
             f.params["distance"] = a.get("distance", "10 mm");
             f.params["direction"] = a.get("direction", "one");
-            for (const char* key : {"distance2", "taper", "thin", "thin_side"}) {
+            for (const char* key : {"distance2", "taper", "thin", "thin_side", "to_offset"}) {
                 if (a.has(key)) {
                     f.params[key] = a.get(key);
+                }
+            }
+            if (a.has("to")) {  // extent=to to=XY|<plane id>|face:<name>
+                const std::string to = a.get("to");
+                f.params["to"] = to;
+                if (to.rfind("face:", 0) == 0) {
+                    f.params["to"] = nullptr;
+                    for (auto& [bid, body] : doc.state().bodies) {
+                        auto hits = body->findFaces(to.substr(5));
+                        if (hits.size() == 1) {
+                            f.params["to"] = {{"face", body->faceRef(bid, hits[0]).toJson()}};
+                        }
+                    }
+                    if (f.params["to"].is_null()) {
+                        return makeError("script.args", "There is no single face called '" + to.substr(5) + "'.");
+                    }
                 }
             }
             f.params["op"] = a.get("op", "new");
