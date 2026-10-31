@@ -4098,8 +4098,8 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
     </message>
     <message>
         <location line="+1" />
-        <source>Shift bodies along X, Y and Z and turn them around an axis through the origin. Tick Copy to keep the original where it is.</source>
-        <translation>[Shîft bödîés álöñg X, Ý áñd Z áñd türñ thém áröüñd áñ áxîs thröügh thé örîgîñ. Tîçk Çöpý tö kéép thé örîgîñál whéré ît îs.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+        <source>Shift bodies along X, Y and Z and turn them around an axis, or move them from one construction point to another. Tick Copy to keep the original where it is.</source>
+        <translation>[Shîft bödîés álöñg X, Ý áñd Z áñd türñ thém áröüñd áñ áxîs, ör mövé thém fröm öñé çöñstrüçtîöñ pöîñt tö áñöthér. Tîçk Çöpý tö kéép thé örîgîñál whéré ît îs.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <location line="+5" />
@@ -4142,7 +4142,27 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
         <translation>[Áñglé~]</translation>
     </message>
     <message>
-        <location line="+27" />
+        <location line="+4" />
+        <source>(none)</source>
+        <translation>[(ñöñé)~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Origin</source>
+        <translation>[Örîgîñ~~]</translation>
+    </message>
+    <message>
+        <location line="+10" />
+        <source>From point</source>
+        <translation>[Fröm pöîñt~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>To point</source>
+        <translation>[Tö pöîñt~~]</translation>
+    </message>
+    <message>
+        <location line="+33" />
         <source>There is no body to move yet.</source>
         <translation>[Théré îs ñö bödý tö mövé ýét.~~~~~~~]</translation>
     </message>
@@ -4152,7 +4172,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
         <translation>[Mövé~]</translation>
     </message>
     <message>
-        <location line="+14" />
+        <location line="+19" />
         <source>move</source>
         <translation>[mövé~]</translation>
     </message>
@@ -4258,7 +4278,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
 <context>
     <name>jigapp::PatternPanel</name>
     <message>
-        <location line="-1444" />
+        <location line="-1471" />
         <location line="+120" />
         <source>Pattern</source>
         <translation>[Páttérñ~~]</translation>

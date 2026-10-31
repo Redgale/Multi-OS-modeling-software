@@ -914,7 +914,18 @@ FeatureOutcome applyMove(const Document& doc, const Feature& f, const std::share
     }
     gp_Trsf rot, move;
     rot.SetRotation(*turn, ang.value());
-    move.SetTranslation(gp_Vec(d[0], d[1], d[2]));
+    gp_Vec shift(d[0], d[1], d[2]);
+    if (p.contains("from") || p.contains("to")) {
+        // point to point: the (turned) "from" point lands on "to", plus any typed shift
+        const std::string n1 = p.value("from", std::string("O")), n2 = p.value("to", std::string("O"));
+        auto a = namedPoint(n1, in), b = namedPoint(n2, in);
+        if (!a || !b) {
+            return failed("The point '" + (!a ? n1 : n2) + "' does not exist (or comes later in the timeline).",
+                          {"Pick the origin (O) or a construction point made earlier."});
+        }
+        shift += gp_Vec(a->Transformed(rot), *b);
+    }
+    move.SetTranslation(shift);
     const gp_Trsf t = move * rot;  // turn about the origin axis, then shift
     const bool copy = p.value("copy", false);
     auto out = copyState(in);

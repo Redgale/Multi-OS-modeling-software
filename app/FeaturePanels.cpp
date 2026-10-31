@@ -3030,8 +3030,8 @@ MovePanel::MovePanel(jig::Document& doc, Viewport* view, std::string editId, QWi
     : FeaturePanel(doc, view, std::move(editId), parent)
 {
     form_->addWidget(heading(this, tr("Move / copy"),
-                             tr("Shift bodies along X, Y and Z and turn them around an axis through the origin. "
-                                "Tick Copy to keep the original where it is.")));
+                             tr("Shift bodies along X, Y and Z and turn them around an axis, or move them from one "
+                                "construction point to another. Tick Copy to keep the original where it is.")));
     bodies_ = new QListWidget(this);
     bodies_->setMaximumHeight(120);
     const char* names[3] = {"X", "Y", "Z"};
@@ -3046,6 +3046,22 @@ MovePanel::MovePanel(jig::Document& doc, Viewport* view, std::string editId, QWi
     copy_ = new QCheckBox(tr("Copy (keep the original)"), this);
     addRow(tr("Turn around"), axis_);
     addRow(tr("Angle"), angle_);
+    from_ = new QComboBox(this);
+    to_ = new QComboBox(this);
+    for (auto* c : {from_, to_}) {
+        c->addItem(tr("(none)"), QString());
+        c->addItem(tr("Origin"), "O");
+    }
+    for (int i = 0; i < insertIndex(); ++i) {
+        const auto& f = doc_.model().features[size_t(i)];
+        if (f.kind == jig::FeatureKind::Point && stateBefore()->points.count(f.id)) {
+            for (auto* c : {from_, to_}) {
+                c->addItem(q(f.name), q(f.id));
+            }
+        }
+    }
+    addRow(tr("From point"), from_);
+    addRow(tr("To point"), to_);
     form_->addWidget(copy_);
     const auto before = stateBefore();
     const jig::Feature* edit = editId_.empty() ? nullptr : doc_.feature(editId_);
@@ -3066,9 +3082,15 @@ MovePanel::MovePanel(jig::Document& doc, Viewport* view, std::string editId, QWi
     if (edit) {
         select(axis_, edit->params.value("axis", std::string("Z")));
         copy_->setChecked(edit->params.value("copy", false));
+        if (edit->params.contains("from") || edit->params.contains("to")) {
+            select(from_, edit->params.value("from", std::string("O")));
+            select(to_, edit->params.value("to", std::string("O")));
+        }
     }
     connect(angle_, &ExprField::changed, this, [this] { schedulePreview(); });
-    connect(axis_, &QComboBox::currentIndexChanged, this, [this] { schedulePreview(); });
+    for (auto* c : {axis_, from_, to_}) {
+        connect(c, &QComboBox::currentIndexChanged, this, [this] { schedulePreview(); });
+    }
     connect(bodies_, &QListWidget::itemChanged, this, [this] { schedulePreview(); });
     connect(copy_, &QCheckBox::toggled, this, [this] { schedulePreview(); });
     if (before->bodies.empty()) {
@@ -3091,6 +3113,11 @@ jig::Feature MovePanel::draft() const
                 {"axis", current(axis_)},
                 {"angle", text(angle_, "0 deg")},
                 {"copy", copy_->isChecked()}};
+    const std::string from = current(from_), to = current(to_);
+    if (!from.empty() || !to.empty()) {  // point to point (an unset end is the origin)
+        f.params["from"] = from.empty() ? "O" : from;
+        f.params["to"] = to.empty() ? "O" : to;
+    }
     return f;
 }
 

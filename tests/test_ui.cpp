@@ -1669,6 +1669,36 @@ private slots:
         QTRY_VERIFY(w.featurePanel() == nullptr);
     }
 
+    // Move a body from one construction point to another.
+    void movePointToPoint()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        {
+            jig::ScriptRunner r(w.document());
+            QVERIFY(r.runText("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=40 h=20\nextrude id=e1 sketch=s1 distance=10\n"
+                              "point id=p1 through=face:e1/end\npoint id=p2 at=50,20,0\n").ok());
+        }
+        w.runCommand("solid.move");
+        auto* mv = qobject_cast<MovePanel*>(w.featurePanel());
+        QVERIFY(mv);
+        mv->fromPoint()->setCurrentIndex(mv->fromPoint()->findData("p1"));
+        mv->toPoint()->setCurrentIndex(mv->toPoint()->findData("p2"));
+        QTest::qWait(300);
+        QTRY_VERIFY(mv->previewOk());
+        QVERIFY(mv->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        const auto mp = jig::massProperties(w.document().state().bodies.at("e1")->shape());
+        QVERIFY(std::abs(mp.xmin - 30) < 1e-6 && std::abs(mp.zmax) < 1e-6);
+        w.editFeature(4);
+        mv = qobject_cast<MovePanel*>(w.featurePanel());
+        QVERIFY(mv);
+        QCOMPARE(mv->toPoint()->currentData().toString(), QString("p2"));
+        mv->cancel();
+    }
+
     // Revolve up to a plane: the angle follows the plane, and the field for it is hidden.
     void revolveUpToPlane()
     {

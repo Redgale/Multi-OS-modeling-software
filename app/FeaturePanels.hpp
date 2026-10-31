@@ -623,6 +623,14 @@ public:
     {
         return copy_;
     }
+    QComboBox* fromPoint() const
+    {
+        return from_;
+    }
+    QComboBox* toPoint() const
+    {
+        return to_;
+    }
 
 protected:
     jig::Feature draft() const override;
@@ -631,7 +639,7 @@ protected:
 private:
     QListWidget* bodies_;
     ExprField* d_[3];
-    QComboBox* axis_;
+    QComboBox *axis_, *from_, *to_;
     ExprField* angle_;
     QCheckBox* copy_;
 };

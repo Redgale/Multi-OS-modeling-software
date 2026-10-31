@@ -1432,3 +1432,34 @@ TEST(Revolve, UpToAPlaneOrFaceThroughTheAxis)
     r.runText(std::string(kProfile) + "revolve id=r1 sketch=s1 axis=Z extent=to to=XY\n");
     EXPECT_NE(bad->status(1).message.find("axis lies in"), std::string::npos) << bad->status(1).message;
 }
+
+TEST(Bodies, MovePointToPoint)
+{
+    // a block's top-face centre (0,0,10) moved onto a point at (50,20,0): the block now
+    // hangs below that point
+    auto doc = build("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=40 h=20\nextrude id=e1 sketch=s1 distance=10\n"
+                     "point id=p1 through=face:e1/end\npoint id=p2 at=50,20,0\n"
+                     "move id=m1 bodies=e1 from=p1 to=p2\n");
+    expectAllOk(*doc);
+    auto mp = props(*doc);
+    EXPECT_NEAR(mp.xmin, 30, 1e-6);
+    EXPECT_NEAR(mp.ymin, 10, 1e-6);
+    EXPECT_NEAR(mp.zmax, 0, 1e-6);
+    // with a quarter turn about Z first, the turned point still lands on the target
+    auto turned = build("sketch id=s1 plane=XY\nrect sketch=s1 corner=0,0 w=40 h=20\nextrude id=e1 sketch=s1 distance=10\n"
+                        "point id=p1 at=40,0,0\npoint id=p2 at=100,0,0\n"
+                        "move id=m1 bodies=e1 axis=Z angle=90deg from=p1 to=p2\n");
+    expectAllOk(*turned);
+    auto tp = props(*turned);
+    // turned: x -20..0, y 0..40 and the point at (0,40); shifted by (100,-40)
+    EXPECT_NEAR(tp.xmin, 80, 1e-6);
+    EXPECT_NEAR(tp.xmax, 100, 1e-6);
+    EXPECT_NEAR(tp.ymin, -40, 1e-6);
+    EXPECT_NEAR(tp.ymax, 0, 1e-6);
+    // a missing point is explained
+    auto bad = std::make_unique<Document>();
+    ScriptRunner r(*bad);
+    r.runText("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=40 h=20\nextrude id=e1 sketch=s1 distance=10\n"
+              "move id=m1 bodies=e1 from=p9 to=O\n");
+    EXPECT_NE(bad->status(2).message.find("p9"), std::string::npos);
+}

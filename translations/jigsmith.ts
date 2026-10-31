@@ -4100,7 +4100,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
     </message>
     <message>
         <location line="+1"/>
-        <source>Shift bodies along X, Y and Z and turn them around an axis through the origin. Tick Copy to keep the original where it is.</source>
+        <source>Shift bodies along X, Y and Z and turn them around an axis, or move them from one construction point to another. Tick Copy to keep the original where it is.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -4144,7 +4144,27 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+27"/>
+        <location line="+4"/>
+        <source>(none)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Origin</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+10"/>
+        <source>From point</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>To point</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+33"/>
         <source>There is no body to move yet.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4154,7 +4174,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+14"/>
+        <location line="+19"/>
         <source>move</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4262,7 +4282,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::PatternPanel</name>
     <message>
-        <location line="-1444"/>
+        <location line="-1471"/>
         <location line="+120"/>
         <source>Pattern</source>
         <translation type="unfinished"></translation>

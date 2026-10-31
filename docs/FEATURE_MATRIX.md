@@ -123,7 +123,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Combine join/cut/intersect, keep tools | 17 | v0.1 M4 | **app** + scripts (`combine`) | |
 | Offset face, replace face, split face, silhouette split | 17 | v0.3+ | — | Direct modelling |
 | Split body (plane) | 17, 18 | v0.1 M4 | **app** + scripts (`split`): origin plane, construction plane or flat face | |
-| Move/Copy bodies (free, translate, rotate, point-to-point) | 17 | v0.1 M4 | **app** + scripts (`move`): typed X/Y/Z shift and turn about an origin or construction axis, copy; free drag and point-to-point not yet | |
+| Move/Copy bodies (free, translate, rotate, point-to-point) | 17 | v0.1 M4 | **app** + scripts (`move`): typed X/Y/Z shift and turn about an origin or construction axis, point to point (construction points), copy; free drag not yet | |
 | Align | 17 | v0.2 | — | |
 | Delete body/feature | 17 | v0.1 M2 | — | |
 | Compute all | 17 | v0.1 | automatic (incremental recompute) | |

@@ -1444,7 +1444,7 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
     if (a.verb == "combine" || a.verb == "split" || a.verb == "move") {
         // combine target=<body> tools="<body>;<body>" [op=join|cut|intersect] [keep=yes]
         // split body=<body> plane=XY|XZ|YZ|<plane id>|face:<name>
-        // move bodies="<body>;…" [dx= dy= dz=] [axis=X|Y|Z angle=<angle>] [copy=yes]
+        // move bodies="<body>;…" [dx= dy= dz=] [axis=X|Y|Z angle=<angle>] [from=<point> to=<point>] [copy=yes]
         nlohmann::json params = nlohmann::json::object();
         FeatureKind kind = FeatureKind::Combine;
         std::string prefix = "cb";
@@ -1475,7 +1475,7 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
             kind = FeatureKind::Move;
             prefix = "mv";
             params = {{"bodies", split(a.get("bodies"), ';')}, {"copy", a.get("copy", "no") == "yes"}};
-            for (const char* key : {"dx", "dy", "dz", "axis", "angle"}) {
+            for (const char* key : {"dx", "dy", "dz", "axis", "angle", "from", "to"}) {
                 if (a.has(key)) {
                     params[key] = a.get(key);
                 }
