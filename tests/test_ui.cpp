@@ -8,6 +8,7 @@
 #include <QComboBox>
 #include <QCheckBox>
 #include <QListWidget>
+#include <QLabel>
 #include <QLineEdit>
 #include <QMenu>
 #include <QPushButton>
@@ -942,6 +943,82 @@ private slots:
         for (auto& [id, b] : st.bodies) {
             QVERIFY(std::abs(jig::massProperties(b->shape()).zmax - 12) < 1e-9);
         }
+    }
+
+    // B-015: the Parameters dialog changes the design as one undoable step; the timeline's
+    // right-click menu suppresses a step and brings it back.
+    void parametersAndTimelineMenu()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        {
+            jig::ScriptRunner r(w.document());
+            QVERIFY(r.runText("param h = 10 mm\nsketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=40 h=30\n"
+                              "extrude id=e1 sketch=s1 distance=h\nsketch id=s2 on=e1/end\n"
+                              "circle sketch=s2 center=0,0 d=10\nextrude id=e2 sketch=s2 distance=5 op=join\n").ok());
+        }
+        w.showAllBodies();
+        const double before = volume(w);
+        {
+            ParametersDialog d(w.document(), &w);
+            auto* table = d.findChild<QTableWidget*>();
+            QVERIFY(table);
+            QCOMPARE(table->item(0, 0)->text(), QString("h"));
+            table->item(0, 1)->setText("20 mm");
+            QVERIFY(d.apply());
+        }
+        QVERIFY(std::abs(volume(w) - (before + 40 * 30 * 10)) < 1e-6);
+        w.runCommand("edit.undo");  // one step back
+        QTRY_VERIFY(std::abs(volume(w) - before) < 1e-6);
+        // a bad value is refused with a reason, and nothing changes
+        {
+            ParametersDialog d(w.document(), &w);
+            d.findChild<QTableWidget*>()->item(0, 1)->setText("ten");
+            QVERIFY(!d.apply());
+            bool explained = false;
+            for (auto* l : d.findChildren<QLabel*>()) {
+                explained |= l->text().contains("attention");
+            }
+            QVERIFY(explained);
+        }
+        QVERIFY(std::abs(volume(w) - before) < 1e-6);
+
+        // right-click the last step in the timeline, choose Suppress
+        auto* timeline = w.findChild<QListWidget*>("Timeline");
+        if (!timeline) {
+            for (auto* l : w.findChildren<QListWidget*>()) {
+                if (l->count() == int(w.document().model().features.size())) {
+                    timeline = l;
+                }
+            }
+        }
+        QVERIFY(timeline);
+        auto chooseInMenu = [](const QString& text) {
+            QTimer::singleShot(150, [text] {
+                auto* menu = qobject_cast<QMenu*>(QApplication::activePopupWidget());
+                QVERIFY(menu);
+                for (QAction* a : menu->actions()) {
+                    if (a->text().startsWith(text)) {
+                        a->trigger();
+                        menu->close();
+                        return;
+                    }
+                }
+                menu->close();
+            });
+        };
+        const int last = timeline->count() - 1;
+        const QPoint at = timeline->visualItemRect(timeline->item(last)).center();
+        chooseInMenu("Suppress");
+        QMetaObject::invokeMethod(timeline, "customContextMenuRequested", Q_ARG(QPoint, at));
+        QTRY_VERIFY(w.document().model().features.back().suppressed);
+        QVERIFY(std::abs(volume(w) - 40 * 30 * 10) < 1e-6);  // the post is gone
+        chooseInMenu("Unsuppress");
+        QMetaObject::invokeMethod(timeline, "customContextMenuRequested", Q_ARG(QPoint, at));
+        QTRY_VERIFY(!w.document().model().features.back().suppressed);
+        QVERIFY(std::abs(volume(w) - before) < 1e-6);
     }
 
     // Select Other: a long press lists the faces under the cursor (front and back of a block),

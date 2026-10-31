@@ -46,7 +46,8 @@ conflict refusal, gap rings, profiles, construction toggle, delete.
 Done: Extrude and Fillet panels with live preview, Auto join/cut, edge picking, tangent chain,
 timeline edit/rename/suppress/roll back/delete with dependents warning, Parameters dialog.
 
-- B-015 UI test for the Parameters dialog and timeline context menu.
+- ~~B-015~~ done: UI test `parametersAndTimelineMenu` (Parameters dialog as one undoable step,
+  a bad value explained in the dialog; Suppress/Unsuppress from the timeline menu).
 - ~~B-017~~ done: drag handle, two sides, up to a face, taper, thin (incl. open curves).
 - B-018 (reorder; Browser visibility, isolate, rename done) Timeline groups; find in timeline;
   saving visibility with the design.

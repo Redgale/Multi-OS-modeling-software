@@ -2936,7 +2936,7 @@ bool ParametersDialog::apply()
     for (auto& p : m.parameters) {
         if (!jig::isValidParameterName(p.name) || !names.insert(p.name).second || !jig::Document::evalParamIn(m, p.name)) {
             revalidate();
-            QMessageBox::information(this, tr("Parameters"), tr("Some parameters need attention first (see the Result column)."));
+            note_->setText("<b>✕ " + tr("Some parameters need attention first (see the Result column).") + "</b>");
             return false;
         }
     }
