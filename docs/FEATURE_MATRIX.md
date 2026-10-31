@@ -162,7 +162,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Mesh: insert, repair, reduce, remesh, plane cut, convert to solid | 27 | v0.2 | Brief |
 | Sheet metal with flat-pattern DXF | 28 | v0.3+ | Brief |
 | Plastic tab (boss, snap fit, grill, lip and groove) | 29 | never as a tab; v0.3+ as plugins | Niche; plugin ecosystem |
-| 3D print utility (send to slicer) | 29, 40 | v0.1 export; "open in slicer" v0.2 | Export is the core need |
+| 3D print utility (send to slicer) | 29, 40 | v0.1 export (**done**: STL, STEP and 3MF with one named object per body); "open in slicer" v0.2 | Export is the core need |
 | Scripts and add-ins (Python API) | 29 | v0.2 | Core designed for it now (commands are data) |
 | AI assistant | 29, 42 | never (for now) | Requires network/cloud; violates "free means free" defaults |
 | Components, joints (7 types), limits, drive, as-built, rigid group | 7, 30, 31 | v0.2 | Brief |

@@ -74,7 +74,7 @@ Profile keys are the sorted ids of the sketch curves around a closed area, e.g. 
 |---|---|
 | `faces [body=<id>]` | Print every face name of the bodies (to write `face:<name>` selectors) |
 | `report` | Print JSON: per-body volume, area, bounding box, face/edge counts, validity, and every step's status and messages |
-| `export stl <path>` · `export step <path>` | Export all bodies (millimetres) |
+| `export stl <path>` · `export step <path>` · `export 3mf <path>` | Export all bodies (millimetres). 3MF keeps each body as its own named object |
 | `save <path.jig>` | Save the design |
 
 ## Face names

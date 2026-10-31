@@ -148,7 +148,7 @@ CommandRegistry::CommandRegistry()
         "constraint.parallel", "constraint.perpendicular", "constraint.horizontal", "constraint.tangent",
         "constraint.symmetric", "constraint.equal", "solid.extrude", "solid.fillet", "solid.chamfer", "solid.shell",
         "solid.revolve", "solid.hole", "solid.mirror", "solid.pattern_rect", "solid.pattern_circ", "modify.parameters",
-        "inspect.measure", "inspect.properties"};
+        "inspect.measure", "inspect.properties", "file.export_3mf"};
     for (auto& c : commands_) {
         if (inApp.count(c.id)) {
             c.available = true;
@@ -1254,9 +1254,17 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
     }
     if (a.verb == "export") {
         if (a.positional.size() < 2) {
-            return makeError("script.args", "Use: export stl|step <path>");
+            return makeError("script.args", "Use: export stl|step|3mf <path>");
         }
         const std::string fmt = lower(a.positional[0]), path = a.positional[1];
+        if (fmt == "3mf") {
+            std::vector<std::pair<std::string, TopoDS_Shape>> bodies;
+            for (auto& [id, b] : doc.state().bodies) {
+                const Feature* f = doc.feature(id);
+                bodies.emplace_back(f ? f->name : id, b->shape());
+            }
+            return export3mf(bodies, path);
+        }
         TopoDS_Shape s = doc.combinedShape();
         Result<bool> r = fmt == "stl"    ? exportStl(s, path)
                        : fmt == "step"   ? exportStep(s, path)

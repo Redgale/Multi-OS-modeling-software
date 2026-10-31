@@ -6,7 +6,10 @@
 
 #include <gtest/gtest.h>
 
+#include <map>
+
 #include "helpers.hpp"
+#include "jig/io.hpp"
 
 using namespace jig;
 using namespace jigtest;
@@ -157,6 +160,40 @@ TEST(Interchange, BinaryStl)
     std::memcpy(&n, data.data() + 80, 4);
     EXPECT_EQ(data.size(), 84u + 50u * n);  // binary STL layout
     EXPECT_GT(n, 500u);
+}
+
+TEST(Interchange, ThreeMfIsWatertightAndKeepsVolume)
+{
+    auto doc = buildSample("knob.jigs");
+    const auto& body = *doc->state().bodies.begin()->second;
+    const Mesh m = meshOf(body.shape());
+    ASSERT_GT(m.triangles.size(), 300u);
+    // every directed edge appears once, and its reverse once: closed and consistently oriented
+    std::map<std::pair<uint32_t, uint32_t>, int> half;
+    for (size_t i = 0; i < m.triangles.size(); i += 3) {
+        for (int k = 0; k < 3; ++k) {
+            ++half[{m.triangles[i + size_t(k)], m.triangles[i + size_t((k + 1) % 3)]}];
+        }
+    }
+    int bad = 0;
+    for (auto& [e, n] : half) {
+        auto twin = half.find({e.second, e.first});
+        bad += n != 1 || twin == half.end() || twin->second != 1;
+    }
+    EXPECT_EQ(bad, 0);
+    double vol = 0;
+    auto P = [&](uint32_t i) { return gp_XYZ(m.xyz[3 * i], m.xyz[3 * i + 1], m.xyz[3 * i + 2]); };
+    for (size_t i = 0; i < m.triangles.size(); i += 3) {
+        vol += P(m.triangles[i]).Dot(P(m.triangles[i + 1]).Crossed(P(m.triangles[i + 2]))) / 6;
+    }
+    EXPECT_NEAR(vol, props(*doc).volume, props(*doc).volume * 1e-3);
+    const auto path = (tempDir() / "knob.3mf").string();
+    ScriptRunner r(*doc);
+    ASSERT_TRUE(r.runLine("export 3mf " + path).ok());
+    const std::string bytes = readFile(path);
+    EXPECT_EQ(bytes.substr(0, 2), "PK");
+    EXPECT_NE(bytes.find("3D/3dmodel.model"), std::string::npos);
+    EXPECT_NE(bytes.find("[Content_Types].xml"), std::string::npos);
 }
 
 TEST(Interchange, MalformedStepIsRejected)

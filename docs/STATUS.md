@@ -12,7 +12,7 @@ for downloadable builds, then Chamfer and Shell (part of M3) with the pen cup sa
 then Revolve, Hole, rectangular and circular Patterns and Mirror with panels, Arc/Slot/
 Polygon sketch tools, and **Text** (FreeType outlines, built-in Inter font, D-014), which
 completes the knob (A2) and pen cup (A3) samples including their lettering, and the
-Inspect tools **Measure** and **Properties**. 75 tests, including UI workflow tests that
+Inspect tools **Measure** and **Properties**, and **3MF** export. 76 tests, including UI workflow tests that
 drive the real window.
 
 ## What works, and how it was verified
@@ -28,7 +28,7 @@ drive the real window.
 | Failure grace (A5) | Impossible fillet rolls back, explains, suggests a radius that is verified to work | `FailureGrace.*` (4 tests) |
 | Undo (A6, half) | Unlimited; 50 undo + 50 redo identical | `Document.UndoRedoFiftyStepsIsIdentical` |
 | Files | `.jig` ZIP (manifest + canonical JSON), atomic save, unknown fields kept, version check, corrupt-file fuzz | `Document.*` (11 tests) |
-| Interchange (A7, half) | STEP export/import (volume to 1e-6, unit detected), binary STL | `Interchange.*` |
+| Interchange (A7, half) | STEP export/import (volume to 1e-6, unit detected), binary STL, **3MF** (one named object per body, millimetres, welded watertight mesh) | `Interchange.*` (3MF: every half-edge has one opposite twin, mesh volume within 0.1 % of the solid) |
 | Command registry | ~80 v0.1 tools described; intent search; brief's default keys | `Commands.*` (4 tests) |
 | Desktop app shell | Window, GL 3.3 viewport, GPU face and edge picking, gizmo, navigation presets, workflow strip, icon + label toolbar from the registry (unbuilt tools disabled with milestone), browser, timeline with icons, status glyphs and rollback marker, palette with icons, open/save/export, undo/redo, themes, welcome, autosave and recovery prompt | Linux under Xvfb + Mesa: screenshots in `docs/images/` |
 | Sketching (M1) | Create sketch by clicking an origin plane or a flat face; look-at; contextual sketch toolbar; Line (chains, close by clicking the start), Rectangle (corner, centre), Circle, Arc (centre, start, end; typed radius and angle), Slot (two centres, width), Polygon (centre, corner; typed diameter and number of sides; fully constrained shape), Point, Dimension (length, diameter, radius, point-point, point-line); typed values with Tab/Enter; snapping to points and grid; automatic horizontal/vertical (Ctrl suppresses); constraints from the toolbar on the selection; drag with live solve; delete; construction toggle; DOF in words; free/fixed shown by marker shape; constraint glyphs and dimension values (expressions shown); gap rings; shaded profiles; conflicting constraints refused with an explanation | `tests/test_ui.cpp` drives it (plane click, centre rectangle with typed 60 × 40, refusal message); screenshot `docs/images/sketch_mode.png` |
@@ -77,7 +77,7 @@ Clang 18 as well as GCC 13.
   "to object".
 - Text: installed fonts by name, bold/italic, multi-line, complex-script shaping (B-020).
 - Not built yet:
-  Section view, SVG/DXF import, 3MF, local versions, tutorial, marking menu.
+  Section view, SVG/DXF import, local versions, tutorial, marking menu.
 - Reorder of timeline steps (model supports it; no command or tests yet, B-002).
 - libslvs comparison (B-001).
 

@@ -1033,6 +1033,9 @@ void MainWindow::runCommand(const QString& id)
     else if (id == "file.export_step") {
         exportAs("step");
     }
+    else if (id == "file.export_3mf") {
+        exportAs("3mf");
+    }
     else if (id == "edit.undo" || id == "edit.redo") {
         if (panel_) {
             panel_->cancel();
@@ -1201,7 +1204,9 @@ void MainWindow::exportAs(const QString& format)
         QMessageBox::information(this, tr("Nothing to export"), tr("There is no 3D body yet."));
         return;
     }
-    const QString filter = format == "stl" ? tr("STL mesh for slicers (*.stl)") : tr("STEP solid (*.step *.stp)");
+    const QString filter = format == "stl"   ? tr("STL mesh for slicers (*.stl)")
+                         : format == "3mf" ? tr("3MF print file (*.3mf)")
+                                           : tr("STEP solid (*.step *.stp)");
     QString p = QFileDialog::getSaveFileName(this, tr("Export"), {}, filter);
     if (p.isEmpty()) {
         return;
@@ -1209,8 +1214,19 @@ void MainWindow::exportAs(const QString& format)
     if (!p.contains('.')) {
         p += "." + format;
     }
-    auto shape = doc_->combinedShape();
-    auto r = format == "stl" ? jig::exportStl(shape, p.toStdString()) : jig::exportStep(shape, p.toStdString());
+    jig::Result<bool> r = true;
+    if (format == "3mf") {
+        std::vector<std::pair<std::string, TopoDS_Shape>> bodies;
+        for (auto& [id, b] : doc_->state().bodies) {
+            const jig::Feature* f = doc_->feature(id);
+            bodies.emplace_back(f ? f->name : id, b->shape());
+        }
+        r = jig::export3mf(bodies, p.toStdString());
+    }
+    else {
+        auto shape = doc_->combinedShape();
+        r = format == "stl" ? jig::exportStl(shape, p.toStdString()) : jig::exportStep(shape, p.toStdString());
+    }
     if (!r) {
         QMessageBox::warning(this, tr("Could not export"), q(r.error().message));
         return;

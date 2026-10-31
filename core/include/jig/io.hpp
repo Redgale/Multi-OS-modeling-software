@@ -7,8 +7,13 @@
 // Writes are atomic (temporary file, then rename).
 #pragma once
 
+#include <cstdint>
 #include <memory>
 #include <string>
+#include <utility>
+#include <vector>
+
+#include <TopoDS_Shape.hxx>
 
 #include "jig/document.hpp"
 #include "jig/result.hpp"
@@ -25,5 +30,20 @@ Result<std::unique_ptr<Document>> loadDocument(const std::string& path);
 
 // For tests and fuzzing: parse a container already in memory.
 Result<std::unique_ptr<Document>> loadDocumentFromMemory(const void* data, size_t size);
+
+// ---------------------------------------------------------------- 3MF
+
+// A triangle mesh with shared (welded) vertices, oriented outward.
+struct Mesh
+{
+    std::vector<double> xyz;          // 3 per vertex, millimetres
+    std::vector<uint32_t> triangles;  // 3 vertex indices per triangle
+};
+// Tessellates a solid into a closed mesh suitable for slicers.
+Mesh meshOf(const TopoDS_Shape& s, double deflection = 0.02);
+
+// 3MF (3D Manufacturing Format) with one object per body, units in millimetres.
+Result<bool> export3mf(const std::vector<std::pair<std::string, TopoDS_Shape>>& bodies, const std::string& path,
+                       double deflection = 0.02);
 
 }  // namespace jig
