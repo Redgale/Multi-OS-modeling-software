@@ -99,6 +99,7 @@ const std::map<QString, QString>& icons()
         {"solid.split", "M4 7 L12 3 L20 7 L20 17 L12 21 L4 17 Z a M2 15 L22 9"},
         {"solid.move", "R8 8 8 8 a M12 2 L12 6 M10 4 L12 2 L14 4 M22 12 L18 12 M20 10 L22 12 L20 14"},
         // construct
+        {"view.save_named", "R3 8 18 12 a O12 14 3.5 f R8 5 6 3"},
         {"construct.offset_plane", "M2 19 L7 15 L22 15 L17 19 Z a M2 11 L7 7 L22 7 L17 11 Z t M12 10 L12 16"},
         {"construct.angle_plane", "M2 19 L8 15 L22 15 L16 19 Z a M8 15 L5 5 L19 5 L22 15 t M5 19 A5 19 4 90 -40"},
         {"construct.midplane", "M2 7 L7 4 L22 4 L17 7 Z M2 21 L7 18 L22 18 L17 21 Z a M2 14 L7 11 L22 11 L17 14 Z"},

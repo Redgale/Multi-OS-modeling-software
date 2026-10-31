@@ -159,6 +159,16 @@
     </message>
     <message>
         <location line="+1" />
+        <source>Save view…</source>
+        <translation>[Sávé vîéw…~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Keep the current view of the design under a name, to come back to it from the Browser.</source>
+        <translation>[Kéép thé çürréñt vîéw öf thé désîgñ üñdér á ñámé, tö çömé báçk tö ît fröm thé Bröwsér.~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
         <source>Perspective / orthographic</source>
         <translation>[Pérspéçtîvé / örthögráphîç~~~~~~~]</translation>
     </message>
@@ -4109,15 +4119,15 @@
     </message>
     <message>
         <location line="+9" />
-        <location line="+651" />
-        <location line="+587" />
-        <location line="+824" />
+        <location line="+652" />
+        <location line="+631" />
+        <location line="+833" />
         <location line="+26" />
         <source>Sketch</source>
         <translation>[Skétçh~~]</translation>
     </message>
     <message>
-        <location line="-2086" />
+        <location line="-2140" />
         <source>Extrude</source>
         <translation>[Éxtrüdé~~]</translation>
     </message>
@@ -4258,12 +4268,12 @@
     </message>
     <message>
         <location line="+4" />
-        <location line="+686" />
+        <location line="+731" />
         <source>&lt;p&gt;Nothing selected.&lt;/p&gt;</source>
         <translation>[&lt;p&gt;Ñöthîñg séléçtéd.&lt;/p&gt;~~~~~]</translation>
     </message>
     <message>
-        <location line="-675" />
+        <location line="-720" />
         <source>&lt;h3&gt;Body&lt;/h3&gt;&lt;p&gt;&lt;b&gt;Name:&lt;/b&gt; %1&lt;br&gt;&lt;b&gt;Volume:&lt;/b&gt; %2&lt;br&gt;&lt;b&gt;Size:&lt;/b&gt; %3 × %4 × %5&lt;br&gt;&lt;b&gt;Faces:&lt;/b&gt; %6&lt;/p&gt;&lt;p&gt;Right-click it in the Browser to hide, isolate or rename it.&lt;/p&gt;</source>
         <translation>[&lt;h3&gt;Bödý&lt;/h3&gt;&lt;p&gt;&lt;b&gt;Ñámé:&lt;/b&gt; %1&lt;br&gt;&lt;b&gt;Völümé:&lt;/b&gt; %2&lt;br&gt;&lt;b&gt;Sîzé:&lt;/b&gt; %3 × %4 × %5&lt;br&gt;&lt;b&gt;Fáçés:&lt;/b&gt; %6&lt;/p&gt;&lt;p&gt;Rîght-çlîçk ît îñ thé Bröwsér tö hîdé, îsöláté ör réñámé ît.&lt;/p&gt;~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -4333,7 +4343,7 @@
         <translation>[&amp;Vîéw~]</translation>
     </message>
     <message>
-        <location line="+7" />
+        <location line="+8" />
         <source>Top</source>
         <translation>[Töp~]</translation>
     </message>
@@ -4349,12 +4359,12 @@
     </message>
     <message>
         <location line="+2" />
-        <location line="+1350" />
+        <location line="+1403" />
         <source>Mouse and trackpad</source>
         <translation>[Möüsé áñd tráçkpád~~~~~]</translation>
     </message>
     <message>
-        <location line="-1348" />
+        <location line="-1401" />
         <source>Default (middle-drag pans, Shift+middle orbits)</source>
         <translation>[Défáült (mîddlé-drág páñs, Shîft+mîddlé örbîts)~~~~~~~~~~~~]</translation>
     </message>
@@ -4375,30 +4385,30 @@
     </message>
     <message>
         <location line="+11" />
-        <location line="+1323" />
+        <location line="+1376" />
         <source>Theme</source>
         <translation>[Thémé~]</translation>
     </message>
     <message>
-        <location line="-1321" />
-        <location line="+1276" />
+        <location line="-1374" />
+        <location line="+1329" />
         <source>Light</source>
         <translation>[Lîght~]</translation>
     </message>
     <message>
-        <location line="-1276" />
-        <location line="+1275" />
+        <location line="-1329" />
+        <location line="+1328" />
         <source>Dark</source>
         <translation>[Dárk~]</translation>
     </message>
     <message>
-        <location line="-1274" />
-        <location line="+1276" />
+        <location line="-1327" />
+        <location line="+1329" />
         <source>High contrast</source>
         <translation>[Hîgh çöñtrást~~~~]</translation>
     </message>
     <message>
-        <location line="-1268" />
+        <location line="-1321" />
         <source>&amp;Help</source>
         <translation>[&amp;Hélp~]</translation>
     </message>
@@ -4479,7 +4489,22 @@
         <translation>[Bröwsér~~]</translation>
     </message>
     <message>
-        <location line="+32" />
+        <location line="+34" />
+        <source>Go to this view</source>
+        <translation>[Gö tö thîs vîéw~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Replace with the current view</source>
+        <translation>[Répláçé wîth thé çürréñt vîéw~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Delete this view</source>
+        <translation>[Délété thîs vîéw~~~~]</translation>
+    </message>
+    <message>
+        <location line="+13" />
         <source>Hide</source>
         <translation>[Hîdé~]</translation>
     </message>
@@ -4500,12 +4525,12 @@
     </message>
     <message>
         <location line="+2" />
-        <location line="+1885" />
+        <location line="+1921" />
         <source>Rename…</source>
         <translation>[Réñámé…~~]</translation>
     </message>
     <message>
-        <location line="-1881" />
+        <location line="-1917" />
         <source>Design browser</source>
         <translation>[Désîgñ bröwsér~~~~]</translation>
     </message>
@@ -4516,13 +4541,13 @@
     </message>
     <message>
         <location line="+5" />
-        <location line="+1350" />
+        <location line="+1386" />
         <location line="+58" />
         <source>Properties</source>
         <translation>[Pröpértîés~~~]</translation>
     </message>
     <message>
-        <location line="-1402" />
+        <location line="-1438" />
         <source>Properties and help</source>
         <translation>[Pröpértîés áñd hélp~~~~~]</translation>
     </message>
@@ -4598,12 +4623,12 @@
     </message>
     <message>
         <location line="+18" />
-        <location line="+1777" />
+        <location line="+1813" />
         <source>Move rollback marker</source>
         <translation>[Mövé röllbáçk márkér~~~~~~]</translation>
     </message>
     <message>
-        <location line="-1673" />
+        <location line="-1709" />
         <source>Start here: every part begins as a flat sketch.
 Click Sketch on the toolbar, then click a plane.
 Or open the phone stand sample (File ▸ Open a sample).</source>
@@ -4697,6 +4722,16 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
         <translation>[Tîçk tö shöw, üñtîçk tö hîdé. Rîght-çlîçk tö îsöláté ör réñámé.~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
+        <location line="+4" />
+        <source>Named views</source>
+        <translation>[Ñáméd vîéws~~~]</translation>
+    </message>
+    <message>
+        <location line="+4" />
+        <source>Double-click (or Enter) to look at the design from here. Right-click to replace or delete.</source>
+        <translation>[Döüblé-çlîçk (ör Éñtér) tö löök át thé désîgñ fröm héré. Rîght-çlîçk tö répláçé ör délété.~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
         <location line="+3" />
         <source>Parameters</source>
         <translation>[Párámétérs~~~]</translation>
@@ -4707,7 +4742,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
         <translation>[pröblém~~]</translation>
     </message>
     <message>
-        <location line="+64" />
+        <location line="+11" />
+        <source>View “%1” saved with the design. Double-click it in the Browser to come back.</source>
+        <translation>[Vîéw “%1” sávéd wîth thé désîgñ. Döüblé-çlîçk ît îñ thé Bröwsér tö çömé báçk.~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+72" />
         <source>Select other</source>
         <translation>[Séléçt öthér~~~]</translation>
     </message>
@@ -4783,12 +4823,27 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+0" />
-        <location line="+327" />
+        <location line="+336" />
         <source>Jigsmith designs (*.jig)</source>
         <translation>[Jîgsmîth désîgñs (*.jîg)~~~~~~]</translation>
     </message>
     <message>
-        <location line="-217" />
+        <location line="-289" />
+        <source>Save view</source>
+        <translation>[Sávé vîéw~~]</translation>
+    </message>
+    <message>
+        <location line="+0" />
+        <source>Name for this view:</source>
+        <translation>[Ñámé för thîs vîéw:~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>View %1</source>
+        <translation>[Vîéw %1~]</translation>
+    </message>
+    <message>
+        <location line="+71" />
         <source>Import STEP</source>
         <translation>[Împört STÉP~~~]</translation>
     </message>
@@ -7657,7 +7712,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
         <translation>[Thé 3D vîéw ñééds ÖpéñGL 3.3, áñd thîs çömpütér's gráphîçs drîvér öfférs %1. Üpdátîñg thé gráphîçs drîvér üsüállý fîxés thîs. Désîgñs stîll öpéñ, sávé áñd éxpört; öñlý thé vîéw stáýs émptý.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+544" />
+        <location line="+569" />
         <source>touching</source>
         <translation>[töüçhîñg~~]</translation>
     </message>

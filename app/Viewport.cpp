@@ -697,6 +697,31 @@ void Viewport::ray(const QPointF& px, QVector3D& origin, QVector3D& dir) const
     dir = (b - a).normalized();
 }
 
+nlohmann::json Viewport::camera() const
+{
+    return {{"target", {target_.x(), target_.y(), target_.z()}},
+            {"distance", distance_},
+            {"yaw", yaw_},
+            {"pitch", pitch_},
+            {"perspective", perspective_}};
+}
+
+void Viewport::setCamera(const nlohmann::json& c)
+{
+    if (!c.is_object()) {
+        return;
+    }
+    const auto t = c.value("target", nlohmann::json::array({0, 0, 0}));
+    if (t.is_array() && t.size() == 3) {
+        target_ = QVector3D(t[0].get<float>(), t[1].get<float>(), t[2].get<float>());
+    }
+    distance_ = std::clamp(c.value("distance", distance_), 0.5f, 50000.0f);
+    yaw_ = c.value("yaw", yaw_);
+    pitch_ = std::clamp(c.value("pitch", pitch_), -89.9f, 89.9f);
+    setPerspective(c.value("perspective", perspective_));
+    update();
+}
+
 QPointF Viewport::project(const QVector3D& w) const
 {
     QVector3D n = (projMatrix() * viewMatrix()).map(w);

@@ -335,3 +335,20 @@ TEST(Document, VisibilityIsSavedButNotUndone)
     // a design with nothing hidden writes no view block
     EXPECT_FALSE(build("param a = 1 mm\n")->toJson().contains("view"));
 }
+
+TEST(Document, NamedViewsAreSaved)
+{
+    auto doc = build("param a = 1 mm\n");
+    const auto rev = doc->revision();
+    doc->setNamedView("Front detail", {{"yaw", 10.0}, {"pitch", 5.0}, {"distance", 120.0}});
+    EXPECT_GT(doc->revision(), rev);
+    const auto path = (tempDir() / "views.jig").string();
+    ASSERT_TRUE(saveDocument(*doc, path).ok());
+    auto back = loadDocument(path);
+    ASSERT_TRUE(back.ok()) << back.error().message;
+    ASSERT_EQ((*back)->namedViews().size(), 1u);
+    EXPECT_DOUBLE_EQ((*back)->namedViews().at("Front detail").value("distance", 0.0), 120.0);
+    (*back)->setNamedView("Front detail", nullptr);
+    EXPECT_TRUE((*back)->namedViews().empty());
+    EXPECT_FALSE((*back)->toJson().contains("view"));
+}

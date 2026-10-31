@@ -35,7 +35,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Orthographic/perspective | 5 | v0.1 | yes | |
 | Grid and snaps display | 5 | v0.1 | grid | Snaps with sketching M1 |
 | Objects visibility toggles | 5 | v0.1 M2 | **app**: per body in the Browser (saved with the design); construction geometry always shown | |
-| Named views | 5 | v0.1 M8 | — | |
+| Named views | 5 | v0.1 M8 | **app**: View ▸ Save view…; listed under Named views in the Browser (activate to go there; replace or delete from its menu); saved with the design | |
 | Document settings: units, up axis | 8 | v0.1 (mm, Z fixed) | shown in browser | Safe defaults |
 | Capture design history on/off | 8, 24 | v0.3+ | — | Direct modelling is later |
 | Appearances and physical material | 8, 34 | v0.2 (density in v0.1 Properties M6) | density chooser in Properties (not stored in the design yet) | Mass needs density |

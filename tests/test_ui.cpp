@@ -1739,6 +1739,38 @@ private slots:
         QTRY_VERIFY(w.featurePanel() == nullptr);
     }
 
+    // Named views: saved with the design, listed in the Browser, restored by activating them.
+    void namedViews()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        {
+            jig::ScriptRunner r(w.document());
+            QVERIFY(r.runText("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=40 h=30\nextrude id=e1 sketch=s1 distance=10\n").ok());
+        }
+        Viewport* view = w.viewport();
+        view->viewTop();
+        const auto top = view->camera();
+        w.saveNamedView("From above");
+        view->homeView();
+        QVERIFY(view->camera() != top);
+        // the Browser lists it; activating it brings the view back
+        QTreeWidgetItem* item = nullptr;
+        for (auto* it : w.findChildren<QTreeWidget*>()) {
+            for (auto* found : it->findItems("From above", Qt::MatchRecursive)) {
+                item = found;
+            }
+        }
+        QVERIFY(item);
+        emit item->treeWidget()->itemActivated(item, 0);
+        QCOMPARE(view->camera()["yaw"].get<float>(), top["yaw"].get<float>());
+        QCOMPARE(view->camera()["pitch"].get<float>(), top["pitch"].get<float>());
+        QVERIFY(w.isWindowModified());  // a saved view is a change to save
+        QVERIFY(!w.restoreNamedView("No such view"));
+    }
+
     // Import STEP: the solid arrives as a timeline step and can be built on.
     void importStep()
     {

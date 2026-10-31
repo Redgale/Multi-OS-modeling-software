@@ -670,6 +670,7 @@ void MainWindow::buildMenus()
     proj->setCheckable(true);
     proj->setChecked(true);
     view->addAction(proj);
+    view->addAction(registryAction("view.save_named"));
     view->addAction(tr("Top"), view_, &Viewport::viewTop);
     view->addAction(tr("Front"), view_, &Viewport::viewFront);
     view->addAction(tr("Right"), view_, &Viewport::viewRight);
@@ -857,8 +858,25 @@ void MainWindow::buildDocks()
             timeline_->scrollToItem(timeline_->item(row));
         }
     });
+    connect(browser_, &QTreeWidget::itemActivated, this, [this](QTreeWidgetItem* it, int) {
+        const QString v = it ? it->data(0, Qt::UserRole + 2).toString() : QString();
+        if (!v.isEmpty()) {
+            restoreNamedView(v);
+        }
+    });
     connect(browser_, &QTreeWidget::customContextMenuRequested, this, [this](const QPoint& pos) {
         QTreeWidgetItem* it = browser_->itemAt(pos);
+        if (const QString v = it ? it->data(0, Qt::UserRole + 2).toString() : QString(); !v.isEmpty()) {
+            QMenu m(this);
+            m.addAction(tr("Go to this view"), this, [this, v] { restoreNamedView(v); });
+            m.addAction(tr("Replace with the current view"), this, [this, v] { saveNamedView(v); });
+            m.addAction(tr("Delete this view"), this, [this, v] {
+                doc_->setNamedView(v.toStdString(), nullptr);
+                refreshAll();
+            });
+            m.exec(browser_->viewport()->mapToGlobal(pos));
+            return;
+        }
         const QString id = it ? it->data(0, Qt::UserRole).toString() : QString();
         if (id.isEmpty()) {
             return;
@@ -1169,6 +1187,14 @@ void MainWindow::refreshBrowser()
         it->setToolTip(0, tr("Tick to show, untick to hide. Right-click to isolate or rename."));
     }
     browser_->blockSignals(false);
+    if (!doc_->namedViews().empty()) {
+        auto* views = new QTreeWidgetItem(browser_, {tr("Named views")});
+        for (auto& [name, cam] : doc_->namedViews()) {
+            auto* v = new QTreeWidgetItem(views, {q(name)});
+            v->setData(0, Qt::UserRole + 2, q(name));
+            v->setToolTip(0, tr("Double-click (or Enter) to look at the design from here. Right-click to replace or delete."));
+        }
+    }
     auto* params = new QTreeWidgetItem(browser_, {tr("Parameters")});
     for (auto& p : doc_->model().parameters) {
         auto v = doc_->evalParam(p.name);
@@ -1179,6 +1205,25 @@ void MainWindow::refreshBrowser()
     browser_->expandAll();
     settings->setExpanded(false);
     origin->setExpanded(false);
+}
+
+void MainWindow::saveNamedView(const QString& name)
+{
+    doc_->setNamedView(name.toStdString(), view_->camera());  // saved with the design
+    refreshAll();
+    statusBar()->showMessage(tr("View “%1” saved with the design. Double-click it in the Browser to come back.").arg(name),
+                             6000);
+}
+
+bool MainWindow::restoreNamedView(const QString& name)
+{
+    auto it = doc_->namedViews().find(name.toStdString());
+    if (it == doc_->namedViews().end()) {
+        return false;
+    }
+    view_->setCamera(it->second);
+    registryAction("view.projection")->setChecked(view_->perspective());
+    return true;
 }
 
 void MainWindow::setBodyVisible(const std::string& body, bool on)
@@ -1461,6 +1506,15 @@ void MainWindow::runCommand(const QString& id)
     }
     else if (id == "view.fit") {
         view_->fitAll();
+    }
+    else if (id == "view.save_named") {
+        bool ok = false;
+        const QString name = QInputDialog::getText(this, tr("Save view"), tr("Name for this view:"), QLineEdit::Normal,
+                                                   tr("View %1").arg(doc_->namedViews().size() + 1), &ok)
+                                 .trimmed();
+        if (ok && !name.isEmpty()) {
+            saveNamedView(name);
+        }
     }
     else if (id == "view.home") {
         view_->homeView();

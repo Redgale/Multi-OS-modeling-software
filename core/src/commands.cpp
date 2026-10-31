@@ -74,6 +74,7 @@ CommandRegistry::CommandRegistry()
     add({"edit.palette", "Find a tool…", "Command Search", "EDIT", "Type what you want to do and pick the tool.", "Ctrl+K", {"search", "find", "command", "help"}, true, true, false, ""});
     add({"view.fit", "Fit to view", "Fit", "VIEW", "Zoom so the whole design fits on screen. Use it whenever you feel lost.", "F6", {"zoom all", "lost", "see everything"}, true, true, false, ""});
     add({"view.home", "Home view", "Home", "VIEW", "Return to the default angled view.", "Home", {"reset view", "isometric"}, true, true, false, ""});
+    add({"view.save_named", "Save view…", "Named View", "VIEW", "Keep the current view of the design under a name, to come back to it from the Browser.", "", {"camera", "bookmark view", "named view"}, false, true, false, ""});
     add({"view.projection", "Perspective / orthographic", "Projection", "VIEW", "Switch between a natural view and a measured, parallel view.", "", {"ortho", "perspective", "camera"}, false, true, false, ""});
 
     // Sketch.

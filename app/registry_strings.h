@@ -32,6 +32,8 @@ QT_TRANSLATE_NOOP("Command", "Zoom so the whole design fits on screen. Use it wh
 QT_TRANSLATE_NOOP("Command", "VIEW")
 QT_TRANSLATE_NOOP("Command", "Home view")
 QT_TRANSLATE_NOOP("Command", "Return to the default angled view.")
+QT_TRANSLATE_NOOP("Command", "Save view…")
+QT_TRANSLATE_NOOP("Command", "Keep the current view of the design under a name, to come back to it from the Browser.")
 QT_TRANSLATE_NOOP("Command", "Perspective / orthographic")
 QT_TRANSLATE_NOOP("Command", "Switch between a natural view and a measured, parallel view.")
 QT_TRANSLATE_NOOP("Command", "Sketch")

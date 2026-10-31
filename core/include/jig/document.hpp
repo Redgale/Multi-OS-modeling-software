@@ -239,6 +239,13 @@ public:
         return folded_;
     }
     void setFoldedGroups(std::set<std::string> groups);
+    // Camera positions saved under a name (what is stored is up to the app); a null value
+    // removes one.
+    const std::map<std::string, nlohmann::json>& namedViews() const
+    {
+        return views_;
+    }
+    void setNamedView(const std::string& name, nlohmann::json camera);
 
     // ---- files ------------------------------------------------------------
     nlohmann::json toJson() const;
@@ -274,6 +281,7 @@ private:
     double lastMs_ = 0;
     uint64_t revision_ = 0;
     std::set<std::string> hidden_, folded_;
+    std::map<std::string, nlohmann::json> views_;
 };
 
 // Applies one feature to `in`. Implemented in features.cpp. Never throws.

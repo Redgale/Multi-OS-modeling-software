@@ -613,6 +613,18 @@ void Document::setFoldedGroups(std::set<std::string> groups)
     }
 }
 
+void Document::setNamedView(const std::string& name, nlohmann::json camera)
+{
+    if (camera.is_null()) {
+        if (views_.erase(name)) {
+            ++revision_;
+        }
+        return;
+    }
+    views_[name] = std::move(camera);
+    ++revision_;
+}
+
 // ---------------------------------------------------------------- json
 
 nlohmann::json Document::toJson() const
@@ -648,8 +660,11 @@ nlohmann::json Document::toJson() const
     j["features"] = feats;
     j["rollback"] = model_.rollback;
     j["counters"] = model_.counters;
-    if (!hidden_.empty() || !folded_.empty()) {
+    if (!hidden_.empty() || !folded_.empty() || !views_.empty()) {
         j["view"] = {{"hidden_bodies", hidden_}, {"folded_groups", folded_}};
+        if (!views_.empty()) {
+            j["view"]["named_views"] = views_;
+        }
     }
     return j;
 }
@@ -719,6 +734,11 @@ Result<std::unique_ptr<Document>> Document::fromJson(const nlohmann::json& input
         if (j.contains("view") && j["view"].is_object()) {
             doc->hidden_ = j["view"].value("hidden_bodies", std::set<std::string> {});
             doc->folded_ = j["view"].value("folded_groups", std::set<std::string> {});
+            if (j["view"].contains("named_views") && j["view"]["named_views"].is_object()) {
+                for (auto& [k, v] : j["view"]["named_views"].items()) {
+                    doc->views_[k] = v;
+                }
+            }
         }
         return doc;
     }

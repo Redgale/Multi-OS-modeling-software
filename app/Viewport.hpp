@@ -147,6 +147,9 @@ public:
     {
         return yaw_;
     }
+    // Where the camera is (target, distance, angles, projection), to save and restore it.
+    nlohmann::json camera() const;
+    void setCamera(const nlohmann::json& c);
     NavPreset navPreset() const
     {
         return nav_;

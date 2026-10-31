@@ -160,6 +160,16 @@
     </message>
     <message>
         <location line="+1"/>
+        <source>Save view…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Keep the current view of the design under a name, to come back to it from the Browser.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>Perspective / orthographic</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4112,15 +4122,15 @@
     </message>
     <message>
         <location line="+9"/>
-        <location line="+651"/>
-        <location line="+587"/>
-        <location line="+824"/>
+        <location line="+652"/>
+        <location line="+631"/>
+        <location line="+833"/>
         <location line="+26"/>
         <source>Sketch</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2086"/>
+        <location line="-2140"/>
         <source>Extrude</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4261,12 +4271,12 @@
     </message>
     <message>
         <location line="+4"/>
-        <location line="+686"/>
+        <location line="+731"/>
         <source>&lt;p&gt;Nothing selected.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-675"/>
+        <location line="-720"/>
         <source>&lt;h3&gt;Body&lt;/h3&gt;&lt;p&gt;&lt;b&gt;Name:&lt;/b&gt; %1&lt;br&gt;&lt;b&gt;Volume:&lt;/b&gt; %2&lt;br&gt;&lt;b&gt;Size:&lt;/b&gt; %3 × %4 × %5&lt;br&gt;&lt;b&gt;Faces:&lt;/b&gt; %6&lt;/p&gt;&lt;p&gt;Right-click it in the Browser to hide, isolate or rename it.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4336,7 +4346,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+7"/>
+        <location line="+8"/>
         <source>Top</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4352,12 +4362,12 @@
     </message>
     <message>
         <location line="+2"/>
-        <location line="+1350"/>
+        <location line="+1403"/>
         <source>Mouse and trackpad</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1348"/>
+        <location line="-1401"/>
         <source>Default (middle-drag pans, Shift+middle orbits)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4378,30 +4388,30 @@
     </message>
     <message>
         <location line="+11"/>
-        <location line="+1323"/>
+        <location line="+1376"/>
         <source>Theme</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1321"/>
-        <location line="+1276"/>
+        <location line="-1374"/>
+        <location line="+1329"/>
         <source>Light</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1276"/>
-        <location line="+1275"/>
+        <location line="-1329"/>
+        <location line="+1328"/>
         <source>Dark</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1274"/>
-        <location line="+1276"/>
+        <location line="-1327"/>
+        <location line="+1329"/>
         <source>High contrast</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1268"/>
+        <location line="-1321"/>
         <source>&amp;Help</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4482,7 +4492,22 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+32"/>
+        <location line="+34"/>
+        <source>Go to this view</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Replace with the current view</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Delete this view</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+13"/>
         <source>Hide</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4503,12 +4528,12 @@
     </message>
     <message>
         <location line="+2"/>
-        <location line="+1885"/>
+        <location line="+1921"/>
         <source>Rename…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1881"/>
+        <location line="-1917"/>
         <source>Design browser</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4519,13 +4544,13 @@
     </message>
     <message>
         <location line="+5"/>
-        <location line="+1350"/>
+        <location line="+1386"/>
         <location line="+58"/>
         <source>Properties</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1402"/>
+        <location line="-1438"/>
         <source>Properties and help</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4601,12 +4626,12 @@
     </message>
     <message>
         <location line="+18"/>
-        <location line="+1777"/>
+        <location line="+1813"/>
         <source>Move rollback marker</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1673"/>
+        <location line="-1709"/>
         <source>Start here: every part begins as a flat sketch.
 Click Sketch on the toolbar, then click a plane.
 Or open the phone stand sample (File ▸ Open a sample).</source>
@@ -4698,6 +4723,16 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location line="+4"/>
+        <source>Named views</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Double-click (or Enter) to look at the design from here. Right-click to replace or delete.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <location line="+3"/>
         <source>Parameters</source>
         <translation type="unfinished"></translation>
@@ -4708,7 +4743,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+64"/>
+        <location line="+11"/>
+        <source>View “%1” saved with the design. Double-click it in the Browser to come back.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+72"/>
         <source>Select other</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4784,12 +4824,27 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+0"/>
-        <location line="+327"/>
+        <location line="+336"/>
         <source>Jigsmith designs (*.jig)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-217"/>
+        <location line="-289"/>
+        <source>Save view</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Name for this view:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>View %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+71"/>
         <source>Import STEP</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7669,7 +7724,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+544"/>
+        <location line="+569"/>
         <source>touching</source>
         <translation type="unfinished"></translation>
     </message>
