@@ -724,6 +724,50 @@ void Viewport::lookAlong(const QVector3D& normal, const QVector3D& up, const QVe
     update();
 }
 
+std::vector<EdgePick> Viewport::edgesInBox(const QRectF& box, bool crossing) const
+{
+    std::vector<EdgePick> out;
+    if (!glReady_) {
+        return out;
+    }
+    for (auto& m : meshes_) {
+        // per edge: did any segment touch the box, did every segment lie inside it
+        std::map<int, std::pair<bool, bool>> seen;  // edge -> (any, all)
+        for (size_t s = 0; s < m->segEdge.size(); ++s) {
+            const float* f = &m->edgeLines[s * 6];
+            const QVector3D a(f[0], f[1], f[2]), b(f[3], f[4], f[5]);
+            const QVector3D mid = (a + b) * 0.5f;
+            if (section_ && QVector3D::dotProduct(section_->toVector3D(), mid) > section_->w()) {
+                continue;
+            }
+            const QPointF pa = project(a), pb = project(b);
+            const bool inA = box.contains(pa), inB = box.contains(pb);
+            bool touches = inA || inB;
+            if (!touches) {
+                // a segment can cross the box with both ends outside
+                const QLineF seg(pa, pb);
+                const QLineF sides[4] = {{box.topLeft(), box.topRight()}, {box.topRight(), box.bottomRight()},
+                                         {box.bottomRight(), box.bottomLeft()}, {box.bottomLeft(), box.topLeft()}};
+                for (auto& side : sides) {
+                    if (seg.intersects(side) == QLineF::BoundedIntersection) {
+                        touches = true;
+                        break;
+                    }
+                }
+            }
+            auto [it, fresh] = seen.try_emplace(int(m->segEdge[s]), false, true);
+            it->second.first = it->second.first || touches;
+            it->second.second = it->second.second && inA && inB;
+        }
+        for (auto& [edge, st] : seen) {
+            if (crossing ? st.first : st.second) {
+                out.push_back({m->body, edge});
+            }
+        }
+    }
+    return out;
+}
+
 std::optional<EdgePick> Viewport::pickEdgeAt(const QPoint& pos)
 {
     if (!glReady_ || meshes_.empty()) {
@@ -853,6 +897,20 @@ void Viewport::paintOverlay(QPainter& p)
         for (auto& [text, at] : datumLabels_) {
             p.drawText(project(at) + QPointF(4, -4), text);
         }
+        p.restore();
+    }
+    if (boxing_) {
+        // solid for "wholly inside", dashed for "anything it touches" (not colour alone)
+        const bool crossing = boxEnd_.x() < boxStart_.x();
+        const QRectF r = QRectF(boxStart_, boxEnd_).normalized();
+        p.save();
+        p.setPen(QPen(colors_.selected, 1.2, crossing ? Qt::DashLine : Qt::SolidLine));
+        QColor fill = colors_.selected;
+        fill.setAlpha(28);
+        p.setBrush(fill);
+        p.drawRect(r);
+        p.setPen(colors_.text);
+        p.drawText(r.bottomLeft() + QPointF(4, 14), crossing ? tr("touching") : tr("inside"));
         p.restore();
     }
     drawGizmo(p);
@@ -1086,6 +1144,10 @@ void Viewport::mousePressEvent(QMouseEvent* e)
         if (interactor_) {
             interactor_->mousePress(e);
         }
+        // a press on empty space while picking edges may become a selection box
+        boxArmed_ = !interactor_ && pickMode_ == PickMode::Edges && !pickEdgeAt(lastPos_);
+        boxStart_ = boxEnd_ = lastPos_;
+        boxing_ = false;
     }
 }
 
@@ -1099,6 +1161,16 @@ void Viewport::mouseMoveEvent(QMouseEvent* e)
     }
     if (longPress_->isActive() && d.manhattanLength() > 2) {
         longPress_->stop();  // moving is not a long press
+    }
+    if (boxArmed_ && (e->buttons() & Qt::LeftButton)) {
+        if (!boxing_ && (pos - boxStart_).manhattanLength() > 4) {
+            boxing_ = true;
+        }
+        if (boxing_) {
+            boxEnd_ = pos;
+            overlay_->update();
+            return;
+        }
     }
     if (drag_ == Drag::Orbit) {
         orbit(d);
@@ -1173,6 +1245,32 @@ void Viewport::mouseReleaseEvent(QMouseEvent* e)
         }
         return;
     }
+    if (e->button() == Qt::LeftButton && boxing_) {
+        boxArmed_ = boxing_ = false;
+        boxEnd_ = e->position().toPoint();
+        overlay_->update();
+        const bool crossing = boxEnd_.x() < boxStart_.x();
+        const auto hits = edgesInBox(QRectF(boxStart_, boxEnd_).normalized(), crossing);
+        if (!hits.empty()) {
+            // one body per box: the first one met (fillets work on one body at a time)
+            const std::string body = hits.front().body;
+            for (auto& m : meshes_) {
+                if (m->body != body) {
+                    continue;
+                }
+                QStringList names;
+                for (auto& h : hits) {
+                    if (h.body == body && h.edge < m->shape->edgeCount()) {
+                        names << QString::fromStdString(m->shape->edgeName(h.edge));
+                    }
+                }
+                emit edgesBoxed(QString::fromStdString(body), names, e->modifiers());
+                break;
+            }
+        }
+        return;
+    }
+    boxArmed_ = false;
     if (e->button() == Qt::LeftButton && drag_ == Drag::None) {
         const QPoint pos = e->position().toPoint();
         switch (gizmoHit(pos)) {

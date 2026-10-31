@@ -1051,6 +1051,9 @@ FilletPanel::FilletPanel(jig::Document& doc, Viewport* view, std::string editId,
     connect(view_.data(), &Viewport::edgeClicked, this, [this](const QString& body, const QString& name, Qt::KeyboardModifiers) {
         toggleEdgeByName(body.toStdString(), name.toStdString());
     });
+    connect(view_.data(), &Viewport::edgesBoxed, this, [this](const QString& body, const QStringList& names, Qt::KeyboardModifiers mods) {
+        addEdgesByName(body.toStdString(), names, mods & Qt::ControlModifier);
+    });
 
     const jig::Feature* edit = editId_.empty() ? nullptr : doc_.feature(editId_);
     if (edit) {
@@ -1124,6 +1127,32 @@ void FilletPanel::toggleEdgeByName(const std::string& body, const std::string& n
         toggleEdge(body, hits[0]);
     }
     // else: the click was on a surface this step itself made; nothing to toggle
+}
+
+void FilletPanel::addEdgesByName(const std::string& body, const QStringList& names, bool remove)
+{
+    const auto before = stateBefore();
+    auto bit = before->bodies.find(body);
+    if (bit == before->bodies.end()) {
+        return;
+    }
+    if (!body_.empty() && body_ != body) {
+        status_->setText("<b>✕ " + tr("Pick edges of one body at a time.") + "</b>");
+        return;
+    }
+    int changed = 0;
+    for (const QString& n : names) {
+        auto hits = bit->second->findEdges(n.toStdString());
+        if (hits.size() != 1) {
+            continue;  // made by this step itself: not an edge of the model before it
+        }
+        changed += remove ? int(edges_.erase(hits[0])) : int(edges_.insert(hits[0]).second);
+    }
+    if (changed == 0) {
+        return;
+    }
+    body_ = edges_.empty() ? std::string {} : body;
+    refreshEdges();
 }
 
 void FilletPanel::toggleEdge(const std::string& body, int e)

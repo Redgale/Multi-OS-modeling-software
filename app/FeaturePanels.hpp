@@ -212,6 +212,8 @@ public:
     void toggleEdge(const std::string& body, int edge);
     // A click in the view, by persistent edge name (works on the preview body too).
     void toggleEdgeByName(const std::string& body, const std::string& name);
+    // a selection box: add every edge (Ctrl held: take them away)
+    void addEdgesByName(const std::string& body, const QStringList& names, bool remove);
     ExprField* radius() const
     {
         return radius_;

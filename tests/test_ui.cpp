@@ -957,6 +957,55 @@ private slots:
         }
     }
 
+    // Window selection in 3D: a box dragged over empty space picks edges for a fillet.
+    void boxSelectEdges()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        {
+            jig::ScriptRunner r(w.document());
+            QVERIFY(r.runText("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=40 h=30\nextrude id=e1 sketch=s1 distance=12\n").ok());
+        }
+        w.runCommand("solid.fillet");
+        auto* fp = qobject_cast<FilletPanel*>(w.featurePanel());
+        QVERIFY(fp);
+        Viewport* view = w.viewport();
+        QTRY_VERIFY(view->meshesReady());
+        QTest::qWait(200);
+        // left to right over the whole view: every edge of the box is wholly inside
+        const QPoint a(4, 4), b(view->width() - 4, view->height() - 4);
+        QVERIFY(!view->pickEdgeAt(a));
+        QTest::mousePress(view, Qt::LeftButton, Qt::NoModifier, a);
+        QTest::mouseMove(view, QPoint(200, 200));
+        QTest::mouseMove(view, b);
+        QVERIFY(view->boxing());
+        QTest::mouseRelease(view, Qt::LeftButton, Qt::NoModifier, b);
+        QVERIFY(!view->boxing());
+        QCOMPARE(int(fp->edgeCount()), 12);
+        // the same box with Ctrl takes them away again
+        QTest::mousePress(view, Qt::LeftButton, Qt::NoModifier, a);
+        QTest::mouseMove(view, QPoint(200, 200));
+        QTest::mouseMove(view, b);
+        QTest::mouseRelease(view, Qt::LeftButton, Qt::ControlModifier, b);
+        QCOMPARE(int(fp->edgeCount()), 0);
+        // a small box only touching the model from right to left picks what it crosses,
+        // a box wholly inside nothing picks nothing
+        const QRectF all(QPointF(0, 0), QSizeF(view->size()));
+        QVERIFY(view->edgesInBox(all, false).size() == 12);
+        QVERIFY(view->edgesInBox(QRectF(1, 1, 3, 3), true).empty());
+        fp->radius()->setText("1 mm");
+        QTest::mousePress(view, Qt::LeftButton, Qt::NoModifier, a);
+        QTest::mouseMove(view, QPoint(200, 200));
+        QTest::mouseMove(view, b);
+        QTest::mouseRelease(view, Qt::LeftButton, Qt::NoModifier, b);
+        QTRY_VERIFY(fp->previewOk());
+        QVERIFY(fp->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        QCOMPARE(int(w.document().state().bodies.size()), 1);
+    }
+
     // B-015: the Parameters dialog changes the design as one undoable step; the timeline's
     // right-click menu suppresses a step and brings it back.
     void parametersAndTimelineMenu()
