@@ -9,6 +9,8 @@
 #include "jig/io.hpp"
 #include "jig/screws.hpp"
 #include <BRepAlgoAPI_Common.hxx>
+#include <BRepGProp.hxx>
+#include <GProp_GProps.hxx>
 #include <BRepBndLib.hxx>
 #include <Bnd_Box.hxx>
 
@@ -1644,4 +1646,40 @@ TEST(Revolve, UpToACurvedFace)
     }
     r.runText("revolve id=r1 sketch=s1 axis=Z extent=to to=face:" + w2 + " op=new\n");
     EXPECT_NE(part->status(3).message.find("does not cross"), std::string::npos) << part->status(3).message;
+}
+
+TEST(Pattern, AlongAPath)
+{
+    // a 4 mm peg on a plate, repeated 5 times along a straight path 40 long: 10 apart
+    const std::string base = "sketch id=s1 plane=XY\nrect sketch=s1 corner=-10,-10 w=70 h=40\nextrude id=e1 sketch=s1 distance=3\n"
+                             "sketch id=s2 on=e1/end\ncircle sketch=s2 center=0,0 d=4\nextrude id=e2 sketch=s2 distance=5 op=join\n"
+                             "sketch id=p plane=XY\nline sketch=p p1=0,0 p2=40,0 construction=yes\n";
+    auto doc = build(base + "pattern id=pt1 feature=e2 kind=path path=p count=5\n");
+    expectAllOk(*doc);
+    EXPECT_NEAR(props(*doc).volume, 70 * 40 * 3 + 5 * 4 * pi * 5, 1e-3);
+    // with a spacing: 3 copies 15 apart; too many for the path is explained
+    auto spaced = build(base + "pattern id=pt1 feature=e2 kind=path path=p count=3 spacing=15mm\n");
+    expectAllOk(*spaced);
+    EXPECT_NEAR(props(*spaced).volume, 70 * 40 * 3 + 3 * 4 * pi * 5, 1e-3);
+    auto toomany = std::make_unique<Document>();
+    ScriptRunner r(*toomany);
+    r.runText(base + "pattern id=pt1 feature=e2 kind=path path=p count=9 spacing=15mm\n");
+    EXPECT_NE(toomany->status(int(toomany->model().features.size()) - 1).message.find("do not fit"), std::string::npos);
+    // around a closed circle of radius 20, a block turning with it: copies keep their place
+    // relative to the path, so each one's distance from the centre stays the same
+    auto ring = build("sketch id=s1 plane=XY\nrect sketch=s1 center=20,0 w=4 h=2\nextrude id=e1 sketch=s1 distance=2\n"
+                      "sketch id=p plane=XY\ncircle sketch=p center=0,0 d=40 construction=yes\n"
+                      "pattern id=pt1 body=e1 kind=path path=p count=4 orient=follow op=new\n");
+    expectAllOk(*ring);
+    ASSERT_EQ(ring->state().bodies.size(), 4u);
+    for (auto& [id, b] : ring->state().bodies) {
+        GProp_GProps g;
+        BRepGProp::VolumeProperties(b->shape(), g);
+        const gp_Pnt c = g.CentreOfMass();
+        EXPECT_NEAR(std::hypot(c.X(), c.Y()), 20, 1e-6) << id;
+        // turned with the path: the long side (4 mm) lies along the radius at each copy
+        const auto mp = massProperties(b->shape());
+        const double along = std::abs(c.X()) > 1 ? mp.xmax - mp.xmin : mp.ymax - mp.ymin;
+        EXPECT_NEAR(along, 4, 1e-6) << id;
+    }
 }

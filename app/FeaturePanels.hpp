@@ -474,6 +474,22 @@ public:
     {
         return count_;
     }
+    QComboBox* kind() const
+    {
+        return kind_;
+    }
+    QComboBox* pathSketch() const
+    {
+        return pathSketch_;
+    }
+    ExprField* pathCount() const
+    {
+        return pathCount_;
+    }
+    QComboBox* pathOrient() const
+    {
+        return pathOrient_;
+    }
 
 protected:
     jig::Feature draft() const override;
@@ -481,9 +497,10 @@ protected:
 
 private:
     void updateVisibility();
-    QComboBox *source_, *kind_, *axis_, *dir1_, *dir2_, *bodyOp_;
-    ExprField *count_, *angle_, *count1_, *spacing1_, *count2_, *spacing2_;
-    QWidget *circular_, *grid_;
+    QComboBox *source_, *kind_, *axis_, *dir1_, *dir2_, *bodyOp_, *pathSketch_, *pathOrient_;
+    ExprField *count_, *angle_, *count1_, *spacing1_, *count2_, *spacing2_, *pathCount_, *pathSpacing_;
+    QCheckBox* pathSpaced_;
+    QWidget *circular_, *grid_, *path_;
 };
 
 // Mirror: copy a body across an origin plane.

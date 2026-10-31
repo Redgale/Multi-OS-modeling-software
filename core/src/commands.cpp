@@ -1698,6 +1698,13 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
                 return makeError("script.args", "There is no single face called '" + name + "'.");
             }
         }
+        if (a.verb == "pattern" && a.get("kind") == "path") {
+            // pattern feature=e2|body=e1 kind=path path=<sketch> count=5 [spacing=<len>] [orient=same|follow]
+            if (!doc.state().sketches.count(a.get("path"))) {
+                return makeError("script.args", fmt("There is no sketch called '%1' to use as the path.", {a.get("path")}));
+            }
+            params["path"] = {{"sketch", a.get("path")}, {"curves", "all"}};
+        }
         if (a.verb == "revolve") {
             const std::string ax = a.get("axis", "Z");
             if (ax.rfind("line:", 0) == 0) {

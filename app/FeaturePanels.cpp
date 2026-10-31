@@ -1825,11 +1825,12 @@ PatternPanel::PatternPanel(jig::Document& doc, Viewport* view, std::string editI
     : FeaturePanel(doc, view, std::move(editId), parent)
 {
     form_->addWidget(heading(this, tr("Pattern"),
-                             tr("Repeat an earlier Extrude, Revolve or Hole, or a whole body, around an axis (ring) "
-                                "or in rows and columns (grid). Each copy of a step adds or removes material the "
-                                "same way.")));
+                             tr("Repeat an earlier Extrude, Revolve or Hole, or a whole body, around an axis (ring), "
+                                "in rows and columns (grid) or along the curves of a sketch (path). Each copy of a "
+                                "step adds or removes material the same way.")));
     source_ = new QComboBox(this);
-    kind_ = combo(this, {{tr("Ring (around an axis)"), "circular"}, {tr("Grid (rows and columns)"), "rectangular"}});
+    kind_ = combo(this, {{tr("Ring (around an axis)"), "circular"}, {tr("Grid (rows and columns)"), "rectangular"},
+                         {tr("Along a path (a sketch's curves)"), "path"}});
     bodyOp_ = combo(this, {{tr("Separate bodies"), "new"}, {tr("Join into one body"), "join"}});
     addRow(tr("What to repeat"), source_);
     addRow(tr("Copies of a body"), bodyOp_);
@@ -1869,8 +1870,28 @@ PatternPanel::PatternPanel(jig::Document& doc, Viewport* view, std::string editI
         gl->addWidget(new QLabel("<b>" + label + "</b>", grid_));
         gl->addWidget(w);
     }
+    path_ = new QWidget(this);
+    auto* pl = new QVBoxLayout(path_);
+    pl->setContentsMargins(0, 0, 0, 0);
+    pathSketch_ = new QComboBox(path_);
+    fillSketches(pathSketch_, doc_, insertIndex(), *stateBefore());
+    pathCount_ = new ExprField(doc, jig::Dim::none(), path_);
+    pathSpaced_ = new QCheckBox(tr("A set spacing (instead of spreading them over the whole path)"), path_);
+    pathSpacing_ = new ExprField(doc, jig::Dim::len(), path_);
+    pathOrient_ = combo(path_, {{tr("Keep the same direction"), "same"}, {tr("Turn with the path"), "follow"}});
+    for (auto [label, w] : {std::pair<QString, QWidget*> {tr("Sketch with the path (its curves, joined end to end)"), pathSketch_},
+                            {tr("Number of copies (including the original)"), pathCount_},
+                            {QString(), pathSpaced_},
+                            {tr("Spacing along the path"), pathSpacing_},
+                            {tr("Copies"), pathOrient_}}) {
+        if (!label.isEmpty()) {
+            pl->addWidget(new QLabel("<b>" + label + "</b>", path_));
+        }
+        pl->addWidget(w);
+    }
     form_->addWidget(circular_);
     form_->addWidget(grid_);
+    form_->addWidget(path_);
 
     const auto before = stateBefore();
     const int limit = insertIndex();
@@ -1909,13 +1930,24 @@ PatternPanel::PatternPanel(jig::Document& doc, Viewport* view, std::string editI
     spacing1_->setText(value("spacing1", doc_.defaultLength(10, 0.5).c_str()));
     count2_->setText(value("count2", "1"));
     spacing2_->setText(value("spacing2", doc_.defaultLength(10, 0.5).c_str()));
-    for (auto* c : {source_, kind_, axis_, dir1_, dir2_, bodyOp_}) {
+    pathCount_->setText(value("count", "5"));
+    pathSpaced_->setChecked(edit && edit->params.contains("spacing"));
+    pathSpacing_->setText(value("spacing", doc_.defaultLength(10, 0.5).c_str()));
+    select(pathOrient_, value("orient", "same").toStdString());
+    if (edit && edit->params.contains("path")) {
+        select(pathSketch_, edit->params["path"].value("sketch", std::string {}));
+    }
+    connect(pathSpaced_, &QCheckBox::toggled, this, [this] {
+        updateVisibility();
+        schedulePreview();
+    });
+    for (auto* c : {source_, kind_, axis_, dir1_, dir2_, bodyOp_, pathSketch_, pathOrient_}) {
         connect(c, &QComboBox::currentIndexChanged, this, [this] {
             updateVisibility();
             schedulePreview();
         });
     }
-    for (auto* e : {count_, angle_, count1_, spacing1_, count2_, spacing2_}) {
+    for (auto* e : {count_, angle_, count1_, spacing1_, count2_, spacing2_, pathCount_, pathSpacing_}) {
         connect(e, &ExprField::changed, this, [this] { schedulePreview(); });
     }
     updateVisibility();
@@ -1930,9 +1962,11 @@ PatternPanel::PatternPanel(jig::Document& doc, Viewport* view, std::string editI
 
 void PatternPanel::updateVisibility()
 {
-    const bool circ = current(kind_) == "circular";
+    const bool circ = current(kind_) == "circular", path = current(kind_) == "path";
     circular_->setVisible(circ);
-    grid_->setVisible(!circ);
+    grid_->setVisible(!circ && !path);
+    path_->setVisible(path);
+    pathSpacing_->setVisible(pathSpaced_->isChecked());
     const bool body = current(source_).rfind("body:", 0) == 0;
     bodyOp_->setVisible(body);
     if (const int i = form_->indexOf(bodyOp_); i > 0) {
@@ -1953,7 +1987,15 @@ jig::Feature PatternPanel::draft() const
     else {
         f.params = {{"feature", src}, {"kind", current(kind_)}};
     }
-    if (current(kind_) == "circular") {
+    if (current(kind_) == "path") {
+        f.params["path"] = {{"sketch", current(pathSketch_)}, {"curves", "all"}};
+        f.params["count"] = text(pathCount_, "5");
+        f.params["orient"] = current(pathOrient_);
+        if (pathSpaced_->isChecked()) {
+            f.params["spacing"] = text(pathSpacing_, "10 mm");
+        }
+    }
+    else if (current(kind_) == "circular") {
         f.params["axis"] = current(axis_);
         f.params["count"] = text(count_, "6");
         f.params["angle"] = text(angle_, "360 deg");

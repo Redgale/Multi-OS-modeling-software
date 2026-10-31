@@ -55,6 +55,10 @@
 #include <ShapeUpgrade_UnifySameDomain.hxx>
 #include <Standard_Failure.hxx>
 #include <STEPControl_Reader.hxx>
+#include <GCPnts_AbscissaPoint.hxx>
+#include <BRepAdaptor_CompCurve.hxx>
+#include <TopTools_HSequenceOfShape.hxx>
+#include <ShapeAnalysis_FreeBounds.hxx>
 #include <BRepTools.hxx>
 #include <STEPControl_Writer.hxx>
 #include <StlAPI_Writer.hxx>
@@ -579,97 +583,110 @@ Result<gp_Ax3> faceFrame(const TopoDS_Shape& shape)
     return gp_Ax3(origin, n, gp_Dir(xp));
 }
 
+namespace
+{
+// The 3D edge of one sketch curve on its plane (null for a point, or a curve too small to
+// build). `ext` grows to the largest local coordinate used, for sizing helpers.
+TopoDS_Edge sketchEdge(const Sketch& sketch, int id, const SketchEntity& e, const gp_Ax3& frame, double& ext)
+{
+    auto to3d = [&](double x, double y) {
+        gp_XYZ p = frame.Location().XYZ() + frame.XDirection().XYZ() * x + frame.YDirection().XYZ() * y;
+        return gp_Pnt(p);
+    };
+    auto grow = [&](double x, double y, double r) {
+        ext = std::max({ext, std::abs(x) + r, std::abs(y) + r});
+    };
+    TopoDS_Edge edge;
+    if (e.type == EntityType::Line) {
+        auto [x1, y1] = sketch.pointXY(e.p1);
+        auto [x2, y2] = sketch.pointXY(e.p2);
+        if (std::hypot(x2 - x1, y2 - y1) < 1e-7) {
+            return {};
+        }
+        grow(x1, y1, 0);
+        grow(x2, y2, 0);
+        edge = BRepBuilderAPI_MakeEdge(to3d(x1, y1), to3d(x2, y2)).Edge();
+    }
+    else if (e.type == EntityType::Circle || e.type == EntityType::Arc) {
+        auto [cx, cy] = sketch.pointXY(e.center);
+        if (e.r < 1e-7) {
+            return {};
+        }
+        grow(cx, cy, e.r);
+        gp_Circ circ(gp_Ax2(to3d(cx, cy), frame.Direction(), frame.XDirection()), e.r);
+        if (e.type == EntityType::Circle) {
+            edge = BRepBuilderAPI_MakeEdge(circ).Edge();
+        }
+        else {
+            double a0 = e.a0, a1 = e.a1;
+            while (a1 <= a0) {
+                a1 += 2 * std::numbers::pi;
+            }
+            edge = BRepBuilderAPI_MakeEdge(circ, a0, a1).Edge();
+        }
+    }
+    else if (e.type == EntityType::Ellipse) {
+        auto [cx, cy] = sketch.pointXY(e.center);
+        auto [ax, ay] = sketch.pointXY(e.p1);
+        double major = std::hypot(ax - cx, ay - cy), minor = e.r;
+        if (major < 1e-7 || minor < 1e-7) {
+            return {};
+        }
+        gp_Dir2d ux(ax - cx, ay - cy);
+        if (minor > major) {  // OCCT wants the longer axis first
+            std::swap(major, minor);
+            ux = gp_Dir2d(-ux.Y(), ux.X());
+        }
+        grow(cx, cy, major);
+        const gp_Dir xd(frame.XDirection().XYZ() * ux.X() + frame.YDirection().XYZ() * ux.Y());
+        edge = BRepBuilderAPI_MakeEdge(gp_Elips(gp_Ax2(to3d(cx, cy), frame.Direction(), xd), major, minor)).Edge();
+    }
+    else if (e.type == EntityType::Spline) {
+        // the Bézier pieces joined into one cubic B-spline (each inner knot repeated 3 times)
+        const auto pieces = sketch.splinePieces(id);
+        if (pieces.empty()) {
+            return {};
+        }
+        const int n = int(pieces.size());
+        TColgp_Array1OfPnt poles(1, 3 * n + 1);
+        int k = 1;
+        for (int i = 0; i < n; ++i) {
+            for (int j = i == 0 ? 0 : 1; j < 4; ++j) {
+                poles.SetValue(k++, to3d(pieces[size_t(i)][size_t(j)].first, pieces[size_t(i)][size_t(j)].second));
+                grow(pieces[size_t(i)][size_t(j)].first, pieces[size_t(i)][size_t(j)].second, 0);
+            }
+        }
+        TColStd_Array1OfReal knots(1, n + 1);
+        TColStd_Array1OfInteger mults(1, n + 1);
+        for (int i = 0; i <= n; ++i) {
+            knots.SetValue(i + 1, i);
+            mults.SetValue(i + 1, i == 0 || i == n ? 4 : 3);
+        }
+        if (poles.First().Distance(poles.Last()) < 1e-7 && !e.closed) {
+            return {};  // an open curve that starts and ends in one place
+        }
+        Handle(Geom_BSplineCurve) bs = new Geom_BSplineCurve(poles, knots, mults, 3);
+        edge = BRepBuilderAPI_MakeEdge(bs).Edge();
+    }
+    else {
+        return {};
+    }
+    return edge;
+}
+}  // namespace
+
 Result<ProfileSet> buildProfiles(const Sketch& sketch, const gp_Ax3& frame)
 {
     try {
-        auto to3d = [&](double x, double y) {
-            gp_XYZ p = frame.Location().XYZ() + frame.XDirection().XYZ() * x
-                     + frame.YDirection().XYZ() * y;
-            return gp_Pnt(p);
-        };
         TopTools_ListOfShape tools;
         TopTools_DataMapOfShapeInteger origEntity;
         double ext = 1;
-        auto grow = [&](double x, double y, double r) {
-            ext = std::max({ext, std::abs(x) + r, std::abs(y) + r});
-        };
         for (auto& [id, e] : sketch.entities()) {
             if (e.construction) {
                 continue;
             }
-            TopoDS_Edge edge;
-            if (e.type == EntityType::Line) {
-                auto [x1, y1] = sketch.pointXY(e.p1);
-                auto [x2, y2] = sketch.pointXY(e.p2);
-                if (std::hypot(x2 - x1, y2 - y1) < 1e-7) {
-                    continue;
-                }
-                grow(x1, y1, 0);
-                grow(x2, y2, 0);
-                edge = BRepBuilderAPI_MakeEdge(to3d(x1, y1), to3d(x2, y2)).Edge();
-            }
-            else if (e.type == EntityType::Circle || e.type == EntityType::Arc) {
-                auto [cx, cy] = sketch.pointXY(e.center);
-                if (e.r < 1e-7) {
-                    continue;
-                }
-                grow(cx, cy, e.r);
-                gp_Circ circ(gp_Ax2(to3d(cx, cy), frame.Direction(), frame.XDirection()), e.r);
-                if (e.type == EntityType::Circle) {
-                    edge = BRepBuilderAPI_MakeEdge(circ).Edge();
-                }
-                else {
-                    double a0 = e.a0, a1 = e.a1;
-                    while (a1 <= a0) {
-                        a1 += 2 * std::numbers::pi;
-                    }
-                    edge = BRepBuilderAPI_MakeEdge(circ, a0, a1).Edge();
-                }
-            }
-            else if (e.type == EntityType::Ellipse) {
-                auto [cx, cy] = sketch.pointXY(e.center);
-                auto [ax, ay] = sketch.pointXY(e.p1);
-                double major = std::hypot(ax - cx, ay - cy), minor = e.r;
-                if (major < 1e-7 || minor < 1e-7) {
-                    continue;
-                }
-                gp_Dir2d ux(ax - cx, ay - cy);
-                if (minor > major) {  // OCCT wants the longer axis first
-                    std::swap(major, minor);
-                    ux = gp_Dir2d(-ux.Y(), ux.X());
-                }
-                grow(cx, cy, major);
-                const gp_Dir xd(frame.XDirection().XYZ() * ux.X() + frame.YDirection().XYZ() * ux.Y());
-                edge = BRepBuilderAPI_MakeEdge(gp_Elips(gp_Ax2(to3d(cx, cy), frame.Direction(), xd), major, minor)).Edge();
-            }
-            else if (e.type == EntityType::Spline) {
-                // the Bézier pieces joined into one cubic B-spline (each inner knot repeated 3 times)
-                const auto pieces = sketch.splinePieces(id);
-                if (pieces.empty()) {
-                    continue;
-                }
-                const int n = int(pieces.size());
-                TColgp_Array1OfPnt poles(1, 3 * n + 1);
-                int k = 1;
-                for (int i = 0; i < n; ++i) {
-                    for (int j = i == 0 ? 0 : 1; j < 4; ++j) {
-                        poles.SetValue(k++, to3d(pieces[size_t(i)][size_t(j)].first, pieces[size_t(i)][size_t(j)].second));
-                        grow(pieces[size_t(i)][size_t(j)].first, pieces[size_t(i)][size_t(j)].second, 0);
-                    }
-                }
-                TColStd_Array1OfReal knots(1, n + 1);
-                TColStd_Array1OfInteger mults(1, n + 1);
-                for (int i = 0; i <= n; ++i) {
-                    knots.SetValue(i + 1, i);
-                    mults.SetValue(i + 1, i == 0 || i == n ? 4 : 3);
-                }
-                if (poles.First().Distance(poles.Last()) < 1e-7 && !e.closed) {
-                    continue;  // an open curve that starts and ends in one place
-                }
-                Handle(Geom_BSplineCurve) bs = new Geom_BSplineCurve(poles, knots, mults, 3);
-                edge = BRepBuilderAPI_MakeEdge(bs).Edge();
-            }
-            else {
+            const TopoDS_Edge edge = sketchEdge(sketch, id, e, frame, ext);
+            if (edge.IsNull()) {
                 continue;
             }
             tools.Append(edge);
@@ -806,6 +823,54 @@ Result<ProfileSet> buildProfiles(const Sketch& sketch, const gp_Ax3& frame)
 }
 
 // ---------------------------------------------------------------- extrude
+
+Result<SketchPath> sketchPath(const Sketch& sketch, const gp_Ax3& frame, const std::vector<int>& curves)
+{
+    try {
+        Handle(TopTools_HSequenceOfShape) edges = new TopTools_HSequenceOfShape;
+        double ext = 1;
+        for (int id : curves) {
+            const SketchEntity* e = sketch.entity(id);
+            if (!e) {
+                continue;
+            }
+            const TopoDS_Edge edge = sketchEdge(sketch, id, *e, frame, ext);
+            if (!edge.IsNull()) {
+                edges->Append(edge);
+            }
+        }
+        if (edges->IsEmpty()) {
+            return makeError("pattern.path", "The path has no curves.", {"Draw the path as lines, arcs or a smooth curve."});
+        }
+        Handle(TopTools_HSequenceOfShape) wires;
+        ShapeAnalysis_FreeBounds::ConnectEdgesToWires(edges, 1e-6, Standard_False, wires);
+        if (wires.IsNull() || wires->Length() != 1) {
+            return makeError("pattern.path", "The path's curves are not joined end to end.",
+                             {"Join the ends (they should share a point), or use one chain of curves."});
+        }
+        SketchPath out;
+        out.wire = TopoDS::Wire(wires->Value(1));
+        BRepAdaptor_CompCurve c(out.wire);
+        out.length = GCPnts_AbscissaPoint::Length(c);
+        out.closed = c.Value(c.FirstParameter()).Distance(c.Value(c.LastParameter())) < 1e-6;
+        return out;
+    }
+    catch (const Standard_Failure& f) {
+        return makeError("pattern.path", "The path could not be followed.", {}, kernelText(f));
+    }
+}
+
+void pathAt(const SketchPath& path, double s, gp_Pnt& point, gp_Vec& tangent)
+{
+    BRepAdaptor_CompCurve c(path.wire);
+    const double u = s <= 0 ? c.FirstParameter()
+                   : s >= path.length ? c.LastParameter()
+                                      : GCPnts_AbscissaPoint(c, s, c.FirstParameter()).Parameter();
+    c.D1(u, point, tangent);
+    if (tangent.Magnitude() > 1e-12) {
+        tangent.Normalize();
+    }
+}
 
 Result<NamedShape> trimToFace(const NamedShape& body, const TopoDS_Face& target, const TopoDS_Shape& start,
                               const std::string& featureId, const std::string& endName)

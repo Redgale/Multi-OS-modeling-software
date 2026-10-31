@@ -223,7 +223,10 @@ QT_TRANSLATE_NOOP("Core", "Add a Point in the sketch where each hole should go."
 QT_TRANSLATE_NOOP("Core", "The hole fit must be close, normal or loose.")
 QT_TRANSLATE_NOOP("Core", "Edit the pattern and pick a body.")
 QT_TRANSLATE_NOOP("Core", "Pattern an Extrude, Revolve or Hole that comes earlier in the timeline, or a body.")
+QT_TRANSLATE_NOOP("Core", "Edit the pattern and pick the sketch with the path.")
 QT_TRANSLATE_NOOP("Core", "The number of copies must be a whole number from 2 to 1000.")
+QT_TRANSLATE_NOOP("Core", "The spacing must be larger than zero.")
+QT_TRANSLATE_NOOP("Core", "Use fewer copies, a smaller spacing, or spread them over the whole path.")
 QT_TRANSLATE_NOOP("Core", "The number of copies in each direction must be a whole number from 1 to 1000.")
 QT_TRANSLATE_NOOP("Core", "This pattern makes no copies.")
 QT_TRANSLATE_NOOP("Core", "Use a count of 2 or more.")
@@ -282,6 +285,11 @@ QT_TRANSLATE_NOOP("Core", "That face is curved. A sketch needs a flat face or a 
 QT_TRANSLATE_NOOP("Core", "Pick a flat face, or create a tangent construction plane first.")
 QT_TRANSLATE_NOOP("Core", "The sketch curves could not be split into regions.")
 QT_TRANSLATE_NOOP("Core", "The sketch shape could not be processed.")
+QT_TRANSLATE_NOOP("Core", "The path has no curves.")
+QT_TRANSLATE_NOOP("Core", "Draw the path as lines, arcs or a smooth curve.")
+QT_TRANSLATE_NOOP("Core", "The path's curves are not joined end to end.")
+QT_TRANSLATE_NOOP("Core", "Join the ends (they should share a point), or use one chain of curves.")
+QT_TRANSLATE_NOOP("Core", "The path could not be followed.")
 QT_TRANSLATE_NOOP("Core", "The extrude could not be cut off at that face.")
 QT_TRANSLATE_NOOP("Core", "That face does not cross the whole extrude, so there is no clean place to stop.")
 QT_TRANSLATE_NOOP("Core", "Pick a face that covers the sketch's outline, or a flat face or plane.")
@@ -429,6 +437,7 @@ QT_TRANSLATE_NOOP("Core", "Try another font.")
 inline const char* const kCorePatterns[] = {
     QT_TRANSLATE_NOOP("Core", "There is no body called '%1'."),
     QT_TRANSLATE_NOOP("Core", "The id '%1' is already used."),
+    QT_TRANSLATE_NOOP("Core", "There is no sketch called '%1' to use as the path."),
     QT_TRANSLATE_NOOP("Core", "There is no parameter called '%1'."),
     QT_TRANSLATE_NOOP("Core", "Parameter '%1' depends on itself."),
     QT_TRANSLATE_NOOP("Core", "“%1” uses “%2”, so it must stay after it."),
@@ -455,6 +464,8 @@ inline const char* const kCorePatterns[] = {
     QT_TRANSLATE_NOOP("Core", "Edit this %1 and pick another sketch."),
     QT_TRANSLATE_NOOP("Core", "The body this pattern repeats (%1) no longer exists."),
     QT_TRANSLATE_NOOP("Core", "The step this pattern repeats (%1) is missing, after the pattern, or has a problem."),
+    QT_TRANSLATE_NOOP("Core", "The sketch with this pattern's path (%1) is missing or comes later."),
+    QT_TRANSLATE_NOOP("Core", "%1 copies %2 apart do not fit on a path %3 long."),
     QT_TRANSLATE_NOOP("Core", "The step this mirror copies (%1) is missing, after the mirror, or has a problem."),
     QT_TRANSLATE_NOOP("Core", "%1 of the edges this chamfer bevelled no longer exist."),
     QT_TRANSLATE_NOOP("Core", "%1 of the edges this fillet rounded no longer exist."),

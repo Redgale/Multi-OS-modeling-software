@@ -1405,7 +1405,93 @@ FeatureOutcome applyPattern(const Document& doc, const Feature& f, const std::sh
         return na ? na->Direction() : gp_Dir(1, 0, 0);
     };
     std::vector<gp_Trsf> moves;
-    if (kind == "circular") {
+    if (kind == "path") {
+        // along a chain of sketch curves: spread evenly, or at a set spacing; the copies keep
+        // their direction, or turn with the path ("follow")
+        const nlohmann::json pj = p.value("path", nlohmann::json::object());
+        const std::string sid = pj.value("sketch", std::string {});
+        const SketchState* sk = findSketch(in, sid);
+        if (!sk) {
+            return failed(fmt("The sketch with this pattern's path (%1) is missing or comes later.", {sid}),
+                          {"Edit the pattern and pick the sketch with the path."});
+        }
+        std::vector<int> curves;
+        const nlohmann::json cj = pj.value("curves", nlohmann::json("all"));
+        if (cj.is_array()) {
+            for (auto& c : cj) {
+                curves.push_back(c.get<int>());
+            }
+        }
+        else {
+            for (auto& [id, e] : sk->solved.entities()) {
+                if (e.type != EntityType::Point) {
+                    curves.push_back(id);
+                }
+            }
+        }
+        auto path = sketchPath(sk->solved, sk->frame, curves);
+        if (!path) {
+            return failed(path.error());
+        }
+        auto n = evaluate(p.value("count", std::string("5")), doc.lookup());
+        if (!n || !(n->dim == Dim::none()) || n->value < 2 || n->value > 1000) {
+            return failed("The number of copies must be a whole number from 2 to 1000.");
+        }
+        const int cnt = int(std::lround(n->value));
+        const double L = path->length;
+        double step = path->closed ? L / cnt : L / (cnt - 1);
+        if (p.contains("spacing")) {
+            auto sp = doc.evalLength(p.value("spacing", std::string("10 mm")));
+            if (!sp) {
+                return failed(sp.error());
+            }
+            if (!(sp.value() > 0)) {
+                return failed("The spacing must be larger than zero.");
+            }
+            step = sp.value();
+            if (!path->closed && step * (cnt - 1) > L + 1e-7) {
+                return failed(fmt("%1 copies %2 apart do not fit on a path %3 long.",
+                                  {std::to_string(cnt), formatQuantity(Quantity {step, Dim::len()}), formatQuantity(Quantity {L, Dim::len()})}),
+                              {"Use fewer copies, a smaller spacing, or spread them over the whole path."});
+            }
+        }
+        // the path runs from the end nearer the shape being repeated
+        Bnd_Box sb = boxOf(rec.tool->shape());
+        double x0, y0, z0, x1, y1, z1;
+        sb.Get(x0, y0, z0, x1, y1, z1);
+        const gp_Pnt mid((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
+        gp_Pnt a, b;
+        gp_Vec ta, tb;
+        pathAt(*path, 0, a, ta);
+        pathAt(*path, L, b, tb);
+        const bool backwards = !path->closed && b.Distance(mid) < a.Distance(mid) - 1e-9;
+        auto at = [&](double sAlong, gp_Pnt& pt, gp_Vec& t) {
+            pathAt(*path, backwards ? L - sAlong : sAlong, pt, t);
+            if (backwards) {
+                t.Reverse();
+            }
+        };
+        const bool follow = p.value("orient", std::string("same")) == "follow";
+        gp_Pnt p0;
+        gp_Vec t0;
+        at(0, p0, t0);
+        const gp_Dir normal = sk->frame.Direction();
+        for (int k = 1; k < cnt; ++k) {
+            gp_Pnt pk;
+            gp_Vec tk;
+            at(step * k, pk, tk);
+            gp_Trsf move;
+            move.SetTranslation(gp_Vec(p0, pk));
+            if (follow && t0.Magnitude() > 1e-12 && tk.Magnitude() > 1e-12) {
+                const double ang = std::atan2(t0.Crossed(tk).Dot(gp_Vec(normal)), t0.Dot(tk));
+                gp_Trsf turn;
+                turn.SetRotation(gp_Ax1(pk, normal), ang);
+                move = turn * move;
+            }
+            moves.push_back(move);
+        }
+    }
+    else if (kind == "circular") {
         auto n = evaluate(p.value("count", std::string("6")), doc.lookup());
         if (!n || !(n->dim == Dim::none()) || n->value < 2 || n->value > 1000) {
             return failed("The number of copies must be a whole number from 2 to 1000.");

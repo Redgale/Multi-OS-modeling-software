@@ -1973,7 +1973,22 @@
     </message>
     <message>
         <location line="+1"/>
+        <source>Edit the pattern and pick the sketch with the path.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>The number of copies must be a whole number from 2 to 1000.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The spacing must be larger than zero.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Use fewer copies, a smaller spacing, or spread them over the whole path.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -2223,6 +2238,31 @@
     </message>
     <message>
         <location line="+10"/>
+        <source>The path has no curves.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Draw the path as lines, arcs or a smooth curve.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The path&apos;s curves are not joined end to end.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Join the ends (they should share a point), or use one chain of curves.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The path could not be followed.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>The extrude could not be cut off at that face.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2373,6 +2413,11 @@
     </message>
     <message>
         <location line="+2"/>
+        <source>There is no sketch called &apos;%1&apos; to use as the path.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>There is no parameter called &apos;%1&apos;.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2503,6 +2548,16 @@
     </message>
     <message>
         <location line="+1"/>
+        <source>The sketch with this pattern&apos;s path (%1) is missing or comes later.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>%1 copies %2 apart do not fit on a path %3 long.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>The step this mirror copies (%1) is missing, after the mirror, or has a problem.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2527,12 +2582,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-31"/>
+        <location line="-34"/>
         <source>The id &apos;%1&apos; is already used.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+32"/>
+        <location line="+35"/>
         <source>A wall of %1 does not fit this outline.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2607,12 +2662,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-201"/>
+        <location line="-209"/>
         <source>There is nothing to export yet.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-88"/>
+        <location line="-91"/>
         <source>The face this extrude goes up to no longer exists.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2637,7 +2692,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+85"/>
+        <location line="+88"/>
         <source>The 3MF file could not be created.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2677,7 +2732,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+4"/>
+        <location line="+9"/>
         <source>Pick at least one closed area (profile) to extrude.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3346,7 +3401,7 @@
 <context>
     <name>jigapp::AxisPanel</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="+2252"/>
+        <location filename="../app/FeaturePanels.cpp" line="+2294"/>
         <source>Construction axis</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3573,7 +3628,7 @@
 <context>
     <name>jigapp::ExprField</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="-2799"/>
+        <location filename="../app/FeaturePanels.cpp" line="-2841"/>
         <source>e.g. 45 deg</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5702,7 +5757,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::MirrorPanel</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="+182"/>
+        <location filename="../app/FeaturePanels.cpp" line="+224"/>
         <location line="+97"/>
         <source>Mirror</source>
         <translation type="unfinished"></translation>
@@ -5970,14 +6025,14 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::PatternPanel</name>
     <message>
-        <location line="-1511"/>
-        <location line="+120"/>
+        <location line="-1553"/>
+        <location line="+154"/>
         <source>Pattern</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-119"/>
-        <source>Repeat an earlier Extrude, Revolve or Hole, or a whole body, around an axis (ring) or in rows and columns (grid). Each copy of a step adds or removes material the same way.</source>
+        <location line="-153"/>
+        <source>Repeat an earlier Extrude, Revolve or Hole, or a whole body, around an axis (ring), in rows and columns (grid) or along the curves of a sketch (path). Each copy of a step adds or removes material the same way.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -5988,6 +6043,11 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
     <message>
         <location line="+0"/>
         <source>Grid (rows and columns)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Along a path (a sketch&apos;s curves)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -6022,11 +6082,12 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
     </message>
     <message>
         <location line="+1"/>
+        <location line="+36"/>
         <source>Number of copies (including the original)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
+        <location line="-35"/>
         <source>Total angle</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6075,17 +6136,47 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+12"/>
+        <location line="+11"/>
+        <source>A set spacing (instead of spreading them over the whole path)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Keep the same direction</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Turn with the path</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Sketch with the path (its curves, joined end to end)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Spacing along the path</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Copies</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+14"/>
         <source>Body: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+44"/>
+        <location line="+55"/>
         <source>There is no body or step to repeat yet.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+51"/>
+        <location line="+61"/>
         <source>pattern</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6541,7 +6632,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::RevolvePanel</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="-1002"/>
+        <location filename="../app/FeaturePanels.cpp" line="-1044"/>
         <location line="+170"/>
         <source>Revolve</source>
         <translation type="unfinished"></translation>
@@ -7704,7 +7795,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::SplitPanel</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="+1607"/>
+        <location filename="../app/FeaturePanels.cpp" line="+1649"/>
         <source>Split body</source>
         <translation type="unfinished"></translation>
     </message>

@@ -26,6 +26,7 @@
 #include <TopTools_IndexedMapOfShape.hxx>
 #include <TopoDS_Face.hxx>
 #include <TopoDS_Shape.hxx>
+#include <TopoDS_Wire.hxx>
 #include <gp_Ax1.hxx>
 #include <gp_Pnt.hxx>
 #include <gp_Pln.hxx>
@@ -312,6 +313,17 @@ struct ExtrudeInput
 
 // Builds the extruded tool body and names its faces.
 Result<NamedShape> makeExtrusion(const ExtrudeInput& in);
+
+// Sketch curves joined end to end as one 3D path (for patterns along a path).
+struct SketchPath
+{
+    TopoDS_Wire wire;
+    double length = 0;
+    bool closed = false;
+};
+Result<SketchPath> sketchPath(const Sketch& sketch, const gp_Ax3& frame, const std::vector<int>& curves);
+// The point and the unit direction at distance s along the path (0 to its length).
+void pathAt(const SketchPath& path, double s, gp_Pnt& point, gp_Vec& tangent);
 
 // Cuts an extruded body off where it meets `target` (any face, curved or slanted; a flat
 // face is extended to a whole plane), keeping the piece that touches `start` (the sketch's

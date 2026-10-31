@@ -1048,6 +1048,41 @@ private slots:
         QCOMPARE(int(w.document().state().bodies.size()), 1);
     }
 
+    // Pattern along a path: pegs along a sketch line, spread evenly.
+    void patternAlongPath()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        {
+            jig::ScriptRunner r(w.document());
+            QVERIFY(r.runText("sketch id=s1 plane=XY\nrect sketch=s1 corner=-10,-10 w=70 h=40\nextrude id=e1 sketch=s1 distance=3\n"
+                              "sketch id=s2 on=e1/end\ncircle sketch=s2 center=0,0 d=4\nextrude id=e2 sketch=s2 distance=5 op=join\n"
+                              "sketch id=p plane=XY\nline sketch=p p1=0,0 p2=40,0 construction=yes\n").ok());
+        }
+        const double before = jig::massProperties(w.document().state().bodies.at("e1")->shape()).volume;
+        w.runCommand("solid.pattern_rect");
+        auto* pp = qobject_cast<PatternPanel*>(w.featurePanel());
+        QVERIFY(pp);
+        pp->source()->setCurrentIndex(pp->source()->findData("e2"));
+        pp->kind()->setCurrentIndex(pp->kind()->findData("path"));
+        pp->pathSketch()->setCurrentIndex(pp->pathSketch()->findData("p"));
+        pp->pathCount()->setText("5");
+        QTest::qWait(300);
+        QTRY_VERIFY(pp->previewOk());
+        QVERIFY(pp->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        const double after = jig::massProperties(w.document().state().bodies.at("e1")->shape()).volume;
+        QVERIFY2(std::abs(after - before - 4 * 4 * M_PI * 5) < 1e-3, qPrintable(QString::number(after - before)));
+        w.editFeature(int(w.document().model().features.size()) - 1);
+        pp = qobject_cast<PatternPanel*>(w.featurePanel());
+        QVERIFY(pp);
+        QCOMPARE(pp->kind()->currentData().toString(), QString("path"));
+        QCOMPARE(pp->pathSketch()->currentData().toString(), QString("p"));
+        pp->cancel();
+    }
+
     // Extrude up to a curved face clicked in the view: the rod stops under the cylinder.
     void extrudeUpToCurvedFace()
     {

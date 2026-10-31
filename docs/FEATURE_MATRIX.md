@@ -128,7 +128,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Delete body/feature | 17 | v0.1 M2 | **app** + scripts (`remove`): a step is deleted from the timeline (warning when later steps use it); a body is deleted from the Browser as a Remove step, so undo and rolling back bring it back | |
 | Compute all | 17 | v0.1 | automatic (incremental recompute) | |
 | Patterns: rectangular, circular (features, bodies) | 19 | v0.1 M3 | **app** + scripts: features (Extrude, Revolve, Hole) and whole bodies (separate or joined); axes and directions may be construction axes | |
-| Pattern on path | 19 | v0.2 | — | |
+| Pattern on path | 19 | v0.2 (done early) | **app** + scripts (`kind=path`): along a sketch's curves, spread or spaced, same direction or turning with the path | |
 | Pattern compute options (optimised/identical/adjust) | 19 | v0.2 | — | Adjust only in v0.1 |
 | Mirror (features, bodies) | 19 | v0.1 M3 | **app** + scripts: bodies and single steps, across origin planes, construction planes or a clicked flat face | |
 | Construct: offset plane, plane at angle, midplane | 20 | v0.1 M4 | **app** + scripts (`plane`): from origin planes, construction planes or flat faces; angle around an origin or construction axis or straight edge | |
