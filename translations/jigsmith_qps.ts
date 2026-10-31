@@ -2578,7 +2578,7 @@
     </message>
     <message>
         <location line="+9" />
-        <location line="+639" />
+        <location line="+645" />
         <location line="+539" />
         <location line="+815" />
         <location line="+26" />
@@ -2586,7 +2586,7 @@
         <translation>[Skétçh~~]</translation>
     </message>
     <message>
-        <location line="-2017" />
+        <location line="-2023" />
         <source>Extrude</source>
         <translation>[Éxtrüdé~~]</translation>
     </message>
@@ -2672,6 +2672,11 @@
     </message>
     <message>
         <location line="+17" />
+        <source>3D view unavailable</source>
+        <translation>[3D vîéw üñáváîláblé~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+6" />
         <source>Pick faces</source>
         <translation>[Pîçk fáçés~~~]</translation>
     </message>
@@ -4068,12 +4073,11 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
     <name>jigapp::ParametersDialog</name>
     <message>
         <location line="+9" />
-        <location line="+143" />
         <source>Parameters</source>
         <translation>[Párámétérs~~~]</translation>
     </message>
     <message>
-        <location line="-140" />
+        <location line="+3" />
         <source>Name the sizes that matter (width, wall, clearance) and type the names in any size field. Values can use units and other names, e.g. &lt;i&gt;width / 2 + 3 mm&lt;/i&gt;.</source>
         <translation>[Ñámé thé sîzés thát máttér (wîdth, wáll, çléáráñçé) áñd týpé thé ñámés îñ áñý sîzé fîéld. Válüés çáñ üsé üñîts áñd öthér ñámés, é.g. &lt;i&gt;wîdth / 2 + 3 mm&lt;/i&gt;.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -5842,7 +5846,17 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
 <context>
     <name>jigapp::Viewport</name>
     <message>
-        <location filename="../app/Viewport.cpp" line="+853" />
+        <location filename="../app/Viewport.cpp" line="+367" />
+        <source>none</source>
+        <translation>[ñöñé~]</translation>
+    </message>
+    <message>
+        <location line="+2" />
+        <source>The 3D view needs OpenGL 3.3, and this computer's graphics driver offers %1. Updating the graphics driver usually fixes this. Designs still open, save and export; only the view stays empty.</source>
+        <translation>[Thé 3D vîéw ñééds ÖpéñGL 3.3, áñd thîs çömpütér's gráphîçs drîvér öfférs %1. Üpdátîñg thé gráphîçs drîvér üsüállý fîxés thîs. Désîgñs stîll öpéñ, sávé áñd éxpört; öñlý thé vîéw stáýs émptý.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+505" />
         <source>Updating the view…</source>
         <translation>[Üpdátîñg thé vîéw…~~~~~]</translation>
     </message>

@@ -477,6 +477,12 @@ MainWindow::MainWindow()
     statusBar()->addPermanentWidget(statusInfo_);
     connect(view_, &Viewport::hovered, this, [this](const QString& d) { statusSel_->setText(d); });
     connect(view_, &Viewport::menuRequested, this, [this](const QPoint& p) { openMarkingMenu(p); });
+    connect(view_, &Viewport::graphicsProblem, this, [this](const QString& why) {
+        statusBar()->showMessage(why);
+        auto* box = new QMessageBox(QMessageBox::Warning, tr("3D view unavailable"), why, QMessageBox::Ok, this);
+        box->setAttribute(Qt::WA_DeleteOnClose);
+        box->open();  // not modal to the event loop: everything else keeps working
+    });
     connect(view_, &Viewport::selectOtherRequested, this, [this](const QPoint& p) { openSelectOther(p); });
     selectFilter_ = new QComboBox(this);
     selectFilter_->addItem(tr("Pick faces"), "faces");

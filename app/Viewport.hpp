@@ -232,6 +232,8 @@ signals:
     void menuRequested(const QPoint& pos);
     // a long left press without moving: offer the faces hidden behind the one under it
     void selectOtherRequested(const QPoint& pos);
+    // the graphics driver cannot draw the 3D view (too old an OpenGL): what to tell the person
+    void graphicsProblem(const QString& explanation);
     void meshesUpdated();
 
 protected:
@@ -294,6 +296,7 @@ private:
     int gridMinorCount_ = 0, gridMajorCount_ = 0, axisCount_ = 0;
     std::unique_ptr<QOpenGLFramebufferObject> pickFbo_;
     bool glReady_ = false;
+    bool glFailed_ = false;  // no usable OpenGL 3.3: the view draws nothing instead of crashing
     std::vector<BodyInput> waiting_;  // set before GL was initialised
 
     // camera (Z-up)

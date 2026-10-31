@@ -14,6 +14,7 @@
 #include <QOpenGLFramebufferObject>
 #include <QPainter>
 #include <QResizeEvent>
+#include <QOpenGLContext>
 #include <QTimer>
 
 #include <IntCurvesFace_ShapeIntersector.hxx>
@@ -358,7 +359,20 @@ void Viewport::buildGrid()
 
 void Viewport::initializeGL()
 {
-    initializeOpenGLFunctions();
+    // Without OpenGL 3.3 core the function table below is empty: calling it would crash.
+    const QSurfaceFormat got = context() ? context()->format() : QSurfaceFormat();
+    const bool versionOk = got.majorVersion() > 3 || (got.majorVersion() == 3 && got.minorVersion() >= 3);
+    if (!context() || !versionOk || !initializeOpenGLFunctions()) {
+        glFailed_ = true;
+        const QString have = context() ? QString("%1.%2").arg(got.majorVersion()).arg(got.minorVersion()) : tr("none");
+        QTimer::singleShot(0, this, [this, have] {
+            emit graphicsProblem(tr("The 3D view needs OpenGL 3.3, and this computer's graphics driver offers %1. "
+                                    "Updating the graphics driver usually fixes this. Designs still open, save "
+                                    "and export; only the view stays empty.")
+                                     .arg(have));
+        });
+        return;
+    }
     meshProg_ = std::make_unique<QOpenGLShaderProgram>();
     meshProg_->addShaderFromSourceCode(QOpenGLShader::Vertex, kMeshVs);
     meshProg_->addShaderFromSourceCode(QOpenGLShader::Fragment, kMeshFs);
@@ -784,6 +798,13 @@ void Viewport::keyPressEvent(QKeyEvent* e)
 
 void Viewport::paintGL()
 {
+    if (glFailed_) {
+        // nothing can be drawn: let finished tessellations go, keep the rest of the app working
+        auto& js = jobs(this);
+        std::erase_if(js, [](auto& j) { return j.mesh.wait_for(std::chrono::seconds(0)) == std::future_status::ready; });
+        pending_ = int(js.size());
+        return;
+    }
     // Collect finished tessellations.
     auto& js = jobs(this);
     bool changed = false;

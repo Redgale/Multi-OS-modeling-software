@@ -2581,7 +2581,7 @@
     </message>
     <message>
         <location line="+9"/>
-        <location line="+639"/>
+        <location line="+645"/>
         <location line="+539"/>
         <location line="+815"/>
         <location line="+26"/>
@@ -2589,7 +2589,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2017"/>
+        <location line="-2023"/>
         <source>Extrude</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2675,6 +2675,11 @@
     </message>
     <message>
         <location line="+17"/>
+        <source>3D view unavailable</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
         <source>Pick faces</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4070,12 +4075,11 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
     <name>jigapp::ParametersDialog</name>
     <message>
         <location line="+9"/>
-        <location line="+143"/>
         <source>Parameters</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-140"/>
+        <location line="+3"/>
         <source>Name the sizes that matter (width, wall, clearance) and type the names in any size field. Values can use units and other names, e.g. &lt;i&gt;width / 2 + 3 mm&lt;/i&gt;.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5852,7 +5856,17 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::Viewport</name>
     <message>
-        <location filename="../app/Viewport.cpp" line="+853"/>
+        <location filename="../app/Viewport.cpp" line="+367"/>
+        <source>none</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>The 3D view needs OpenGL 3.3, and this computer&apos;s graphics driver offers %1. Updating the graphics driver usually fixes this. Designs still open, save and export; only the view stays empty.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+505"/>
         <source>Updating the view…</source>
         <translation type="unfinished"></translation>
     </message>
