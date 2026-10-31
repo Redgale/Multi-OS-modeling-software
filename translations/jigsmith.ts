@@ -1807,17 +1807,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
-        <source>Extrude can only go up to a plane or flat face parallel to the sketch.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+1"/>
-        <source>Pick a face that faces the sketch, or type a distance.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+1"/>
+        <location line="+6"/>
         <source>That face or plane is in the sketch&apos;s own plane, so there is nothing to extrude up to.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2222,7 +2212,22 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+60"/>
+        <location line="+10"/>
+        <source>The extrude could not be cut off at that face.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>That face does not cross the whole extrude, so there is no clean place to stop.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Pick a face that covers the sketch&apos;s outline, or a flat face or plane.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+51"/>
         <source>The imported solid stored in this design is damaged.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2592,12 +2597,37 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-198"/>
+        <location line="-201"/>
         <source>There is nothing to export yet.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location line="-86"/>
+        <source>The face this extrude goes up to no longer exists.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <location line="+1"/>
+        <source>Edit the extrude and pick a face again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>An offset beyond a curved or slanted face is not supported yet.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Set the offset to 0, or pick a face parallel to the sketch.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>That face is level with the sketch, so there is no way to tell which way to extrude.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+83"/>
         <source>The 3MF file could not be created.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2637,7 +2667,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
+        <location line="+4"/>
         <source>Pick at least one closed area (profile) to extrude.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3306,7 +3336,7 @@
 <context>
     <name>jigapp::AxisPanel</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="+2260"/>
+        <location filename="../app/FeaturePanels.cpp" line="+2256"/>
         <source>Construction axis</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3533,7 +3563,7 @@
 <context>
     <name>jigapp::ExprField</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="-2807"/>
+        <location filename="../app/FeaturePanels.cpp" line="-2803"/>
         <source>e.g. 45 deg</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3643,12 +3673,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+369"/>
+        <location line="+365"/>
         <source>New body</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-368"/>
+        <location line="-364"/>
         <source>Intersect: keep the overlap</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3709,22 +3739,17 @@
     </message>
     <message>
         <location line="+25"/>
-        <location line="+172"/>
+        <location line="+168"/>
         <source>Face %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-99"/>
+        <location line="-95"/>
         <source>There is no sketch to extrude yet. Create a sketch first.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+92"/>
-        <source>Click a flat face to extrude up to.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+43"/>
+        <location line="+131"/>
         <source>Area %1 · %2</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3767,7 +3792,7 @@
 <context>
     <name>jigapp::FeaturePanel</name>
     <message>
-        <location line="-743"/>
+        <location line="-739"/>
         <source>OK</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3825,7 +3850,7 @@
 <context>
     <name>jigapp::FilletPanel</name>
     <message>
-        <location line="+533"/>
+        <location line="+529"/>
         <source>Chamfer</source>
         <translation type="unfinished"></translation>
     </message>

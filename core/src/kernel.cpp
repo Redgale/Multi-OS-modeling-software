@@ -807,6 +807,64 @@ Result<ProfileSet> buildProfiles(const Sketch& sketch, const gp_Ax3& frame)
 
 // ---------------------------------------------------------------- extrude
 
+Result<NamedShape> trimToFace(const NamedShape& body, const TopoDS_Face& target, const TopoDS_Shape& start,
+                              const std::string& featureId, const std::string& endName)
+{
+    try {
+        TopoDS_Shape tool = target;
+        BRepAdaptor_Surface surf(target);
+        if (surf.GetType() == GeomAbs_Plane) {
+            // a flat face reaches as far as its plane: a face big enough to cross the body
+            Bnd_Box bb;
+            BRepBndLib::Add(body.shape(), bb);
+            const double big = std::sqrt(bb.SquareExtent()) * 4 + 100;
+            tool = BRepBuilderAPI_MakeFace(surf.Plane(), -big, big, -big, big).Face();
+        }
+        BRepAlgoAPI_Splitter split;
+        TopTools_ListOfShape args, tools;
+        args.Append(body.shape());
+        tools.Append(tool);
+        split.SetArguments(args);
+        split.SetTools(tools);
+        split.Build();
+        if (!split.IsDone()) {
+            return makeError("extrude.to_face", "The extrude could not be cut off at that face.");
+        }
+        GProp_GProps whole;
+        BRepGProp::VolumeProperties(body.shape(), whole);
+        TopoDS_Shape keep;
+        int pieces = 0;
+        int touching = 0;
+        for (TopExp_Explorer ex(split.Shape(), TopAbs_SOLID); ex.More(); ex.Next()) {
+            ++pieces;
+            BRepExtrema_DistShapeShape d(ex.Current(), start);
+            if (d.IsDone() && d.Value() < 1e-6) {
+                keep = ex.Current();
+                ++touching;
+            }
+        }
+        if (pieces < 2 || touching != 1) {
+            return makeError("extrude.to_face", "That face does not cross the whole extrude, so there is no clean place to stop.",
+                             {"Pick a face that covers the sketch's outline, or a flat face or plane."});
+        }
+        NamedShape out(keep);
+        propagateFaceNames(split, {&body}, out);
+        // the faces the cut made (named after the target) are the new end
+        std::vector<TopoDS_Shape> ends;
+        for (int i = 0; i < out.faceCount(); ++i) {
+            if (out.faceName(i).empty()) {
+                ends.push_back(out.face(i));
+            }
+        }
+        assignNames(out, ends, endName);
+        nameLeftovers(out, featureId);
+        return out;
+    }
+    catch (const Standard_Failure& f) {
+        return makeError("extrude.to_face", "The extrude could not be cut off at that face.", {}, kernelText(f));
+    }
+}
+
 Result<NamedShape> makeExtrusion(const ExtrudeInput& in)
 {
     if (in.profiles.empty()) {

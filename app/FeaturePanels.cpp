@@ -828,11 +828,7 @@ void ExtrudePanel::useFace(const std::string& body, const std::string& name)
     if (hits.empty()) {
         return;
     }
-    if (jig::measureItem(it->second->face(hits[0])).kind != "flat face") {
-        status_->setText("<b>✕ " + tr("Click a flat face to extrude up to.") + "</b>");
-        return;
-    }
-    extent_->setCurrentIndex(extent_->findData("to"));
+    extent_->setCurrentIndex(extent_->findData("to"));  // any face: flat, slanted or curved
     const QString key = q(nlohmann::json {{"face", it->second->faceRef(body, hits[0]).toJson()}}.dump());
     int i = to_->findData(key);
     if (i < 0) {

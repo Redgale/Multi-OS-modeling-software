@@ -1217,11 +1217,58 @@ TEST(Extrude, UpToAFaceOrPlane)
     expectAllOk(*pl);
     EXPECT_NEAR(props(*pl).zmin, 9, 1e-9);
     EXPECT_NEAR(props(*pl).zmax, 30, 1e-9);
-    // a face that is not parallel is explained
+    // a plane square to the sketch, through the outline, gives no way to tell how far
     auto bad = std::make_unique<Document>();
     ScriptRunner r(*bad);
     r.runText("sketch id=s1 plane=XY\ncircle sketch=s1 center=0,0 d=10\nextrude id=e1 sketch=s1 extent=to to=YZ\n");
-    EXPECT_NE(bad->status(1).message.find("parallel"), std::string::npos) << bad->status(1).message;
+    EXPECT_NE(int(bad->status(1).level), int(StatusLevel::Ok));
+}
+
+TEST(Extrude, UpToASlantedPlaneOrCurvedFace)
+{
+    // a 10 mm rod from 20 below the floor up to a plane tilted 30 degrees about X through the
+    // origin: the cut is centred on the rod, so the volume is the area times 20
+    auto slant = build("plane id=pl1 kind=angle base=XY axis=X angle=30deg\nsketch id=s1 plane=XY offset=-20mm\n"
+                       "circle sketch=s1 center=0,0 d=10\nextrude id=e1 sketch=s1 extent=to to=pl1\n");
+    expectAllOk(*slant);
+    EXPECT_NEAR(props(*slant).volume, 25 * pi * 20, 1e-3);
+    const auto& rod = *slant->state().bodies.at("e1");
+    EXPECT_EQ(rod.findFaces("e1/end").size(), 1u);  // the slanted cut is the rod's end
+    // up to the underside of a lying cylinder (radius 20, axis along Y at z = 30)
+    auto curved = build("sketch id=c plane=XZ\ncircle sketch=c center=0,30 d=40\nextrude id=cyl sketch=c distance=30 direction=symmetric\n"
+                        "sketch id=s1 plane=XY\ncircle sketch=s1 center=0,0 d=6\n");
+    std::string round;
+    for (auto& [bid, b] : curved->state().bodies) {
+        for (int i = 0; i < b->faceCount(); ++i) {
+            if (measureItem(b->face(i)).radius) {
+                round = b->faceName(i);
+            }
+        }
+    }
+    ASSERT_FALSE(round.empty());
+    run(*curved, "extrude id=e1 sketch=s1 extent=to to=face:" + round + " op=new");
+    expectAllOk(*curved);
+    const auto mp = massProperties(curved->state().bodies.at("e1")->shape());
+    EXPECT_NEAR(mp.zmin, 0, 1e-6);
+    EXPECT_NEAR(mp.zmax, 30 - std::sqrt(400.0 - 9), 1e-6);  // highest at the rod's sides
+    // between the rod cut flat at the lowest and the highest point of the curve
+    EXPECT_GT(mp.volume, 9 * pi * 10);
+    EXPECT_LT(mp.volume, 9 * pi * (30 - std::sqrt(400.0 - 9)));
+    // a face that does not cover the outline is explained: a thin upright pin inside a wide rod
+    auto narrow = std::make_unique<Document>();
+    ScriptRunner rn(*narrow);
+    rn.runText("sketch id=b plane=XY\ncircle sketch=b center=0,0 d=4\nextrude id=e0 sketch=b distance=30\n"
+               "sketch id=s1 plane=XY offset=-10mm\ncircle sketch=s1 center=0,0 d=20\n");
+    std::string pin;
+    const auto& b0 = *narrow->state().bodies.at("e0");
+    for (int i = 0; i < b0.faceCount(); ++i) {
+        if (measureItem(b0.face(i)).radius) {
+            pin = b0.faceName(i);
+        }
+    }
+    ASSERT_FALSE(pin.empty());
+    rn.runText("extrude id=e1 sketch=s1 extent=to to=face:" + pin + " op=new\n");
+    EXPECT_NE(narrow->status(3).message.find("does not cross"), std::string::npos) << narrow->status(3).message;
 }
 
 TEST(Extrude, ThinWallsAlongOpenCurves)

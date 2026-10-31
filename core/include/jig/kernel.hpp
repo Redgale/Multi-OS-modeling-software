@@ -313,6 +313,13 @@ struct ExtrudeInput
 // Builds the extruded tool body and names its faces.
 Result<NamedShape> makeExtrusion(const ExtrudeInput& in);
 
+// Cuts an extruded body off where it meets `target` (any face, curved or slanted; a flat
+// face is extended to a whole plane), keeping the piece that touches `start` (the sketch's
+// profile). The cut face is named `endName`. Refused when the face does not cross the
+// whole body.
+Result<NamedShape> trimToFace(const NamedShape& body, const TopoDS_Face& target, const TopoDS_Shape& start,
+                              const std::string& featureId, const std::string& endName);
+
 // Spins profiles around an axis. angle in radians (2*pi = full turn). Faces are named
 // "<feature>/side:<sketch curve>", plus "start"/"end" caps for partial turns.
 Result<NamedShape> makeRevolution(const std::string& featureId,

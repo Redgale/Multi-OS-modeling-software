@@ -13,6 +13,9 @@
 
 #include <BRepAdaptor_Curve.hxx>
 #include <BRepBndLib.hxx>
+#include <TopoDS_Compound.hxx>
+#include <BRep_Builder.hxx>
+#include <BRepBuilderAPI_MakeFace.hxx>
 #include <BRepGProp.hxx>
 #include <GProp_GProps.hxx>
 #include <BRepGProp_Face.hxx>
@@ -772,17 +775,74 @@ FeatureOutcome applyExtrude(const Document& doc, const Feature& f, const std::sh
         const std::string side = p.value("thin_side", std::string("center"));
         ei.thinSide = side == "inside" ? -1 : side == "outside" ? 1 : 0;
     }
+    std::optional<TopoDS_Face> trimAt;  // up to a curved or slanted face: cut off there
     if (p.value("extent", std::string("distance")) == "to") {
         // up to a plane or flat face parallel to the sketch: the distance follows it
+        const nlohmann::json toRef = p.value("to", nlohmann::json("XY"));
+        const gp_Vec n(sk.frame.Direction());
+        std::optional<TopoDS_Face> face;
+        if (toRef.is_object() && toRef.contains("face")) {
+            ShapeRef ref = ShapeRef::fromJson(toRef["face"]);
+            auto bit = in->bodies.find(ref.body);
+            Resolution r = bit == in->bodies.end() ? Resolution {} : resolve(*bit->second, ref);
+            if (bit == in->bodies.end() || r.status == ResolveStatus::Missing || r.status == ResolveStatus::Ambiguous) {
+                return failed("The face this extrude goes up to no longer exists.", {"Edit the extrude and pick a face again."});
+            }
+            face = TopoDS::Face(bit->second->face(r.index));
+        }
+        const bool flat = !face || measureItem(*face).normal.has_value();
+        auto to = flat ? planeFrame(toRef, in, status) : Result<gp_Ax3>(gp_Ax3());
+        if (!to) {
+            return failed(to.error());
+        }
+        if (!flat || !to->Direction().IsParallel(sk.frame.Direction(), 1e-6)) {
+            // curved or slanted: extrude past it, then cut off where it meets it
+            if (p.contains("to_offset")) {
+                auto off = doc.evalLength(p.value("to_offset", std::string("0 mm")));
+                if (off && std::abs(off.value()) > 1e-9) {
+                    return failed("An offset beyond a curved or slanted face is not supported yet.",
+                                  {"Set the offset to 0, or pick a face parallel to the sketch."});
+                }
+            }
+            const TopoDS_Face target = face ? *face : BRepBuilderAPI_MakeFace(gp_Pln(*to)).Face();
+            Bnd_Box all;
+            for (auto& [id, b] : in->bodies) {
+                all.Add(boxOf(b->shape()));
+            }
+            all.Add(boxOf(profiles.front()->face));
+            if (face) {
+                all.Add(boxOf(*face));
+            }
+            const double reach = std::sqrt(all.SquareExtent()) * 2 + 10;
+            // which way: toward the face (its centre, or the plane's point nearest the sketch)
+            GProp_GProps g;
+            BRepGProp::SurfaceProperties(profiles.front()->face, g);
+            gp_Pnt aim;
+            if (face) {
+                GProp_GProps fg;
+                BRepGProp::SurfaceProperties(*face, fg);
+                aim = fg.CentreOfMass();
+            }
+            else {
+                const gp_Pln pl(*to);
+                const gp_Vec v(pl.Location(), g.CentreOfMass());
+                aim = g.CentreOfMass().Translated(-gp_Vec(pl.Axis().Direction()) * v.Dot(gp_Vec(pl.Axis().Direction())));
+            }
+            const double side = gp_Vec(g.CentreOfMass(), aim).Dot(n);
+            if (std::abs(side) < 1e-7) {
+                return failed("That face is level with the sketch, so there is no way to tell which way to extrude.");
+            }
+            ei.distance = reach;
+            ei.direction = side > 0 ? ExtrudeDirection::OneSide : ExtrudeDirection::Reverse;
+            trimAt = target;
+        }
+    }
+    if (p.value("extent", std::string("distance")) == "to" && !trimAt) {
         auto to = planeFrame(p.value("to", nlohmann::json("XY")), in, status);
         if (!to) {
             return failed(to.error());
         }
         const gp_Vec n(sk.frame.Direction());
-        if (!to->Direction().IsParallel(sk.frame.Direction(), 1e-6)) {
-            return failed("Extrude can only go up to a plane or flat face parallel to the sketch.",
-                          {"Pick a face that faces the sketch, or type a distance."});
-        }
         double d = gp_Vec(sk.frame.Location(), to->Location()).Dot(n);
         if (p.contains("to_offset")) {
             auto off = doc.evalLength(p.value("to_offset", std::string("0 mm")));
@@ -807,7 +867,7 @@ FeatureOutcome applyExtrude(const Document& doc, const Feature& f, const std::sh
         ei.distance = 2 * d;
         ei.direction = ExtrudeDirection::Symmetric;
     }
-    else {
+    else if (!trimAt) {
         auto d = doc.evalLength(p.value("distance", std::string("10 mm")));
         if (!d) {
             return failed(d.error());
@@ -824,6 +884,15 @@ FeatureOutcome applyExtrude(const Document& doc, const Feature& f, const std::sh
         return failed("This extrude has an unknown operation.");
     }
     auto tool = makeExtrusion(ei);
+    if (tool && trimAt) {
+        TopoDS_Compound start;
+        BRep_Builder bb;
+        bb.MakeCompound(start);
+        for (const Profile* pr : profiles) {
+            bb.Add(start, pr->face);
+        }
+        tool = trimToFace(tool.value(), *trimAt, start, f.id, f.id + "/end");
+    }
     if (!tool) {
         Error e = tool.error();
         if (e.code == "extrude.taper" && std::abs(ei.taper) > 1e-9) {

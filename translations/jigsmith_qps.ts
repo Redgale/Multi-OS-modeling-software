@@ -1806,17 +1806,7 @@
         <translation>[Fîx thé skétçh fîrst: ît îs márkéd îñ thé tîmélîñé.~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+1" />
-        <source>Extrude can only go up to a plane or flat face parallel to the sketch.</source>
-        <translation>[Éxtrüdé çáñ öñlý gö üp tö á pláñé ör flát fáçé párállél tö thé skétçh.~~~~~~~~~~~~~~~~~~]</translation>
-    </message>
-    <message>
-        <location line="+1" />
-        <source>Pick a face that faces the sketch, or type a distance.</source>
-        <translation>[Pîçk á fáçé thát fáçés thé skétçh, ör týpé á dîstáñçé.~~~~~~~~~~~~~~]</translation>
-    </message>
-    <message>
-        <location line="+1" />
+        <location line="+6" />
         <source>That face or plane is in the sketch's own plane, so there is nothing to extrude up to.</source>
         <translation>[Thát fáçé ör pláñé îs îñ thé skétçh's öwñ pláñé, sö théré îs ñöthîñg tö éxtrüdé üp tö.~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -2221,7 +2211,22 @@
         <translation>[Thîs fîlé çöüld ñöt bé öpéñéd. Ît máý bé dámágéd ör ñöt á Jîgsmîth désîgñ.~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+60" />
+        <location line="+10" />
+        <source>The extrude could not be cut off at that face.</source>
+        <translation>[Thé éxtrüdé çöüld ñöt bé çüt öff át thát fáçé.~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>That face does not cross the whole extrude, so there is no clean place to stop.</source>
+        <translation>[Thát fáçé döés ñöt çröss thé whölé éxtrüdé, sö théré îs ñö çléáñ pláçé tö stöp.~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Pick a face that covers the sketch's outline, or a flat face or plane.</source>
+        <translation>[Pîçk á fáçé thát çövérs thé skétçh's öütlîñé, ör á flát fáçé ör pláñé.~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+51" />
         <source>The imported solid stored in this design is damaged.</source>
         <translation>[Thé împörtéd sölîd störéd îñ thîs désîgñ îs dámágéd.~~~~~~~~~~~~~~]</translation>
     </message>
@@ -2591,12 +2596,37 @@
         <translation>[Thé föñt '%1' îs ñöt áváîláblé héré; üsîñg thé büîlt-îñ föñt (Îñtér).~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="-198" />
+        <location line="-201" />
         <source>There is nothing to export yet.</source>
         <translation>[Théré îs ñöthîñg tö éxpört ýét.~~~~~~~~]</translation>
     </message>
     <message>
+        <location line="-86" />
+        <source>The face this extrude goes up to no longer exists.</source>
+        <translation>[Thé fáçé thîs éxtrüdé göés üp tö ñö löñgér éxîsts.~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
         <location line="+1" />
+        <source>Edit the extrude and pick a face again.</source>
+        <translation>[Édît thé éxtrüdé áñd pîçk á fáçé ágáîñ.~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>An offset beyond a curved or slanted face is not supported yet.</source>
+        <translation>[Áñ öffsét béýöñd á çürvéd ör sláñtéd fáçé îs ñöt süppörtéd ýét.~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Set the offset to 0, or pick a face parallel to the sketch.</source>
+        <translation>[Sét thé öffsét tö 0, ör pîçk á fáçé párállél tö thé skétçh.~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>That face is level with the sketch, so there is no way to tell which way to extrude.</source>
+        <translation>[Thát fáçé îs lévél wîth thé skétçh, sö théré îs ñö wáý tö téll whîçh wáý tö éxtrüdé.~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+83" />
         <source>The 3MF file could not be created.</source>
         <translation>[Thé 3MF fîlé çöüld ñöt bé çréátéd.~~~~~~~~]</translation>
     </message>
@@ -2636,7 +2666,7 @@
         <translation>[Thé skétçh shápé çöüld ñöt bé pröçésséd.~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+1" />
+        <location line="+4" />
         <source>Pick at least one closed area (profile) to extrude.</source>
         <translation>[Pîçk át léást öñé çlöséd áréá (pröfîlé) tö éxtrüdé.~~~~~~~~~~~~~]</translation>
     </message>
@@ -3305,7 +3335,7 @@
 <context>
     <name>jigapp::AxisPanel</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="+2260" />
+        <location filename="../app/FeaturePanels.cpp" line="+2256" />
         <source>Construction axis</source>
         <translation>[Çöñstrüçtîöñ áxîs~~~~~]</translation>
     </message>
@@ -3532,7 +3562,7 @@
 <context>
     <name>jigapp::ExprField</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="-2807" />
+        <location filename="../app/FeaturePanels.cpp" line="-2803" />
         <source>e.g. 45 deg</source>
         <translation>[é.g. 45 dég~]</translation>
     </message>
@@ -3642,12 +3672,12 @@
     </message>
     <message>
         <location line="+1" />
-        <location line="+369" />
+        <location line="+365" />
         <source>New body</source>
         <translation>[Ñéw bödý~~]</translation>
     </message>
     <message>
-        <location line="-368" />
+        <location line="-364" />
         <source>Intersect: keep the overlap</source>
         <translation>[Îñtérséçt: kéép thé övérláp~~~~~~~]</translation>
     </message>
@@ -3708,22 +3738,17 @@
     </message>
     <message>
         <location line="+25" />
-        <location line="+172" />
+        <location line="+168" />
         <source>Face %1</source>
         <translation>[Fáçé %1~]</translation>
     </message>
     <message>
-        <location line="-99" />
+        <location line="-95" />
         <source>There is no sketch to extrude yet. Create a sketch first.</source>
         <translation>[Théré îs ñö skétçh tö éxtrüdé ýét. Çréáté á skétçh fîrst.~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+92" />
-        <source>Click a flat face to extrude up to.</source>
-        <translation>[Çlîçk á flát fáçé tö éxtrüdé üp tö.~~~~~~~~~]</translation>
-    </message>
-    <message>
-        <location line="+43" />
+        <location line="+131" />
         <source>Area %1 · %2</source>
         <translation>[Áréá %1 · %2~]</translation>
     </message>
@@ -3766,7 +3791,7 @@
 <context>
     <name>jigapp::FeaturePanel</name>
     <message>
-        <location line="-743" />
+        <location line="-739" />
         <source>OK</source>
         <translation>[ÖK~]</translation>
     </message>
@@ -3824,7 +3849,7 @@
 <context>
     <name>jigapp::FilletPanel</name>
     <message>
-        <location line="+533" />
+        <location line="+529" />
         <source>Chamfer</source>
         <translation>[Çhámfér~~]</translation>
     </message>

@@ -1048,6 +1048,39 @@ private slots:
         QCOMPARE(int(w.document().state().bodies.size()), 1);
     }
 
+    // Extrude up to a curved face clicked in the view: the rod stops under the cylinder.
+    void extrudeUpToCurvedFace()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        {
+            jig::ScriptRunner r(w.document());
+            QVERIFY(r.runText("sketch id=c plane=XZ\ncircle sketch=c center=0,30 d=40\nextrude id=cyl sketch=c distance=30 direction=symmetric\n"
+                              "sketch id=s1 plane=XY\ncircle sketch=s1 center=0,0 d=6\n").ok());
+        }
+        std::string round;
+        const auto& cyl = *w.document().state().bodies.at("cyl");
+        for (int i = 0; i < cyl.faceCount(); ++i) {
+            if (jig::measureItem(cyl.face(i)).radius) {
+                round = cyl.faceName(i);
+            }
+        }
+        w.runCommand("solid.extrude");
+        auto* ep = qobject_cast<ExtrudePanel*>(w.featurePanel());
+        QVERIFY(ep);
+        ep->useFace("cyl", round);
+        QCOMPARE(ep->extent()->currentData().toString(), QString("to"));
+        ep->operation()->setCurrentIndex(ep->operation()->findData("new"));
+        QTest::qWait(300);
+        QTRY_VERIFY(ep->previewOk());
+        QVERIFY(ep->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        const auto mp = jig::massProperties(w.document().state().bodies.at(w.document().model().features.back().id)->shape());
+        QVERIFY(std::abs(mp.zmax - (30 - std::sqrt(391.0))) < 1e-6);
+    }
+
     // B-015: the Parameters dialog changes the design as one undoable step; the timeline's
     // right-click menu suppresses a step and brings it back.
     void parametersAndTimelineMenu()
