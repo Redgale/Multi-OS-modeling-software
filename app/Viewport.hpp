@@ -27,6 +27,8 @@
 class QKeyEvent;
 class QOpenGLFramebufferObject;
 
+class QTimer;
+
 namespace jigapp
 {
 
@@ -196,6 +198,10 @@ public:
         return pickAt(p);
     }
     std::optional<EdgePick> pickEdgeAt(const QPoint& p);
+    // Every face under a widget pixel, nearest first (for Select Other).
+    std::vector<PickResult> facesUnder(const QPoint& px) const;
+    // Selects a face as a click on it would (selection + faceClicked).
+    void selectFace(const std::string& body, int face);
     // Camera ray through a widget pixel, and the reverse.
     void ray(const QPointF& px, QVector3D& origin, QVector3D& dir) const;
     QPointF project(const QVector3D& world) const;
@@ -224,6 +230,8 @@ signals:
     void faceClicked(const QString& bodyId, const QString& faceName, Qt::KeyboardModifiers mods);
     // a right click without dragging (a right drag orbits): open the marking menu here
     void menuRequested(const QPoint& pos);
+    // a long left press without moving: offer the faces hidden behind the one under it
+    void selectOtherRequested(const QPoint& pos);
     void meshesUpdated();
 
 protected:
@@ -309,6 +317,8 @@ private:
     int shownBodies_ = 0;
     bool zoomInverted_ = false;
     float orbitSpeed_ = 1.0f;
+    QTimer* longPress_ = nullptr;
+    bool longPressed_ = false;  // the release after a long press is not a click
     QPoint rightPress_;      // where the right button went down
     bool rightMoved_ = false;  // it dragged (orbit) rather than clicked
 

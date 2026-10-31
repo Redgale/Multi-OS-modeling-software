@@ -9,6 +9,7 @@
 #include <QCheckBox>
 #include <QListWidget>
 #include <QLineEdit>
+#include <QMenu>
 #include <QPushButton>
 #include <QSettings>
 #include <QTableWidget>
@@ -941,6 +942,48 @@ private slots:
         for (auto& [id, b] : st.bodies) {
             QVERIFY(std::abs(jig::massProperties(b->shape()).zmax - 12) < 1e-9);
         }
+    }
+
+    // Select Other: a long press lists the faces under the cursor (front and back of a block),
+    // and picking the hidden one selects it.
+    void selectOther()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        {
+            jig::ScriptRunner r(w.document());
+            QVERIFY(r.runText("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=40 h=30\nextrude id=e1 sketch=s1 distance=10\n").ok());
+        }
+        w.showAllBodies();
+        Viewport* view = w.viewport();
+        QTRY_VERIFY(view->meshesReady());
+        view->viewTop();
+        QTest::qWait(100);
+        const QPoint at = view->project(QVector3D(5, 5, 10)).toPoint();
+        const auto under = view->facesUnder(at);
+        QCOMPARE(int(under.size()), 2);  // the top, then the bottom behind it
+        // a long press opens the list
+        QTest::mousePress(view, Qt::LeftButton, Qt::NoModifier, at);
+        QMenu* menu = nullptr;
+        QTRY_VERIFY_WITH_TIMEOUT((menu = w.findChild<QMenu*>()) != nullptr && menu->isVisible(), 3000);
+        QTest::mouseRelease(view, Qt::LeftButton, Qt::NoModifier, at);
+        QList<QAction*> picks;
+        for (QAction* a : menu->actions()) {
+            if (!a->isSeparator() && a->isEnabled() && a->text().contains("e1/")) {
+                picks << a;
+            }
+        }
+        QCOMPARE(picks.size(), 2);
+        QVERIFY(picks[0]->text().contains("e1/end"));    // nearest first
+        QVERIFY(picks[1]->text().contains("e1/start"));
+        QSignalSpy clicked(view, &Viewport::faceClicked);
+        picks[1]->trigger();
+        QCOMPARE(clicked.count(), 1);
+        QCOMPARE(clicked.first().at(1).toString(), QString("e1/start"));
+        QTRY_VERIFY(w.detailsText().contains("e1/start"));
+        menu->close();
     }
 
     // Drag the extrude arrow: grab its tip, pull it to twice the length, the distance doubles.

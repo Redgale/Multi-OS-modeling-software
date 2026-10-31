@@ -148,7 +148,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Decal | 22, 34 | v0.3+ | — | Rendering |
 | McMaster-Carr, manufacturer parts | 22, 32 | never | — | Requires network and third-party catalogs |
 | Insert fastener (standard parts) | 22, 32 | v0.2 | — | Brief v0.2: offline library |
-| Select, selection priority, filters | 23 | v0.1 M2 | **app**: filter in the status bar (faces, edges, bodies) with details for each; Select Other not yet | |
+| Select, selection priority, filters | 23 | v0.1 M2 | **app**: filter in the status bar (faces, edges, bodies) with details for each; Select Other (long press: every face under the cursor, nearest first) | |
 | Window and crossing selection | 23 | v0.1 M2 | **app** in sketches (window left to right, crossing right to left); in 3D not yet | |
 | Freeform, paint selection, selection sets | 23 | v0.2 | — | |
 | Select Other (overlapping) | 23 | v0.1 M2 | — | 5.4d |

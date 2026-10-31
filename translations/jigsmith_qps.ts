@@ -876,7 +876,7 @@
 <context>
     <name>QObject</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="+119" />
+        <location filename="../app/FeaturePanels.cpp" line="+121" />
         <source>Area %1 · %2</source>
         <translation>[Áréá %1 · %2~]</translation>
     </message>
@@ -982,7 +982,7 @@
 <context>
     <name>jigapp::AxisPanel</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="+1994" />
+        <location filename="../app/FeaturePanels.cpp" line="+2126" />
         <source>Construction axis</source>
         <translation>[Çöñstrüçtîöñ áxîs~~~~~]</translation>
     </message>
@@ -1179,7 +1179,7 @@
 <context>
     <name>jigapp::ExprField</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="-2299" />
+        <location filename="../app/FeaturePanels.cpp" line="-2431" />
         <source>e.g. 45 deg</source>
         <translation>[é.g. 45 dég~]</translation>
     </message>
@@ -1192,7 +1192,7 @@
 <context>
     <name>jigapp::ExtrudePanel</name>
     <message>
-        <location line="+326" />
+        <location line="+384" />
         <source>Extrude</source>
         <translation>[Éxtrüdé~~]</translation>
     </message>
@@ -1289,12 +1289,12 @@
     </message>
     <message>
         <location line="+1" />
-        <location line="+295" />
+        <location line="+369" />
         <source>New body</source>
         <translation>[Ñéw bödý~~]</translation>
     </message>
     <message>
-        <location line="-294" />
+        <location line="-368" />
         <source>Intersect: keep the overlap</source>
         <translation>[Îñtérséçt: kéép thé övérláp~~~~~~~]</translation>
     </message>
@@ -1355,17 +1355,17 @@
     </message>
     <message>
         <location line="+25" />
-        <location line="+98" />
+        <location line="+172" />
         <source>Face %1</source>
         <translation>[Fáçé %1~]</translation>
     </message>
     <message>
-        <location line="-29" />
+        <location line="-99" />
         <source>There is no sketch to extrude yet. Create a sketch first.</source>
         <translation>[Théré îs ñö skétçh tö éxtrüdé ýét. Çréáté á skétçh fîrst.~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+22" />
+        <location line="+92" />
         <source>Click a flat face to extrude up to.</source>
         <translation>[Çlîçk á flát fáçé tö éxtrüdé üp tö.~~~~~~~~~]</translation>
     </message>
@@ -1413,7 +1413,7 @@
 <context>
     <name>jigapp::FeaturePanel</name>
     <message>
-        <location line="-599" />
+        <location line="-731" />
         <source>OK</source>
         <translation>[ÖK~]</translation>
     </message>
@@ -1466,7 +1466,7 @@
 <context>
     <name>jigapp::FilletPanel</name>
     <message>
-        <location line="+401" />
+        <location line="+533" />
         <source>Chamfer</source>
         <translation>[Çhámfér~~]</translation>
     </message>
@@ -1800,15 +1800,15 @@
     </message>
     <message>
         <location line="+9" />
-        <location line="+638" />
-        <location line="+516" />
+        <location line="+639" />
+        <location line="+539" />
         <location line="+815" />
         <location line="+26" />
         <source>Sketch</source>
         <translation>[Skétçh~~]</translation>
     </message>
     <message>
-        <location line="-1993" />
+        <location line="-2017" />
         <source>Extrude</source>
         <translation>[Éxtrüdé~~]</translation>
     </message>
@@ -1893,7 +1893,7 @@
         <translation>[Thé 3D vîéw. Mîddlé-drág páñs, Shîft+mîddlé-drág örbîts, thé whéél zööms töwárd thé çürsör; rîght-drág álsö örbîts. Çlîçk á fáçé tö séléçt ît. Üsé thé áxîs gîzmö át thé töp rîght för stáñdárd vîéws, Hömé áñd Fît.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+16" />
+        <location line="+17" />
         <source>Pick faces</source>
         <translation>[Pîçk fáçés~~~]</translation>
     </message>
@@ -2025,12 +2025,12 @@
     </message>
     <message>
         <location line="+2" />
-        <location line="+1270" />
+        <location line="+1293" />
         <source>Mouse and trackpad</source>
         <translation>[Möüsé áñd tráçkpád~~~~~]</translation>
     </message>
     <message>
-        <location line="-1268" />
+        <location line="-1291" />
         <source>Default (middle-drag pans, Shift+middle orbits)</source>
         <translation>[Défáült (mîddlé-drág páñs, Shîft+mîddlé örbîts)~~~~~~~~~~~~]</translation>
     </message>
@@ -2051,30 +2051,30 @@
     </message>
     <message>
         <location line="+11" />
-        <location line="+1243" />
+        <location line="+1266" />
         <source>Theme</source>
         <translation>[Thémé~]</translation>
     </message>
     <message>
-        <location line="-1241" />
-        <location line="+1196" />
+        <location line="-1264" />
+        <location line="+1219" />
         <source>Light</source>
         <translation>[Lîght~]</translation>
     </message>
     <message>
-        <location line="-1196" />
-        <location line="+1195" />
+        <location line="-1219" />
+        <location line="+1218" />
         <source>Dark</source>
         <translation>[Dárk~]</translation>
     </message>
     <message>
-        <location line="-1194" />
-        <location line="+1196" />
+        <location line="-1217" />
+        <location line="+1219" />
         <source>High contrast</source>
         <translation>[Hîgh çöñtrást~~~~]</translation>
     </message>
     <message>
-        <location line="-1188" />
+        <location line="-1211" />
         <source>&amp;Help</source>
         <translation>[&amp;Hélp~]</translation>
     </message>
@@ -2176,12 +2176,12 @@
     </message>
     <message>
         <location line="+2" />
-        <location line="+1774" />
+        <location line="+1797" />
         <source>Rename…</source>
         <translation>[Réñámé…~~]</translation>
     </message>
     <message>
-        <location line="-1770" />
+        <location line="-1793" />
         <source>Design browser</source>
         <translation>[Désîgñ bröwsér~~~~]</translation>
     </message>
@@ -2192,13 +2192,13 @@
     </message>
     <message>
         <location line="+5" />
-        <location line="+1281" />
+        <location line="+1304" />
         <location line="+58" />
         <source>Properties</source>
         <translation>[Pröpértîés~~~]</translation>
     </message>
     <message>
-        <location line="-1333" />
+        <location line="-1356" />
         <source>Properties and help</source>
         <translation>[Pröpértîés áñd hélp~~~~~]</translation>
     </message>
@@ -2274,12 +2274,12 @@
     </message>
     <message>
         <location line="+18" />
-        <location line="+1666" />
+        <location line="+1689" />
         <source>Move rollback marker</source>
         <translation>[Mövé röllbáçk márkér~~~~~~]</translation>
     </message>
     <message>
-        <location line="-1574" />
+        <location line="-1597" />
         <source>Start here: every part begins as a flat sketch.
 Click Sketch on the toolbar, then click a plane.
 Or open the phone stand sample (File ▸ Open a sample).</source>
@@ -2383,7 +2383,27 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
         <translation>[pröblém~~]</translation>
     </message>
     <message>
-        <location line="+66" />
+        <location line="+62" />
+        <source>Select other</source>
+        <translation>[Séléçt öthér~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Nothing under the cursor</source>
+        <translation>[Ñöthîñg üñdér thé çürsör~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+0" />
+        <source>Faces here, nearest first</source>
+        <translation>[Fáçés héré, ñéárést fîrst~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+8" />
+        <source>%1. %2 (%3)</source>
+        <translation>[%1. %2 (%3)~]</translation>
+    </message>
+    <message>
+        <location line="+18" />
         <source>Only this body is shown. Right-click a body and choose Show all to bring the rest back.</source>
         <translation>[Öñlý thîs bödý îs shöwñ. Rîght-çlîçk á bödý áñd çhöösé Shöw áll tö brîñg thé rést báçk.~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -5044,7 +5064,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
 <context>
     <name>jigapp::Viewport</name>
     <message>
-        <location filename="../app/Viewport.cpp" line="+843" />
+        <location filename="../app/Viewport.cpp" line="+853" />
         <source>Updating the view…</source>
         <translation>[Üpdátîñg thé vîéw…~~~~~]</translation>
     </message>
@@ -5064,7 +5084,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
         <translation>[Fît~]</translation>
     </message>
     <message>
-        <location line="+124" />
+        <location line="+133" />
         <source>Edge “%1”</source>
         <translation>[Édgé “%1”~]</translation>
     </message>

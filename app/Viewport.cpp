@@ -15,6 +15,9 @@
 #include <QPainter>
 #include <QResizeEvent>
 #include <QTimer>
+
+#include <IntCurvesFace_ShapeIntersector.hxx>
+#include <gp_Lin.hxx>
 #include <QWheelEvent>
 
 namespace jigapp
@@ -181,6 +184,13 @@ Viewport::Viewport(QWidget* parent)
                QColor(255, 196, 92), QColor(66, 140, 255), QColor(214, 218, 224), QColor(190, 196, 205),
                QColor(60, 64, 72)});
     // Finished tessellations are collected on the UI thread (no cross-thread callbacks).
+    longPress_ = new QTimer(this);
+    longPress_->setSingleShot(true);
+    longPress_->setInterval(600);
+    connect(longPress_, &QTimer::timeout, this, [this] {
+        longPressed_ = true;
+        emit selectOtherRequested(lastPos_);
+    });
     auto* poll = new QTimer(this);
     poll->setInterval(25);
     connect(poll, &QTimer::timeout, this, [this] {
@@ -1047,8 +1057,14 @@ void Viewport::mousePressEvent(QMouseEvent* e)
         rightPress_ = lastPos_;
         rightMoved_ = false;
     }
-    if (drag_ == Drag::None && e->button() == Qt::LeftButton && gizmoHit(lastPos_) < 0 && interactor_) {
-        interactor_->mousePress(e);
+    longPressed_ = false;
+    if (drag_ == Drag::None && e->button() == Qt::LeftButton && gizmoHit(lastPos_) < 0) {
+        if (!interactor_ && (pickMode_ == PickMode::Faces || pickMode_ == PickMode::Any) && !meshes_.empty()) {
+            longPress_->start();
+        }
+        if (interactor_) {
+            interactor_->mousePress(e);
+        }
     }
 }
 
@@ -1059,6 +1075,9 @@ void Viewport::mouseMoveEvent(QMouseEvent* e)
     lastPos_ = pos;
     if ((e->buttons() & Qt::RightButton) && (pos - rightPress_).manhattanLength() > 4) {
         rightMoved_ = true;
+    }
+    if (longPress_->isActive() && d.manhattanLength() > 2) {
+        longPress_->stop();  // moving is not a long press
     }
     if (drag_ == Drag::Orbit) {
         orbit(d);
@@ -1121,6 +1140,11 @@ void Viewport::mouseMoveEvent(QMouseEvent* e)
 
 void Viewport::mouseReleaseEvent(QMouseEvent* e)
 {
+    longPress_->stop();
+    if (e->button() == Qt::LeftButton && longPressed_) {
+        longPressed_ = false;  // the menu of hidden faces took this press
+        return;
+    }
     if (e->button() == Qt::RightButton) {
         drag_ = Drag::None;
         if (!rightMoved_) {
@@ -1234,6 +1258,53 @@ void Viewport::leaveEvent(QEvent*)
         hover_.reset();
         emit hovered({});
         update();
+    }
+}
+
+std::vector<PickResult> Viewport::facesUnder(const QPoint& px) const
+{
+    QVector3D o, d;
+    ray(px, o, d);
+    const gp_Lin line(gp_Pnt(o.x(), o.y(), o.z()), gp_Dir(d.x(), d.y(), d.z()));
+    std::vector<std::pair<double, PickResult>> hits;
+    for (auto& m : meshes_) {
+        IntCurvesFace_ShapeIntersector inter;
+        inter.Load(m->shape->shape(), 1e-6);
+        inter.Perform(line, 0, 1e9);
+        for (int i = 1; i <= inter.NbPnt(); ++i) {
+            const TopoDS_Face& f = inter.Face(i);
+            for (int k = 0; k < m->shape->faceCount(); ++k) {
+                if (m->shape->face(k).IsSame(f)) {
+                    bool dup = false;
+                    for (auto& h : hits) {
+                        dup |= h.second.body == m->body && h.second.face == k;
+                    }
+                    if (!dup) {
+                        hits.push_back({inter.WParameter(i), PickResult {m->body, k}});
+                    }
+                }
+            }
+        }
+    }
+    std::sort(hits.begin(), hits.end(), [](auto& a, auto& b) { return a.first < b.first; });
+    std::vector<PickResult> out;
+    for (auto& h : hits) {
+        out.push_back(h.second);
+    }
+    return out;
+}
+
+void Viewport::selectFace(const std::string& body, int face)
+{
+    for (auto& m : meshes_) {
+        if (m->body == body && face >= 0 && face < m->shape->faceCount()) {
+            selected_ = PickResult {body, face};
+            emit selectionChanged(QString::fromStdString(body), face);
+            emit faceClicked(QString::fromStdString(body), QString::fromStdString(m->shape->faceName(face)),
+                             Qt::NoModifier);
+            update();
+            return;
+        }
     }
 }
 

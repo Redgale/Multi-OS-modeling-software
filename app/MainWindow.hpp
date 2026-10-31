@@ -23,6 +23,7 @@ class QTextBrowser;
 class QTimer;
 class QTreeWidget;
 class QComboBox;
+class QMenu;
 class QActionGroup;
 
 namespace jigapp
@@ -127,6 +128,8 @@ public:
     void setNavigation(NavPreset preset, bool zoomInverted, float orbitSpeed);
     // The marking menu for the view's current context, opened at a view position.
     MarkingMenu* openMarkingMenu(const QPoint& viewPos);
+    // Select Other: a menu of every face under a view position, nearest first.
+    QMenu* openSelectOther(const QPoint& viewPos);
     void isolateBody(const std::string& body);
     void showAllBodies();
     bool bodyVisible(const std::string& body) const

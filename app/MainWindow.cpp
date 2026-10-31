@@ -477,6 +477,7 @@ MainWindow::MainWindow()
     statusBar()->addPermanentWidget(statusInfo_);
     connect(view_, &Viewport::hovered, this, [this](const QString& d) { statusSel_->setText(d); });
     connect(view_, &Viewport::menuRequested, this, [this](const QPoint& p) { openMarkingMenu(p); });
+    connect(view_, &Viewport::selectOtherRequested, this, [this](const QPoint& p) { openSelectOther(p); });
     selectFilter_ = new QComboBox(this);
     selectFilter_->addItem(tr("Pick faces"), "faces");
     selectFilter_->addItem(tr("Pick edges"), "edges");
@@ -1190,6 +1191,29 @@ MarkingMenu* MainWindow::openMarkingMenu(const QPoint& viewPos)
     }
     auto* m = new MarkingMenu(acts, this);
     m->popupAt(view_->mapToGlobal(viewPos));
+    return m;
+}
+
+QMenu* MainWindow::openSelectOther(const QPoint& viewPos)
+{
+    const auto faces = view_->facesUnder(viewPos);
+    auto* m = new QMenu(this);
+    m->setAttribute(Qt::WA_DeleteOnClose);
+    m->setAccessibleName(tr("Select other"));
+    m->addSection(faces.empty() ? tr("Nothing under the cursor") : tr("Faces here, nearest first"));
+    int n = 0;
+    for (const auto& f : faces) {
+        auto it = doc_->state().bodies.find(f.body);
+        if (it == doc_->state().bodies.end()) {
+            continue;
+        }
+        const jig::Feature* bf = doc_->feature(f.body);
+        const QString label = tr("%1. %2 (%3)")
+                                  .arg(++n)
+                                  .arg(q(it->second->faceName(f.face)), bf ? q(bf->name) : q(f.body));
+        m->addAction(label, this, [this, f] { view_->selectFace(f.body, f.face); });
+    }
+    m->popup(view_->mapToGlobal(viewPos));
     return m;
 }
 

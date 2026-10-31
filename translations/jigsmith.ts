@@ -877,7 +877,7 @@
 <context>
     <name>QObject</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="+119"/>
+        <location filename="../app/FeaturePanels.cpp" line="+121"/>
         <source>Area %1 · %2</source>
         <translation type="unfinished"></translation>
     </message>
@@ -983,7 +983,7 @@
 <context>
     <name>jigapp::AxisPanel</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="+1994"/>
+        <location filename="../app/FeaturePanels.cpp" line="+2126"/>
         <source>Construction axis</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1180,7 +1180,7 @@
 <context>
     <name>jigapp::ExprField</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="-2299"/>
+        <location filename="../app/FeaturePanels.cpp" line="-2431"/>
         <source>e.g. 45 deg</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1193,7 +1193,7 @@
 <context>
     <name>jigapp::ExtrudePanel</name>
     <message>
-        <location line="+326"/>
+        <location line="+384"/>
         <source>Extrude</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1290,12 +1290,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+295"/>
+        <location line="+369"/>
         <source>New body</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-294"/>
+        <location line="-368"/>
         <source>Intersect: keep the overlap</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1356,17 +1356,17 @@
     </message>
     <message>
         <location line="+25"/>
-        <location line="+98"/>
+        <location line="+172"/>
         <source>Face %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-29"/>
+        <location line="-99"/>
         <source>There is no sketch to extrude yet. Create a sketch first.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+22"/>
+        <location line="+92"/>
         <source>Click a flat face to extrude up to.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1414,7 +1414,7 @@
 <context>
     <name>jigapp::FeaturePanel</name>
     <message>
-        <location line="-599"/>
+        <location line="-731"/>
         <source>OK</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1467,7 +1467,7 @@
 <context>
     <name>jigapp::FilletPanel</name>
     <message>
-        <location line="+401"/>
+        <location line="+533"/>
         <source>Chamfer</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1803,15 +1803,15 @@
     </message>
     <message>
         <location line="+9"/>
-        <location line="+638"/>
-        <location line="+516"/>
+        <location line="+639"/>
+        <location line="+539"/>
         <location line="+815"/>
         <location line="+26"/>
         <source>Sketch</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1993"/>
+        <location line="-2017"/>
         <source>Extrude</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1896,7 +1896,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+16"/>
+        <location line="+17"/>
         <source>Pick faces</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2028,12 +2028,12 @@
     </message>
     <message>
         <location line="+2"/>
-        <location line="+1270"/>
+        <location line="+1293"/>
         <source>Mouse and trackpad</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1268"/>
+        <location line="-1291"/>
         <source>Default (middle-drag pans, Shift+middle orbits)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2054,30 +2054,30 @@
     </message>
     <message>
         <location line="+11"/>
-        <location line="+1243"/>
+        <location line="+1266"/>
         <source>Theme</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1241"/>
-        <location line="+1196"/>
+        <location line="-1264"/>
+        <location line="+1219"/>
         <source>Light</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1196"/>
-        <location line="+1195"/>
+        <location line="-1219"/>
+        <location line="+1218"/>
         <source>Dark</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1194"/>
-        <location line="+1196"/>
+        <location line="-1217"/>
+        <location line="+1219"/>
         <source>High contrast</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1188"/>
+        <location line="-1211"/>
         <source>&amp;Help</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2179,12 +2179,12 @@
     </message>
     <message>
         <location line="+2"/>
-        <location line="+1774"/>
+        <location line="+1797"/>
         <source>Rename…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1770"/>
+        <location line="-1793"/>
         <source>Design browser</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2195,13 +2195,13 @@
     </message>
     <message>
         <location line="+5"/>
-        <location line="+1281"/>
+        <location line="+1304"/>
         <location line="+58"/>
         <source>Properties</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1333"/>
+        <location line="-1356"/>
         <source>Properties and help</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2277,12 +2277,12 @@
     </message>
     <message>
         <location line="+18"/>
-        <location line="+1666"/>
+        <location line="+1689"/>
         <source>Move rollback marker</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1574"/>
+        <location line="-1597"/>
         <source>Start here: every part begins as a flat sketch.
 Click Sketch on the toolbar, then click a plane.
 Or open the phone stand sample (File ▸ Open a sample).</source>
@@ -2384,7 +2384,27 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+66"/>
+        <location line="+62"/>
+        <source>Select other</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Nothing under the cursor</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Faces here, nearest first</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>%1. %2 (%3)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+18"/>
         <source>Only this body is shown. Right-click a body and choose Show all to bring the rest back.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5054,7 +5074,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::Viewport</name>
     <message>
-        <location filename="../app/Viewport.cpp" line="+843"/>
+        <location filename="../app/Viewport.cpp" line="+853"/>
         <source>Updating the view…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5074,7 +5094,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+124"/>
+        <location line="+133"/>
         <source>Edge “%1”</source>
         <translation type="unfinished"></translation>
     </message>
