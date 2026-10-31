@@ -925,6 +925,24 @@ private slots:
         click(20, 40, Qt::ControlModifier);
         QVERIFY2(sk->message().isEmpty(), qPrintable(sk->message()));
         QCOMPARE(regions(), 5);
+
+        // turn the copy a quarter turn around the origin: typed as the third value
+        sk->setTool(SketchEditor::Tool::Select);
+        click(23, 40);
+        QCOMPARE(int(sk->selection().size()), 1);
+        w.runCommand("sketch.move");
+        click(0, 0);
+        sk->typeValues({"0", "0", "90 deg"});
+        QVERIFY2(sk->message().isEmpty(), qPrintable(sk->message()));
+        bool turned = false;
+        for (auto& [id, e] : sk->sketch().entities()) {
+            if (e.type == jig::EntityType::Circle) {
+                auto [x, y] = sk->sketch().pointXY(e.center);
+                turned = turned || (std::abs(x + 39.9488) < 1e-3 && std::abs(y - 19.9033) < 1e-3);  // (19.90, 39.95) turned
+            }
+        }
+        QVERIFY(turned);
+        QCOMPARE(regions(), 5);
     }
 
     // Extrude up to a clicked face: the new body ends at that face.

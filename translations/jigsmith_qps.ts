@@ -5016,12 +5016,12 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
     </message>
     <message>
         <location line="+0" />
-        <location line="+619" />
+        <location line="+630" />
         <source>Spacing</source>
         <translation>[Spáçîñg~~]</translation>
     </message>
     <message>
-        <location line="-585" />
+        <location line="-596" />
         <source>Click to select, drag to move what is still free. Delete removes the selection.</source>
         <translation>[Çlîçk tö séléçt, drág tö mövé whát îs stîll fréé. Délété rémövés thé séléçtîöñ.~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -5225,8 +5225,8 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
     </message>
     <message>
         <location line="+2" />
-        <source>Click where the base point goes, or type how far across (Tab) up and press Enter. Hold Ctrl to copy instead.</source>
-        <translation>[Çlîçk whéré thé básé pöîñt göés, ör týpé höw fár áçröss (Táb) üp áñd préss Éñtér. Höld Çtrl tö çöpý îñstéád.~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+        <source>Click where the base point goes, or type how far across (Tab) up (Tab) and how far to turn around the base point, then press Enter. Hold Ctrl to copy instead.</source>
+        <translation>[Çlîçk whéré thé básé pöîñt göés, ör týpé höw fár áçröss (Táb) üp (Táb) áñd höw fár tö türñ áröüñd thé básé pöîñt, théñ préss Éñtér. Höld Çtrl tö çöpý îñstéád.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <location line="+2" />
@@ -5319,7 +5319,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
         <translation>[Îñtér (büîlt îñ)~~~~]</translation>
     </message>
     <message>
-        <location line="+108" />
+        <location line="+109" />
         <source>Dimension</source>
         <translation>[Dîméñsîöñ~~~]</translation>
     </message>
@@ -5350,12 +5350,12 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
     </message>
     <message>
         <location line="+11" />
-        <location line="+547" />
+        <location line="+557" />
         <source>Type the words for the text.</source>
         <translation>[Týpé thé wörds för thé téxt.~~~~~~~]</translation>
     </message>
     <message>
-        <location line="-535" />
+        <location line="-545" />
         <source>Edit text</source>
         <translation>[Édît téxt~~]</translation>
     </message>
@@ -5401,17 +5401,17 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
     </message>
     <message>
         <location line="+16" />
-        <location line="+801" />
+        <location line="+811" />
         <source>Minor radius</source>
         <translation>[Mîñör rádîüs~~~]</translation>
     </message>
     <message>
-        <location line="-780" />
+        <location line="-790" />
         <source>Ellipse</source>
         <translation>[Éllîpsé~~]</translation>
     </message>
     <message>
-        <location line="+19" />
+        <location line="+29" />
         <source>Copy</source>
         <translation>[Çöpý~]</translation>
     </message>
@@ -5642,6 +5642,11 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
         <location line="+0" />
         <source>Up</source>
         <translation>[Üp~]</translation>
+    </message>
+    <message>
+        <location line="+0" />
+        <source>Turn</source>
+        <translation>[Türñ~]</translation>
     </message>
     <message>
         <location line="+3" />

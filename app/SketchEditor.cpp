@@ -110,7 +110,7 @@ SketchEditor::SketchEditor(Viewport* view, jig::Document& doc, std::string featu
     inputBox_->setAutoFillBackground(true);
     auto* lay = new QHBoxLayout(inputBox_);
     lay->setContentsMargins(6, 4, 6, 4);
-    for (int i = 0; i < 2; ++i) {
+    for (int i = 0; i < 3; ++i) {
         auto* l = new QLabel(inputBox_);
         auto* f = new QLineEdit(inputBox_);
         f->setFixedWidth(84);
@@ -532,8 +532,8 @@ QString SketchEditor::toolHint() const
             if (selection_.empty()) {
                 return tr("Select the curves to move first (Select tool, Shift-click for more), then choose Move.");
             }
-            return first_ ? tr("Click where the base point goes, or type how far across (Tab) up and press Enter. "
-                               "Hold Ctrl to copy instead.")
+            return first_ ? tr("Click where the base point goes, or type how far across (Tab) up (Tab) and how far "
+                               "to turn around the base point, then press Enter. Hold Ctrl to copy instead.")
                           : tr("Click a base point to move the selected curves by.");
         case Tool::PatternRect:
             if (selection_.empty()) {
@@ -657,7 +657,8 @@ void SketchEditor::placeSecond(const Snap& cur, const QStringList& rawTyped)
     for (int i = 0; i < typed.size(); ++i) {
         const bool notLength = (tool_ == Tool::Line && i == 1) || (tool_ == Tool::Arc && second_) ||
                                (tool_ == Tool::Polygon && i == 1) || (tool_ == Tool::Text && i == 0) ||
-                               (tool_ == Tool::PatternRect && i == 0) || tool_ == Tool::PatternCirc;
+                               (tool_ == Tool::PatternRect && i == 0) || tool_ == Tool::PatternCirc ||
+                               (tool_ == Tool::Move && i == 2);
         if (!notLength && !typed[i].trimmed().isEmpty()) {
             typed[i] = QString::fromStdString(doc_.lengthInput(typed[i].trimmed().toStdString()));
         }
@@ -828,7 +829,7 @@ void SketchEditor::placeSecond(const Snap& cur, const QStringList& rawTyped)
     const bool notLengths = (tool_ == Tool::Arc && second_) || tool_ == Tool::PatternCirc;
     for (int i = 0; i < typed.size() && !notLengths; ++i) {
         if ((tool_ == Tool::Polygon && i == 1) || (tool_ == Tool::Text && i == 0) ||
-            (tool_ == Tool::PatternRect && i == 0)) {
+            (tool_ == Tool::PatternRect && i == 0) || (tool_ == Tool::Move && i == 2)) {
             continue;
         }
         if (badTyped(i)) {
@@ -1012,9 +1013,19 @@ void SketchEditor::placeSecond(const Snap& cur, const QStringList& rawTyped)
                 dx = across ? *across : 0;
                 dy = up ? *up : 0;
             }
+            // an optional turn around the base point, then the shift
+            double turn = 0;
+            if (typed.size() > 2 && !typed[2].trimmed().isEmpty()) {
+                auto av = doc_.evalAngle(typed[2].toStdString());
+                if (!av) {
+                    message_ = coreText(av.error().message);
+                    break;
+                }
+                turn = av.value();
+            }
             const bool copy = QGuiApplication::keyboardModifiers() & Qt::ControlModifier;
             if (copy) {
-                auto r = s.copyCurves(picked, dx, dy);
+                auto r = s.copyCurves(picked, dx, dy, turn, a.x(), a.y());
                 if (!r) {
                     message_ = coreText(r.error().message);
                     break;
@@ -1025,7 +1036,7 @@ void SketchEditor::placeSecond(const Snap& cur, const QStringList& rawTyped)
                 }
                 break;
             }
-            auto r = s.moveCurves(picked, dx, dy);
+            auto r = s.moveCurves(picked, dx, dy, turn, a.x(), a.y());
             if (!r) {
                 message_ = coreText(r.error().message);
                 break;
@@ -1871,7 +1882,7 @@ bool SketchEditor::mouseRelease(QMouseEvent* e)
                     showInput({tr("Length")});
                 }
                 else if (tool_ == Tool::Move) {
-                    showInput({tr("Across"), tr("Up")});
+                    showInput({tr("Across"), tr("Up"), tr("Turn")});
                 }
                 else if (tool_ == Tool::Ellipse) {
                     showInput({tr("Major radius")});

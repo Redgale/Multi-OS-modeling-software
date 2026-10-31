@@ -72,7 +72,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Trim, Extend, Break | 11 | v0.1 M1 | **app** + scripts: Trim (lines, circles, arcs); Extend (loose ends of lines and arcs); Break (at crossings) | |
 | Sketch scale | 11 | v0.2 | — | Not in brief's list |
 | Offset (chains) | 11 | v0.1 M1 | **app** + scripts: closed outlines (sharp corners) and single curves; not associative yet | |
-| Move/Copy (sketch) | 11 | v0.1 M1 | **app** (click or typed shift, Ctrl copies) + scripts (also turn about a point) | |
+| Move/Copy (sketch) | 11 | v0.1 M1 | **app** (click or typed shift and turn about the base point, Ctrl copies) + scripts (`angle= about=`) | |
 | Stretch | 11 | v0.2 | — | |
 | Delete | 11 | v0.1 M1 | **app** | |
 | Change parameters from sketch | 11 | v0.1 M5 | — | |

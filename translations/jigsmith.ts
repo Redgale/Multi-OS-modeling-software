@@ -5022,12 +5022,12 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
     </message>
     <message>
         <location line="+0"/>
-        <location line="+619"/>
+        <location line="+630"/>
         <source>Spacing</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-585"/>
+        <location line="-596"/>
         <source>Click to select, drag to move what is still free. Delete removes the selection.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5233,7 +5233,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
     </message>
     <message>
         <location line="+2"/>
-        <source>Click where the base point goes, or type how far across (Tab) up and press Enter. Hold Ctrl to copy instead.</source>
+        <source>Click where the base point goes, or type how far across (Tab) up (Tab) and how far to turn around the base point, then press Enter. Hold Ctrl to copy instead.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -5327,7 +5327,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+108"/>
+        <location line="+109"/>
         <source>Dimension</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5358,12 +5358,12 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
     </message>
     <message>
         <location line="+11"/>
-        <location line="+547"/>
+        <location line="+557"/>
         <source>Type the words for the text.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-535"/>
+        <location line="-545"/>
         <source>Edit text</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5409,17 +5409,17 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
     </message>
     <message>
         <location line="+16"/>
-        <location line="+801"/>
+        <location line="+811"/>
         <source>Minor radius</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-780"/>
+        <location line="-790"/>
         <source>Ellipse</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+19"/>
+        <location line="+29"/>
         <source>Copy</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5649,6 +5649,11 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
     <message>
         <location line="+0"/>
         <source>Up</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Turn</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
