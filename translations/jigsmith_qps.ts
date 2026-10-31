@@ -1630,26 +1630,6 @@
         <source>The offset made a curve that sketches cannot hold.</source>
         <translation>[Thé öffsét mádé á çürvé thát skétçhés çáññöt höld.~~~~~~~~~~~~~]</translation>
     </message>
-    <message>
-        <location line="+1" />
-        <source>The text engine could not start.</source>
-        <translation>[Thé téxt éñgîñé çöüld ñöt stárt.~~~~~~~~]</translation>
-    </message>
-    <message>
-        <location line="+1" />
-        <source>The built-in font could not be loaded.</source>
-        <translation>[Thé büîlt-îñ föñt çöüld ñöt bé löádéd.~~~~~~~~~~]</translation>
-    </message>
-    <message>
-        <location line="+1" />
-        <source>This text could not be turned into shapes.</source>
-        <translation>[Thîs téxt çöüld ñöt bé türñéd îñtö shápés.~~~~~~~~~~~]</translation>
-    </message>
-    <message>
-        <location line="+1" />
-        <source>Try another font.</source>
-        <translation>[Trý áñöthér föñt.~~~~]</translation>
-    </message>
 </context>
 <context>
     <name>QObject</name>
