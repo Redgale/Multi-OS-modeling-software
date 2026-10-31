@@ -416,7 +416,7 @@ protected:
 
 private:
     void updateVisibility();
-    QComboBox *kind_, *through_, *base_, *base2_, *from_, *to_;
+    QComboBox *kind_, *through_, *base_, *base2_, *from_, *to_, *at_;
     bool nextIsSecond_ = false;
 };
 
@@ -450,7 +450,7 @@ protected:
 
 private:
     void updateVisibility();
-    QComboBox *kind_, *through_, *end_;
+    QComboBox *kind_, *through_, *end_, *plane_;
     ExprField* xyz_[3];
 };
 

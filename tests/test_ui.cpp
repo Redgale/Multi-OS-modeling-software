@@ -1894,6 +1894,43 @@ private slots:
         QVERIFY(pp);
         QCOMPARE(pp->coord(2)->text(), QString("25 mm"));
         pp->cancel();
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+
+        // where the corner edge crosses the floor plane: z = 0
+        w.runCommand("construct.point");
+        pp = qobject_cast<PointPanel*>(w.featurePanel());
+        QVERIFY(pp);
+        pp->useEdge("e1", "E[e1/side:5|e1/side:6]");
+        pp->end()->setCurrentIndex(pp->end()->findData("plane"));
+        QTest::qWait(300);
+        QTRY_VERIFY(pp->previewOk());
+        QVERIFY(pp->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        QCOMPARE(int(w.document().state().points.size()), 3);
+        const std::string crossing = w.document().model().features.back().id;
+        QVERIFY(std::abs(w.document().state().points.at(crossing).Z()) < 1e-9);
+
+        // an axis square to the block's top through that point
+        w.runCommand("construct.axis");
+        ap = qobject_cast<AxisPanel*>(w.featurePanel());
+        QVERIFY(ap);
+        ap->kind()->setCurrentIndex(ap->kind()->findData("normal"));
+        ap->useFace("e1", "e1/end");
+        QCOMPARE(ap->kind()->currentData().toString(), QString("normal"));
+        QComboBox* at = nullptr;
+        for (auto* c : ap->findChildren<QComboBox*>()) {
+            if (c->isVisible() && c->findData(QString::fromStdString(crossing)) >= 0) {
+                at = c;
+            }
+        }
+        QVERIFY(at);
+        at->setCurrentIndex(at->findData(QString::fromStdString(crossing)));
+        QTest::qWait(300);
+        QTRY_VERIFY(ap->previewOk());
+        QVERIFY(ap->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        const gp_Ax1 sq = w.document().state().axes.at(w.document().model().features.back().id);
+        QVERIFY(sq.Direction().IsParallel(gp_Dir(0, 0, 1), 1e-9));
     }
 
     // Tangent arc from a line's end, 2- and 3-point circles, a rectangle at an angle.

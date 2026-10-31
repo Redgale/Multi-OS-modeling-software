@@ -21,6 +21,8 @@
 #include <TopExp_Explorer.hxx>
 #include <TopoDS.hxx>
 #include <gp_Ax2.hxx>
+#include <gp_Lin.hxx>
+#include <gp_Pln.hxx>
 #include <gp_Trsf.hxx>
 
 #include "jig/document.hpp"
@@ -159,7 +161,21 @@ FeatureOutcome applyAxis(const Document&, const Feature& f, const std::shared_pt
     const auto& p = f.params;
     FeatureStatus status;
     gp_Ax1 axis;
-    if (p.contains("from")) {
+    if (p.contains("normal")) {
+        // square to a plane or flat face, through a point (the origin, or a construction point)
+        auto pl = planeFrame(p["normal"], in, status);
+        if (!pl) {
+            return failed(pl.error());
+        }
+        const std::string name = p.value("at", std::string("O"));
+        auto at = namedPoint(name, in);
+        if (!at) {
+            return failed(fmt("The point '%1' does not exist (or comes later in the timeline).", {name}),
+                          {"Pick the origin (O) or a construction point made earlier."});
+        }
+        axis = gp_Ax1(*at, pl->Direction());
+    }
+    else if (p.contains("from")) {
         // through two construction points (or the origin)
         const std::string n1 = p.value("from", std::string {}), n2 = p.value("to", std::string {});
         auto a = namedPoint(n1, in), b = namedPoint(n2, in);
@@ -237,6 +253,65 @@ FeatureOutcome applyPoint(const Document& doc, const Feature& f, const std::shar
             GProp_GProps props;
             BRepGProp::SurfaceProperties(bit->second->face(r.index), props);
             at = props.CentreOfMass();
+        }
+        else if (p.contains("plane")) {
+            // where the edge (or its straight continuation) crosses a plane or flat face
+            FeatureStatus ignored;
+            auto pl = planeFrame(p["plane"], in, ignored);
+            if (!pl) {
+                return failed(pl.error());
+            }
+            BRepAdaptor_Curve c(TopoDS::Edge(bit->second->edge(r.index)));
+            const gp_Pln plane(*pl);
+            const gp_Dir n = plane.Axis().Direction();
+            auto side = [&](double u) { return gp_Vec(plane.Location(), c.Value(u)).Dot(gp_Vec(n)); };
+            double u0 = c.FirstParameter(), u1 = c.LastParameter();
+            if (c.GetType() == GeomAbs_Line) {
+                // a straight edge: its line, so the plane may be beyond its ends
+                const gp_Lin l = c.Line();
+                const double along = gp_Vec(l.Direction()).Dot(gp_Vec(n));
+                if (std::abs(along) < 1e-9) {
+                    return failed("The edge runs parallel to the plane, so it never crosses it.",
+                                  {"Pick an edge that points through the plane."});
+                }
+                const double t = -gp_Vec(plane.Location(), l.Location()).Dot(gp_Vec(n)) / along;
+                at = l.Location().Translated(gp_Vec(l.Direction()) * t);
+            }
+            else {
+                // a curve: the first crossing along it, found by halving
+                const int steps = 64;
+                bool found = false;
+                double a = u0, fa = side(u0);
+                for (int k = 1; k <= steps && !found; ++k) {
+                    const double b = u0 + (u1 - u0) * k / steps, fb = side(b);
+                    if (std::abs(fa) < 1e-9) {
+                        at = c.Value(a);
+                        found = true;
+                        break;
+                    }
+                    if (fa * fb < 0) {
+                        double lo = a, hi = b, flo = fa;
+                        for (int it = 0; it < 60; ++it) {
+                            const double mid = 0.5 * (lo + hi), fm = side(mid);
+                            (fm * flo <= 0 ? hi : lo) = mid;
+                            if (fm * flo > 0) {
+                                flo = fm;
+                            }
+                        }
+                        at = c.Value(0.5 * (lo + hi));
+                        found = true;
+                    }
+                    a = b;
+                    fa = fb;
+                }
+                if (!found && std::abs(side(u1)) < 1e-9) {
+                    at = c.Value(u1);
+                    found = true;
+                }
+                if (!found) {
+                    return failed("This curved edge does not reach the plane.", {"Pick another edge or plane."});
+                }
+            }
         }
         else {
             const TopoDS_Edge e = TopoDS::Edge(bit->second->edge(r.index));

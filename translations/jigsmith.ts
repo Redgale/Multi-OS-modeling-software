@@ -1593,6 +1593,26 @@
     </message>
     <message>
         <location line="+1"/>
+        <source>The edge runs parallel to the plane, so it never crosses it.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Pick an edge that points through the plane.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>This curved edge does not reach the plane.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Pick another edge or plane.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>Choose its start, end or middle instead.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3261,6 +3281,11 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location line="+1"/>
+        <source>Square to a plane or flat face, through a point</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <location line="+6"/>
         <source>Kind</source>
         <translation type="unfinished"></translation>
@@ -3292,6 +3317,11 @@
     </message>
     <message>
         <location line="+2"/>
+        <source>Through point</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
         <source>Origin</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3312,23 +3342,23 @@
     </message>
     <message>
         <location line="+28"/>
-        <location line="+86"/>
+        <location line="+93"/>
         <source>Face %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-83"/>
-        <location line="+111"/>
+        <location line="-90"/>
+        <location line="+118"/>
         <source>Edge %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-73"/>
+        <location line="-76"/>
         <source>Click an edge or a round face in the view.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+36"/>
+        <location line="+39"/>
         <source>That face has no centre line. Click a hole, a cylinder or a cone.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3338,12 +3368,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+38"/>
+        <location line="+39"/>
         <source>Axis</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+42"/>
+        <location line="+45"/>
         <source>construction axis</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3351,7 +3381,7 @@
 <context>
     <name>jigapp::CombinePanel</name>
     <message>
-        <location line="+233"/>
+        <location line="+259"/>
         <location line="+56"/>
         <source>Combine</source>
         <translation type="unfinished"></translation>
@@ -3453,7 +3483,7 @@
 <context>
     <name>jigapp::ExprField</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="-2759"/>
+        <location filename="../app/FeaturePanels.cpp" line="-2799"/>
         <source>e.g. 45 deg</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5582,7 +5612,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::MovePanel</name>
     <message>
-        <location line="+953"/>
+        <location line="+993"/>
         <source>Move / copy</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5770,7 +5800,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::PatternPanel</name>
     <message>
-        <location line="-1471"/>
+        <location line="-1511"/>
         <location line="+120"/>
         <source>Pattern</source>
         <translation type="unfinished"></translation>
@@ -6013,7 +6043,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::PointPanel</name>
     <message>
-        <location line="+328"/>
+        <location line="+342"/>
         <source>Construction point</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6054,6 +6084,26 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
     </message>
     <message>
         <location line="+1"/>
+        <source>Where it crosses a plane</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Floor (XY)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Front (XZ)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Side (YZ)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+7"/>
         <source>Kind</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6068,19 +6118,29 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location line="+1"/>
+        <source>Plane</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <location line="+8"/>
-        <location line="+51"/>
+        <location line="+58"/>
         <source>Face %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-51"/>
-        <location line="+70"/>
+        <location line="-58"/>
+        <location line="+77"/>
         <source>Edge %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+31"/>
+        <location line="-72"/>
+        <source>(picked face)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+104"/>
         <source>Click an edge or a face in the view.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6090,7 +6150,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+37"/>
+        <location line="+43"/>
         <source>construction point</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6098,7 +6158,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::PressPullPanel</name>
     <message>
-        <location line="-487"/>
+        <location line="-527"/>
         <location line="+59"/>
         <source>Press pull</source>
         <translation type="unfinished"></translation>
@@ -7423,7 +7483,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::SplitPanel</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="+1571"/>
+        <location filename="../app/FeaturePanels.cpp" line="+1611"/>
         <source>Split body</source>
         <translation type="unfinished"></translation>
     </message>

@@ -1554,7 +1554,9 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
         // axis id=a1 through=edge:<name>|face:<name>   (along a straight edge, through a round one)
         // axis id=a1 base=<plane> base2=<plane>       (where two planes or flat faces meet)
         // axis id=a1 from=<point id>|O to=<point id>|O (through two points)
+        // axis id=a1 normal=<plane>|face:<name> [at=<point id>|O] (square to a plane, through a point)
         // point id=pt1 at=x,y,z | through=edge:<name> [end=start|end|mid|center] | through=face:<name>
+        // point id=pt1 through=edge:<name> plane=<plane>|face:<name>  (where the edge crosses it)
         const bool isAxis = a.verb == "axis", isPoint = a.verb == "point";
         const ModelState& st = doc.state();
         auto ref = [&](const std::string& v) -> Result<nlohmann::json> {
@@ -1592,7 +1594,10 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
                 params[key] = a.get(key);
             }
         }
-        for (const char* key : {"base", "base2", "axis", "through"}) {
+        if (isAxis && a.has("at")) {
+            params["at"] = a.get("at");  // the point a square-on axis runs through
+        }
+        for (const char* key : {"base", "base2", "axis", "through", "plane", "normal"}) {
             if (a.has(key)) {
                 auto r = ref(a.get(key));
                 if (!r) {

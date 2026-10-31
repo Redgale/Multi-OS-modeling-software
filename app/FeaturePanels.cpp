@@ -2422,7 +2422,8 @@ AxisPanel::AxisPanel(jig::Document& doc, Viewport* view, std::string editId, QWi
                                 "edge, a round edge or a round face (a hole, a cylinder) in the view.")));
     kind_ = combo(this, {{tr("Along an edge, or through a round edge or face"), "through"},
                          {tr("Where two planes meet"), "planes"},
-                         {tr("Through two points"), "points"}});
+                         {tr("Through two points"), "points"},
+                         {tr("Square to a plane or flat face, through a point"), "normal"}});
     through_ = new QComboBox(this);
     base_ = new QComboBox(this);
     base2_ = new QComboBox(this);
@@ -2434,7 +2435,9 @@ AxisPanel::AxisPanel(jig::Document& doc, Viewport* view, std::string editId, QWi
     addRow(tr("And plane"), base2_);
     addRow(tr("From point"), from_);
     addRow(tr("To point"), to_);
-    for (auto* c : {from_, to_}) {
+    at_ = new QComboBox(this);
+    addRow(tr("Through point"), at_);
+    for (auto* c : {from_, to_, at_}) {
         c->addItem(tr("Origin"), "O");
     }
     for (auto* c : {base_, base2_}) {
@@ -2451,7 +2454,7 @@ AxisPanel::AxisPanel(jig::Document& doc, Viewport* view, std::string editId, QWi
             }
         }
         if (f.kind == jig::FeatureKind::Point && before->points.count(f.id)) {
-            for (auto* c : {from_, to_}) {
+            for (auto* c : {from_, to_, at_}) {
                 c->addItem(q(f.name), q(f.id));
             }
         }
@@ -2478,7 +2481,11 @@ AxisPanel::AxisPanel(jig::Document& doc, Viewport* view, std::string editId, QWi
             }
             c->setCurrentIndex(i);
         };
-        select(kind_, p.contains("through") ? "through" : p.contains("from") ? "points" : "planes");
+        select(kind_, p.contains("through") ? "through" : p.contains("from") ? "points" : p.contains("normal") ? "normal" : "planes");
+        if (p.contains("normal")) {
+            put(base_, p["normal"]);
+            at_->setCurrentIndex(std::max(0, at_->findData(q(p.value("at", std::string("O"))))));
+        }
         if (p.contains("from")) {
             from_->setCurrentIndex(std::max(0, from_->findData(q(p.value("from", std::string("O"))))));
             to_->setCurrentIndex(std::max(0, to_->findData(q(p.value("to", std::string("O"))))));
@@ -2493,7 +2500,7 @@ AxisPanel::AxisPanel(jig::Document& doc, Viewport* view, std::string editId, QWi
             put(base2_, p["base2"]);
         }
     }
-    for (auto* c : {kind_, through_, base_, base2_, from_, to_}) {
+    for (auto* c : {kind_, through_, base_, base2_, from_, to_, at_}) {
         connect(c, &QComboBox::currentIndexChanged, this, [this] {
             updateVisibility();
             ok_->setEnabled(current(kind_) != "through" || through_->count() > 0);
@@ -2539,7 +2546,10 @@ void AxisPanel::useFace(const std::string& body, const std::string& name)
     const jig::MeasureItem m = jig::measureItem(it->second->face(hits[0]));
     nlohmann::json ref {{"face", it->second->faceRef(body, hits[0]).toJson()}};
     QComboBox* target = through_;
-    if (m.kind == "flat face") {  // flat faces: the axis where two of them meet
+    if (m.kind == "flat face" && current(kind_) == "normal") {  // the face the axis stands square on
+        target = base_;
+    }
+    else if (m.kind == "flat face") {  // flat faces: the axis where two of them meet
         select(kind_, "planes");
         target = nextIsSecond_ ? base2_ : base_;
         nextIsSecond_ = !nextIsSecond_;
@@ -2602,12 +2612,13 @@ void AxisPanel::updateVisibility()
             }
         }
     };
-    const bool points = current(kind_) == "points";
+    const bool points = current(kind_) == "points", normal = current(kind_) == "normal";
     show(through_, through);
     show(base_, !through && !points);
-    show(base2_, !through && !points);
+    show(base2_, !through && !points && !normal);
     show(from_, points);
     show(to_, points);
+    show(at_, normal);
 }
 
 jig::Feature AxisPanel::draft() const
@@ -2623,6 +2634,9 @@ jig::Feature AxisPanel::draft() const
     }
     else if (current(kind_) == "points") {
         f.params = {{"from", from_->currentData().toString().toStdString()}, {"to", to_->currentData().toString().toStdString()}};
+    }
+    else if (current(kind_) == "normal") {
+        f.params = {{"normal", json(base_)}, {"at", at_->currentData().toString().toStdString()}};
     }
     else {
         f.params = {{"base", json(base_)}, {"base2", json(base2_)}};
@@ -2667,7 +2681,18 @@ PointPanel::PointPanel(jig::Document& doc, Viewport* view, std::string editId, Q
                                 "goes, or click an edge (its end, middle or centre) or a face (its centre).")));
     kind_ = combo(this, {{tr("At typed coordinates"), "at"}, {tr("On an edge or face"), "through"}});
     through_ = new QComboBox(this);
-    end_ = combo(this, {{tr("Start"), "start"}, {tr("End"), "end"}, {tr("Middle"), "mid"}, {tr("Centre (circles, arcs)"), "center"}});
+    end_ = combo(this, {{tr("Start"), "start"}, {tr("End"), "end"}, {tr("Middle"), "mid"}, {tr("Centre (circles, arcs)"), "center"},
+                        {tr("Where it crosses a plane"), "plane"}});
+    plane_ = new QComboBox(this);
+    plane_->addItem(tr("Floor (XY)"), "\"XY\"");
+    plane_->addItem(tr("Front (XZ)"), "\"XZ\"");
+    plane_->addItem(tr("Side (YZ)"), "\"YZ\"");
+    for (int i = 0; i < insertIndex(); ++i) {
+        const auto& f = doc_.model().features[size_t(i)];
+        if (f.kind == jig::FeatureKind::Plane && stateBefore()->planes.count(f.id)) {
+            plane_->addItem(q(f.name), q(nlohmann::json(f.id).dump()));
+        }
+    }
     addRow(tr("Kind"), kind_);
     const char* axes[3] = {"X", "Y", "Z"};
     for (int i = 0; i < 3; ++i) {
@@ -2677,6 +2702,7 @@ PointPanel::PointPanel(jig::Document& doc, Viewport* view, std::string editId, Q
     }
     addRow(tr("On"), through_);
     addRow(tr("Where"), end_);
+    addRow(tr("Plane"), plane_);
     if (const jig::Feature* edit = editId_.empty() ? nullptr : doc_.feature(editId_)) {
         const auto& p = edit->params;
         if (p.contains("through")) {
@@ -2685,7 +2711,14 @@ PointPanel::PointPanel(jig::Document& doc, Viewport* view, std::string editId, Q
             const bool face = t.contains("face");
             const std::string name = (face ? t["face"] : t.value("edge", nlohmann::json::object())).value("name", std::string {});
             through_->addItem(face ? tr("Face %1").arg(q(name)) : tr("Edge %1").arg(q(name)), q(t.dump()));
-            select(end_, p.value("end", std::string("start")));
+            select(end_, p.contains("plane") ? std::string("plane") : p.value("end", std::string("start")));
+            if (p.contains("plane")) {
+                const QString key = q(p["plane"].dump());
+                if (plane_->findData(key) < 0) {
+                    plane_->addItem(p["plane"].is_object() ? tr("(picked face)") : key, key);
+                }
+                plane_->setCurrentIndex(plane_->findData(key));
+            }
         }
         else if (p.contains("at") && p["at"].is_array() && p["at"].size() == 3) {
             for (int i = 0; i < 3; ++i) {
@@ -2693,7 +2726,7 @@ PointPanel::PointPanel(jig::Document& doc, Viewport* view, std::string editId, Q
             }
         }
     }
-    for (auto* c : {kind_, through_, end_}) {
+    for (auto* c : {kind_, through_, end_, plane_}) {
         connect(c, &QComboBox::currentIndexChanged, this, [this] {
             updateVisibility();
             schedulePreview();
@@ -2784,6 +2817,7 @@ void PointPanel::updateVisibility()
     }
     show(through_, through);
     show(end_, edge);
+    show(plane_, edge && current(end_) == "plane");
     if (through && through_->count() == 0) {
         status_->setText(tr("Click an edge or a face in the view."));
     }
@@ -2797,7 +2831,13 @@ jig::Feature PointPanel::draft() const
     if (current(kind_) == "through" && through_->count() > 0) {
         f.params = {{"through", nlohmann::json::parse(through_->currentData().toString().toStdString(), nullptr, false)}};
         if (f.params["through"].contains("edge")) {
-            f.params["end"] = current(end_);
+            if (current(end_) == "plane") {
+                const std::string d = plane_->currentData().toString().toStdString();
+                f.params["plane"] = nlohmann::json::parse(d.empty() ? "\"XY\"" : d, nullptr, false);
+            }
+            else {
+                f.params["end"] = current(end_);
+            }
         }
     }
     else {

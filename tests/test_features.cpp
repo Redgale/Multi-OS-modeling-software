@@ -1491,3 +1491,45 @@ TEST(Bodies, MovePointToPoint)
               "move id=m1 bodies=e1 from=p9 to=O\n");
     EXPECT_NE(bad->status(2).message.find("p9"), std::string::npos);
 }
+
+TEST(Point, WhereAnEdgeCrossesAPlaneAndSquareAxes)
+{
+    // a vertical corner edge of a 10 mm block crosses a plane 4 mm up at z = 4; a plane
+    // above the block is still met by the edge's line
+    auto doc = build("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=40 h=20\nextrude id=e1 sketch=s1 distance=10\n"
+                     "plane id=pl1 base=XY distance=4mm\nplane id=pl2 base=XY distance=25mm\n"
+                     "point id=p1 through=edge:E[e1/side:5|e1/side:6] plane=pl1\n"
+                     "point id=p2 through=edge:E[e1/side:5|e1/side:6] plane=pl2\n");
+    expectAllOk(*doc);
+    EXPECT_NEAR(doc->state().points.at("p1").Z(), 4, 1e-9);
+    EXPECT_NEAR(std::abs(doc->state().points.at("p1").X()), 20, 1e-9);
+    EXPECT_NEAR(doc->state().points.at("p2").Z(), 25, 1e-9);
+    // a circle crossing a vertical plane: the first crossing along it
+    auto ring = build("sketch id=s1 plane=XY\ncircle sketch=s1 center=0,0 d=20\nextrude id=e1 sketch=s1 distance=5\n");
+    std::string rim;
+    for (auto& [bid, b] : ring->state().bodies) {
+        for (int i = 0; i < b->edgeCount() && rim.empty(); ++i) {
+            if (measureItem(b->edge(i)).radius) {
+                rim = b->edgeName(i);
+            }
+        }
+    }
+    ASSERT_FALSE(rim.empty());
+    run(*ring, "point id=p3 through=edge:" + rim + " plane=YZ");
+    expectAllOk(*ring);
+    const gp_Pnt c = ring->state().points.at("p3");
+    EXPECT_NEAR(std::abs(c.X()), 0, 1e-7);
+    EXPECT_NEAR(std::abs(c.Y()), 10, 1e-7);
+    // an axis square to the block's top, through that crossing point: parallel to Z
+    run(*doc, "axis id=a1 normal=face:e1/end at=p1");
+    expectAllOk(*doc);
+    const gp_Ax1 a = doc->state().axes.at("a1");
+    EXPECT_TRUE(a.Direction().IsParallel(gp_Dir(0, 0, 1), 1e-9));
+    EXPECT_NEAR(a.Location().Distance(doc->state().points.at("p1")), 0, 1e-9);
+    // an edge parallel to the plane never crosses it
+    auto bad = std::make_unique<Document>();
+    ScriptRunner r(*bad);
+    r.runText("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=40 h=20\nextrude id=e1 sketch=s1 distance=10\n"
+              "point id=p1 through=edge:E[e1/side:5|e1/side:6] plane=XZ\n");
+    EXPECT_NE(bad->status(2).message.find("parallel"), std::string::npos) << bad->status(2).message;
+}
