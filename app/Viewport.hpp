@@ -111,6 +111,11 @@ public:
         std::shared_ptr<const jig::NamedShape> shape;
     };
     void setBodies(std::vector<BodyInput> bodies);
+    // The graphics driver could not run the 3D view (no OpenGL 3.3).
+    bool graphicsFailed() const
+    {
+        return glFailed_;
+    }
     // How many bodies the view was last asked to show.
     int bodyCount() const
     {
