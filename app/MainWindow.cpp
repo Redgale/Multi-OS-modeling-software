@@ -840,6 +840,17 @@ void MainWindow::buildDocks()
             QTimer::singleShot(0, this, [this, body, on] { setBodyVisible(body, on); });  // not inside the signal
         }
     });
+    // choosing a sketch or body shows the step that made it in the timeline
+    connect(browser_, &QTreeWidget::currentItemChanged, this, [this](QTreeWidgetItem* it, QTreeWidgetItem*) {
+        if (!it || !doc_) {
+            return;
+        }
+        const int row = doc_->featureIndex(it->data(0, Qt::UserRole + 1).toString().toStdString());
+        if (row >= 0 && row < timeline_->count()) {
+            timeline_->setCurrentRow(row);
+            timeline_->scrollToItem(timeline_->item(row));
+        }
+    });
     connect(browser_, &QTreeWidget::customContextMenuRequested, this, [this](const QPoint& pos) {
         QTreeWidgetItem* it = browser_->itemAt(pos);
         const QString id = it ? it->data(0, Qt::UserRole).toString() : QString();
@@ -1119,8 +1130,9 @@ void MainWindow::refreshBrowser()
             extra = it->second->report.dof == 0 ? tr("fully defined")
                                                 : tr("%1 free").arg(it->second->report.dof);
         }
-        new QTreeWidgetItem(sketches, {QString("%1 %2  (%3)").arg(statusGlyph(st.level), q(feats[i].name),
-                                                                  extra.isEmpty() ? statusWord(st.level) : extra)});
+        auto* sk = new QTreeWidgetItem(sketches, {QString("%1 %2  (%3)").arg(statusGlyph(st.level), q(feats[i].name),
+                                                                             extra.isEmpty() ? statusWord(st.level) : extra)});
+        sk->setData(0, Qt::UserRole + 1, q(feats[i].id));  // the step, for "find in timeline"
     }
     browser_->blockSignals(true);
     for (auto& [id, b] : doc_->state().bodies) {
@@ -1133,6 +1145,7 @@ void MainWindow::refreshBrowser()
                                                          q(jig::formatVolume(mp.volume, doc_->units())),
                                                          shown ? QString() : tr("  hidden"))});
         it->setData(0, Qt::UserRole, q(id));
+        it->setData(0, Qt::UserRole + 1, q(id));  // the step that made the body
         it->setFlags(it->flags() | Qt::ItemIsUserCheckable);
         it->setCheckState(0, shown ? Qt::Checked : Qt::Unchecked);
         it->setToolTip(0, tr("Tick to show, untick to hide. Right-click to isolate or rename."));

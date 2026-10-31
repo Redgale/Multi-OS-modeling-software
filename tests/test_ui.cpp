@@ -1456,6 +1456,20 @@ private slots:
             saysHidden |= (*it)->data(0, Qt::UserRole).toString() == "e1" && (*it)->text(0).contains("hidden");
         }
         QVERIFY(saysHidden);  // written out, not only an unticked box
+        // choosing a body in the Browser finds the step that made it in the timeline
+        QListWidget* timeline = nullptr;
+        for (auto* l : w.findChildren<QListWidget*>()) {
+            if (l->count() == int(w.document().model().features.size())) {
+                timeline = l;
+            }
+        }
+        QVERIFY(timeline);
+        for (QTreeWidgetItemIterator it(w.browser()); *it; ++it) {
+            if ((*it)->data(0, Qt::UserRole).toString() == "e1") {
+                w.browser()->setCurrentItem(*it);
+            }
+        }
+        QCOMPARE(timeline->currentRow(), w.document().featureIndex("e1"));
         w.isolateBody("p1.1");
         QCOMPARE(w.viewport()->bodyCount(), 1);
         w.showAllBodies();
