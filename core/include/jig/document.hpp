@@ -81,6 +81,7 @@ struct Model
     std::vector<Feature> features;
     int rollback = -1;  // number of active features; -1 = all
     std::map<std::string, int> counters;  // next id number per prefix
+    LengthUnit units = LengthUnit::Millimetre;  // how sizes are shown and typed (geometry is always mm)
     nlohmann::json extra = nlohmann::json::object();
 };
 
@@ -147,6 +148,19 @@ public:
     // Evaluates a parameter of a model that is not (yet) the document's own.
     static Result<Quantity> evalParamIn(const Model& m, const std::string& name);
     Result<double> evalLength(const std::string& expr) const;
+    LengthUnit units() const
+    {
+        return model_.units;
+    }
+    // Typed input made explicit in the design's unit (see withLengthUnit).
+    std::string lengthInput(const std::string& expr) const;
+    std::string fmtLength(double mm) const
+    {
+        return formatLength(mm, model_.units);
+    }
+    // A sensible starting value for a size field: the millimetre value in metric
+    // designs, the inch value (already a round number) in inch and foot designs.
+    std::string defaultLength(double mm, double inches) const;
     Result<double> evalAngle(const std::string& expr) const;
 
     // ---- transactions -----------------------------------------------------

@@ -212,8 +212,17 @@ QPoint SketchEditor::screenOf(double x, double y) const
 
 double SketchEditor::gridStep() const
 {
-    // a "nice" step of about 12 screen pixels: 0.1, 0.2, 0.5, 1, 2, 5, 10 ...
+    // a "nice" step of about 12 screen pixels: 0.1, 0.2, 0.5, 1, 2, 5, 10 ... in metric
+    // designs; 1/64, 1/32, … 1/2, 1, 2, 6, 12 inches in inch and foot designs
     const double raw = 12 * view_->worldPerPixel();
+    if (doc_.units() == jig::LengthUnit::Inch || doc_.units() == jig::LengthUnit::Foot) {
+        for (double in : {1.0 / 64, 1.0 / 32, 1.0 / 16, 1.0 / 8, 1.0 / 4, 1.0 / 2, 1.0, 2.0, 6.0, 12.0, 24.0, 60.0}) {
+            if (raw <= in * 25.4) {
+                return in * 25.4;
+            }
+        }
+        return 120 * 25.4;
+    }
     const double p = std::pow(10.0, std::floor(std::log10(std::max(raw, 1e-6))));
     for (double m : {1.0, 2.0, 5.0, 10.0}) {
         if (raw <= m * p) {
@@ -422,6 +431,11 @@ void SketchEditor::hideInput()
     view_->setFocus();
 }
 
+QString SketchEditor::inUnits(double mm) const
+{
+    return QString::fromStdString(doc_.fmtLength(mm));  // prefill the value box, unit included
+}
+
 QStringList SketchEditor::inputValues() const
 {
     QStringList v;
@@ -439,8 +453,18 @@ void SketchEditor::typeValues(const QStringList& values)
     placeSecond(cursor_, inputValues());
 }
 
-void SketchEditor::placeSecond(const Snap& cur, const QStringList& typed)
+void SketchEditor::placeSecond(const Snap& cur, const QStringList& rawTyped)
 {
+    // Plain numbers typed into size fields are in the design's unit; store them explicitly.
+    // (Angles, counts and the words of a text are left alone.)
+    QStringList typed = rawTyped;
+    for (int i = 0; i < typed.size(); ++i) {
+        const bool notLength = (tool_ == Tool::Line && i == 1) || (tool_ == Tool::Arc && second_) ||
+                               (tool_ == Tool::Polygon && i == 1) || (tool_ == Tool::Text && i == 0);
+        if (!notLength && !typed[i].trimmed().isEmpty()) {
+            typed[i] = QString::fromStdString(doc_.lengthInput(typed[i].trimmed().toStdString()));
+        }
+    }
     auto typedLen = [&](int i) -> std::optional<double> {
         if (i >= typed.size() || typed[i].isEmpty()) {
             return std::nullopt;
@@ -746,7 +770,8 @@ void SketchEditor::placeSecond(const Snap& cur, const QStringList& typed)
                 message_ = tr("Type the words for the text.");
                 return;
             }
-            const QString hExpr = typed.size() > 1 && !typed[1].isEmpty() ? typed[1] : QString("5 mm");
+            const QString hExpr = typed.size() > 1 && !typed[1].isEmpty() ? typed[1]
+                                                                            : QString::fromStdString(doc_.defaultLength(5, 0.25));
             auto h = doc_.evalLength(hExpr.toStdString());
             if (!h || !(h.value() > 0)) {
                 message_ = h ? tr("Text size must be larger than zero.") : QString::fromStdString(h.error().message);
@@ -931,7 +956,7 @@ bool SketchEditor::mouseRelease(QMouseEvent* e)
                         auto [bx, by] = work_.pointXY(en->p2);
                         v = std::abs((bx - ax) * (ay - y1) - (ax - x1) * (by - ay)) / std::hypot(bx - ax, by - ay);
                     }
-                    showInput({tr("Distance")}, {fmt(v)});
+                    showInput({tr("Distance")}, {inUnits(v)});
                     inputFields_[0]->selectAll();
                     inputFields_[0]->setFocus();
                 }
@@ -958,7 +983,7 @@ bool SketchEditor::mouseRelease(QMouseEvent* e)
                 v = en->r;
                 label = tr("Radius");
             }
-            showInput({label}, {fmt(v)});
+            showInput({label}, {inUnits(v)});
             inputFields_[0]->selectAll();
             inputFields_[0]->setFocus();
             inputBox_->move(pos.toPoint() + QPoint(18, 18));
@@ -976,7 +1001,9 @@ bool SketchEditor::mouseRelease(QMouseEvent* e)
                     showInput({tr("Diameter"), tr("Sides")}, {QString(), "6"});
                 }
                 else if (tool_ == Tool::Text) {
-                    showInput({tr("Text"), tr("Size")}, {QString(), lastTextHeight_});
+                    showInput({tr("Text"), tr("Size")},
+                              {QString(), lastTextHeight_.isEmpty() ? QString::fromStdString(doc_.defaultLength(5, 0.25))
+                                                                    : lastTextHeight_});
                     inputFields_[0]->setFocus();
                 }
                 else {
@@ -1378,6 +1405,7 @@ void SketchEditor::rebuildOverlay()
 
 void SketchEditor::paint(QPainter& p)
 {
+    auto len = [this](double mm) { return QString::fromStdString(doc_.fmtLength(mm)); };
     const jig::Sketch& s = shown();
     const std::set<int> freeSet(report_.freeEntities.begin(), report_.freeEntities.end());
     const ViewColors& vc = view_->colors();
@@ -1494,7 +1522,7 @@ void SketchEditor::paint(QPainter& p)
             p.setBrush(Qt::NoBrush);
             p.drawEllipse(c, 8, 8);
             if (g.nearestPointId && g.gap > 0) {
-                p.drawText(c + QPointF(10, -8), tr("gap %1 mm").arg(fmt(g.gap)));
+                p.drawText(c + QPointF(10, -8), tr("gap %1").arg(len(g.gap)));
             }
         }
     }
@@ -1517,20 +1545,20 @@ void SketchEditor::paint(QPainter& p)
         if (first_) {
             const QPointF d = cursor_.local - first_->local;
             if (tool_ == Tool::Line) {
-                label += tr("%1 mm  %2°").arg(fmt(std::hypot(d.x(), d.y()))).arg(fmt(std::atan2(d.y(), d.x()) * 180 / kPi));
+                label += tr("%1  %2°").arg(len(std::hypot(d.x(), d.y()))).arg(fmt(std::atan2(d.y(), d.x()) * 180 / kPi));
             }
             else if (tool_ == Tool::Rectangle) {
-                label += tr("%1 × %2 mm").arg(fmt(std::abs(d.x()))).arg(fmt(std::abs(d.y())));
+                label += tr("%1 × %2").arg(len(std::abs(d.x()))).arg(len(std::abs(d.y())));
             }
             else if (tool_ == Tool::CenterRectangle) {
-                label += tr("%1 × %2 mm").arg(fmt(2 * std::abs(d.x()))).arg(fmt(2 * std::abs(d.y())));
+                label += tr("%1 × %2").arg(len(2 * std::abs(d.x()))).arg(len(2 * std::abs(d.y())));
             }
             else if (tool_ == Tool::Circle || tool_ == Tool::Polygon) {
-                label += tr("Ø %1 mm").arg(fmt(2 * std::hypot(d.x(), d.y())));
+                label += tr("Ø %1").arg(len(2 * std::hypot(d.x(), d.y())));
             }
             else if (tool_ == Tool::Arc) {
                 if (!second_) {
-                    label += tr("R %1 mm").arg(fmt(std::hypot(d.x(), d.y())));
+                    label += tr("R %1").arg(len(std::hypot(d.x(), d.y())));
                 }
                 else {
                     const QPointF st = second_->local - first_->local;
@@ -1543,7 +1571,7 @@ void SketchEditor::paint(QPainter& p)
             }
             else if (tool_ == Tool::Slot) {
                 if (!second_) {
-                    label += tr("%1 mm").arg(fmt(std::hypot(d.x(), d.y())));
+                    label += len(std::hypot(d.x(), d.y()));
                 }
                 else {
                     const QPointF c2 = second_->local;
@@ -1551,7 +1579,7 @@ void SketchEditor::paint(QPainter& p)
                     if (axis.length() > 1e-9) {
                         const QPointF n(-(c2.y() - first_->local.y()) / axis.length(),
                                         (c2.x() - first_->local.x()) / axis.length());
-                        label += tr("width %1 mm").arg(fmt(2 * std::abs(QPointF::dotProduct(d, n))));
+                        label += tr("width %1").arg(len(2 * std::abs(QPointF::dotProduct(d, n))));
                     }
                 }
             }

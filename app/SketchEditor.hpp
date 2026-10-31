@@ -134,6 +134,7 @@ private:
     void showInput(const QStringList& labels, const QStringList& prefill = {});
     void hideInput();
     QStringList inputValues() const;
+    QString inUnits(double mm) const;
     std::vector<QPointF> polyline(const jig::Sketch& s, const jig::SketchEntity& e) const;
     const jig::Sketch& shown() const
     {
@@ -154,7 +155,7 @@ private:
     std::optional<Snap> second_;     // second click of a three-click tool (arc, slot)
     QString arcRadiusExpr_;          // typed at the second step (arc radius, slot length)
     int editText_ = 0;
-    QString lastTextHeight_ = "5 mm";               // text being changed (double-click on its anchor)
+    QString lastTextHeight_;  // empty: the design's default size               // text being changed (double-click on its anchor)
     std::vector<std::vector<QVector3D>> textEdges_;  // glyph outlines, for drawing
     int chainStart_ = 0;             // line chains: the first point, clicking it closes
     Snap cursor_;

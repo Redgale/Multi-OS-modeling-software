@@ -56,7 +56,7 @@ ExprField::ExprField(jig::Document& doc, jig::Dim dim, QWidget* parent)
     lay->setContentsMargins(0, 0, 0, 0);
     lay->setSpacing(1);
     edit_ = new QLineEdit(this);
-    edit_->setPlaceholderText(dim == jig::Dim::ang() ? tr("e.g. 45 deg") : tr("e.g. 10 mm, 2 in, width/2"));
+    edit_->setPlaceholderText(dim == jig::Dim::ang() ? tr("e.g. 45 deg") : tr("e.g. 10 mm, 2 in, width/2 (a plain number is in %1)").arg(q(jig::unitSymbol(doc.units()))));
     result_ = new QLabel(this);
     QFont f = result_->font();
     f.setPointSizeF(f.pointSizeF() * 0.9);
@@ -72,7 +72,9 @@ ExprField::ExprField(jig::Document& doc, jig::Dim dim, QWidget* parent)
 
 QString ExprField::text() const
 {
-    return edit_->text().trimmed();
+    // a plain number typed into a size field is in the design's unit: store it explicitly
+    const QString raw = edit_->text().trimmed();
+    return dim_ == jig::Dim::len() ? q(doc_.lengthInput(raw.toStdString())) : raw;
 }
 
 void ExprField::setText(const QString& t)
@@ -97,7 +99,7 @@ void ExprField::evaluate()
     valid_ = r.ok();
     if (valid_) {
         value_ = r->value;
-        result_->setText("= " + q(jig::formatQuantity(r.value())));
+        result_->setText("= " + q(dim_ == jig::Dim::len() ? doc_.fmtLength(r->value) : jig::formatQuantity(r.value())));
         result_->setStyleSheet({});
     }
     else {
@@ -348,7 +350,7 @@ ExtrudePanel::ExtrudePanel(jig::Document& doc, Viewport* view, std::string editI
     }
     else {
         sketch_->setCurrentIndex(sketch_->count() - 1);
-        distance_->setText(remembered().count("extrude.distance") ? remembered()["extrude.distance"] : "10 mm");
+        distance_->setText(remembered().count("extrude.distance") ? remembered()["extrude.distance"] : q(doc_.defaultLength(10, 0.5)));
     }
     fillProfiles();
     if (edit && edit->params.contains("profiles") && edit->params["profiles"].is_array()) {
@@ -392,7 +394,7 @@ void ExtrudePanel::fillProfiles()
     if (it != before->sketches.end()) {
         int n = 1;
         for (auto& r : it->second->profiles.regions) {
-            auto* item = new QListWidgetItem(tr("Area %1 · %2 mm²").arg(n++).arg(r.area, 0, 'f', 1), profiles_);
+            auto* item = new QListWidgetItem(tr("Area %1 · %2").arg(n++).arg(q(jig::formatArea(r.area, doc_.units()))), profiles_);
             item->setData(Qt::UserRole, q(r.key));
             item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
             item->setCheckState(Qt::Checked);
@@ -544,7 +546,8 @@ FilletPanel::FilletPanel(jig::Document& doc, Viewport* view, std::string editId,
     }
     else {
         const QString key = chamfer ? "chamfer.distance" : "fillet.radius";
-        radius_->setText(remembered().count(key) ? remembered()[key] : (chamfer ? "1 mm" : "2 mm"));
+        radius_->setText(remembered().count(key) ? remembered()[key]
+                                                 : (chamfer ? q(doc_.defaultLength(1, 0.03125)) : q(doc_.defaultLength(2, 0.0625))));
     }
     view_->setPickMode(PickMode::Edges);
     refreshEdges();
@@ -703,7 +706,7 @@ ShellPanel::ShellPanel(jig::Document& doc, Viewport* view, std::string editId, Q
         }
     }
     else {
-        thickness_->setText(remembered().count("shell.thickness") ? remembered()["shell.thickness"] : "2 mm");
+        thickness_->setText(remembered().count("shell.thickness") ? remembered()["shell.thickness"] : q(doc_.defaultLength(2, 0.08)));
     }
     if (body_.empty() && !before->bodies.empty()) {
         body_ = before->bodies.begin()->first;
@@ -838,7 +841,8 @@ void fillSketches(QComboBox* c, const jig::Document& doc, int limit, const jig::
     }
 }
 
-void fillProfileList(QListWidget* list, const jig::SketchState* sk, const nlohmann::json& chosen)
+void fillProfileList(QListWidget* list, const jig::SketchState* sk, const nlohmann::json& chosen,
+                     jig::LengthUnit units = jig::LengthUnit::Millimetre)
 {
     list->blockSignals(true);
     list->clear();
@@ -851,7 +855,7 @@ void fillProfileList(QListWidget* list, const jig::SketchState* sk, const nlohma
         }
         int n = 1;
         for (auto& r : sk->profiles.regions) {
-            auto* item = new QListWidgetItem(QObject::tr("Area %1 · %2 mm²").arg(n++).arg(r.area, 0, 'f', 1), list);
+            auto* item = new QListWidgetItem(QObject::tr("Area %1 · %2").arg(n++).arg(q(jig::formatArea(r.area, units))), list);
             item->setData(Qt::UserRole, q(r.key));
             item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
             item->setCheckState(keys.empty() || keys.count(r.key) ? Qt::Checked : Qt::Unchecked);
@@ -970,7 +974,8 @@ void RevolvePanel::fillFromSketch()
     auto it = before->sketches.find(current(sketch_));
     const jig::SketchState* sk = it == before->sketches.end() ? nullptr : it->second.get();
     const jig::Feature* edit = editId_.empty() ? nullptr : doc_.feature(editId_);
-    fillProfileList(profiles_, sk, edit ? edit->params.value("profiles", nlohmann::json("all")) : nlohmann::json("all"));
+    fillProfileList(profiles_, sk, edit ? edit->params.value("profiles", nlohmann::json("all")) : nlohmann::json("all"),
+                    doc_.units());
     axis_->blockSignals(true);
     axis_->clear();
     // Lines of the sketch first (construction lines are the usual choice), then the origin axes.
@@ -1046,7 +1051,10 @@ HolePanel::HolePanel(jig::Document& doc, Viewport* view, std::string editId, QWi
     addRow(tr("Counterbore depth"), cboreDepth_);
     addRow(tr("Countersink diameter"), csinkDiameter_);
     addRow(tr("Countersink angle"), csinkAngle_);
-    auto* tip = new QLabel(tr("Clearance for an M3 screw: 3.4 mm. Add 0.2–0.4 mm for 3D prints."), this);
+    auto* tip = new QLabel(doc.units() == jig::LengthUnit::Inch || doc.units() == jig::LengthUnit::Foot
+                               ? tr("Clearance for a #4 screw: 0.13 in; for a #6: 0.15 in. Add about 0.01 in for 3D prints.")
+                               : tr("Clearance for an M3 screw: 3.4 mm. Add 0.2–0.4 mm for 3D prints."),
+                           this);
     tip->setWordWrap(true);
     form_->addWidget(tip);
     const auto before = stateBefore();
@@ -1067,11 +1075,11 @@ HolePanel::HolePanel(jig::Document& doc, Viewport* view, std::string editId, QWi
     }
     select(type_, value("type", "simple").toStdString());
     select(extent_, value("extent", "distance").toStdString());
-    diameter_->setText(value("diameter", "3.4 mm"));
-    depth_->setText(value("depth", "10 mm"));
-    cboreDiameter_->setText(value("cbore_diameter", "6.5 mm"));
-    cboreDepth_->setText(value("cbore_depth", "3.5 mm"));
-    csinkDiameter_->setText(value("csink_diameter", "6.5 mm"));
+    diameter_->setText(value("diameter", doc_.defaultLength(3.4, 0.13).c_str()));
+    depth_->setText(value("depth", doc_.defaultLength(10, 0.375).c_str()));
+    cboreDiameter_->setText(value("cbore_diameter", doc_.defaultLength(6.5, 0.25).c_str()));
+    cboreDepth_->setText(value("cbore_depth", doc_.defaultLength(3.5, 0.14).c_str()));
+    csinkDiameter_->setText(value("csink_diameter", doc_.defaultLength(6.5, 0.25).c_str()));
     csinkAngle_->setText(value("csink_angle", "90 deg"));
     for (auto* c : {sketch_, type_, extent_}) {
         connect(c, &QComboBox::currentIndexChanged, this, [this] {
@@ -1235,9 +1243,9 @@ PatternPanel::PatternPanel(jig::Document& doc, Viewport* view, std::string editI
     select(dir1_, value("dir1", "X").toStdString());
     select(dir2_, value("dir2", "Y").toStdString());
     count1_->setText(value("count1", "3"));
-    spacing1_->setText(value("spacing1", "10 mm"));
+    spacing1_->setText(value("spacing1", doc_.defaultLength(10, 0.5).c_str()));
     count2_->setText(value("count2", "1"));
-    spacing2_->setText(value("spacing2", "10 mm"));
+    spacing2_->setText(value("spacing2", doc_.defaultLength(10, 0.5).c_str()));
     for (auto* c : {source_, kind_, axis_, dir1_, dir2_}) {
         connect(c, &QComboBox::currentIndexChanged, this, [this] {
             updateVisibility();
@@ -1415,7 +1423,7 @@ PlanePanel::PlanePanel(jig::Document& doc, Viewport* view, std::string editId, Q
     }
     else {
         select(kind_, kind);
-        distance_->setText("10 mm");
+        distance_->setText(q(doc_.defaultLength(10, 0.5)));
         angle_->setText("45 deg");
         if (kind == "midplane") {
             base2_->setCurrentIndex(base2_->findData("\"XY\""));
@@ -1823,7 +1831,7 @@ MovePanel::MovePanel(jig::Document& doc, Viewport* view, std::string editId, QWi
     fillBodyList(bodies_, doc_, *before, chosen);
     const char* keys[3] = {"dx", "dy", "dz"};
     for (int k = 0; k < 3; ++k) {
-        d_[k]->setText(q(edit ? edit->params.value(keys[k], std::string("0 mm")) : std::string("0 mm")));
+        d_[k]->setText(q(edit ? edit->params.value(keys[k], std::string("0 mm")) : doc_.defaultLength(0, 0)));
         connect(d_[k], &ExprField::changed, this, [this] { schedulePreview(); });
     }
     angle_->setText(q(edit ? edit->params.value("angle", std::string("0 deg")) : std::string("0 deg")));
@@ -1899,7 +1907,7 @@ ParametersDialog::ParametersDialog(jig::Document& doc, QWidget* parent)
     }
     connect(add, &QPushButton::clicked, this, [this] {
         int n = table_->rowCount() + 1;
-        addRow({"param" + std::to_string(n), "10 mm", jig::ParamKind::Length, {}});
+        addRow({"param" + std::to_string(n), doc_.defaultLength(10, 0.5), jig::ParamKind::Length, {}});
         table_->editItem(table_->item(table_->rowCount() - 1, 0));
     });
     connect(del, &QPushButton::clicked, this, [this] {

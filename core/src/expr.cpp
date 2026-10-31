@@ -23,13 +23,16 @@ struct UnitDef
 };
 
 // Lengths convert to mm, angles to rad.
-constexpr std::array<UnitDef, 9> kUnits {{
+constexpr std::array<UnitDef, 12> kUnits {{
     {"mm", 1.0, {1, 0}},
     {"cm", 10.0, {1, 0}},
     {"m", 1000.0, {1, 0}},
     {"um", 0.001, {1, 0}},
     {"in", 25.4, {1, 0}},
     {"ft", 304.8, {1, 0}},
+    {"yd", 914.4, {1, 0}},
+    {"thou", 0.0254, {1, 0}},  // a thousandth of an inch
+    {"mil", 0.0254, {1, 0}},
     {"deg", kDegToRad, {0, 1}},
     {"rad", 1.0, {0, 1}},
     {"turn", 2.0 * std::numbers::pi, {0, 1}},
@@ -547,6 +550,134 @@ std::string formatQuantity(const Quantity& q)
     char buf[64];
     std::snprintf(buf, sizeof buf, "%.6g", v);
     return std::string(buf) + unit;
+}
+
+std::string unitSymbol(LengthUnit u)
+{
+    switch (u) {
+        case LengthUnit::Centimetre:
+            return "cm";
+        case LengthUnit::Metre:
+            return "m";
+        case LengthUnit::Inch:
+            return "in";
+        case LengthUnit::Foot:
+            return "ft";
+        case LengthUnit::Millimetre:
+            break;
+    }
+    return "mm";
+}
+
+std::optional<LengthUnit> lengthUnitFromString(std::string_view s)
+{
+    if (s == "mm" || s == "millimetre" || s == "millimeter") {
+        return LengthUnit::Millimetre;
+    }
+    if (s == "cm" || s == "centimetre" || s == "centimeter") {
+        return LengthUnit::Centimetre;
+    }
+    if (s == "m" || s == "metre" || s == "meter") {
+        return LengthUnit::Metre;
+    }
+    if (s == "in" || s == "inch" || s == "inches") {
+        return LengthUnit::Inch;
+    }
+    if (s == "ft" || s == "foot" || s == "feet") {
+        return LengthUnit::Foot;
+    }
+    return std::nullopt;
+}
+
+double millimetresPer(LengthUnit u)
+{
+    switch (u) {
+        case LengthUnit::Centimetre:
+            return 10;
+        case LengthUnit::Metre:
+            return 1000;
+        case LengthUnit::Inch:
+            return 25.4;
+        case LengthUnit::Foot:
+            return 304.8;
+        case LengthUnit::Millimetre:
+            break;
+    }
+    return 1;
+}
+
+namespace
+{
+std::string trimmed(double v, int decimals)
+{
+    std::ostringstream os;
+    os.imbue(std::locale::classic());
+    os.setf(std::ios::fixed);
+    os.precision(decimals);
+    os << v;
+    std::string s = os.str();
+    if (s.find('.') != std::string::npos) {
+        while (!s.empty() && s.back() == '0') {
+            s.pop_back();
+        }
+        if (!s.empty() && s.back() == '.') {
+            s.pop_back();
+        }
+    }
+    return s == "-0" ? "0" : s;
+}
+
+int decimalsFor(LengthUnit u)
+{
+    return u == LengthUnit::Inch || u == LengthUnit::Foot || u == LengthUnit::Metre ? 4 : 3;
+}
+
+bool imperial(LengthUnit u)
+{
+    return u == LengthUnit::Inch || u == LengthUnit::Foot;
+}
+}  // namespace
+
+std::string formatLength(double mm, LengthUnit u, bool withSymbol)
+{
+    const std::string v = trimmed(mm / millimetresPer(u), decimalsFor(u));
+    return withSymbol ? v + " " + unitSymbol(u) : v;
+}
+
+std::string formatArea(double mm2, LengthUnit u)
+{
+    const double f = millimetresPer(u);
+    return trimmed(mm2 / (f * f), decimalsFor(u)) + " " + unitSymbol(u) + "²";
+}
+
+std::string formatVolume(double mm3, LengthUnit u)
+{
+    if (!imperial(u)) {
+        return trimmed(mm3 / 1000, 3) + " cm³";  // metric hobby convention, and 1 cm³ = 1 ml
+    }
+    const double f = millimetresPer(u);
+    return trimmed(mm3 / (f * f * f), 4) + " " + unitSymbol(u) + "³";
+}
+
+std::string withLengthUnit(std::string_view expr, LengthUnit u, const ParamLookup& lookup)
+{
+    std::string e(expr);
+    while (!e.empty() && std::isspace(static_cast<unsigned char>(e.back()))) {
+        e.pop_back();
+    }
+    if (e.empty()) {
+        return e;
+    }
+    auto q = evaluate(e, lookup);
+    if (!q || !(q->dim == Dim::none())) {
+        return e;
+    }
+    // plain numbers get a plain suffix; anything else is wrapped
+    bool plain = true;
+    for (char c : e) {
+        plain = plain && (std::isdigit(static_cast<unsigned char>(c)) || c == '.' || c == ' ' || c == '-' || c == '+');
+    }
+    return (plain ? e : "(" + e + ")") + " " + unitSymbol(u);
 }
 
 bool isValidParameterName(std::string_view name)

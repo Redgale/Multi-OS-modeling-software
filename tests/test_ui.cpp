@@ -7,6 +7,8 @@
 #include <QComboBox>
 #include <QCheckBox>
 #include <QListWidget>
+#include <QLineEdit>
+#include <QSettings>
 #include <QTableWidget>
 #include <QtTest>
 
@@ -607,6 +609,68 @@ private slots:
         sp->cancel();
         QTRY_VERIFY(w.featurePanel() == nullptr);
         QTRY_VERIFY(!view->section().has_value());
+    }
+
+    // Dark is the default theme; an inch design reads plain numbers as inches and shows
+    // every size in inches.
+    void darkDefaultAndInchDesign()
+    {
+        QSettings().remove("appearance/theme");
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        QVERIFY2(w.palette().color(QPalette::Window).lightness() < 80,
+                 qPrintable(w.palette().color(QPalette::Window).name()));
+        Viewport* view = w.viewport();
+        w.setDesignUnits(jig::LengthUnit::Inch);
+        QCOMPARE(int(w.document().units()), int(jig::LengthUnit::Inch));
+        QCOMPARE(QString::fromStdString(w.document().defaultLength(10, 0.5)), QString("0.5 in"));
+
+        // a 2 x 1 rectangle typed as plain numbers
+        QVERIFY(w.createSketchOn("XY"));
+        SketchEditor* sk = w.sketchEditor();
+        sk->setTool(SketchEditor::Tool::CenterRectangle);
+        QTest::mouseMove(view, sk->screenOf(0, 0));
+        QTest::mouseClick(view, Qt::LeftButton, Qt::NoModifier, sk->screenOf(0, 0));
+        QTest::mouseMove(view, sk->screenOf(10, 8));
+        sk->typeValues({"2", "1"});
+        QVERIFY2(sk->message().isEmpty(), qPrintable(sk->message()));
+        w.runCommand("sketch.finish");
+        w.runCommand("solid.extrude");
+        auto* ex = qobject_cast<ExtrudePanel*>(w.featurePanel());
+        QVERIFY(ex);
+        // (the panel may show a value remembered from earlier in the session)
+        ex->distance()->edit()->setText("0.25");               // a plain number: inches
+        QCOMPARE(ex->distance()->text(), QString("0.25 in"));
+        QTRY_VERIFY(ex->previewOk());
+        QVERIFY(ex->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        const double in3 = 25.4 * 25.4 * 25.4;
+        QVERIFY2(std::abs(volume(w) - 2 * 1 * 0.25 * in3) < 1e-6, qPrintable(QString::number(volume(w))));
+
+        // Measure and Properties speak inches
+        w.runCommand("inspect.measure");
+        auto* mp = qobject_cast<MeasurePanel*>(w.featurePanel());
+        QVERIFY(mp);
+        const std::string body = w.document().state().bodies.begin()->first;
+        mp->pick(body, "e1/end", false);
+        mp->pick(body, "e1/start", false);
+        QVERIFY2(mp->resultText().contains("Distance: 0.25 in"), qPrintable(mp->resultText()));
+        QVERIFY2(mp->resultText().contains("Area: 2 in²"), qPrintable(mp->resultText()));
+        mp->cancel();
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        PropertiesDialog props(w.document(), &w);
+        QVERIFY2(props.table()->item(0, 0)->text().startsWith("0.5 in³"), qPrintable(props.table()->item(0, 0)->text()));
+        QVERIFY2(props.table()->item(1, 0)->text().contains(" oz"), qPrintable(props.table()->item(1, 0)->text()));
+        QVERIFY2(props.table()->item(4, 0)->text() == "2 × 1 × 0.25 in", qPrintable(props.table()->item(4, 0)->text()));
+
+        // switching back to millimetres resizes nothing
+        w.setDesignUnits(jig::LengthUnit::Millimetre);
+        QVERIFY(std::abs(volume(w) - 2 * 1 * 0.25 * in3) < 1e-6);
+        w.runCommand("edit.undo");  // the unit change is undoable
+        QCOMPARE(int(w.document().units()), int(jig::LengthUnit::Inch));
+        w.grab().save(shotPath("inch-dark"));
     }
 
     // Revolve a ring, drill it from its top face, repeat the hole around the axis,

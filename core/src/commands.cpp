@@ -444,11 +444,44 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
     if (!ta) {
         return ta.error();
     }
-    const Args& a = ta.value();
+    Args& a = ta.value();
     if (a.verb.empty()) {
         return true;
     }
     Document& doc = doc_;
+    // In a design that is not in millimetres, plain numbers in size and position arguments
+    // are in the design's unit ("rect w=2" in an inch design is 2 in). They are stored with
+    // the unit written out, so changing the design's unit later never rescales anything.
+    if (doc.units() != LengthUnit::Millimetre) {
+        static const std::set<std::string> lengthKeys {
+            "w", "h", "d", "r", "width", "height", "distance", "depth", "diameter", "thickness", "radius",
+            "offset", "dx", "dy", "dz", "spacing1", "spacing2", "cbore_diameter", "cbore_depth", "csink_diameter",
+            "center", "corner", "points", "c1", "c2", "p1", "p2", "at"};
+        for (auto& [k, v] : a.kv) {
+            if (!lengthKeys.count(k)) {
+                continue;
+            }
+            std::string out, tok;
+            auto flush = [&] {
+                std::string t = tok;
+                const auto b = t.find_first_not_of(' '), e = t.find_last_not_of(' ');
+                t = b == std::string::npos ? "" : t.substr(b, e - b + 1);
+                out += t.empty() ? tok : withLengthUnit(t, doc.units(), doc.lookup());
+                tok.clear();
+            };
+            for (char c : v) {
+                if (c == ',' || c == ';') {
+                    flush();
+                    out += c;
+                }
+                else {
+                    tok += c;
+                }
+            }
+            flush();
+            v = out;
+        }
+    }
 
     // After a feature-creating edit: fail when the new/edited feature errors (strict mode).
     auto checkFeature = [&](const std::string& id) -> Result<bool> {
@@ -490,6 +523,17 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
     auto len = [&](const std::string& e) { return doc.evalLength(e); };
 
     // ---- parameters
+    if (a.verb == "units") {
+        // units mm|cm|m|in|ft : how this design shows sizes and reads plain numbers
+        auto u = lengthUnitFromString(a.positional.empty() ? "" : a.positional[0]);
+        if (!u) {
+            return makeError("script.args", "Use: units mm|cm|m|in|ft");
+        }
+        return doc.transact("Units", [&](Model& m) -> Result<bool> {
+            m.units = *u;
+            return true;
+        });
+    }
     if (a.verb == "param") {
         // param name = expr [kind=angle|number] [comment="..."]
         std::string rest = line.substr(line.find("param") + 5);
@@ -533,6 +577,9 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
             target->expr = expr;
             if (kind) {
                 target->kind = *kind;  // an existing parameter keeps its kind unless told otherwise
+            }
+            if (target->kind == ParamKind::Length && m.units != LengthUnit::Millimetre) {
+                target->expr = withLengthUnit(expr, m.units);  // "2" in an inch design is 2 in
             }
             // Reject the change (nothing is committed) if the value does not work.
             auto v = Document::evalParamIn(m, name);

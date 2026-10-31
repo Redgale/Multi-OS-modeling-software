@@ -13,6 +13,15 @@ angle or position accepts an expression with units and parameter names (`width/2
 `2 in`, `75 deg`). A bare number in a length means millimetres; in an angle, degrees.
 The script stops at the first failing line, and the error names the line number.
 
+## Units
+
+| Command | Meaning |
+|---|---|
+| `units mm\|cm\|m\|in\|ft` | The design's unit. After `units in`, plain numbers in sizes and positions (`w=2`, `center=1,0.5`, `param wall = 0.125`) mean inches; they are stored as `2 in`, so a later unit change never resizes anything. Angles and counts are unaffected. Without this command scripts use millimetres |
+
+Units you can type anywhere: `mm`, `cm`, `m`, `um`, `in`, `ft`, `yd`, `thou`/`mil`
+(1/1000 in), `deg`, `rad`, `turn`.
+
 ## Parameters
 
 | Command | Example |

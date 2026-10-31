@@ -158,12 +158,14 @@ void MeasurePanel::update()
         view_->setFaceHighlight(hlBody, hlFaces);
         view_->setEdgeHighlight(hlBody, hlEdges);
     }
-    auto describe = [](const jig::MeasureItem& m) {
+    const jig::LengthUnit u = doc_.units();
+    auto L = [u](double mm) { return QString::fromStdString(jig::formatLength(mm, u)); };
+    auto describe = [&](const jig::MeasureItem& m) {
         const bool face = m.kind.find("face") != std::string::npos || m.kind == "cone";
         QString t = "<b>" + kindWord(m.kind) + "</b><br>";
-        t += face ? tr("Area: %1 mm²").arg(num(m.size)) : tr("Length: %1 mm").arg(num(m.size));
+        t += face ? tr("Area: %1").arg(QString::fromStdString(jig::formatArea(m.size, u))) : tr("Length: %1").arg(L(m.size));
         if (m.radius) {
-            t += "<br>" + tr("Diameter: %1 mm  (radius %2 mm)").arg(num(2 * *m.radius), num(*m.radius));
+            t += "<br>" + tr("Diameter: %1  (radius %2)").arg(L(2 * *m.radius), L(*m.radius));
         }
         return t;
     };
@@ -177,18 +179,18 @@ void MeasurePanel::update()
             result_->setText("✕ " + QString::fromStdString(r.error().message));
             return;
         }
-        QString t = "<b>" + tr("Distance: %1 mm").arg(num(r->distance)) + "</b>";
+        QString t = "<b>" + tr("Distance: %1").arg(L(r->distance)) + "</b>";
         if (r->distance < 1e-9) {
             t += " " + tr("(they touch)");
         }
         if (r->centres) {
-            t += "<br><b>" + tr("Centre to centre: %1 mm").arg(num(*r->centres)) + "</b>";
+            t += "<br><b>" + tr("Centre to centre: %1").arg(L(*r->centres)) + "</b>";
         }
         if (r->angle) {
             t += "<br>" + tr("Angle: %1°").arg(num(*r->angle * 180 / std::numbers::pi));
         }
         const gp_Vec d(r->p1, r->p2);
-        t += "<br>" + tr("Along X, Y, Z: %1, %2, %3 mm").arg(num(std::abs(d.X())), num(std::abs(d.Y())), num(std::abs(d.Z())));
+        t += "<br>" + tr("Along X, Y, Z: %1, %2, %3").arg(L(std::abs(d.X())), L(std::abs(d.Y())), L(std::abs(d.Z())));
         result_->setText(t);
     }
     else {
@@ -219,7 +221,7 @@ SectionPanel::SectionPanel(jig::Document& doc, Viewport* view, QWidget* parent)
         }
     }
     position_ = new ExprField(doc, jig::Dim::len(), this);
-    position_->setText("0 mm");
+    position_->setText(QString::fromStdString(doc.defaultLength(0, 0)));
     flip_ = new QCheckBox(tr("Remove the other side"), this);
     note_ = new QLabel(this);
     note_->setWordWrap(true);
@@ -332,6 +334,10 @@ PropertiesDialog::PropertiesDialog(const jig::Document& doc, QWidget* parent)
 void PropertiesDialog::fill()
 {
     const auto& bodies = doc_.state().bodies;
+    const jig::LengthUnit u = doc_.units();
+    const bool us = u == jig::LengthUnit::Inch || u == jig::LengthUnit::Foot;
+    auto L = [u](double mm) { return QString::fromStdString(jig::formatLength(mm, u, false)); };
+    const QString sym = QString::fromStdString(jig::unitSymbol(u));
     const QStringList rows {tr("Volume"), tr("Weight"), tr("Filament (1.75 mm)"), tr("Surface area"), tr("Size (X × Y × Z)"),
                             tr("Centre of mass"), tr("Valid solid")};
     table_->clear();
@@ -347,12 +353,14 @@ void PropertiesDialog::fill()
         const jig::MassProperties m = jig::massProperties(b->shape());
         const double filament = m.volume / (std::numbers::pi * 0.875 * 0.875) / 1000;  // metres
         const QStringList vals {
-            tr("%1 cm³  (%2 mm³)").arg(num(m.volume / 1000), num(m.volume)),
-            tr("%1 g").arg(num(m.volume * rho / 1000)),
-            tr("%1 m").arg(num(filament)),
-            tr("%1 cm²").arg(num(m.area / 100)),
-            tr("%1 × %2 × %3 mm").arg(num(m.xmax - m.xmin), num(m.ymax - m.ymin), num(m.zmax - m.zmin)),
-            tr("%1, %2, %3 mm").arg(num(m.cx), num(m.cy), num(m.cz)),
+            us ? QString::fromStdString(jig::formatVolume(m.volume, u)) + tr("  (%1 cm³)").arg(num(m.volume / 1000))
+               : tr("%1 cm³  (%2 mm³)").arg(num(m.volume / 1000), num(m.volume)),
+            us ? tr("%1 oz  (%2 g)").arg(num(m.volume * rho / 1000 / 28.349523125), num(m.volume * rho / 1000))
+               : tr("%1 g").arg(num(m.volume * rho / 1000)),
+            us ? tr("%1 ft  (%2 m)").arg(num(filament / 0.3048), num(filament)) : tr("%1 m").arg(num(filament)),
+            QString::fromStdString(jig::formatArea(m.area, us ? u : jig::LengthUnit::Centimetre)),
+            tr("%1 × %2 × %3 %4").arg(L(m.xmax - m.xmin), L(m.ymax - m.ymin), L(m.zmax - m.zmin), sym),
+            tr("%1, %2, %3 %4").arg(L(m.cx), L(m.cy), L(m.cz), sym),
             m.valid ? tr("✓ yes") : tr("✕ no: the shape has errors")};
         for (int r = 0; r < vals.size(); ++r) {
             table_->setItem(r, c, new QTableWidgetItem(vals[r]));

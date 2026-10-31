@@ -47,6 +47,9 @@ public:
     void newDesign();
     void showWelcome();
     void setTheme(Theme t);
+    void openSettings();
+    void setDesignUnits(jig::LengthUnit u);  // undoable; display and typed input only
+    std::unique_ptr<jig::Document> blankDocument() const;  // in the units chosen for new designs
     Viewport* viewport() const
     {
         return view_;
@@ -146,7 +149,7 @@ private:
     QWidget* sketchPanel_ = nullptr;
     QLabel* sketchInfo_ = nullptr;
     QAction* centerRect_ = nullptr;
-    Theme theme_ = Theme::Light;
+    Theme theme_ = Theme::Dark;
     bool updatingRollback_ = false;
 };
 

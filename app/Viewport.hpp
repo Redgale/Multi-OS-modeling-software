@@ -156,6 +156,10 @@ public:
     {
         return section_;
     }
+    void setUnits(jig::LengthUnit u)  // for hover descriptions
+    {
+        units_ = u;
+    }
     // Construction planes and their names: drawn under any tool overlay.
     void setDatums(SceneOverlay geometry, std::vector<std::pair<QString, QVector3D>> labels);
     void setEdgeHighlight(const std::string& body, std::vector<int> edges);
@@ -280,7 +284,8 @@ private:
     PickMode pickMode_ = PickMode::Faces;
     SceneOverlay overlayData_;
     SceneOverlay datums_;
-    std::optional<QVector4D> section_;                                     // construction planes, always shown
+    std::optional<QVector4D> section_;
+    jig::LengthUnit units_ = jig::LengthUnit::Millimetre;                                     // construction planes, always shown
     std::vector<std::pair<QString, QVector3D>> datumLabels_;
     bool overlayDirty_ = false;
     std::unique_ptr<QOpenGLShaderProgram> colorProg_;

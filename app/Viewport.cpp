@@ -867,9 +867,9 @@ QString Viewport::describe(const PickResult& r) const
     for (auto& m : meshes_) {
         if (m->body == r.body) {
             auto fp = m->shape->faceFingerprint(r.face);
-            return tr("Face “%1” · %2 · %3 mm²")
-                .arg(QString::fromStdString(m->shape->faceName(r.face)), QString::fromStdString(fp.type))
-                .arg(fp.size, 0, 'f', 1);
+            return tr("Face “%1” · %2 · %3")
+                .arg(QString::fromStdString(m->shape->faceName(r.face)), QString::fromStdString(fp.type),
+                     QString::fromStdString(jig::formatArea(fp.size, units_)));
         }
     }
     return {};

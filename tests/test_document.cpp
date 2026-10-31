@@ -194,3 +194,31 @@ TEST(Document, DependentsAreFound)
     EXPECT_NE(std::find(e1.begin(), e1.end(), "f1"), e1.end());
     EXPECT_TRUE(doc->dependents("f2").empty());
 }
+
+TEST(Document, InchDesignsReadPlainNumbersAsInches)
+{
+    auto doc = build("units in\nparam wall = 0.125\n"
+                     "sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=2 h=1\nextrude id=e1 sketch=s1 distance=0.5\n"
+                     "shell id=sh1 faces=face:e1/end thickness=wall\n");
+    expectAllOk(*doc);
+    EXPECT_EQ(doc->units(), LengthUnit::Inch);
+    const double in = 25.4;
+    const double t = 0.125 * in;
+    const double expected = 2 * in * 1 * in * 0.5 * in - (2 * in - 2 * t) * (1 * in - 2 * t) * (0.5 * in - t);
+    EXPECT_NEAR(props(*doc).volume, expected, 1e-6);
+    // the typed values were stored with their unit written out
+    EXPECT_EQ(doc->model().parameters[0].expr, "0.125 in");
+    EXPECT_EQ(doc->feature("e1")->params.value("distance", std::string {}), "0.5 in");
+    // the unit is saved, and switching back to millimetres changes the display only
+    const auto path = (tempDir() / "inch.jig").string();
+    ASSERT_TRUE(saveDocument(*doc, path).ok());
+    auto back = loadDocument(path);
+    ASSERT_TRUE(back.ok());
+    EXPECT_EQ((*back)->units(), LengthUnit::Inch);
+    run(*doc, "units mm");
+    EXPECT_NEAR(props(*doc).volume, expected, 1e-6);
+    EXPECT_EQ(doc->fmtLength(25.4), "25.4 mm");
+    EXPECT_EQ(doc->defaultLength(10, 0.5), "10 mm");
+    run(*doc, "units in");
+    EXPECT_EQ(doc->defaultLength(10, 0.5), "0.5 in");
+}

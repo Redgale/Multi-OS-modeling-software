@@ -4,6 +4,9 @@
 #include <array>
 
 #include <QAction>
+#include <QDialogButtonBox>
+#include <QComboBox>
+#include <QFormLayout>
 #include <QCheckBox>
 #include <QPainter>
 #include <QInputDialog>
@@ -460,11 +463,11 @@ MainWindow::MainWindow()
             return;
         }
         auto fp = it->second->faceFingerprint(face);
-        details_->setHtml(tr("<h3>Face</h3><p><b>Name:</b> %1<br><b>Surface:</b> %2<br><b>Area:</b> %3 mm²<br>"
+        details_->setHtml(tr("<h3>Face</h3><p><b>Name:</b> %1<br><b>Surface:</b> %2<br><b>Area:</b> %3<br>"
                              "<b>Body:</b> %4</p><p>Faces keep their name when earlier steps change, so "
                              "fillets and sketches stay attached.</p>")
                               .arg(q(it->second->faceName(face)).toHtmlEscaped(), q(fp.type))
-                              .arg(fp.size, 0, 'f', 1)
+                              .arg(q(jig::formatArea(fp.size, doc_->units())))
                               .arg(body));
     });
     connect(view_, &Viewport::meshesUpdated, this, [this] {
@@ -476,7 +479,9 @@ MainWindow::MainWindow()
     });
 
     QSettings st;
-    theme_ = Theme(st.value("theme", int(Theme::Light)).toInt());
+    // Dark is the default. The key is new: the old "theme" key was written with Light on
+    // every first start, so it does not tell us what anyone actually chose.
+    theme_ = Theme(st.value("appearance/theme", int(Theme::Dark)).toInt());
     view_->setNavPreset(NavPreset(st.value("navigation", int(NavPreset::Default)).toInt()));
     setTheme(theme_);
     restoreGeometry(st.value("geometry").toByteArray());
@@ -486,7 +491,7 @@ MainWindow::MainWindow()
     connect(autosaveTimer_, &QTimer::timeout, this, &MainWindow::autosave);
     autosaveTimer_->start();
 
-    setDocument(std::make_unique<jig::Document>(), {});
+    setDocument(blankDocument(), {});
     resize(1360, 860);
     // Esc: cancel the open panel, the plane picker, or the sketch tool in progress
     auto* esc = new QShortcut(QKeySequence(Qt::Key_Escape), this);
@@ -566,6 +571,10 @@ void MainWindow::buildMenus()
     edit->addAction(registryAction("edit.redo"));
     edit->addSeparator();
     edit->addAction(registryAction("edit.palette"));
+    edit->addSeparator();
+    auto* settingsAction = edit->addAction(tr("Settings…"), this, [this] { openSettings(); });
+    settingsAction->setShortcut(QKeySequence::Preferences);
+    settingsAction->setMenuRole(QAction::PreferencesRole);  // macOS: in the application menu
 
     auto* view = menuBar()->addMenu(tr("&View"));
     view->addAction(registryAction("view.fit"));
@@ -903,6 +912,7 @@ void MainWindow::refreshAll()
         bodies.push_back({id, b});
     }
     view_->setBodies(std::move(bodies));
+    view_->setUnits(doc_->units());
     refreshDatums();
     view_->setEmptyHint(doc_->model().features.empty() && !sketch_ && !picker_
                             ? tr("Start here: every part begins as a flat sketch.\n"
@@ -922,7 +932,8 @@ void MainWindow::refreshAll()
     const QString name = path_.isEmpty() ? tr("Untitled") : QFileInfo(path_).completeBaseName();
     setWindowTitle(QString("%1[*] — Jigsmith").arg(name));  // [*]: the platform's "unsaved" marker
     setWindowModified(dirty);
-    statusInfo_->setText(tr("mm · Z up · rebuilt %1 step(s) in %2 ms")
+    statusInfo_->setText(tr("%1 · Z up · rebuilt %2 step(s) in %3 ms")
+                             .arg(q(jig::unitSymbol(doc_->units())))
                              .arg(doc_->recomputedLastTime())
                              .arg(doc_->lastRecomputeMs(), 0, 'f', 0));
 }
@@ -931,7 +942,8 @@ void MainWindow::refreshBrowser()
 {
     browser_->clear();
     auto* settings = new QTreeWidgetItem(browser_, {tr("Document settings")});
-    new QTreeWidgetItem(settings, {tr("Units: millimetres")});
+    static const char* unitNames[] = {"millimetres", "centimetres", "metres", "inches", "feet"};
+    new QTreeWidgetItem(settings, {tr("Units: %1 (change in Settings)").arg(tr(unitNames[int(doc_->units())]))});
     new QTreeWidgetItem(settings, {tr("Up axis: Z")});
     auto* origin = new QTreeWidgetItem(browser_, {tr("Origin")});
     for (const char* p : {"XY plane (floor)", "XZ plane (front)", "YZ plane (side)"}) {
@@ -957,7 +969,7 @@ void MainWindow::refreshBrowser()
     for (auto& [id, b] : doc_->state().bodies) {
         auto mp = jig::massProperties(b->shape());
         const jig::Feature* f = doc_->feature(id);
-        new QTreeWidgetItem(bodies, {tr("%1  (%2 cm³)").arg(f ? q(f->name) : q(id)).arg(mp.volume / 1000, 0, 'f', 1)});
+        new QTreeWidgetItem(bodies, {tr("%1  (%2)").arg(f ? q(f->name) : q(id), q(jig::formatVolume(mp.volume, doc_->units())))});
     }
     auto* params = new QTreeWidgetItem(browser_, {tr("Parameters")});
     for (auto& p : doc_->model().parameters) {
@@ -1233,7 +1245,7 @@ void MainWindow::newDesign()
     if (!maybeKeepChanges()) {
         return;
     }
-    setDocument(std::make_unique<jig::Document>(), {});
+    setDocument(blankDocument(), {});
 }
 
 bool MainWindow::openFile(const QString& path)
@@ -1429,10 +1441,85 @@ void MainWindow::showWelcome()
     QSettings().setValue("welcomeShown", true);
 }
 
+std::unique_ptr<jig::Document> MainWindow::blankDocument() const
+{
+    auto doc = std::make_unique<jig::Document>();
+    const auto u = jig::lengthUnitFromString(QSettings().value("units/new", "mm").toString().toStdString());
+    if (u && *u != jig::LengthUnit::Millimetre) {
+        jig::Model m = doc->model();
+        m.units = *u;
+        doc->resetModel(std::move(m));
+    }
+    return doc;
+}
+
+void MainWindow::setDesignUnits(jig::LengthUnit u)
+{
+    if (!doc_ || doc_->units() == u) {
+        return;
+    }
+    doc_->transact(tr("Change units to %1").arg(q(jig::unitSymbol(u))).toStdString(), [u](jig::Model& m) -> jig::Result<bool> {
+        m.units = u;
+        return true;
+    });
+    if (sketch_) {
+        sketch_->refreshFromDocument();
+    }
+    refreshAll();
+}
+
+void MainWindow::openSettings()
+{
+    QDialog d(this);
+    d.setWindowTitle(tr("Settings"));
+    auto* lay = new QVBoxLayout(&d);
+    auto* form = new QFormLayout();
+    auto* theme = new QComboBox(&d);
+    theme->addItem(tr("Dark"), int(Theme::Dark));
+    theme->addItem(tr("Light"), int(Theme::Light));
+    theme->addItem(tr("High contrast"), int(Theme::HighContrast));
+    theme->setCurrentIndex(theme->findData(int(theme_)));
+    const std::pair<QString, QString> units[] = {{tr("Millimetres (mm)"), "mm"}, {tr("Centimetres (cm)"), "cm"},
+                                                 {tr("Inches (in)"), "in"},      {tr("Feet (ft)"), "ft"},
+                                                 {tr("Metres (m)"), "m"}};
+    auto* design = new QComboBox(&d);
+    auto* fresh = new QComboBox(&d);
+    for (auto& [label, sym] : units) {
+        design->addItem(label, sym);
+        fresh->addItem(label, sym);
+    }
+    design->setCurrentIndex(design->findData(q(jig::unitSymbol(doc_->units()))));
+    fresh->setCurrentIndex(std::max(0, fresh->findData(QSettings().value("units/new", "mm").toString())));
+    form->addRow(tr("Theme"), theme);
+    form->addRow(tr("Units of this design"), design);
+    form->addRow(tr("Units for new designs"), fresh);
+    auto* note = new QLabel(tr("Changing units never resizes anything: it changes how sizes are shown, and what a "
+                               "plain number typed into a size field means. You can always type a unit, e.g. "
+                               "<i>2 in</i> or <i>50 mm</i>, in any design."),
+                            &d);
+    note->setWordWrap(true);
+    auto* box = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &d);
+    lay->addLayout(form);
+    lay->addWidget(note);
+    lay->addWidget(box);
+    connect(box, &QDialogButtonBox::accepted, &d, &QDialog::accept);
+    connect(box, &QDialogButtonBox::rejected, &d, &QDialog::reject);
+    connect(theme, &QComboBox::currentIndexChanged, this, [this, theme] { setTheme(Theme(theme->currentData().toInt())); });
+    const Theme before = theme_;
+    if (d.exec() != QDialog::Accepted) {
+        setTheme(before);  // the theme previews live; Cancel puts it back
+        return;
+    }
+    QSettings().setValue("units/new", fresh->currentData().toString());
+    if (auto u = jig::lengthUnitFromString(design->currentData().toString().toStdString())) {
+        setDesignUnits(*u);
+    }
+}
+
 void MainWindow::setTheme(Theme t)
 {
     theme_ = t;
-    QSettings().setValue("theme", int(t));
+    QSettings().setValue("appearance/theme", int(t));
     qApp->setStyle(QStyleFactory::create("Fusion"));  // Qt's built-in cross-platform widget style
     QPalette p;
     ViewColors vc;

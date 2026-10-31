@@ -238,6 +238,25 @@ Result<double> Document::evalLength(const std::string& expr) const
     return r->value;
 }
 
+std::string Document::lengthInput(const std::string& expr) const
+{
+    return model_.units == LengthUnit::Millimetre ? expr : withLengthUnit(expr, model_.units, lookup());
+}
+
+std::string Document::defaultLength(double mm, double inches) const
+{
+    switch (model_.units) {
+        case LengthUnit::Inch:
+            return formatLength(inches * 25.4, LengthUnit::Inch);
+        case LengthUnit::Foot:
+            return formatLength(inches * 25.4, LengthUnit::Inch);  // feet are too coarse for part sizes
+        case LengthUnit::Centimetre:
+            return formatLength(mm, LengthUnit::Centimetre);
+        default:
+            return formatLength(mm, LengthUnit::Millimetre);
+    }
+}
+
 Result<double> Document::evalAngle(const std::string& expr) const
 {
     auto r = evaluate(expr, lookup(), Dim::ang());
@@ -478,7 +497,7 @@ nlohmann::json Document::toJson() const
 {
     nlohmann::json j = model_.extra;
     j["format_version"] = kFormatVersion;
-    j["units"] = "mm";
+    j["units"] = unitSymbol(model_.units);
     j["up_axis"] = "Z";
     nlohmann::json params = nlohmann::json::array();
     for (auto& p : model_.parameters) {
@@ -560,6 +579,9 @@ Result<std::unique_ptr<Document>> Document::fromJson(const nlohmann::json& input
                 }
             }
             m.features.push_back(std::move(f));
+        }
+        if (auto u = lengthUnitFromString(j.value("units", std::string("mm")))) {
+            m.units = *u;
         }
         m.rollback = j.value("rollback", -1);
         m.counters = j.value("counters", std::map<std::string, int> {});
