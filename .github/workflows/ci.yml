@@ -189,7 +189,8 @@ jobs:
             prep: pacman -Syu --noconfirm git
           - name: openSUSE Tumbleweed
             image: opensuse/tumbleweed:latest
-            prep: zypper --non-interactive install git gzip tar
+            # the minimal image ships busybox-gawk, which blocks real gawk (needed via Qt's cups deps)
+            prep: zypper --non-interactive install --force-resolution git gzip tar gawk
     steps:
       - name: Get git
         run: ${{ matrix.prep }}
