@@ -2561,15 +2561,15 @@
     </message>
     <message>
         <location line="+9"/>
-        <location line="+645"/>
-        <location line="+539"/>
+        <location line="+647"/>
+        <location line="+572"/>
         <location line="+815"/>
         <location line="+26"/>
         <source>Sketch</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2023"/>
+        <location line="-2058"/>
         <source>Extrude</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2700,17 +2700,17 @@
     </message>
     <message>
         <location line="+4"/>
-        <location line="+657"/>
+        <location line="+672"/>
         <source>&lt;p&gt;Nothing selected.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-646"/>
+        <location line="-661"/>
         <source>&lt;h3&gt;Body&lt;/h3&gt;&lt;p&gt;&lt;b&gt;Name:&lt;/b&gt; %1&lt;br&gt;&lt;b&gt;Volume:&lt;/b&gt; %2&lt;br&gt;&lt;b&gt;Size:&lt;/b&gt; %3 × %4 × %5&lt;br&gt;&lt;b&gt;Faces:&lt;/b&gt; %6&lt;/p&gt;&lt;p&gt;Right-click it in the Browser to hide, isolate or rename it.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+14"/>
+        <location line="+16"/>
         <source>&lt;h3&gt;Face&lt;/h3&gt;&lt;p&gt;&lt;b&gt;Name:&lt;/b&gt; %1&lt;br&gt;&lt;b&gt;Surface:&lt;/b&gt; %2&lt;br&gt;&lt;b&gt;Area:&lt;/b&gt; %3&lt;br&gt;&lt;b&gt;Body:&lt;/b&gt; %4&lt;/p&gt;&lt;p&gt;Faces keep their name when earlier steps change, so fillets and sketches stay attached.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2791,12 +2791,12 @@
     </message>
     <message>
         <location line="+2"/>
-        <location line="+1293"/>
+        <location line="+1326"/>
         <source>Mouse and trackpad</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1291"/>
+        <location line="-1324"/>
         <source>Default (middle-drag pans, Shift+middle orbits)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2817,30 +2817,30 @@
     </message>
     <message>
         <location line="+11"/>
-        <location line="+1266"/>
+        <location line="+1299"/>
         <source>Theme</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1264"/>
-        <location line="+1219"/>
+        <location line="-1297"/>
+        <location line="+1252"/>
         <source>Light</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1219"/>
-        <location line="+1218"/>
+        <location line="-1252"/>
+        <location line="+1251"/>
         <source>Dark</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1217"/>
-        <location line="+1219"/>
+        <location line="-1250"/>
+        <location line="+1252"/>
         <source>High contrast</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1211"/>
+        <location line="-1244"/>
         <source>&amp;Help</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2921,7 +2921,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+21"/>
+        <location line="+32"/>
         <source>Hide</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2942,12 +2942,12 @@
     </message>
     <message>
         <location line="+2"/>
-        <location line="+1797"/>
+        <location line="+1819"/>
         <source>Rename…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1793"/>
+        <location line="-1815"/>
         <source>Design browser</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2958,13 +2958,13 @@
     </message>
     <message>
         <location line="+5"/>
-        <location line="+1304"/>
+        <location line="+1326"/>
         <location line="+58"/>
         <source>Properties</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1356"/>
+        <location line="-1378"/>
         <source>Properties and help</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3040,12 +3040,12 @@
     </message>
     <message>
         <location line="+18"/>
-        <location line="+1689"/>
+        <location line="+1711"/>
         <source>Move rollback marker</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1597"/>
+        <location line="-1619"/>
         <source>Start here: every part begins as a flat sketch.
 Click Sketch on the toolbar, then click a plane.
 Or open the phone stand sample (File ▸ Open a sample).</source>
@@ -3122,7 +3122,7 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+11"/>
+        <location line="+12"/>
         <source>%1  (%2)%3</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3132,7 +3132,7 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+4"/>
+        <location line="+5"/>
         <source>Tick to show, untick to hide. Right-click to isolate or rename.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3172,7 +3172,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+54"/>
+        <location line="+43"/>
+        <source>Group: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+31"/>
         <source>Next: create a sketch on a plane.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3766,11 +3771,48 @@ An empty design with the origin ready</source>
     </message>
     <message>
         <location line="+8"/>
+        <source>Put in a group…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <location line="+1"/>
+        <location line="+20"/>
+        <source>Group</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-21"/>
+        <source>Group name:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>Take out of the group</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Unfold the group</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Fold the group</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
         <source>Delete…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+9"/>
+        <location line="+7"/>
+        <source>Ungroup</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+25"/>
         <source>Cannot move this step there</source>
         <translation type="unfinished"></translation>
     </message>

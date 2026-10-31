@@ -120,6 +120,13 @@ public:
     void openAxis(const std::string& editId = {});
     // Browser: which bodies are drawn (a view setting, not part of the design or its undo)
     void setBodyVisible(const std::string& body, bool on);
+    // Timeline groups: put a step in a group ("" takes it out); fold a group to one item.
+    void setStepGroup(const std::string& id, const std::string& group);
+    void setGroupFolded(const std::string& group, bool folded);
+    QListWidget* timeline() const
+    {
+        return timeline_;
+    }
     // What a plain click picks when no tool is open: "faces", "edges" or "bodies".
     void setSelectFilter(const QString& what);
     QString selectFilter() const;
@@ -189,6 +196,7 @@ private:
     Viewport* view_ = nullptr;
     QTreeWidget* browser_ = nullptr;
     std::set<std::string> hiddenBodies_;
+    std::set<std::string> foldedGroups_;
     QPointer<QComboBox> selectFilter_;  // (a QPointer: panels may be destroyed after it on exit)
     QActionGroup* navGroup_ = nullptr;
     QListWidget* timeline_ = nullptr;

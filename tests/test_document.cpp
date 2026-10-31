@@ -295,3 +295,18 @@ TEST(Document, VersionsTravelInsideTheFile)
     ASSERT_TRUE(listVersions(plain).ok());
     EXPECT_TRUE(listVersions(plain)->empty());
 }
+
+TEST(Document, TimelineGroupsAreSaved)
+{
+    auto doc = build("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=10 h=10\nextrude id=e1 sketch=s1 distance=5\n"
+                     "group name=\"Base\" steps=s1;e1\n");
+    EXPECT_EQ(doc->model().features[0].group, "Base");
+    EXPECT_EQ(doc->model().features[1].group, "Base");
+    const auto path = (tempDir() / "groups.jig").string();
+    ASSERT_TRUE(saveDocument(*doc, path).ok());
+    auto back = loadDocument(path);
+    ASSERT_TRUE(back.ok()) << back.error().message;
+    EXPECT_EQ((*back)->model().features[1].group, "Base");
+    run(*doc, "group name=\"\" steps=e1");
+    EXPECT_TRUE(doc->model().features[1].group.empty());
+}

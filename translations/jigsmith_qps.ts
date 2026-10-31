@@ -2558,15 +2558,15 @@
     </message>
     <message>
         <location line="+9" />
-        <location line="+645" />
-        <location line="+539" />
+        <location line="+647" />
+        <location line="+572" />
         <location line="+815" />
         <location line="+26" />
         <source>Sketch</source>
         <translation>[Skétçh~~]</translation>
     </message>
     <message>
-        <location line="-2023" />
+        <location line="-2058" />
         <source>Extrude</source>
         <translation>[Éxtrüdé~~]</translation>
     </message>
@@ -2697,17 +2697,17 @@
     </message>
     <message>
         <location line="+4" />
-        <location line="+657" />
+        <location line="+672" />
         <source>&lt;p&gt;Nothing selected.&lt;/p&gt;</source>
         <translation>[&lt;p&gt;Ñöthîñg séléçtéd.&lt;/p&gt;~~~~~]</translation>
     </message>
     <message>
-        <location line="-646" />
+        <location line="-661" />
         <source>&lt;h3&gt;Body&lt;/h3&gt;&lt;p&gt;&lt;b&gt;Name:&lt;/b&gt; %1&lt;br&gt;&lt;b&gt;Volume:&lt;/b&gt; %2&lt;br&gt;&lt;b&gt;Size:&lt;/b&gt; %3 × %4 × %5&lt;br&gt;&lt;b&gt;Faces:&lt;/b&gt; %6&lt;/p&gt;&lt;p&gt;Right-click it in the Browser to hide, isolate or rename it.&lt;/p&gt;</source>
         <translation>[&lt;h3&gt;Bödý&lt;/h3&gt;&lt;p&gt;&lt;b&gt;Ñámé:&lt;/b&gt; %1&lt;br&gt;&lt;b&gt;Völümé:&lt;/b&gt; %2&lt;br&gt;&lt;b&gt;Sîzé:&lt;/b&gt; %3 × %4 × %5&lt;br&gt;&lt;b&gt;Fáçés:&lt;/b&gt; %6&lt;/p&gt;&lt;p&gt;Rîght-çlîçk ît îñ thé Bröwsér tö hîdé, îsöláté ör réñámé ît.&lt;/p&gt;~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+14" />
+        <location line="+16" />
         <source>&lt;h3&gt;Face&lt;/h3&gt;&lt;p&gt;&lt;b&gt;Name:&lt;/b&gt; %1&lt;br&gt;&lt;b&gt;Surface:&lt;/b&gt; %2&lt;br&gt;&lt;b&gt;Area:&lt;/b&gt; %3&lt;br&gt;&lt;b&gt;Body:&lt;/b&gt; %4&lt;/p&gt;&lt;p&gt;Faces keep their name when earlier steps change, so fillets and sketches stay attached.&lt;/p&gt;</source>
         <translation>[&lt;h3&gt;Fáçé&lt;/h3&gt;&lt;p&gt;&lt;b&gt;Ñámé:&lt;/b&gt; %1&lt;br&gt;&lt;b&gt;Sürfáçé:&lt;/b&gt; %2&lt;br&gt;&lt;b&gt;Áréá:&lt;/b&gt; %3&lt;br&gt;&lt;b&gt;Bödý:&lt;/b&gt; %4&lt;/p&gt;&lt;p&gt;Fáçés kéép théîr ñámé whéñ éárlîér stéps çháñgé, sö fîlléts áñd skétçhés stáý áttáçhéd.&lt;/p&gt;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -2788,12 +2788,12 @@
     </message>
     <message>
         <location line="+2" />
-        <location line="+1293" />
+        <location line="+1326" />
         <source>Mouse and trackpad</source>
         <translation>[Möüsé áñd tráçkpád~~~~~]</translation>
     </message>
     <message>
-        <location line="-1291" />
+        <location line="-1324" />
         <source>Default (middle-drag pans, Shift+middle orbits)</source>
         <translation>[Défáült (mîddlé-drág páñs, Shîft+mîddlé örbîts)~~~~~~~~~~~~]</translation>
     </message>
@@ -2814,30 +2814,30 @@
     </message>
     <message>
         <location line="+11" />
-        <location line="+1266" />
+        <location line="+1299" />
         <source>Theme</source>
         <translation>[Thémé~]</translation>
     </message>
     <message>
-        <location line="-1264" />
-        <location line="+1219" />
+        <location line="-1297" />
+        <location line="+1252" />
         <source>Light</source>
         <translation>[Lîght~]</translation>
     </message>
     <message>
-        <location line="-1219" />
-        <location line="+1218" />
+        <location line="-1252" />
+        <location line="+1251" />
         <source>Dark</source>
         <translation>[Dárk~]</translation>
     </message>
     <message>
-        <location line="-1217" />
-        <location line="+1219" />
+        <location line="-1250" />
+        <location line="+1252" />
         <source>High contrast</source>
         <translation>[Hîgh çöñtrást~~~~]</translation>
     </message>
     <message>
-        <location line="-1211" />
+        <location line="-1244" />
         <source>&amp;Help</source>
         <translation>[&amp;Hélp~]</translation>
     </message>
@@ -2918,7 +2918,7 @@
         <translation>[Bröwsér~~]</translation>
     </message>
     <message>
-        <location line="+21" />
+        <location line="+32" />
         <source>Hide</source>
         <translation>[Hîdé~]</translation>
     </message>
@@ -2939,12 +2939,12 @@
     </message>
     <message>
         <location line="+2" />
-        <location line="+1797" />
+        <location line="+1819" />
         <source>Rename…</source>
         <translation>[Réñámé…~~]</translation>
     </message>
     <message>
-        <location line="-1793" />
+        <location line="-1815" />
         <source>Design browser</source>
         <translation>[Désîgñ bröwsér~~~~]</translation>
     </message>
@@ -2955,13 +2955,13 @@
     </message>
     <message>
         <location line="+5" />
-        <location line="+1304" />
+        <location line="+1326" />
         <location line="+58" />
         <source>Properties</source>
         <translation>[Pröpértîés~~~]</translation>
     </message>
     <message>
-        <location line="-1356" />
+        <location line="-1378" />
         <source>Properties and help</source>
         <translation>[Pröpértîés áñd hélp~~~~~]</translation>
     </message>
@@ -3037,12 +3037,12 @@
     </message>
     <message>
         <location line="+18" />
-        <location line="+1689" />
+        <location line="+1711" />
         <source>Move rollback marker</source>
         <translation>[Mövé röllbáçk márkér~~~~~~]</translation>
     </message>
     <message>
-        <location line="-1597" />
+        <location line="-1619" />
         <source>Start here: every part begins as a flat sketch.
 Click Sketch on the toolbar, then click a plane.
 Or open the phone stand sample (File ▸ Open a sample).</source>
@@ -3121,7 +3121,7 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
         <translation>[%1 fréé~]</translation>
     </message>
     <message>
-        <location line="+11" />
+        <location line="+12" />
         <source>%1  (%2)%3</source>
         <translation>[%1  (%2)%3~]</translation>
     </message>
@@ -3131,7 +3131,7 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
         <translation>[  hîddéñ~~]</translation>
     </message>
     <message>
-        <location line="+4" />
+        <location line="+5" />
         <source>Tick to show, untick to hide. Right-click to isolate or rename.</source>
         <translation>[Tîçk tö shöw, üñtîçk tö hîdé. Rîght-çlîçk tö îsöláté ör réñámé.~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -3171,7 +3171,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
         <translation>[Öñlý thîs bödý îs shöwñ. Rîght-çlîçk á bödý áñd çhöösé Shöw áll tö brîñg thé rést báçk.~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+54" />
+        <location line="+43" />
+        <source>Group: %1</source>
+        <translation>[Gröüp: %1~]</translation>
+    </message>
+    <message>
+        <location line="+31" />
         <source>Next: create a sketch on a plane.</source>
         <translation>[Ñéxt: çréáté á skétçh öñ á pláñé.~~~~~~~~]</translation>
     </message>
@@ -3762,11 +3767,48 @@ An empty design with the origin ready</source>
     </message>
     <message>
         <location line="+8" />
+        <source>Put in a group…</source>
+        <translation>[Püt îñ á gröüp…~~~]</translation>
+    </message>
+    <message>
+        <location line="+4" />
+        <location line="+1" />
+        <location line="+20" />
+        <source>Group</source>
+        <translation>[Gröüp~]</translation>
+    </message>
+    <message>
+        <location line="-21" />
+        <source>Group name:</source>
+        <translation>[Gröüp ñámé:~~~]</translation>
+    </message>
+    <message>
+        <location line="+8" />
+        <source>Take out of the group</source>
+        <translation>[Táké öüt öf thé gröüp~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+2" />
+        <source>Unfold the group</source>
+        <translation>[Üñföld thé gröüp~~~~]</translation>
+    </message>
+    <message>
+        <location line="+0" />
+        <source>Fold the group</source>
+        <translation>[Föld thé gröüp~~~~]</translation>
+    </message>
+    <message>
+        <location line="+4" />
         <source>Delete…</source>
         <translation>[Délété…~~]</translation>
     </message>
     <message>
-        <location line="+9" />
+        <location line="+7" />
+        <source>Ungroup</source>
+        <translation>[Üñgröüp~~]</translation>
+    </message>
+    <message>
+        <location line="+25" />
         <source>Cannot move this step there</source>
         <translation>[Çáññöt mövé thîs stép théré~~~~~~~]</translation>
     </message>

@@ -618,6 +618,9 @@ nlohmann::json Document::toJson() const
         if (f.suppressed) {
             jf["suppressed"] = true;
         }
+        if (!f.group.empty()) {
+            jf["group"] = f.group;
+        }
         jf["params"] = f.params;
         feats.push_back(jf);
     }
@@ -659,7 +662,7 @@ Result<std::unique_ptr<Document>> Document::fromJson(const nlohmann::json& input
             p.comment = jp.value("comment", std::string {});
             m.parameters.push_back(p);
         }
-        static const std::set<std::string> fknown {"id", "name", "kind", "suppressed", "params"};
+        static const std::set<std::string> fknown {"id", "name", "kind", "suppressed", "group", "params"};
         for (auto& jf : j.at("features")) {
             Feature f;
             f.id = jf.at("id").get<std::string>();
@@ -673,6 +676,7 @@ Result<std::unique_ptr<Document>> Document::fromJson(const nlohmann::json& input
             }
             f.kind = *k;
             f.suppressed = jf.value("suppressed", false);
+            f.group = jf.value("group", std::string {});
             f.params = jf.value("params", nlohmann::json::object());
             for (auto& [key, val] : jf.items()) {
                 if (!fknown.count(key)) {

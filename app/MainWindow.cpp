@@ -1269,9 +1269,29 @@ void MainWindow::refreshTimeline()
                                                                  q(feats[i].name)),
                                        timeline_);
         it->setTextAlignment(Qt::AlignCenter);
+        // groups: the first step of a run carries the group's name; folding hides the rest
+        const std::string& g = feats[i].group;
+        if (!g.empty()) {
+            const bool first = i == 0 || feats[i - 1].group != g;
+            const bool folded = foldedGroups_.count(g) > 0;
+            if (first) {
+                int n = 0;
+                for (size_t k = i; k < feats.size() && feats[k].group == g; ++k) {
+                    ++n;
+                }
+                it->setText((folded ? QString("▸ %1 (%2 steps)").arg(q(g)).arg(n) : QString("▾ %1").arg(q(g))) + "\n" +
+                            it->text().section('\n', 1));
+            }
+            else if (folded) {
+                it->setHidden(true);
+            }
+        }
         it->setIcon(toolIcon(QString("feature.") + jig::toString(feats[i].kind), palette().color(QPalette::WindowText),
                              accentFor(palette())));
         QString tip = statusWord(st.level);
+        if (!feats[i].group.empty()) {
+            tip = tr("Group: %1").arg(q(feats[i].group)) + "\n" + tip;
+        }
         if (!st.message.empty()) {
             tip += ": " + coreText(st.message);
         }
@@ -2690,9 +2710,50 @@ void MainWindow::timelineMenu(const QPoint& pos)
         refreshAll();
     });
     m.addSeparator();
+    m.addAction(tr("Put in a group…"), this, [this, id = f.id, row] {
+        const auto& feats = doc_->model().features;
+        const QString suggest = row > 0 ? q(feats[size_t(row - 1)].group) : QString();
+        bool ok = false;
+        const QString name = QInputDialog::getText(this, tr("Group"), tr("Group name:"), QLineEdit::Normal,
+                                                   suggest.isEmpty() ? tr("Group") : suggest, &ok)
+                                 .trimmed();
+        if (ok && !name.isEmpty()) {
+            setStepGroup(id, name.toStdString());
+        }
+    });
+    if (!f.group.empty()) {
+        m.addAction(tr("Take out of the group"), this, [this, id = f.id] { setStepGroup(id, {}); });
+        const bool folded = foldedGroups_.count(f.group) > 0;
+        m.addAction(folded ? tr("Unfold the group") : tr("Fold the group"), this,
+                    [this, g = f.group, folded] { setGroupFolded(g, !folded); });
+    }
+    m.addSeparator();
     m.addAction(toolIcon("sketch.trim", palette().color(QPalette::WindowText), accentFor(palette())), tr("Delete…"),
                 this, [this, id = f.id] { deleteFeature(id); });
     m.exec(timeline_->viewport()->mapToGlobal(pos));
+}
+
+void MainWindow::setStepGroup(const std::string& id, const std::string& group)
+{
+    doc_->transact(group.empty() ? tr("Ungroup").toStdString() : tr("Group").toStdString(),
+                   [&](jig::Model& mm) -> jig::Result<bool> {
+                       if (auto* x = jig::Document::findFeature(mm, id)) {
+                           x->group = group;
+                       }
+                       return true;
+                   });
+    refreshAll();
+}
+
+void MainWindow::setGroupFolded(const std::string& group, bool folded)
+{
+    if (folded) {
+        foldedGroups_.insert(group);
+    }
+    else {
+        foldedGroups_.erase(group);
+    }
+    refreshTimeline();
 }
 
 bool MainWindow::moveStep(const std::string& id, int to)

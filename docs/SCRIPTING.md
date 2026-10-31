@@ -87,6 +87,7 @@ nothing is committed.
 | `move id=mv1 bodies="<body>;…" [dx= dy= dz=] [axis=X\|Y\|Z angle=<angle>] [copy=yes]` | Turn about an origin axis, then shift. `copy=yes` keeps the original |
 | `mirror id=m1 [body=<id> \| feature=<id>] plane=YZ\|XZ\|XY\|<plane id>\|face:<name> [op=join\|new]` | Mirror a body (joined to the original or as a new body), or one step (its copy adds or removes material the same way), across a plane or flat face |
 | `presspull [id=pp1] face=<name> distance=<len>` | Pull a flat face straight out (positive, adds material) or push it in (negative, removes it) |
+| `group name="Base" steps=s1;e1` | Put steps in a timeline group (an empty name takes them out); grouping never changes the part |
 
 Profile keys are the sorted ids of the sketch curves around a closed area, e.g. `3,4,5,6`.
 

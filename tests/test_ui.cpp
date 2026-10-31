@@ -1031,6 +1031,19 @@ private slots:
         QMetaObject::invokeMethod(timeline, "customContextMenuRequested", Q_ARG(QPoint, at));
         QTRY_VERIFY(!w.document().model().features.back().suppressed);
         QVERIFY(std::abs(volume(w) - before) < 1e-6);
+
+        // groups: the post's sketch and extrude in one group; folding hides the second step
+        w.setStepGroup("s2", "Post");
+        w.setStepGroup("e2", "Post");
+        auto* tl = w.timeline();
+        const int first = w.document().featureIndex("s2");
+        QVERIFY(tl->item(first)->text().contains("Post"));
+        w.setGroupFolded("Post", true);
+        QVERIFY(tl->item(first)->text().contains("2 steps"));
+        QVERIFY(tl->item(first + 1)->isHidden());
+        w.setGroupFolded("Post", false);
+        QVERIFY(!tl->item(first + 1)->isHidden());
+        QVERIFY(std::abs(volume(w) - before) < 1e-6);  // grouping never changes the part
     }
 
     // Select Other: a long press lists the faces under the cursor (front and back of a block),

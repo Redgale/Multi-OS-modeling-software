@@ -1498,6 +1498,21 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
         }
         return checkFeature(id);
     }
+    if (a.verb == "group") {
+        // group name="Base" steps=s1;e1   (an empty name takes the steps out of their group)
+        const std::string name = a.get("name");
+        const auto steps = split(a.get("steps"), ';');
+        return doc.transact(name.empty() ? "Ungroup" : "Group", [&](Model& m) -> Result<bool> {
+            for (const auto& id : steps) {
+                Feature* f = findFeature(m, id);
+                if (!f) {
+                    return makeError("script.args", "There is no step called '" + id + "'.");
+                }
+                f->group = name;
+            }
+            return true;
+        });
+    }
     if (a.verb == "presspull") {
         // presspull [id=pp1] face=<name> distance=<len>   (positive pulls out, negative pushes in)
         nlohmann::json face;

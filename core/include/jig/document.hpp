@@ -73,6 +73,7 @@ struct Feature
     std::string name;  // user-visible, renameable: "Base sketch"
     FeatureKind kind = FeatureKind::Sketch;
     bool suppressed = false;
+    std::string group;  // timeline group ("Base", "Mounting holes"); empty = none
     nlohmann::json params = nlohmann::json::object();  // kind-specific, see features.cpp
     nlohmann::json extra = nlohmann::json::object();   // unknown fields, preserved on save
 };

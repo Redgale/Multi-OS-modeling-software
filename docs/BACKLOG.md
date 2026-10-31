@@ -50,7 +50,7 @@ timeline edit/rename/suppress/roll back/delete with dependents warning, Paramete
 - ~~B-015~~ done: UI test `parametersAndTimelineMenu` (Parameters dialog as one undoable step,
   a bad value explained in the dialog; Suppress/Unsuppress from the timeline menu).
 - ~~B-017~~ done: drag handle, two sides, up to a face, taper, thin (incl. open curves).
-- B-018 (reorder; Browser visibility, isolate, rename, find in timeline done) Timeline groups;
+- B-018 (reorder; Browser visibility, isolate, rename, find in timeline, timeline groups done)
   saving visibility with the design.
 - B-019 (sketch window selection, selection filter, Select Other done) window selection in 3D.
 
