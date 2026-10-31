@@ -156,10 +156,7 @@ public:
     {
         return section_;
     }
-    void setUnits(jig::LengthUnit u)  // for hover descriptions
-    {
-        units_ = u;
-    }
+    void setUnits(jig::LengthUnit u);  // hover descriptions and the floor grid
     // Construction planes and their names: drawn under any tool overlay.
     void setDatums(SceneOverlay geometry, std::vector<std::pair<QString, QVector3D>> labels);
     void setEdgeHighlight(const std::string& body, std::vector<int> edges);

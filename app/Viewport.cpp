@@ -300,19 +300,26 @@ void Viewport::uploadMesh(const std::string& body, std::shared_ptr<const jig::Na
 void Viewport::buildGrid()
 {
     std::vector<float> v;
-    const float ext = 500, minor = 10, major = 50;
+    // metric designs: 10 mm squares, a heavier line every 50 mm; inch and foot designs:
+    // quarter-inch squares, a heavier line every inch
+    const bool inch = units_ == jig::LengthUnit::Inch || units_ == jig::LengthUnit::Foot;
+    const float minor = inch ? 6.35f : 10.0f;
+    const int perMajor = inch ? 4 : 5, n = inch ? 80 : 50;  // about ±500 mm either way
+    const float ext = minor * float(n);
     auto line = [&](float x1, float y1, float z1, float x2, float y2, float z2) {
         v.insert(v.end(), {x1, y1, z1, x2, y2, z2});
     };
-    for (float t = -ext; t <= ext + 0.1f; t += minor) {
-        if (std::fmod(std::abs(t), major) < 0.01f) {
+    for (int i = -n; i <= n; ++i) {
+        if (i % perMajor == 0) {
             continue;
         }
+        const float t = minor * float(i);
         line(t, -ext, 0, t, ext, 0);
         line(-ext, t, 0, ext, t, 0);
     }
     gridMinorCount_ = int(v.size() / 3);
-    for (float t = -ext; t <= ext + 0.1f; t += major) {
+    for (int i = -n; i <= n; i += perMajor) {
+        const float t = minor * float(i);
         line(t, -ext, 0, t, ext, 0);
         line(-ext, t, 0, ext, t, 0);
     }
@@ -322,9 +329,13 @@ void Viewport::buildGrid()
     line(0, 0, 0, 0, 60, 0);
     line(0, 0, 0, 0, 0, 60);
     axisCount_ = 6;
-    gridVao_.create();
+    if (!gridVao_.isCreated()) {
+        gridVao_.create();
+    }
     gridVao_.bind();
-    gridVbo_.create();
+    if (!gridVbo_.isCreated()) {
+        gridVbo_.create();
+    }
     gridVbo_.bind();
     gridVbo_.allocate(v.data(), int(v.size() * sizeof(float)));
     glEnableVertexAttribArray(0);
@@ -480,6 +491,19 @@ void Viewport::setOverlay(SceneOverlay o)
     overlayData_ = std::move(o);
     overlayDirty_ = true;
     update();
+}
+
+void Viewport::setUnits(jig::LengthUnit u)
+{
+    const bool wasInch = units_ == jig::LengthUnit::Inch || units_ == jig::LengthUnit::Foot;
+    units_ = u;
+    const bool inch = u == jig::LengthUnit::Inch || u == jig::LengthUnit::Foot;
+    if (wasInch != inch && glReady_) {
+        makeCurrent();
+        buildGrid();
+        doneCurrent();
+        update();
+    }
 }
 
 void Viewport::setSection(std::optional<QVector4D> plane)
