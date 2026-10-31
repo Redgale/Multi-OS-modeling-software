@@ -152,8 +152,4 @@ QT_TRANSLATE_NOOP("Core", "Close the outline first, or offset the curves one at 
 QT_TRANSLATE_NOOP("Core", "This outline could not be offset by that distance.")
 QT_TRANSLATE_NOOP("Core", "Try a smaller distance: an inward offset must fit inside the outline.")
 QT_TRANSLATE_NOOP("Core", "The offset made a curve that sketches cannot hold.")
-QT_TRANSLATE_NOOP("Core", "The text engine could not start.")
-QT_TRANSLATE_NOOP("Core", "The built-in font could not be loaded.")
-QT_TRANSLATE_NOOP("Core", "This text could not be turned into shapes.")
-QT_TRANSLATE_NOOP("Core", "Try another font.")
 #endif

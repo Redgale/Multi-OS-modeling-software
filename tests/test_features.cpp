@@ -1282,3 +1282,37 @@ TEST(Fixes, StepsOfferOneClickRepairs)
         EXPECT_FALSE(fixOf(*steep, 1, "taper").empty());
     }
 }
+
+TEST(Text, InstalledFontsByFamilyName)
+{
+    // a font folder of our own (the bundled Inter file), found by family and style
+    const std::string dir = std::string(JIG_SOURCE_DIR) + "/assets/fonts";
+#if defined(_WIN32)
+    _putenv_s("JIG_FONT_DIRS", dir.c_str());
+#else
+    setenv("JIG_FONT_DIRS", dir.c_str(), 1);
+#endif
+    const auto& fonts = installedFonts(true);
+    bool inter = false;
+    for (auto& f : fonts) {
+        inter |= f.family == "Inter" && f.path.find("Inter-Regular.otf") != std::string::npos;
+    }
+    EXPECT_TRUE(inter);
+    auto f = findFont("inter regular");  // any case
+    ASSERT_TRUE(f.has_value());
+    EXPECT_EQ(f->family, "Inter");
+    EXPECT_FALSE(findFont("No Such Typeface").has_value());
+    // a sketch text in "Inter Regular" (by name, from the folder) matches the built-in Inter
+    auto byName = build("sketch id=s1 plane=XY\ntext sketch=s1 at=0,0 text=\"Jig\" size=10mm font=\"Inter Regular\"\n");
+    auto builtIn = build("sketch id=s1 plane=XY\ntext sketch=s1 at=0,0 text=\"Jig\" size=10mm\n");
+    double a = 0, b = 0;
+    for (auto& r : byName->state().sketches.at("s1")->profiles.regions) {
+        a += r.area;
+    }
+    for (auto& r : builtIn->state().sketches.at("s1")->profiles.regions) {
+        b += r.area;
+    }
+    EXPECT_GT(a, 0);
+    EXPECT_NEAR(a, b, 1e-6);
+    EXPECT_TRUE(byName->status(0).message.find("not available") == std::string::npos) << byName->status(0).message;
+}

@@ -10,6 +10,7 @@
 #include <BRepAdaptor_Curve.hxx>
 #include <TopExp_Explorer.hxx>
 #include <TopoDS.hxx>
+#include <QComboBox>
 #include <QFrame>
 #include <QGuiApplication>
 #include <QHBoxLayout>
@@ -143,6 +144,13 @@ SketchEditor::SketchEditor(Viewport* view, jig::Document& doc, std::string featu
         });
         connect(f, &QLineEdit::textChanged, this, [this] { rebuildOverlay(); });
     }
+    fontLabel_ = new QLabel(tr("Font"), inputBox_);
+    fontBox_ = new QComboBox(inputBox_);
+    fontBox_->setAccessibleName(tr("Font"));
+    lay->addWidget(fontLabel_);
+    lay->addWidget(fontBox_);
+    fontLabel_->hide();
+    fontBox_->hide();
     inputBox_->hide();
     refreshFromDocument();
 }
@@ -572,9 +580,40 @@ void SketchEditor::showInput(const QStringList& labels, const QStringList& prefi
             inputFields_[i]->setPlaceholderText(tr("type…"));
         }
     }
+    fontLabel_->hide();
+    fontBox_->hide();
     inputBox_->adjustSize();
     inputBox_->show();
     inputBox_->raise();
+}
+
+void SketchEditor::showFontChoice(const std::string& current)
+{
+    if (fontBox_->count() == 0) {  // filled once: the scan of installed fonts can take a moment
+        fontBox_->addItem(tr("Inter (built in)"), QString());
+        QStringList seen;
+        for (const auto& f : jig::installedFonts()) {
+            const QString name = QString::fromStdString(f.family);
+            if (!seen.contains(name) && name != "Inter") {
+                seen << name;
+                fontBox_->addItem(name, name);
+            }
+        }
+    }
+    int i = fontBox_->findData(QString::fromStdString(current));
+    if (i < 0 && !current.empty()) {  // a font from another computer, or with a style
+        fontBox_->addItem(QString::fromStdString(current), QString::fromStdString(current));
+        i = fontBox_->count() - 1;
+    }
+    fontBox_->setCurrentIndex(std::max(0, i));
+    fontLabel_->show();
+    fontBox_->show();
+    inputBox_->adjustSize();
+}
+
+std::string SketchEditor::chosenFont() const
+{
+    return fontBox_ && fontBox_->isVisible() ? fontBox_->currentData().toString().toStdString() : std::string {};
 }
 
 void SketchEditor::hideInput()
@@ -773,6 +812,7 @@ void SketchEditor::placeSecond(const Snap& cur, const QStringList& rawTyped)
         if (typed.size() > 1 && !typed[1].isEmpty()) {
             t->height = typed[1].toStdString();
         }
+        t->font = chosenFont();
         if (commit(tr("Edit text"), s)) {
             resetToolState();
         }
@@ -1318,12 +1358,13 @@ void SketchEditor::placeSecond(const Snap& cur, const QStringList& rawTyped)
                 message_ = h ? tr("Text size must be larger than zero.") : coreText(h.error().message);
                 return;
             }
-            const int id = s.addText(a.x(), a.y(), typed[0].toStdString(), hExpr.toStdString(), h.value());
+            const int id = s.addText(a.x(), a.y(), typed[0].toStdString(), hExpr.toStdString(), h.value(), chosenFont());
             if (first_->point) {
                 s.addConstraint(jig::ConstraintType::Coincident, s.texts().at(id).anchor, first_->point);
             }
             if (commit(tr("Text"), s)) {
                 lastTextHeight_ = hExpr;
+                lastTextFont_ = chosenFont();
                 resetToolState();
             }
             break;
@@ -1850,6 +1891,7 @@ bool SketchEditor::mouseRelease(QMouseEvent* e)
                     showInput({tr("Text"), tr("Size")},
                               {QString(), lastTextHeight_.isEmpty() ? QString::fromStdString(doc_.defaultLength(5, 0.25))
                                                                     : lastTextHeight_});
+                    showFontChoice(lastTextFont_);
                     inputFields_[0]->setFocus();
                 }
                 else {
@@ -2001,6 +2043,7 @@ bool SketchEditor::editTextAt(int anchorPoint)
             resetToolState();
             editText_ = id;
             showInput({tr("Text"), tr("Size")}, {QString::fromStdString(t.text), QString::fromStdString(t.height)});
+            showFontChoice(t.font);
             auto [x, y] = work_.pointXY(t.anchor);
             inputBox_->move(screenOf(x, y) + QPoint(18, 18));
             inputFields_[0]->selectAll();

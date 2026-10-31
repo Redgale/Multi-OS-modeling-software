@@ -383,6 +383,18 @@ private slots:
         // Undo brings back the first words.
         w.runCommand("edit.undo");
         QTRY_COMPARE(regions(), 3);
+        // the font: built-in Inter first; an installed family when there is one
+        QVERIFY(sk->editTextAt(anchor));
+        auto* font = view->findChild<QComboBox*>();
+        QVERIFY(font && font->isVisible());
+        QCOMPARE(font->currentData().toString(), QString());  // Inter (built in)
+        if (font->count() > 1) {
+            font->setCurrentIndex(1);
+            const QString family = font->currentData().toString();
+            sk->typeValues({"Hi", "10 mm"});
+            QCOMPARE(QString::fromStdString(sk->sketch().texts().begin()->second.font), family);
+            QVERIFY(regions() >= 2);
+        }
     }
 
     // Measure: click a face, then an edge; Properties: volume and weight.

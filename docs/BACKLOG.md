@@ -53,8 +53,8 @@ timeline edit/rename/suppress/roll back/delete with dependents warning, Paramete
   saving visibility with the design.
 - B-019 (sketch window selection, selection filter, Select Other done) window selection in 3D.
 
-- B-020 Text: pick installed fonts by family name (fontconfig / DirectWrite / CoreText),
-  bold/italic, multi-line, HarfBuzz shaping for complex scripts, text along a path.
+- B-020 Text (installed fonts by family and style done): multi-line, HarfBuzz shaping for complex
+  scripts, text along a path.
 
 ## Later v0.1 milestones
 

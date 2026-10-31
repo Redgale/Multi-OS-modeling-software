@@ -24,6 +24,7 @@
 class QFrame;
 class QLabel;
 class QLineEdit;
+class QComboBox;
 
 namespace jigapp
 {
@@ -206,7 +207,8 @@ private:
     int editConstraint_ = 0;
     std::optional<QPointF> roundAt_;                     // Round: the corner clicked                             // dimension being changed (double-click)
     int glyphAt(const QPointF& screen) const;
-    QString lastTextHeight_;  // empty: the design's default size               // text being changed (double-click on its anchor)
+    QString lastTextHeight_;
+    std::string lastTextFont_;  // empty: the design's default size               // text being changed (double-click on its anchor)
     std::vector<std::vector<QVector3D>> textEdges_;  // glyph outlines, for drawing
     int chainStart_ = 0;             // line chains: the first point, clicking it closes
     Snap cursor_;
@@ -227,6 +229,10 @@ private:
 
     // value box
     QPointer<QFrame> inputBox_;  // owned by the viewport
+    QComboBox* fontBox_ = nullptr;  // Text: the font (built-in Inter or an installed family)
+    QLabel* fontLabel_ = nullptr;
+    void showFontChoice(const std::string& current);
+    std::string chosenFont() const;
     std::vector<QLabel*> inputLabels_;
     std::vector<QLineEdit*> inputFields_;
 

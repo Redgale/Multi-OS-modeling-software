@@ -4832,7 +4832,13 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::SketchEditor</name>
     <message>
-        <location filename="../app/SketchEditor.cpp" line="+226"/>
+        <location filename="../app/SketchEditor.cpp" line="+147"/>
+        <location line="+2"/>
+        <source>Font</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+85"/>
         <source>Not applied: %1</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4843,12 +4849,12 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
     </message>
     <message>
         <location line="+0"/>
-        <location line="+587"/>
+        <location line="+619"/>
         <source>Spacing</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-553"/>
+        <location line="-585"/>
         <source>Click to select, drag to move what is still free. Delete removes the selection.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5143,7 +5149,12 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+90"/>
+        <location line="+13"/>
+        <source>Inter (built in)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+108"/>
         <source>Dimension</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5174,7 +5185,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
     </message>
     <message>
         <location line="+11"/>
-        <location line="+546"/>
+        <location line="+547"/>
         <source>Type the words for the text.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5225,12 +5236,12 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
     </message>
     <message>
         <location line="+16"/>
-        <location line="+800"/>
+        <location line="+801"/>
         <source>Minor radius</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-779"/>
+        <location line="-780"/>
         <source>Ellipse</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5266,24 +5277,24 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
     </message>
     <message>
         <location line="+11"/>
-        <location line="+634"/>
+        <location line="+635"/>
         <location line="+101"/>
-        <location line="+26"/>
+        <location line="+27"/>
         <location line="+3"/>
         <source>Length</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-764"/>
+        <location line="-766"/>
         <location line="+77"/>
-        <location line="+667"/>
-        <location line="+17"/>
+        <location line="+668"/>
+        <location line="+18"/>
         <location line="+112"/>
         <source>Angle</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-833"/>
+        <location line="-835"/>
         <source>Center rectangle</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5319,13 +5330,13 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
     </message>
     <message>
         <location line="+16"/>
-        <location line="+588"/>
+        <location line="+590"/>
         <location line="+124"/>
         <source>Width</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-680"/>
+        <location line="-682"/>
         <source>Slot</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5336,13 +5347,13 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
     </message>
     <message>
         <location line="+7"/>
-        <location line="+525"/>
-        <location line="+153"/>
+        <location line="+526"/>
+        <location line="+154"/>
         <source>Text</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-666"/>
+        <location line="-667"/>
         <source>A polygon needs 3 to 64 sides.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5369,12 +5380,12 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
     <message>
         <location line="+9"/>
         <location line="+158"/>
-        <location line="+112"/>
+        <location line="+113"/>
         <source>Radius</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-261"/>
+        <location line="-262"/>
         <source>Click on a curve to offset it.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5438,12 +5449,12 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
         <location line="+47"/>
         <location line="+94"/>
         <location line="+17"/>
-        <location line="+13"/>
+        <location line="+14"/>
         <source>Diameter</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-120"/>
+        <location line="-121"/>
         <source>A smooth curve has no single size: dimension the points it passes through instead.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5484,7 +5495,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
     </message>
     <message>
         <location line="+6"/>
-        <location line="+153"/>
+        <location line="+154"/>
         <source>Size</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5504,7 +5515,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+87"/>
+        <location line="+88"/>
         <source>Closed smooth curve</source>
         <translation type="unfinished"></translation>
     </message>

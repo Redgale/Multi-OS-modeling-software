@@ -4,8 +4,11 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <cstdlib>
 #include <filesystem>
 #include <mutex>
+#include <optional>
+#include <tuple>
 
 #include <BRepBuilderAPI_MakeEdge.hxx>
 #include <BRepBuilderAPI_MakeFace.hxx>
@@ -267,8 +270,152 @@ std::vector<TopoDS_Face> facesFromOutlines(const std::vector<OutlineContour>& co
     return out;
 }
 
+// ---------------------------------------------------------------- installed fonts
+
+namespace
+{
+std::string lower(std::string s)
+{
+    std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) { return char(std::tolower(c)); });
+    return s;
+}
+
+std::vector<std::filesystem::path> fontFolders()
+{
+    std::vector<std::filesystem::path> dirs;
+    auto env = [](const char* n) -> std::string {
+        const char* v = std::getenv(n);
+        return v ? v : "";
+    };
+    const std::string home = env("HOME");
+#if defined(_WIN32)
+    const std::string win = env("WINDIR").empty() ? "C:\\Windows" : env("WINDIR");
+    dirs.push_back(std::filesystem::path(win) / "Fonts");
+    if (!env("LOCALAPPDATA").empty()) {
+        dirs.push_back(std::filesystem::path(env("LOCALAPPDATA")) / "Microsoft" / "Windows" / "Fonts");
+    }
+#elif defined(__APPLE__)
+    dirs = {"/System/Library/Fonts", "/Library/Fonts"};
+    if (!home.empty()) {
+        dirs.push_back(std::filesystem::path(home) / "Library" / "Fonts");
+    }
+#else
+    dirs = {"/usr/share/fonts", "/usr/local/share/fonts"};
+    if (!home.empty()) {
+        dirs.push_back(std::filesystem::path(home) / ".local" / "share" / "fonts");
+        dirs.push_back(std::filesystem::path(home) / ".fonts");
+    }
+#endif
+    // extra folders, separated like PATH
+    std::string extra = env("JIG_FONT_DIRS");
+#if defined(_WIN32)
+    const char sep = ';';
+#else
+    const char sep = ':';
+#endif
+    for (size_t from = 0; from < extra.size();) {
+        const size_t at = std::min(extra.find(sep, from), extra.size());
+        if (at > from) {
+            dirs.push_back(extra.substr(from, at - from));
+        }
+        from = at + 1;
+    }
+    return dirs;
+}
+}  // namespace
+
+const std::vector<FontFace>& installedFonts(bool rescan)
+{
+    static std::vector<FontFace> fonts;
+    static bool scanned = false;
+    static std::mutex scanLock;
+    std::lock_guard<std::mutex> once(scanLock);
+    if (scanned && !rescan) {
+        return fonts;
+    }
+    scanned = true;
+    fonts.clear();
+    {
+        std::lock_guard<std::mutex> guard(ftLock());
+        FT_Library lib = library();
+        for (const auto& dir : lib ? fontFolders() : std::vector<std::filesystem::path> {}) {
+            std::error_code ec;
+            if (!std::filesystem::is_directory(dir, ec)) {
+                continue;
+            }
+            for (auto it = std::filesystem::recursive_directory_iterator(
+                     dir, std::filesystem::directory_options::skip_permission_denied, ec);
+                 !ec && it != std::filesystem::recursive_directory_iterator(); it.increment(ec)) {
+                const std::string ext = lower(it->path().extension().string());
+                if (ext != ".ttf" && ext != ".otf" && ext != ".ttc" && ext != ".otc") {
+                    continue;
+                }
+                const std::string path = it->path().string();
+                FT_Face probe = nullptr;
+                if (FT_New_Face(lib, path.c_str(), -1, &probe) != 0) {
+                    continue;
+                }
+                const long n = probe->num_faces;
+                FT_Done_Face(probe);
+                for (long i = 0; i < n && i < 64; ++i) {
+                    FT_Face f = nullptr;
+                    if (FT_New_Face(lib, path.c_str(), i, &f) != 0) {
+                        continue;
+                    }
+                    if (f->family_name && FT_IS_SCALABLE(f)) {
+                        fonts.push_back({f->family_name, f->style_name ? f->style_name : "Regular", path, int(i)});
+                    }
+                    FT_Done_Face(f);
+                }
+            }
+        }
+        std::sort(fonts.begin(), fonts.end(), [](const FontFace& a, const FontFace& b) {
+            return std::tie(a.family, a.style, a.path) < std::tie(b.family, b.style, b.path);
+        });
+    }
+    return fonts;
+}
+
+std::optional<FontFace> findFont(const std::string& wanted)
+{
+    const std::string w = lower(wanted);
+    std::optional<FontFace> best;
+    int bestScore = -1;
+    for (const auto& f : installedFonts()) {
+        const std::string fam = lower(f.family);
+        if (w.rfind(fam, 0) != 0) {
+            continue;  // the family must start the request
+        }
+        std::string rest = w.substr(fam.size());
+        rest.erase(0, rest.find_first_not_of(' '));
+        if (!rest.empty() && w.size() > fam.size() && w[fam.size()] != ' ') {
+            continue;  // "DejaVu Sans Mono" is not "DejaVu Sans" + "Mono" style... unless no better
+        }
+        const std::string style = lower(f.style);
+        int score = 0;
+        if (rest.empty()) {
+            score = style == "regular" || style == "book" || style == "normal" || style == "roman" ? 3 : 1;
+        }
+        else if (style == rest) {
+            score = 4;
+        }
+        else {
+            continue;
+        }
+        score = score * 100 + int(fam.size());  // the longest family that matches wins
+        if (score > bestScore) {
+            bestScore = score;
+            best = f;
+        }
+    }
+    return best;
+}
+
 Result<TextOutline> textFaces(const SketchText& t, double x, double y, const gp_Ax3& frame)
 {
+    if (!t.font.empty() && t.font != "Inter" && !std::filesystem::exists(t.font)) {
+        (void)installedFonts();  // the first scan takes the FreeType lock itself
+    }
     std::lock_guard<std::mutex> guard(ftLock());
     FT_Library lib = library();
     if (!lib) {
@@ -283,7 +430,14 @@ Result<TextOutline> textFaces(const SketchText& t, double x, double y, const gp_
         }
     }
     else if (!t.font.empty() && t.font != "Inter") {
-        result.note = "The font '" + t.font + "' is not available here; using the built-in font (Inter).";
+        // an installed font by family name (and style)
+        const std::optional<FontFace> found = findFont(t.font);  // (fonts were scanned before the lock)
+        if (found && FT_New_Face(lib, found->path.c_str(), found->index, &face) != 0) {
+            face = nullptr;
+        }
+        if (!face) {
+            result.note = "The font '" + t.font + "' is not available here; using the built-in font (Inter).";
+        }
     }
     if (!face && FT_New_Memory_Face(lib, jig_font_inter_regular, FT_Long(jig_font_inter_regular_size), 0, &face) != 0) {
         return makeError("text.font", "The built-in font could not be loaded.");

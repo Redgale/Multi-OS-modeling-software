@@ -4826,7 +4826,13 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
 <context>
     <name>jigapp::SketchEditor</name>
     <message>
-        <location filename="../app/SketchEditor.cpp" line="+226" />
+        <location filename="../app/SketchEditor.cpp" line="+147" />
+        <location line="+2" />
+        <source>Font</source>
+        <translation>[Föñt~]</translation>
+    </message>
+    <message>
+        <location line="+85" />
         <source>Not applied: %1</source>
         <translation>[Ñöt ápplîéd: %1~~~]</translation>
     </message>
@@ -4837,12 +4843,12 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
     </message>
     <message>
         <location line="+0" />
-        <location line="+587" />
+        <location line="+619" />
         <source>Spacing</source>
         <translation>[Spáçîñg~~]</translation>
     </message>
     <message>
-        <location line="-553" />
+        <location line="-585" />
         <source>Click to select, drag to move what is still free. Delete removes the selection.</source>
         <translation>[Çlîçk tö séléçt, drág tö mövé whát îs stîll fréé. Délété rémövés thé séléçtîöñ.~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -5135,7 +5141,12 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
         <translation>[týpé…~]</translation>
     </message>
     <message>
-        <location line="+90" />
+        <location line="+13" />
+        <source>Inter (built in)</source>
+        <translation>[Îñtér (büîlt îñ)~~~~]</translation>
+    </message>
+    <message>
+        <location line="+108" />
         <source>Dimension</source>
         <translation>[Dîméñsîöñ~~~]</translation>
     </message>
@@ -5166,7 +5177,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
     </message>
     <message>
         <location line="+11" />
-        <location line="+546" />
+        <location line="+547" />
         <source>Type the words for the text.</source>
         <translation>[Týpé thé wörds för thé téxt.~~~~~~~]</translation>
     </message>
@@ -5217,12 +5228,12 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
     </message>
     <message>
         <location line="+16" />
-        <location line="+800" />
+        <location line="+801" />
         <source>Minor radius</source>
         <translation>[Mîñör rádîüs~~~]</translation>
     </message>
     <message>
-        <location line="-779" />
+        <location line="-780" />
         <source>Ellipse</source>
         <translation>[Éllîpsé~~]</translation>
     </message>
@@ -5258,24 +5269,24 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
     </message>
     <message>
         <location line="+11" />
-        <location line="+634" />
+        <location line="+635" />
         <location line="+101" />
-        <location line="+26" />
+        <location line="+27" />
         <location line="+3" />
         <source>Length</source>
         <translation>[Léñgth~~]</translation>
     </message>
     <message>
-        <location line="-764" />
+        <location line="-766" />
         <location line="+77" />
-        <location line="+667" />
-        <location line="+17" />
+        <location line="+668" />
+        <location line="+18" />
         <location line="+112" />
         <source>Angle</source>
         <translation>[Áñglé~]</translation>
     </message>
     <message>
-        <location line="-833" />
+        <location line="-835" />
         <source>Center rectangle</source>
         <translation>[Çéñtér réçtáñglé~~~~~]</translation>
     </message>
@@ -5311,13 +5322,13 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
     </message>
     <message>
         <location line="+16" />
-        <location line="+588" />
+        <location line="+590" />
         <location line="+124" />
         <source>Width</source>
         <translation>[Wîdth~]</translation>
     </message>
     <message>
-        <location line="-680" />
+        <location line="-682" />
         <source>Slot</source>
         <translation>[Slöt~]</translation>
     </message>
@@ -5328,13 +5339,13 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
     </message>
     <message>
         <location line="+7" />
-        <location line="+525" />
-        <location line="+153" />
+        <location line="+526" />
+        <location line="+154" />
         <source>Text</source>
         <translation>[Téxt~]</translation>
     </message>
     <message>
-        <location line="-666" />
+        <location line="-667" />
         <source>A polygon needs 3 to 64 sides.</source>
         <translation>[Á pölýgöñ ñééds 3 tö 64 sîdés.~~~~~~]</translation>
     </message>
@@ -5361,12 +5372,12 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
     <message>
         <location line="+9" />
         <location line="+158" />
-        <location line="+112" />
+        <location line="+113" />
         <source>Radius</source>
         <translation>[Rádîüs~~]</translation>
     </message>
     <message>
-        <location line="-261" />
+        <location line="-262" />
         <source>Click on a curve to offset it.</source>
         <translation>[Çlîçk öñ á çürvé tö öffsét ît.~~~~~~~]</translation>
     </message>
@@ -5430,12 +5441,12 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
         <location line="+47" />
         <location line="+94" />
         <location line="+17" />
-        <location line="+13" />
+        <location line="+14" />
         <source>Diameter</source>
         <translation>[Dîámétér~~]</translation>
     </message>
     <message>
-        <location line="-120" />
+        <location line="-121" />
         <source>A smooth curve has no single size: dimension the points it passes through instead.</source>
         <translation>[Á smööth çürvé hás ñö sîñglé sîzé: dîméñsîöñ thé pöîñts ît pássés thröügh îñstéád.~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -5476,7 +5487,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
     </message>
     <message>
         <location line="+6" />
-        <location line="+153" />
+        <location line="+154" />
         <source>Size</source>
         <translation>[Sîzé~]</translation>
     </message>
@@ -5496,7 +5507,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
         <translation>[Válüé~]</translation>
     </message>
     <message>
-        <location line="+87" />
+        <location line="+88" />
         <source>Closed smooth curve</source>
         <translation>[Çlöséd smööth çürvé~~~~~]</translation>
     </message>

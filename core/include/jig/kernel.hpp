@@ -260,6 +260,20 @@ struct TextOutline
 };
 Result<TextOutline> textFaces(const SketchText& t, double x, double y, const gp_Ax3& frame);
 
+// Fonts installed on this computer (the usual font folders of Linux, macOS and Windows,
+// plus any folders in JIG_FONT_DIRS), found once and remembered.
+struct FontFace
+{
+    std::string family;  // "DejaVu Sans"
+    std::string style;   // "Bold Oblique"
+    std::string path;
+    int index = 0;       // face number inside a collection (.ttc)
+};
+// `rescan`: look again (after fonts were installed, or JIG_FONT_DIRS changed).
+const std::vector<FontFace>& installedFonts(bool rescan = false);
+// "DejaVu Sans" (its regular style) or "DejaVu Sans Bold": the best match, if installed.
+std::optional<FontFace> findFont(const std::string& familyAndStyle);
+
 // Finds every closed region of the sketch's non-construction curves. Each glyph
 // outline of a sketch text is a closed region too (key "T<text id>.<n>"); text is
 // not split by the other curves.
