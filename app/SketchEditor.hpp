@@ -65,6 +65,10 @@ public:
     }
     // Constraint buttons act on the current selection.
     bool applyConstraint(jig::ConstraintType t);
+    // Two lines on one infinite line (both ends of the second lie on the first); circles
+    // and arcs that share a centre. Made from point-on-curve and coincident constraints.
+    bool applyCollinear();
+    bool applyConcentric();
     void toggleConstruction();
     void deleteSelection();
     void lookAt();

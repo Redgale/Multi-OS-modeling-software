@@ -148,7 +148,8 @@ CommandRegistry::CommandRegistry()
     static const std::set<std::string> inApp {
         "sketch.create", "sketch.finish", "sketch.line", "sketch.rectangle", "sketch.circle", "sketch.point",
         "sketch.arc", "sketch.arc3", "sketch.slot", "sketch.polygon", "sketch.text", "sketch.trim", "sketch.offset", "sketch.fillet",
-        "sketch.dimension", "sketch.construction", "constraint.coincident", "constraint.midpoint", "constraint.fix",
+        "sketch.dimension", "sketch.construction", "constraint.coincident", "constraint.collinear", "constraint.concentric",
+        "constraint.midpoint", "constraint.fix",
         "constraint.parallel", "constraint.perpendicular", "constraint.horizontal", "constraint.tangent",
         "constraint.symmetric", "constraint.equal", "solid.extrude", "solid.fillet", "solid.chamfer", "solid.shell",
         "solid.revolve", "solid.hole", "solid.mirror", "solid.pattern_rect", "solid.pattern_circ", "modify.parameters",

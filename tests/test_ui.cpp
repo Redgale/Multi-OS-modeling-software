@@ -1041,6 +1041,77 @@ private slots:
         w.grab().save(shotPath("tutorial"));
     }
 
+    // Concentric and collinear, from a selection made by clicking.
+    void concentricAndCollinear()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        Viewport* view = w.viewport();
+        QVERIFY(w.createSketchOn("XY"));
+        SketchEditor* sk = w.sketchEditor();
+        auto click = [&](double x, double y, Qt::KeyboardModifiers m = Qt::NoModifier) {
+            QTest::mouseMove(view, sk->screenOf(x, y));
+            QTest::mouseClick(view, Qt::LeftButton, m, sk->screenOf(x, y));
+        };
+        sk->setTool(SketchEditor::Tool::Circle);
+        click(0, 0);
+        QTest::mouseMove(view, sk->screenOf(5, 0));
+        sk->typeValues({"10 mm"});
+        sk->setTool(SketchEditor::Tool::Circle);
+        click(30, 10);
+        QTest::mouseMove(view, sk->screenOf(36, 10));
+        sk->typeValues({"20 mm"});
+        sk->setTool(SketchEditor::Tool::Select);
+        QTest::qWait(600);
+        click(5, 0);                          // the small circle's outline
+        QTest::qWait(600);
+        click(40, 10, Qt::ShiftModifier);     // and the big one's
+        QCOMPARE(int(sk->selection().size()), 2);
+        QVERIFY(sk->applyConcentric());
+        std::vector<std::pair<double, double>> centres;
+        for (auto& [id, e] : sk->sketch().entities()) {
+            if (e.type == jig::EntityType::Circle) {
+                centres.push_back(sk->sketch().pointXY(e.center));
+            }
+        }
+        QCOMPARE(int(centres.size()), 2);
+        QVERIFY(std::hypot(centres[0].first - centres[1].first, centres[0].second - centres[1].second) < 1e-6);
+
+        // two separate lines, the second slanted; collinear puts both its ends on the first
+        sk->setTool(SketchEditor::Tool::Line);
+        click(-40, -30);
+        click(-20, -30);
+        QTest::keyClick(view, Qt::Key_Escape);
+        sk->setTool(SketchEditor::Tool::Line);
+        click(0, -36);
+        click(20, -33);
+        QTest::keyClick(view, Qt::Key_Escape);
+        sk->setTool(SketchEditor::Tool::Select);
+        QTest::qWait(600);
+        click(-30, -30);
+        QTest::qWait(600);
+        click(10, -34.5, Qt::ShiftModifier);
+        QCOMPARE(int(sk->selection().size()), 2);
+        QVERIFY(sk->applyCollinear());
+        // all four ends on one line (the solver may move either line to get there)
+        std::vector<std::pair<double, double>> ends;
+        for (auto& [id, e] : sk->sketch().entities()) {
+            if (e.type == jig::EntityType::Line && !e.construction) {
+                ends.push_back(sk->sketch().pointXY(e.p1));
+                ends.push_back(sk->sketch().pointXY(e.p2));
+            }
+        }
+        QCOMPARE(int(ends.size()), 4);
+        const double dx = ends[1].first - ends[0].first, dy = ends[1].second - ends[0].second;
+        const double len = std::hypot(dx, dy);
+        for (int k = 2; k < 4; ++k) {
+            const double off = std::abs((ends[k].first - ends[0].first) * dy - (ends[k].second - ends[0].second) * dx) / len;
+            QVERIFY2(off < 1e-6, qPrintable(QString::number(off)));
+        }
+    }
+
     // Revolve a ring, drill it from its top face, repeat the hole around the axis,
     // and mirror the result: the M3 panels driven like a person would.
     void ringRevolveHolePatternMirror()

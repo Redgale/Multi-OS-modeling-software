@@ -719,7 +719,8 @@ void MainWindow::buildToolbar()
     }
     sketchBar_->addSeparator();
     title(tr("CONSTRAIN"));
-    for (const char* id : {"constraint.coincident", "constraint.horizontal", "constraint.parallel",
+    for (const char* id : {"constraint.coincident", "constraint.collinear", "constraint.concentric", "constraint.horizontal",
+                           "constraint.parallel",
                            "constraint.perpendicular", "constraint.tangent", "constraint.equal", "constraint.midpoint",
                            "constraint.symmetric", "constraint.fix"}) {
         sketchBar_->addAction(registryAction(id));
@@ -1261,6 +1262,12 @@ void MainWindow::runCommand(const QString& id)
         }
         else if (id == "sketch.construction") {
             sketch_->toggleConstruction();
+        }
+        else if (id == "constraint.collinear") {
+            sketch_->applyCollinear();
+        }
+        else if (id == "constraint.concentric") {
+            sketch_->applyConcentric();
         }
         view_->setFocus();
     }

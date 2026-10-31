@@ -93,7 +93,7 @@ and packaged but its window is not exercised in CI (B-003). Builds are unsigned.
 ## What is stubbed or not started
 
 - M1 still missing: tangent arcs, Ellipse and Spline tools,
-  Extend/Break/sketch Mirror/patterns, associative offset, window selection, collinear/concentric, Project/Include.
+  Extend/Break/sketch Mirror/patterns, associative offset, window selection, Project/Include.
 - M2 still missing: extrude drag handle on the canvas, extrude to object, thin walls from
   open curves,
   Browser visibility/isolate/rename, selection filters, Select Other, timeline groups, one-click "fix this" beyond the fillet radius.

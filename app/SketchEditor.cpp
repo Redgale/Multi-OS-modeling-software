@@ -1408,6 +1408,49 @@ bool SketchEditor::key(QKeyEvent* e)
 
 // ---------------------------------------------------------------- selection commands
 
+bool SketchEditor::applyCollinear()
+{
+    std::vector<int> lines;
+    for (int id : selection_) {
+        if (const auto* e = work_.entity(id); e && e->type == jig::EntityType::Line) {
+            lines.push_back(id);
+        }
+    }
+    if (lines.size() < 2) {
+        message_ = tr("Select two or more lines to put on one line.");
+        emit stateChanged();
+        return false;
+    }
+    jig::Sketch s = work_;
+    for (size_t i = 1; i < lines.size(); ++i) {
+        const auto* e = s.entity(lines[i]);
+        s.addConstraint(jig::ConstraintType::PointOnCurve, e->p1, lines[0]);
+        s.addConstraint(jig::ConstraintType::PointOnCurve, e->p2, lines[0]);
+    }
+    return commit(tr("Collinear"), s);
+}
+
+bool SketchEditor::applyConcentric()
+{
+    std::vector<int> rounds;
+    for (int id : selection_) {
+        if (const auto* e = work_.entity(id);
+            e && (e->type == jig::EntityType::Circle || e->type == jig::EntityType::Arc)) {
+            rounds.push_back(id);
+        }
+    }
+    if (rounds.size() < 2) {
+        message_ = tr("Select two or more circles or arcs to share one centre.");
+        emit stateChanged();
+        return false;
+    }
+    jig::Sketch s = work_;
+    for (size_t i = 1; i < rounds.size(); ++i) {
+        s.addConstraint(jig::ConstraintType::Coincident, s.entity(rounds[i])->center, s.entity(rounds[0])->center);
+    }
+    return commit(tr("Concentric"), s);
+}
+
 bool SketchEditor::applyConstraint(jig::ConstraintType t)
 {
     std::vector<int> pts, lines, rounds;
