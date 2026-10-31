@@ -84,6 +84,10 @@ public:
     void openPattern(const std::string& editId = {}, bool circular = true);
     void openMirror(const std::string& editId = {});
     void openMeasure();
+    void importDxf();  // Insert > DXF: asks for the file (and its units if the file does not say)
+    // Brings a DXF file into the open sketch (or a new floor sketch). `units` overrides
+    // what the file says; returns false and explains when it cannot.
+    bool importDxfFile(const QString& path, std::optional<jig::LengthUnit> units = std::nullopt);
     void openBodyTool(const std::string& tool, const std::string& editId = {});  // combine, split, move
     void openPlane(const std::string& editId = {}, const std::string& kind = "offset");
     void openProperties();

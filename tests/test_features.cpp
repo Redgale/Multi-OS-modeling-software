@@ -3,6 +3,7 @@
 // hand-computed volumes.
 #include <cmath>
 #include <numbers>
+#include <random>
 
 #include "helpers.hpp"
 #include "jig/io.hpp"
@@ -629,4 +630,63 @@ TEST(SketchRound, CornersBecomeTangentArcs)
     auto res = r.runText("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=40 h=20\nround sketch=s1 at=20,10 r=25\n");
     ASSERT_FALSE(res.ok());
     EXPECT_NE(res.error().message.find("does not fit"), std::string::npos) << res.error().message;
+}
+
+TEST(DxfImport, InchDrawingWithPolylinesBulgesArcsAndCircles)
+{
+    const std::string path = std::string(JIG_SOURCE_DIR) + "/tests/data/plate_inch.dxf";
+    auto d = readDxf(path);
+    ASSERT_TRUE(d.ok()) << d.error().message;
+    EXPECT_TRUE(d->unitsKnown);
+    EXPECT_NEAR(d->unitScale, 25.4, 1e-12);
+    EXPECT_EQ(d->skipped.at("TEXT"), 1);
+    auto doc = build("sketch id=s1 plane=XY\nimport dxf \"" + path + "\" sketch=s1\n");
+    const auto& regions = doc->state().sketches.at("s1")->profiles.regions;
+    std::vector<double> a;
+    for (auto& r : regions) {
+        a.push_back(r.area / (25.4 * 25.4));  // in square inches
+    }
+    std::sort(a.begin(), a.end());
+    ASSERT_EQ(a.size(), 4u);  // circle, D, stadium, plate around the holes
+    const double circle = pi / 16, dshape = pi * 0.25 / 2, stadium = 2 + pi * 0.25;
+    EXPECT_NEAR(a[0], circle, 1e-6);
+    EXPECT_NEAR(a[1], dshape, 1e-6);
+    EXPECT_NEAR(a[2], stadium, 1e-6);
+    EXPECT_NEAR(a[3], 8 - circle - dshape, 1e-6);
+    // the unit can be overridden, and junk is refused politely
+    auto mm = build("sketch id=s1 plane=XY\nimport dxf \"" + path + "\" sketch=s1 units=mm\n");
+    double total = 0;
+    for (auto& r : mm->state().sketches.at("s1")->profiles.regions) {
+        total += r.area;
+    }
+    EXPECT_NEAR(total, 8 + stadium, 1e-6);  // the same numbers, read as millimetres
+    EXPECT_FALSE(parseDxf("this is not a dxf").ok());
+    EXPECT_FALSE(parseDxf("0\nSECTION\n2\nENTITIES\n0\nENDSEC\n0\nEOF\n").ok());
+}
+
+TEST(DxfImport, DamagedFilesNeverCrash)
+{
+    const std::string good = readFile(std::string(JIG_SOURCE_DIR) + "/tests/data/plate_inch.dxf");
+    std::mt19937 rng(7);
+    int parsed = 0;
+    for (int i = 0; i < 3000; ++i) {
+        std::string bad = good;
+        const int edits = 1 + int(rng() % 6);
+        for (int k = 0; k < edits; ++k) {
+            const size_t at = rng() % bad.size();
+            switch (rng() % 4) {
+                case 0: bad[at] = char(rng() % 256); break;              // flip a byte
+                case 1: bad.erase(at, rng() % 20); break;                 // drop some
+                case 2: bad.insert(at, std::string(rng() % 12, '9')); break;  // huge numbers
+                default: bad.insert(at, "\n0\nLWPOLYLINE\n42\n"); break;  // structure noise
+            }
+        }
+        auto r = parseDxf(bad);  // must return, never throw or crash
+        parsed += r.ok();
+        if (r.ok()) {
+            Sketch s;
+            addDxfToSketch(s, r.value(), 1.0);
+        }
+    }
+    EXPECT_GT(parsed, 0);  // many mutations still read; the rest are refused cleanly
 }

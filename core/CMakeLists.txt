@@ -8,6 +8,7 @@ configure_file(version.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/generated/jig/version.
 add_library(jig_core STATIC
     src/commands.cpp
     src/document.cpp
+    src/dxf.cpp
     src/expr.cpp
     src/features.cpp
     src/io.cpp

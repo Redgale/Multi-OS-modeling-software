@@ -151,7 +151,7 @@ CommandRegistry::CommandRegistry()
         "solid.revolve", "solid.hole", "solid.mirror", "solid.pattern_rect", "solid.pattern_circ", "modify.parameters",
         "inspect.measure", "inspect.properties", "file.export_3mf", "construct.offset_plane", "construct.angle_plane",
         "construct.midplane", "solid.combine", "solid.split", "solid.move",
-        "inspect.section"};
+        "inspect.section", "insert.dxf"};
     for (auto& c : commands_) {
         if (inApp.count(c.id)) {
             c.available = true;
@@ -1488,6 +1488,42 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
     if (a.verb == "report") {
         output_.push_back(reportJson(doc).dump(2));
         return true;
+    }
+    if (a.verb == "import") {
+        // import dxf <path> [sketch=s1] [units=mm|in|…] [at=x,y]
+        if (a.positional.size() < 2 || lower(a.positional[0]) != "dxf") {
+            return makeError("script.args", "Use: import dxf <path> [sketch=s1] [units=mm|in] [at=x,y]");
+        }
+        auto dwg = readDxf(a.positional[1]);
+        if (!dwg) {
+            return dwg.error();
+        }
+        double scale = dwg->unitScale;
+        if (a.has("units")) {
+            auto u = lengthUnitFromString(a.get("units"));
+            if (!u) {
+                return makeError("script.args", "Unknown unit '" + a.get("units") + "'.");
+            }
+            scale = millimetresPer(*u);
+        }
+        const std::string sid = a.get("sketch", last_);
+        return editSketch("Import DXF", sid, [&](Sketch& s, const Document&) -> Result<bool> {
+            double dx = 0, dy = 0;
+            if (a.has("at")) {
+                auto pe = parsePairExpr(a.get("at"));
+                if (!pe) {
+                    return pe.error();
+                }
+                auto x = len(pe->first), y = len(pe->second);
+                if (!x || !y) {
+                    return !x ? x.error() : y.error();
+                }
+                dx = x.value();
+                dy = y.value();
+            }
+            addDxfToSketch(s, dwg.value(), scale, dx, dy);
+            return true;
+        });
     }
     if (a.verb == "export") {
         if (a.positional.size() < 2) {

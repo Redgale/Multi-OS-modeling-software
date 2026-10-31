@@ -181,6 +181,36 @@ struct ProfileSet
     std::vector<std::string> notes;  // e.g. a missing font was replaced
 };
 
+// ---------------------------------------------------------------- DXF import
+
+// Curves read from a DXF file, in the file's own units (see unitScale).
+struct DxfDrawing
+{
+    struct Line
+    {
+        double x1, y1, x2, y2;
+    };
+    struct Circle
+    {
+        double cx, cy, r;
+    };
+    struct Arc
+    {
+        double cx, cy, r, startDeg, endDeg;  // counter-clockwise, as DXF stores them
+    };
+    std::vector<Line> lines;
+    std::vector<Circle> circles;
+    std::vector<Arc> arcs;
+    double unitScale = 1;     // millimetres per drawing unit
+    bool unitsKnown = false;  // false when the file does not say ($INSUNITS unset or 0)
+    std::map<std::string, int> skipped;  // entity types not imported, with counts
+};
+Result<DxfDrawing> parseDxf(const std::string& text);
+Result<DxfDrawing> readDxf(const std::string& path);
+// Adds the drawing's curves to a sketch, scaled (mm per drawing unit) and shifted; ends
+// that meet share a point, so outlines close. Returns the number of curves added.
+int addDxfToSketch(Sketch& s, const DxfDrawing& d, double scale, double dx = 0, double dy = 0);
+
 // Offset copy of sketch curves: a single line (to its left for a positive distance), a
 // single circle or arc (bigger radius for positive), or one closed outline (outward for
 // positive, sharp corners). Adds the new curves to the sketch and returns their ids.

@@ -87,6 +87,12 @@ Profile keys are the sorted ids of the sketch curves around a closed area, e.g. 
 | `rollback before=<id>` · `rollback <n>` · `rollback end` | Move the rollback marker; new steps are inserted at the marker |
 | `undo [n]` / `redo [n]` | Undo or redo whole commands |
 
+## Import
+
+| Command | Meaning |
+|---|---|
+| `import dxf <path> [sketch=s1] [units=mm\|in\|…] [at=x,y]` | Bring a DXF drawing's lines, circles, arcs and polylines into a sketch as editable curves. Units come from the file (`$INSUNITS`) unless given |
+
 ## Output
 
 | Command | Meaning |

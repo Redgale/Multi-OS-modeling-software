@@ -869,6 +869,27 @@ private slots:
         QVERIFY2(std::abs(volume(w) - (frustum(10) + frustum(4))) < 1e-6, qPrintable(QString::number(volume(w))));
     }
 
+    // Insert > DXF: an inch drawing comes into a new floor sketch at the right size.
+    void importDxfDrawing()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        QVERIFY(w.importDxfFile(QString(JIG_SOURCE_DIR) + "/tests/data/plate_inch.dxf"));
+        QVERIFY(w.sketchEditor() != nullptr);
+        const auto& regions = w.document().state().sketches.begin()->second->profiles.regions;
+        QCOMPARE(int(regions.size()), 4);
+        double total = 0;
+        for (auto& r : regions) {
+            total += r.area;
+        }
+        const double in2 = 25.4 * 25.4;
+        QVERIFY2(std::abs(total - (8 + 2 + M_PI * 0.25) * in2) < 1e-6, qPrintable(QString::number(total)));
+        w.runCommand("edit.undo");  // one undo takes the whole import back
+        QTRY_COMPARE(int(w.document().state().sketches.begin()->second->profiles.regions.size()), 0);
+    }
+
     // Revolve a ring, drill it from its top face, repeat the hole around the axis,
     // and mirror the result: the M3 panels driven like a person would.
     void ringRevolveHolePatternMirror()

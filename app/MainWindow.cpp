@@ -1190,6 +1190,9 @@ void MainWindow::runCommand(const QString& id)
     else if (id == "inspect.properties") {
         openProperties();
     }
+    else if (id == "insert.dxf") {
+        importDxf();
+    }
     else if (id == "inspect.section") {
         if (doc_->state().bodies.empty()) {
             statusBar()->showMessage(tr("There is nothing to slice yet: make a 3D body first."), 5000);
@@ -1855,6 +1858,87 @@ void MainWindow::openPlane(const std::string& editId, const std::string& kind)
     }
     cancelPicker();
     showPanel(new PlanePanel(*doc_, view_, editId, panelHost_, kind));
+}
+
+void MainWindow::importDxf()
+{
+    const QString path = QFileDialog::getOpenFileName(this, tr("Import DXF"), {}, tr("DXF drawings (*.dxf)"));
+    if (path.isEmpty()) {
+        return;
+    }
+    auto dwg = jig::readDxf(path.toStdString());
+    if (!dwg) {
+        QMessageBox::warning(this, tr("Could not import"), q(dwg.error().message));
+        return;
+    }
+    std::optional<jig::LengthUnit> units;
+    if (!dwg->unitsKnown) {
+        // the file does not say: ask, offering the design's unit first
+        QStringList choices {tr("Millimetres"), tr("Inches"), tr("Centimetres"), tr("Feet"), tr("Metres")};
+        const jig::LengthUnit order[] = {jig::LengthUnit::Millimetre, jig::LengthUnit::Inch, jig::LengthUnit::Centimetre,
+                                         jig::LengthUnit::Foot, jig::LengthUnit::Metre};
+        int current = 0;
+        for (int i = 0; i < 5; ++i) {
+            current = order[i] == doc_->units() ? i : current;
+        }
+        bool ok = false;
+        const QString pick = QInputDialog::getItem(this, tr("Units of this drawing"),
+                                                   tr("The file does not say which unit it uses. One unit in the "
+                                                      "drawing is:"),
+                                                   choices, current, false, &ok);
+        if (!ok) {
+            return;
+        }
+        units = order[choices.indexOf(pick)];
+    }
+    importDxfFile(path, units);
+}
+
+bool MainWindow::importDxfFile(const QString& path, std::optional<jig::LengthUnit> units)
+{
+    auto dwg = jig::readDxf(path.toStdString());
+    if (!dwg) {
+        QMessageBox::warning(this, tr("Could not import"), q(dwg.error().message));
+        return false;
+    }
+    const double scale = units ? jig::millimetresPer(*units) : dwg->unitScale;
+    if (!sketch_) {
+        if (!createSketchOn("XY")) {
+            return false;
+        }
+    }
+    const std::string sid = sketch_->featureId();
+    int added = 0;
+    auto r = doc_->transact(tr("Import DXF").toStdString(), [&](jig::Model& m) -> jig::Result<bool> {
+        jig::Feature* f = jig::Document::findFeature(m, sid);
+        if (!f) {
+            return jig::makeError("dxf.sketch", "The sketch to import into is gone.");
+        }
+        auto sk = jig::Sketch::fromJson(f->params.value("geometry", nlohmann::json::object()));
+        if (!sk) {
+            return sk.error();
+        }
+        added = jig::addDxfToSketch(sk.value(), dwg.value(), scale);
+        f->params["geometry"] = sk->toJson();
+        return true;
+    });
+    if (!r) {
+        QMessageBox::warning(this, tr("Could not import"), q(r.error().message));
+        return false;
+    }
+    sketch_->refreshFromDocument();
+    sketch_->lookAt();
+    refreshAll();
+    QString msg = tr("Imported %n curve(s) from %1", "", added).arg(QFileInfo(path).fileName());
+    QStringList skipped;
+    for (auto& [type, n] : dwg->skipped) {
+        skipped << QString("%1 × %2").arg(n).arg(q(type));
+    }
+    if (!skipped.isEmpty()) {
+        msg += tr(" (not imported: %1)").arg(skipped.join(", "));
+    }
+    statusBar()->showMessage(msg, 8000);
+    return true;
 }
 
 void MainWindow::openMeasure()
