@@ -25,6 +25,7 @@ namespace jigapp
 class Viewport;
 class SketchEditor;
 class FeaturePanel;
+class ToolPanel;
 class PlanePicker;
 
 enum class Theme
@@ -62,7 +63,7 @@ public:
     {
         return sketch_;
     }
-    FeaturePanel* featurePanel() const
+    ToolPanel* featurePanel() const
     {
         return panel_;
     }
@@ -79,6 +80,8 @@ public:
     void openHole(const std::string& editId = {});
     void openPattern(const std::string& editId = {}, bool circular = true);
     void openMirror(const std::string& editId = {});
+    void openMeasure();
+    void openProperties();
     void openParameters();
     void editFeature(int index);
     void runCommand(const QString& id);
@@ -98,7 +101,7 @@ private:
     void showFeatureDetails(int index);
     void openPalette();
     void applyIcons();
-    void showPanel(FeaturePanel* p);
+    void showPanel(ToolPanel* p);
     void closePanel();
     void cancelPicker();
     void escape();
@@ -130,7 +133,7 @@ private:
     QTimer* autosaveTimer_ = nullptr;
     std::map<QString, QAction*> actions_;
     SketchEditor* sketch_ = nullptr;
-    FeaturePanel* panel_ = nullptr;
+    ToolPanel* panel_ = nullptr;
     std::unique_ptr<PlanePicker> picker_;
     QToolBar* toolsBar_ = nullptr;
     QToolBar* sketchBar_ = nullptr;

@@ -147,7 +147,8 @@ CommandRegistry::CommandRegistry()
         "sketch.dimension", "sketch.construction", "constraint.coincident", "constraint.midpoint", "constraint.fix",
         "constraint.parallel", "constraint.perpendicular", "constraint.horizontal", "constraint.tangent",
         "constraint.symmetric", "constraint.equal", "solid.extrude", "solid.fillet", "solid.chamfer", "solid.shell",
-        "solid.revolve", "solid.hole", "solid.mirror", "solid.pattern_rect", "solid.pattern_circ", "modify.parameters"};
+        "solid.revolve", "solid.hole", "solid.mirror", "solid.pattern_rect", "solid.pattern_circ", "modify.parameters",
+        "inspect.measure", "inspect.properties"};
     for (auto& c : commands_) {
         if (inApp.count(c.id)) {
             c.available = true;
@@ -1170,6 +1171,67 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
     }
 
     // ---- output
+    if (a.verb == "measure") {
+        // measure [body=<id>] a=face:<name>|edge:<name> [b=face:<name>|edge:<name>]  -> JSON
+        const ModelState& st = doc.state();
+        std::string bodyId = a.get("body");
+        if (bodyId.empty() && st.bodies.size() == 1) {
+            bodyId = st.bodies.begin()->first;
+        }
+        auto bit = st.bodies.find(bodyId);
+        if (bit == st.bodies.end()) {
+            return makeError("script.args", "Say which body to measure with body=<id>.");
+        }
+        const NamedShape& body = *bit->second;
+        auto pick = [&](const std::string& sel) -> Result<TopoDS_Shape> {
+            if (sel.rfind("face:", 0) == 0) {
+                auto hits = body.findFaces(sel.substr(5));
+                if (hits.size() == 1) {
+                    return TopoDS_Shape(body.face(hits[0]));
+                }
+            }
+            else if (sel.rfind("edge:", 0) == 0) {
+                auto hits = body.findEdges(sel.substr(5));
+                if (hits.size() == 1) {
+                    return TopoDS_Shape(body.edge(hits[0]));
+                }
+            }
+            return makeError("script.args", "No single face or edge called '" + sel + "'.",
+                             {"Use face:<name> or edge:<name>; the faces command lists face names."});
+        };
+        auto sa = pick(a.get("a"));
+        if (!sa) {
+            return sa.error();
+        }
+        auto info = [](const MeasureItem& m) {
+            nlohmann::json j {{"kind", m.kind}, {m.kind.find("face") != std::string::npos || m.kind == "cone" ? "area" : "length", m.size}};
+            if (m.radius) {
+                j["radius"] = *m.radius;
+            }
+            return j;
+        };
+        nlohmann::json out {{"a", info(measureItem(sa.value()))}};
+        if (a.has("b")) {
+            auto sb = pick(a.get("b"));
+            if (!sb) {
+                return sb.error();
+            }
+            out["b"] = info(measureItem(sb.value()));
+            auto mb = measureBetween(sa.value(), sb.value());
+            if (!mb) {
+                return mb.error();
+            }
+            out["distance"] = mb->distance;
+            if (mb->angle) {
+                out["angle_deg"] = *mb->angle * 180 / std::numbers::pi;
+            }
+            if (mb->centres) {
+                out["centre_distance"] = *mb->centres;
+            }
+        }
+        output_.push_back(out.dump(2));
+        return true;
+    }
     if (a.verb == "faces") {
         // faces [body=<id>]: prints the body's face names, for writing face:<name> selectors
         const ModelState& st = doc.state();

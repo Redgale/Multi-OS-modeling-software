@@ -37,7 +37,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Named views | 5 | v0.1 M8 | — | |
 | Document settings: units, up axis | 8 | v0.1 (mm, Z fixed) | shown in browser | Safe defaults |
 | Capture design history on/off | 8, 24 | v0.3+ | — | Direct modelling is later |
-| Appearances and physical material | 8, 34 | v0.2 (density in v0.1 Properties M6) | — | Mass needs density |
+| Appearances and physical material | 8, 34 | v0.2 (density in v0.1 Properties M6) | density chooser in Properties (not stored in the design yet) | Mass needs density |
 
 ## Sketching (PDF ch. 9 to 12)
 
@@ -135,9 +135,9 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Axis (through cylinder, two points, perpendicular) | 20 | v0.1 M4 | — | |
 | Point (vertex, edges, planes, center) | 20 | v0.1 M4 | — | |
 | Pattern construction geometry, user coordinate system | 20 | v0.3+ | — | |
-| Measure | 21 | v0.1 M6 | kernel properties | |
+| Measure | 21 | v0.1 M6 | **app** + scripts: size of a face/edge, distance, angle, centre-to-centre, X/Y/Z offsets | |
 | Section analysis | 21 | v0.1 M6 | — | |
-| Properties: volume, area, mass, center of mass | 21 | v0.1 M6 | CLI `report` and browser volume | |
+| Properties: volume, area, mass, center of mass | 21 | v0.1 M6 | **app**: volume, weight by material or density, filament length, area, size, centre of mass; CLI `report` | |
 | Interference | 21 | v0.2 | — | Needs parts |
 | Curvature comb, zebra, draft, curvature map, isocurve, accessibility, min radius | 21 | v0.3+ | — | Surface-quality tools |
 | Component colours | 21 | v0.2 | — | |

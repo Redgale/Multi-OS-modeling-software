@@ -56,6 +56,7 @@ enum class PickMode
 {
     Faces,  // default: hover/click faces
     Edges,  // fillet and friends: hover/click edges
+    Any,    // measure: an edge when the cursor is on one, otherwise a face
     None    // a tool handles all clicks itself
 };
 

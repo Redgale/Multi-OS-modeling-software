@@ -316,3 +316,46 @@ TEST(Text, AnchorIsNotAHoleCentre)
     EXPECT_EQ(int(doc->status(3).level), int(StatusLevel::Error));
     EXPECT_NE(doc->status(3).message.find("no points"), std::string::npos) << doc->status(3).message;
 }
+
+TEST(Measure, SizesDistancesAnglesAndHoleSpacing)
+{
+    auto doc = build(std::string(kBlock) + "hole id=h1 sketch=s2 diameter=4mm extent=all\n");
+    const auto& body = *doc->state().bodies.at("e1");
+    auto face = [&](const std::string& n) {
+        auto h = body.findFaces(n);
+        EXPECT_EQ(h.size(), 1u) << n;
+        return TopoDS_Shape(body.face(h.at(0)));
+    };
+    // single items
+    const auto top = measureItem(face("e1/end"));
+    EXPECT_EQ(top.kind, "flat face");
+    EXPECT_NEAR(top.size, 40 * 30 - 2 * pi * 4, 1e-6);
+    const auto wall = measureItem(face("h1/wall:p1"));
+    EXPECT_EQ(wall.kind, "round face (cylinder)");
+    ASSERT_TRUE(wall.radius.has_value());
+    EXPECT_NEAR(*wall.radius, 2, 1e-9);
+    // top to bottom: 10 mm apart, parallel
+    auto tb = measureBetween(face("e1/end"), face("e1/start"));
+    ASSERT_TRUE(tb.ok());
+    EXPECT_NEAR(tb->distance, 10, 1e-9);
+    ASSERT_TRUE(tb->angle.has_value());
+    EXPECT_NEAR(*tb->angle, 0, 1e-9);
+    // top to a side wall: they touch, at 90 degrees
+    auto ts = measureBetween(face("e1/end"), face("e1/side:5"));
+    ASSERT_TRUE(ts.ok());
+    EXPECT_NEAR(ts->distance, 0, 1e-9);
+    EXPECT_NEAR(*ts->angle, pi / 2, 1e-9);
+    // the two holes: 20 mm centre to centre, 16 mm wall to wall
+    auto hh = measureBetween(face("h1/wall:p1"), face("h1/wall:p4"));
+    ASSERT_TRUE(hh.ok());
+    ASSERT_TRUE(hh->centres.has_value());
+    EXPECT_NEAR(*hh->centres, 20, 1e-9);
+    EXPECT_NEAR(hh->distance, 16, 1e-6);
+    // edge length, and the script command
+    const int e = body.findEdges("E[e1/end|e1/side:5]").at(0);
+    EXPECT_NEAR(measureItem(body.edge(e)).size, 40, 1e-9);
+    ScriptRunner r(*doc);
+    ASSERT_TRUE(r.runLine("measure a=face:h1/wall:p1 b=face:h1/wall:p4").ok());
+    auto j = nlohmann::json::parse(r.output().back());
+    EXPECT_NEAR(j["centre_distance"].get<double>(), 20, 1e-9);
+}

@@ -990,8 +990,25 @@ void Viewport::mouseMoveEvent(QMouseEvent* e)
     if (interactor_ && interactor_->mouseMove(e)) {
         return;
     }
-    if (e->buttons() == Qt::NoButton && pickMode_ == PickMode::Edges) {
+    if (e->buttons() == Qt::NoButton && (pickMode_ == PickMode::Edges || pickMode_ == PickMode::Any)) {
         auto h = pickEdgeAt(pos);
+        if (!h && pickMode_ == PickMode::Any) {
+            if (hoverEdge_) {
+                hoverEdge_.reset();
+                overlayDirty_ = true;
+            }
+            auto f = pickAt(pos);
+            const bool same = (f.has_value() == hover_.has_value()) && (!f || (f->body == hover_->body && f->face == hover_->face));
+            if (!same) {
+                hover_ = f;
+                emit hovered(f ? describe(*f) : QString());
+                update();
+            }
+            return;
+        }
+        if (h && pickMode_ == PickMode::Any && hover_) {
+            hover_.reset();
+        }
         bool same = (h.has_value() == hoverEdge_.has_value()) && (!h || (h->body == hoverEdge_->body && h->edge == hoverEdge_->edge));
         if (!same) {
             hoverEdge_ = h;
@@ -1040,8 +1057,21 @@ void Viewport::mouseReleaseEvent(QMouseEvent* e)
             drag_ = Drag::None;
             return;
         }
-        if (pickMode_ == PickMode::Edges) {
-            if (auto h = pickEdgeAt(pos)) {
+        if (pickMode_ == PickMode::Edges || pickMode_ == PickMode::Any) {
+            auto h = pickEdgeAt(pos);
+            if (!h && pickMode_ == PickMode::Any) {
+                if (auto f = pickAt(pos)) {
+                    for (auto& m : meshes_) {
+                        if (m->body == f->body && f->face < m->shape->faceCount()) {
+                            emit faceClicked(QString::fromStdString(f->body),
+                                             QString::fromStdString(m->shape->faceName(f->face)), e->modifiers());
+                        }
+                    }
+                }
+                drag_ = Drag::None;
+                return;
+            }
+            if (h) {
                 for (auto& m : meshes_) {
                     if (m->body == h->body && h->edge < m->shape->edgeCount()) {
                         emit edgeClicked(QString::fromStdString(h->body),

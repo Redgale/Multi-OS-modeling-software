@@ -109,7 +109,7 @@ void ExprField::evaluate()
 // ---------------------------------------------------------------- FeaturePanel
 
 FeaturePanel::FeaturePanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent)
-    : QWidget(parent)
+    : ToolPanel(parent)
     , doc_(doc)
     , view_(view)
     , editId_(std::move(editId))

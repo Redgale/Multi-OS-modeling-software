@@ -310,6 +310,28 @@ struct MassProperties
 
 MassProperties massProperties(const TopoDS_Shape& s);
 
+// ---------------------------------------------------------------- measure
+
+// What one picked face or edge is, in plain words, with its size.
+struct MeasureItem
+{
+    std::string kind;       // "flat face", "round face", "straight edge", "circle", "arc", "curved face", …
+    double size = 0;        // area (faces, mm^2) or length (edges, mm)
+    std::optional<double> radius;            // circles, arcs, cylinders, cones at their base
+    std::optional<gp_Ax1> axis;              // circles and cylinders: centre and axis; lines: direction
+    std::optional<gp_Dir> normal;            // flat faces
+};
+MeasureItem measureItem(const TopoDS_Shape& faceOrEdge);
+
+struct MeasureBetween
+{
+    double distance = 0;            // shortest distance (0 when they touch)
+    gp_Pnt p1, p2;                  // where it is measured
+    std::optional<double> angle;    // radians, 0..pi/2, for flat faces and straight edges
+    std::optional<double> centres;  // centre-to-centre distance of two round things with parallel axes
+};
+Result<MeasureBetween> measureBetween(const TopoDS_Shape& a, const TopoDS_Shape& b);
+
 // ---------------------------------------------------------------- display
 
 struct DisplayMesh

@@ -58,7 +58,19 @@ private:
     double value_ = 0;
 };
 
-class FeaturePanel : public QWidget
+// Anything shown in the side dock while a tool runs (feature panels, Measure).
+class ToolPanel : public QWidget
+{
+    Q_OBJECT
+public:
+    using QWidget::QWidget;
+    virtual void cancel() = 0;
+
+signals:
+    void finished(bool committed);
+};
+
+class FeaturePanel : public ToolPanel
 {
     Q_OBJECT
 public:
@@ -70,15 +82,12 @@ public:
     }
     // OK/Cancel from outside (keyboard shortcuts, UI tests)
     bool accept();
-    void cancel();
+    void cancel() override;
     QString statusText() const;
     bool previewOk() const
     {
         return previewOk_;
     }
-
-signals:
-    void finished(bool committed);
 
 protected:
     virtual jig::Feature draft() const = 0;

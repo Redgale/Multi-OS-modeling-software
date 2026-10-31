@@ -882,6 +882,8 @@ bool SketchEditor::mouseRelease(QMouseEvent* e)
         return true;
     }
     cursor_ = snapAt(pos, tool_ == Tool::Line || tool_ == Tool::Rectangle, e->modifiers());
+    // a click without a mouse move before it (a tablet tap, or the cursor already there)
+    cursorValid_ = toLocal(pos).has_value();
     switch (tool_) {
         case Tool::Select: {
             const int hit = entityNear(pos);
@@ -1017,14 +1019,20 @@ bool SketchEditor::editTextAt(int anchorPoint)
 
 bool SketchEditor::mouseDoubleClick(QMouseEvent* e)
 {
+    // Qt delivers the second press of a quick double click as this event instead of a
+    // press. Unless the double click means something, treat it as the press it is, so a
+    // fast second click is never lost.
     if (tool_ == Tool::Select && editTextAt(entityNear(e->position()))) {
+        pressed_ = false;  // ignore the release that follows
         return true;
     }
-    if (tool_ == Tool::Line) {
+    if (tool_ == Tool::Line && first_) {
         resetToolState();  // double-click ends a chain of lines
+        pressed_ = false;
         emit stateChanged();
+        return true;
     }
-    return true;
+    return mousePress(e);
 }
 
 bool SketchEditor::key(QKeyEvent* e)

@@ -41,6 +41,7 @@
 #include <QWhatsThis>
 
 #include "FeaturePanels.hpp"
+#include "InspectPanels.hpp"
 #include "Icons.hpp"
 #include "SketchEditor.hpp"
 #include "Viewport.hpp"
@@ -1085,6 +1086,12 @@ void MainWindow::runCommand(const QString& id)
     else if (id == "solid.mirror") {
         openMirror();
     }
+    else if (id == "inspect.measure") {
+        openMeasure();
+    }
+    else if (id == "inspect.properties") {
+        openProperties();
+    }
     else if (id == "modify.parameters") {
         openParameters();
     }
@@ -1502,7 +1509,7 @@ void MainWindow::updateSketchInfo()
 
 // ---------------------------------------------------------------- feature panels
 
-void MainWindow::showPanel(FeaturePanel* p)
+void MainWindow::showPanel(ToolPanel* p)
 {
     if (panel_) {
         panel_->cancel();
@@ -1512,7 +1519,7 @@ void MainWindow::showPanel(FeaturePanel* p)
     sideStack_->setCurrentWidget(panelHost_);
     propsDock_->setWindowTitle(tr("Change"));
     propsDock_->show();
-    connect(p, &FeaturePanel::finished, this, [this](bool) { closePanel(); });
+    connect(p, &ToolPanel::finished, this, [this](bool) { closePanel(); });
 }
 
 void MainWindow::closePanel()
@@ -1619,6 +1626,29 @@ void MainWindow::openMirror(const std::string& editId)
         return;
     }
     showPanel(new MirrorPanel(*doc_, view_, editId, panelHost_));
+}
+
+void MainWindow::openMeasure()
+{
+    if (sketch_) {
+        exitSketch();
+    }
+    cancelPicker();
+    if (doc_->state().bodies.empty()) {
+        statusBar()->showMessage(tr("There is nothing to measure yet: make a 3D body first."), 5000);
+        return;
+    }
+    showPanel(new MeasurePanel(*doc_, view_, panelHost_));
+}
+
+void MainWindow::openProperties()
+{
+    if (doc_->state().bodies.empty()) {
+        statusBar()->showMessage(tr("There is no 3D body yet."), 5000);
+        return;
+    }
+    PropertiesDialog d(*doc_, this);
+    d.exec();
 }
 
 void MainWindow::openParameters()

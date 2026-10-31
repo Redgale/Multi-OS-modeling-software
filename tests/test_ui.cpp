@@ -5,9 +5,11 @@
 #include <BRepGProp.hxx>
 #include <GProp_GProps.hxx>
 #include <QComboBox>
+#include <QTableWidget>
 #include <QtTest>
 
 #include "FeaturePanels.hpp"
+#include "InspectPanels.hpp"
 #include "Icons.hpp"
 #include "MainWindow.hpp"
 #include "SketchEditor.hpp"
@@ -345,6 +347,71 @@ private slots:
         // Undo brings back the first words.
         w.runCommand("edit.undo");
         QTRY_COMPARE(regions(), 3);
+    }
+
+    // Measure: click a face, then an edge; Properties: volume and weight.
+    void measureAndProperties()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        Viewport* view = w.viewport();
+        QVERIFY(w.createSketchOn("XY"));
+        SketchEditor* sk = w.sketchEditor();
+        sk->setTool(SketchEditor::Tool::CenterRectangle);
+        const QPoint c = sk->screenOf(0, 0);
+        QTest::mouseMove(view, c);
+        QTest::mouseClick(view, Qt::LeftButton, Qt::NoModifier, c);
+        QTest::mouseMove(view, sk->screenOf(10, 8));
+        sk->typeValues({"60", "40"});
+        QVERIFY2(sk->message().isEmpty(), qPrintable(sk->message()));
+        QCOMPARE(int(sk->sketch().entities().size()), 10);  // 4 corners, 4 sides, diagonal, centre
+        w.runCommand("sketch.finish");
+        w.runCommand("solid.extrude");
+        auto* ex = qobject_cast<ExtrudePanel*>(w.featurePanel());
+        QVERIFY(ex);
+        ex->distance()->setText("20 mm");
+        QTRY_VERIFY2(ex->previewOk(), qPrintable(ex->statusText()));
+        QVERIFY(ex->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+
+        w.runCommand("inspect.measure");
+        auto* mp = qobject_cast<MeasurePanel*>(w.featurePanel());
+        QVERIFY(mp);
+        QCOMPARE(int(view->pickMode()), int(PickMode::Any));
+        QTRY_VERIFY(view->meshesReady());
+        view->homeView();
+        QTest::qWait(200);
+        // a click in the middle of the top face picks the face
+        const QPoint top = view->project(QVector3D(5, 5, 20)).toPoint();
+        QTest::mouseMove(view, top);
+        QTest::mouseClick(view, Qt::LeftButton, Qt::NoModifier, top);
+        QVERIFY2(mp->resultText().contains("flat face"), qPrintable(mp->resultText()));
+        QVERIFY2(mp->resultText().contains("Area: 2400 mm²"), qPrintable(mp->resultText()));
+        // a click on the front top edge picks the edge: they touch, 60 mm long
+        const QPoint edge = view->project(QVector3D(10, -20, 20)).toPoint();
+        QTest::mouseMove(view, edge);
+        QTest::mouseClick(view, Qt::LeftButton, Qt::NoModifier, edge);
+        QVERIFY2(mp->resultText().contains("Length: 60 mm"), qPrintable(mp->resultText()));
+        QVERIFY2(mp->resultText().contains("they touch"), qPrintable(mp->resultText()));
+        // top to bottom, by name: 20 mm apart, parallel
+        const std::string body = w.document().state().bodies.begin()->first;
+        mp->pick(body, "e1/end", false);
+        mp->pick(body, "e1/start", false);
+        QVERIFY2(mp->resultText().contains("Distance: 20 mm"), qPrintable(mp->resultText()));
+        QVERIFY2(mp->resultText().contains("Angle: 0°"), qPrintable(mp->resultText()));
+        QTest::qWait(150);  // let the panel lay out its longer text before the screenshot
+        w.grab().save(shotPath("measure"));
+        mp->cancel();
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        QTRY_COMPARE(int(view->pickMode()), int(PickMode::Faces));  // the panel is deleted later
+
+        PropertiesDialog props(w.document(), &w);
+        QCOMPARE(props.table()->item(0, 0)->text(), QString("48 cm³  (48000 mm³)"));
+        QCOMPARE(props.table()->item(1, 0)->text(), QString("59.52 g"));  // PLA, 1.24 g/cm³
+        props.material()->setCurrentIndex(props.material()->findText("Aluminium"));
+        QCOMPARE(props.table()->item(1, 0)->text(), QString("129.6 g"));
     }
 
     // Revolve a ring, drill it from its top face, repeat the hole around the axis,

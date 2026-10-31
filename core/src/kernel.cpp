@@ -1648,6 +1648,121 @@ MassProperties massProperties(const TopoDS_Shape& s)
     return m;
 }
 
+// ---------------------------------------------------------------- measure
+
+MeasureItem measureItem(const TopoDS_Shape& s)
+{
+    MeasureItem m;
+    try {
+        if (s.ShapeType() == TopAbs_FACE) {
+            const TopoDS_Face& f = TopoDS::Face(s);
+            GProp_GProps g;
+            BRepGProp::SurfaceProperties(f, g);
+            m.size = g.Mass();
+            BRepAdaptor_Surface a(f);
+            switch (a.GetType()) {
+                case GeomAbs_Plane: {
+                    m.kind = "flat face";
+                    gp_Dir n = a.Plane().Axis().Direction();
+                    if (f.Orientation() == TopAbs_REVERSED) {
+                        n.Reverse();
+                    }
+                    m.normal = n;
+                    break;
+                }
+                case GeomAbs_Cylinder:
+                    m.kind = "round face (cylinder)";
+                    m.radius = a.Cylinder().Radius();
+                    m.axis = a.Cylinder().Axis();
+                    break;
+                case GeomAbs_Cone:
+                    m.kind = "cone";
+                    m.radius = a.Cone().RefRadius();
+                    m.axis = a.Cone().Axis();
+                    break;
+                case GeomAbs_Sphere:
+                    m.kind = "ball face (sphere)";
+                    m.radius = a.Sphere().Radius();
+                    break;
+                case GeomAbs_Torus:
+                    m.kind = "rounded face (torus)";
+                    m.radius = a.Torus().MinorRadius();
+                    m.axis = a.Torus().Axis();
+                    break;
+                default:
+                    m.kind = "curved face";
+            }
+        }
+        else if (s.ShapeType() == TopAbs_EDGE) {
+            const TopoDS_Edge& e = TopoDS::Edge(s);
+            GProp_GProps g;
+            BRepGProp::LinearProperties(e, g);
+            m.size = g.Mass();
+            BRepAdaptor_Curve c(e);
+            if (c.GetType() == GeomAbs_Line) {
+                m.kind = "straight edge";
+                m.axis = gp_Ax1(c.Line().Location(), c.Line().Direction());
+            }
+            else if (c.GetType() == GeomAbs_Circle) {
+                const bool closed = BRep_Tool::IsClosed(e) || std::abs(c.LastParameter() - c.FirstParameter() - 2 * std::numbers::pi) < 1e-7;
+                m.kind = closed ? "circle" : "arc";
+                m.radius = c.Circle().Radius();
+                m.axis = c.Circle().Axis();
+            }
+            else {
+                m.kind = "curved edge";
+            }
+        }
+    }
+    catch (const Standard_Failure&) {
+        m.kind = "shape";
+    }
+    return m;
+}
+
+Result<MeasureBetween> measureBetween(const TopoDS_Shape& a, const TopoDS_Shape& b)
+{
+    try {
+        MeasureBetween r;
+        BRepExtrema_DistShapeShape d(a, b);
+        if (!d.IsDone() || d.NbSolution() == 0) {
+            return makeError("measure.failed", "The distance between these two could not be measured.");
+        }
+        r.distance = d.Value();
+        r.p1 = d.PointOnShape1(1);
+        r.p2 = d.PointOnShape2(1);
+        const MeasureItem ia = measureItem(a), ib = measureItem(b);
+        // a direction for flat faces (normal) and straight edges (along the edge)
+        auto dirOf = [](const MeasureItem& m) -> std::optional<std::pair<gp_Dir, bool>> {
+            if (m.normal) {
+                return std::pair {*m.normal, true};
+            }
+            if (m.kind == "straight edge" && m.axis) {
+                return std::pair {m.axis->Direction(), false};
+            }
+            return std::nullopt;
+        };
+        auto da = dirOf(ia), db = dirOf(ib);
+        if (da && db) {
+            double ang = da->first.Angle(db->first);  // 0..pi
+            ang = std::min(ang, std::numbers::pi - ang);
+            if (da->second != db->second) {
+                ang = std::numbers::pi / 2 - ang;  // face normal vs line direction
+            }
+            r.angle = std::max(0.0, ang);
+        }
+        const bool roundA = ia.radius && ia.axis && ia.kind != "straight edge";
+        const bool roundB = ib.radius && ib.axis && ib.kind != "straight edge";
+        if (roundA && roundB && ia.axis->Direction().IsParallel(ib.axis->Direction(), 1e-6)) {
+            r.centres = gp_Lin(*ia.axis).Distance(ib.axis->Location());
+        }
+        return r;
+    }
+    catch (const Standard_Failure& f) {
+        return makeError("measure.failed", "The distance between these two could not be measured.", {}, kernelText(f));
+    }
+}
+
 // ---------------------------------------------------------------- display
 
 DisplayMesh tessellate(const TopoDS_Shape& original, double linearDeflection)
