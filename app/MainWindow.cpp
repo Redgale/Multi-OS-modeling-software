@@ -531,11 +531,13 @@ MainWindow::MainWindow()
                                        q(doc_->fmtLength(mp.xmax - mp.xmin)), q(doc_->fmtLength(mp.ymax - mp.ymin)),
                                        q(doc_->fmtLength(mp.zmax - mp.zmin)))
                                   .arg(it->second->faceCount()));
+            browser_->blockSignals(true);  // (only mark the row: the details stay on the body)
             for (QTreeWidgetItemIterator bi(browser_); *bi; ++bi) {
                 if ((*bi)->data(0, Qt::UserRole).toString() == body) {
                     browser_->setCurrentItem(*bi);
                 }
             }
+            browser_->blockSignals(false);
             return;
         }
         auto fp = it->second->faceFingerprint(face);
