@@ -1833,12 +1833,37 @@
     </message>
     <message>
         <location line="+1"/>
-        <source>Press pull moves flat faces. To change a rounded edge or a hole, edit the step that made it.</source>
+        <source>Push or pull by more than zero.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+1"/>
-        <source>Push or pull by more than zero.</source>
+        <source>Press pull moves flat faces and whole round ones (a hole, a round boss). To change this face, edit the step that made it.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>This round face goes only part of the way round, so press pull cannot change its size.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Edit the step that made it (a fillet&apos;s radius, say).</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>That would close the hole up completely.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>That would make the round part disappear.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Push or pull by less than the radius.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -2667,7 +2692,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-91"/>
+        <location line="-96"/>
         <source>The face this extrude goes up to no longer exists.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2692,7 +2717,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+88"/>
+        <location line="+93"/>
         <source>The 3MF file could not be created.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3401,7 +3426,7 @@
 <context>
     <name>jigapp::AxisPanel</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="+2294"/>
+        <location filename="../app/FeaturePanels.cpp" line="+2292"/>
         <source>Construction axis</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3628,7 +3653,7 @@
 <context>
     <name>jigapp::ExprField</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="-2841"/>
+        <location filename="../app/FeaturePanels.cpp" line="-2839"/>
         <source>e.g. 45 deg</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3764,7 +3789,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <source>Up to (click a flat face)</source>
+        <source>Up to (click a face)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -5837,7 +5862,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::MovePanel</name>
     <message>
-        <location line="+993"/>
+        <location line="+991"/>
         <source>Move / copy</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6025,7 +6050,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::PatternPanel</name>
     <message>
-        <location line="-1553"/>
+        <location line="-1551"/>
         <location line="+154"/>
         <source>Pattern</source>
         <translation type="unfinished"></translation>
@@ -6304,7 +6329,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::PointPanel</name>
     <message>
-        <location line="+342"/>
+        <location line="+340"/>
         <source>Construction point</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6419,18 +6444,18 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::PressPullPanel</name>
     <message>
-        <location line="-527"/>
-        <location line="+59"/>
+        <location line="-525"/>
+        <location line="+57"/>
         <source>Press pull</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-58"/>
-        <source>Click a flat face, then type how far to pull it out. A negative distance pushes it in. Clicking a rounded edge or a hole opens the step that made it instead.</source>
+        <location line="-56"/>
+        <source>Click a flat face, or a whole round one (a hole&apos;s wall, a round boss), then type how far to pull it out. A negative distance pushes it in. A hole&apos;s wall moves into the hole, so pulling it out makes the hole smaller.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+2"/>
+        <location line="+3"/>
         <source>No face picked yet: click one in the view.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6446,17 +6471,12 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
     </message>
     <message>
         <location line="+3"/>
-        <location line="+41"/>
+        <location line="+38"/>
         <source>Face %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-6"/>
-        <source>Press pull moves flat faces. To change a rounded edge or a hole, edit the step that made it (double-click it in the timeline).</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+22"/>
+        <location line="+16"/>
         <source>press pull</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6632,7 +6652,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::RevolvePanel</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="-1044"/>
+        <location filename="../app/FeaturePanels.cpp" line="-1042"/>
         <location line="+170"/>
         <source>Revolve</source>
         <translation type="unfinished"></translation>
@@ -7795,7 +7815,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::SplitPanel</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="+1649"/>
+        <location filename="../app/FeaturePanels.cpp" line="+1647"/>
         <source>Split body</source>
         <translation type="unfinished"></translation>
     </message>

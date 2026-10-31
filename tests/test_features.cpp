@@ -8,7 +8,9 @@
 #include "helpers.hpp"
 #include "jig/io.hpp"
 #include "jig/screws.hpp"
+#include <BRepAdaptor_Surface.hxx>
 #include <BRepAlgoAPI_Common.hxx>
+#include <TopoDS.hxx>
 #include <BRepGProp.hxx>
 #include <GProp_GProps.hxx>
 #include <BRepBndLib.hxx>
@@ -1186,20 +1188,62 @@ TEST(PressPull, FlatFacesOutAndIn)
     auto prm = build("param lift = 2 mm\n" + block + "presspull id=pp1 face=e1/end distance=lift\n");
     run(*prm, "param lift = 7 mm");
     EXPECT_NEAR(props(*prm).zmax, 17, 1e-9);
-    // curved faces are explained (edit the fillet instead)
-    auto bad = std::make_unique<Document>();
-    ScriptRunner r(*bad);
-    r.runText("sketch id=s1 plane=XY\ncircle sketch=s1 center=0,0 d=20\nextrude id=e1 sketch=s1 distance=10\n");
+    // a whole round face: a round boss pulled out 2 mm gets 2 mm wider all round
+    auto boss = build("sketch id=s1 plane=XY\ncircle sketch=s1 center=0,0 d=20\nextrude id=e1 sketch=s1 distance=10\n");
     std::string side;
-    for (int i = 0; i < bad->state().bodies.at("e1")->faceCount(); ++i) {
-        if (bad->state().bodies.at("e1")->faceName(i).find("side") != std::string::npos) {
-            side = bad->state().bodies.at("e1")->faceName(i);
+    for (int i = 0; i < boss->state().bodies.at("e1")->faceCount(); ++i) {
+        if (boss->state().bodies.at("e1")->faceName(i).find("side") != std::string::npos) {
+            side = boss->state().bodies.at("e1")->faceName(i);
         }
     }
-    auto res = r.runText("presspull id=pp1 face=" + side + " distance=2mm\n");
-    EXPECT_FALSE(res.ok()) << side;
-    ASSERT_EQ(bad->model().features.size(), 3u) << (res.ok() ? "" : res.error().message);
-    EXPECT_NE(bad->status(2).message.find("flat"), std::string::npos) << bad->status(2).message;
+    run(*boss, "presspull id=pp1 face=" + side + " distance=2mm");
+    expectAllOk(*boss);
+    EXPECT_NEAR(props(*boss).volume, pi * 144 * 10, 1e-3);
+    // a hole's wall: pushed in (negative) the hole gets bigger, pulled out it gets smaller
+    const std::string holed = std::string(kBlock) + "hole id=h1 sketch=s2 diameter=4mm extent=all\n";
+    auto wallOf = [](const Document& d) {
+        for (auto& [bid, b] : d.state().bodies) {
+            for (int i = 0; i < b->faceCount(); ++i) {
+                if (b->faceName(i).rfind("h1/wall:", 0) == 0) {
+                    return b->faceName(i);
+                }
+            }
+        }
+        return std::string {};
+    };
+    auto bigger = build(holed);
+    const std::string wall = wallOf(*bigger);
+    ASSERT_FALSE(wall.empty());
+    const double before = props(*bigger).volume;
+    run(*bigger, "presspull id=pp1 face=" + wall + " distance=-1mm");
+    expectAllOk(*bigger);
+    EXPECT_NEAR(before - props(*bigger).volume, pi * (9 - 4) * 10, 1e-3);  // one hole 4 -> 6 mm across
+    auto smaller = build(holed);
+    run(*smaller, "presspull id=pp1 face=" + wall + " distance=0.5mm");
+    expectAllOk(*smaller);
+    EXPECT_NEAR(props(*smaller).volume - before, pi * (4 - 2.25) * 10, 1e-3);  // 4 -> 3 mm across
+    // closing a hole completely, or a round that is only part of a circle, is explained
+    auto shut = std::make_unique<Document>();
+    ScriptRunner r(*shut);
+    r.runText(holed);
+    r.runText("presspull id=pp1 face=" + wallOf(*shut) + " distance=3mm\n");
+    EXPECT_NE(shut->status(int(shut->model().features.size()) - 1).message.find("close the hole"), std::string::npos);
+    auto rounded = std::make_unique<Document>();
+    ScriptRunner rr(*rounded);
+    rr.runText("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=40 h=30\nextrude id=e1 sketch=s1 distance=10\n"
+               "fillet id=f1 edges=face:e1/end radius=2mm body=e1\n");
+    std::string fil;
+    for (int i = 0; i < rounded->state().bodies.at("e1")->faceCount(); ++i) {
+        const auto& b = *rounded->state().bodies.at("e1");
+        BRepAdaptor_Surface fs(TopoDS::Face(b.face(i)));
+        if (fs.GetType() == GeomAbs_Cylinder && fil.empty()) {
+            fil = b.faceName(i);
+        }
+    }
+    ASSERT_FALSE(fil.empty());
+    rr.runText("presspull id=pp1 face=" + fil + " distance=1mm\n");
+    EXPECT_NE(rounded->status(int(rounded->model().features.size()) - 1).message.find("part of the way"), std::string::npos)
+        << rounded->status(int(rounded->model().features.size()) - 1).message;
 }
 
 TEST(Extrude, UpToAFaceOrPlane)

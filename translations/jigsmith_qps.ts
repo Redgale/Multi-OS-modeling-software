@@ -1832,13 +1832,38 @@
     </message>
     <message>
         <location line="+1" />
-        <source>Press pull moves flat faces. To change a rounded edge or a hole, edit the step that made it.</source>
-        <translation>[Préss püll mövés flát fáçés. Tö çháñgé á röüñdéd édgé ör á hölé, édît thé stép thát mádé ît.~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+        <source>Push or pull by more than zero.</source>
+        <translation>[Püsh ör püll bý möré tháñ zérö.~~~~~~~~]</translation>
     </message>
     <message>
         <location line="+1" />
-        <source>Push or pull by more than zero.</source>
-        <translation>[Püsh ör püll bý möré tháñ zérö.~~~~~~~~]</translation>
+        <source>Press pull moves flat faces and whole round ones (a hole, a round boss). To change this face, edit the step that made it.</source>
+        <translation>[Préss püll mövés flát fáçés áñd whölé röüñd öñés (á hölé, á röüñd böss). Tö çháñgé thîs fáçé, édît thé stép thát mádé ît.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>This round face goes only part of the way round, so press pull cannot change its size.</source>
+        <translation>[Thîs röüñd fáçé göés öñlý párt öf thé wáý röüñd, sö préss püll çáññöt çháñgé îts sîzé.~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Edit the step that made it (a fillet's radius, say).</source>
+        <translation>[Édît thé stép thát mádé ît (á fîllét's rádîüs, sáý).~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>That would close the hole up completely.</source>
+        <translation>[Thát wöüld çlösé thé hölé üp çömplétélý.~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>That would make the round part disappear.</source>
+        <translation>[Thát wöüld máké thé röüñd párt dîsáppéár.~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Push or pull by less than the radius.</source>
+        <translation>[Püsh ör püll bý léss tháñ thé rádîüs.~~~~~~~~~]</translation>
     </message>
     <message>
         <location line="+1" />
@@ -2666,7 +2691,7 @@
         <translation>[Théré îs ñöthîñg tö éxpört ýét.~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="-91" />
+        <location line="-96" />
         <source>The face this extrude goes up to no longer exists.</source>
         <translation>[Thé fáçé thîs éxtrüdé göés üp tö ñö löñgér éxîsts.~~~~~~~~~~~~~]</translation>
     </message>
@@ -2691,7 +2716,7 @@
         <translation>[Thát fáçé îs lévél wîth thé skétçh, sö théré îs ñö wáý tö téll whîçh wáý tö éxtrüdé.~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+88" />
+        <location line="+93" />
         <source>The 3MF file could not be created.</source>
         <translation>[Thé 3MF fîlé çöüld ñöt bé çréátéd.~~~~~~~~]</translation>
     </message>
@@ -3400,7 +3425,7 @@
 <context>
     <name>jigapp::AxisPanel</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="+2294" />
+        <location filename="../app/FeaturePanels.cpp" line="+2292" />
         <source>Construction axis</source>
         <translation>[Çöñstrüçtîöñ áxîs~~~~~]</translation>
     </message>
@@ -3627,7 +3652,7 @@
 <context>
     <name>jigapp::ExprField</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="-2841" />
+        <location filename="../app/FeaturePanels.cpp" line="-2839" />
         <source>e.g. 45 deg</source>
         <translation>[é.g. 45 dég~]</translation>
     </message>
@@ -3763,8 +3788,8 @@
     </message>
     <message>
         <location line="+1" />
-        <source>Up to (click a flat face)</source>
-        <translation>[Üp tö (çlîçk á flát fáçé)~~~~~~]</translation>
+        <source>Up to (click a face)</source>
+        <translation>[Üp tö (çlîçk á fáçé)~~~~]</translation>
     </message>
     <message>
         <location line="+1" />
@@ -5833,7 +5858,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
 <context>
     <name>jigapp::MovePanel</name>
     <message>
-        <location line="+993" />
+        <location line="+991" />
         <source>Move / copy</source>
         <translation>[Mövé / çöpý~~]</translation>
     </message>
@@ -6019,7 +6044,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
 <context>
     <name>jigapp::PatternPanel</name>
     <message>
-        <location line="-1553" />
+        <location line="-1551" />
         <location line="+154" />
         <source>Pattern</source>
         <translation>[Páttérñ~~]</translation>
@@ -6298,7 +6323,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
 <context>
     <name>jigapp::PointPanel</name>
     <message>
-        <location line="+342" />
+        <location line="+340" />
         <source>Construction point</source>
         <translation>[Çöñstrüçtîöñ pöîñt~~~~~]</translation>
     </message>
@@ -6413,18 +6438,18 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
 <context>
     <name>jigapp::PressPullPanel</name>
     <message>
-        <location line="-527" />
-        <location line="+59" />
+        <location line="-525" />
+        <location line="+57" />
         <source>Press pull</source>
         <translation>[Préss püll~~~]</translation>
     </message>
     <message>
-        <location line="-58" />
-        <source>Click a flat face, then type how far to pull it out. A negative distance pushes it in. Clicking a rounded edge or a hole opens the step that made it instead.</source>
-        <translation>[Çlîçk á flát fáçé, théñ týpé höw fár tö püll ît öüt. Á ñégátîvé dîstáñçé püshés ît îñ. Çlîçkîñg á röüñdéd édgé ör á hölé öpéñs thé stép thát mádé ît îñstéád.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+        <location line="-56" />
+        <source>Click a flat face, or a whole round one (a hole's wall, a round boss), then type how far to pull it out. A negative distance pushes it in. A hole's wall moves into the hole, so pulling it out makes the hole smaller.</source>
+        <translation>[Çlîçk á flát fáçé, ör á whölé röüñd öñé (á hölé's wáll, á röüñd böss), théñ týpé höw fár tö püll ît öüt. Á ñégátîvé dîstáñçé püshés ît îñ. Á hölé's wáll mövés îñtö thé hölé, sö püllîñg ît öüt mákés thé hölé smállér.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+2" />
+        <location line="+3" />
         <source>No face picked yet: click one in the view.</source>
         <translation>[Ñö fáçé pîçkéd ýét: çlîçk öñé îñ thé vîéw.~~~~~~~~~~]</translation>
     </message>
@@ -6440,17 +6465,12 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
     </message>
     <message>
         <location line="+3" />
-        <location line="+41" />
+        <location line="+38" />
         <source>Face %1</source>
         <translation>[Fáçé %1~]</translation>
     </message>
     <message>
-        <location line="-6" />
-        <source>Press pull moves flat faces. To change a rounded edge or a hole, edit the step that made it (double-click it in the timeline).</source>
-        <translation>[Préss püll mövés flát fáçés. Tö çháñgé á röüñdéd édgé ör á hölé, édît thé stép thát mádé ît (döüblé-çlîçk ît îñ thé tîmélîñé).~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
-    </message>
-    <message>
-        <location line="+22" />
+        <location line="+16" />
         <source>press pull</source>
         <translation>[préss püll~~~]</translation>
     </message>
@@ -6626,7 +6646,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
 <context>
     <name>jigapp::RevolvePanel</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="-1044" />
+        <location filename="../app/FeaturePanels.cpp" line="-1042" />
         <location line="+170" />
         <source>Revolve</source>
         <translation>[Révölvé~~]</translation>
@@ -7783,7 +7803,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
 <context>
     <name>jigapp::SplitPanel</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="+1649" />
+        <location filename="../app/FeaturePanels.cpp" line="+1647" />
         <source>Split body</source>
         <translation>[Splît bödý~~~]</translation>
     </message>

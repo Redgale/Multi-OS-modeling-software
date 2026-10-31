@@ -630,7 +630,7 @@ ExtrudePanel::ExtrudePanel(jig::Document& doc, Viewport* view, std::string editI
     addRow(tr("Sketch"), sketch_);
     addRow(tr("Closed areas (profiles)"), profiles_);
     addRow(tr("Extent"), extent_);
-    addRow(tr("Up to (click a flat face)"), to_);
+    addRow(tr("Up to (click a face)"), to_);
     addRow(tr("Beyond it by"), toOffset_);
     addRow(tr("Distance"), distance_);
     addRow(tr("Direction"), direction_);
@@ -2385,8 +2385,9 @@ PressPullPanel::PressPullPanel(jig::Document& doc, Viewport* view, std::string e
     : FeaturePanel(doc, view, std::move(editId), parent)
 {
     form_->addWidget(heading(this, tr("Press pull"),
-                             tr("Click a flat face, then type how far to pull it out. A negative distance pushes it "
-                                "in. Clicking a rounded edge or a hole opens the step that made it instead.")));
+                             tr("Click a flat face, or a whole round one (a hole's wall, a round boss), then type how "
+                                "far to pull it out. A negative distance pushes it in. A hole's wall moves into the "
+                                "hole, so pulling it out makes the hole smaller.")));
     face_ = new QLabel(tr("No face picked yet: click one in the view."), this);
     face_->setWordWrap(true);
     distance_ = new ExprField(doc, jig::Dim::len(), this);
@@ -2428,10 +2429,7 @@ bool PressPullPanel::useFace(const std::string& body, const std::string& name)
         return false;
     }
     auto hits = it->second->findFaces(name);
-    if (hits.empty() || jig::measureItem(it->second->face(hits[0])).kind != "flat face") {
-        status_->setText("<b>✕ " + tr("Press pull moves flat faces. To change a rounded edge or a hole, edit the step "
-                                      "that made it (double-click it in the timeline).") +
-                         "</b>");
+    if (hits.empty()) {
         return false;
     }
     faceRef_ = it->second->faceRef(body, hits[0]).toJson();

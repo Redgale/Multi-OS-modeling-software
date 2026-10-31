@@ -13,6 +13,11 @@
 
 #include <BRepAdaptor_Curve.hxx>
 #include <BRepBndLib.hxx>
+#include <gp_Cylinder.hxx>
+#include <BRepPrimAPI_MakeCylinder.hxx>
+#include <BRepAlgoAPI_Cut.hxx>
+#include <BRepTools.hxx>
+#include <BRepAdaptor_Surface.hxx>
 #include <TopoDS_Compound.hxx>
 #include <BRep_Builder.hxx>
 #include <BRepBuilderAPI_MakeFace.hxx>
@@ -927,15 +932,62 @@ FeatureOutcome applyPressPull(const Document& doc, const Feature& f, const std::
         return failed("The face to push or pull no longer exists.", {"Edit the step and click a face."});
     }
     const TopoDS_Face face = TopoDS::Face(bit->second->face(r.index));
-    if (measureItem(face).kind != "flat face") {
-        return failed("Press pull moves flat faces. To change a rounded edge or a hole, edit the step that made it.");
-    }
     auto d = doc.evalLength(p.value("distance", std::string("5 mm")));
     if (!d) {
         return failed(d.error());
     }
     if (std::abs(d.value()) < 1e-9) {
         return failed("Push or pull by more than zero.");
+    }
+    if (measureItem(face).kind != "flat face") {
+        // a whole round face (a hole's wall, a round boss): its radius changes; out adds material
+        BRepAdaptor_Surface sa(face);
+        if (sa.GetType() != GeomAbs_Cylinder) {
+            return failed("Press pull moves flat faces and whole round ones (a hole, a round boss). To change this "
+                          "face, edit the step that made it.");
+        }
+        double u0, u1, v0, v1;
+        BRepTools::UVBounds(face, u0, u1, v0, v1);
+        if (u1 - u0 < 2 * std::numbers::pi - 1e-6) {
+            return failed("This round face goes only part of the way round, so press pull cannot change its size.",
+                          {"Edit the step that made it (a fillet's radius, say)."});
+        }
+        const gp_Cylinder cyl = sa.Cylinder();
+        const double R = cyl.Radius();
+        const gp_Ax1 axis = cyl.Axis();
+        BRepGProp_Face gf(face);
+        gp_Pnt c;
+        gp_Vec n;
+        gf.Normal((u0 + u1) / 2, (v0 + v1) / 2, c, n);
+        gp_Vec radial(axis.Location(), c);
+        radial -= gp_Vec(axis.Direction()) * radial.Dot(gp_Vec(axis.Direction()));
+        const bool hole = n.Dot(radial) < 0;  // the outside of the material faces the axis
+        const double R2 = hole ? R - d.value() : R + d.value();
+        if (!(R2 > 1e-6)) {
+            return failed(hole ? "That would close the hole up completely." : "That would make the round part disappear.",
+                          {"Push or pull by less than the radius."});
+        }
+        const gp_Dir ad = axis.Direction();
+        const gp_Ax2 base(axis.Location().Translated(gp_Vec(ad) * v0), ad);
+        const double h = v1 - v0, inner = std::min(R, R2), outer = std::max(R, R2);
+        TopoDS_Shape ring = BRepAlgoAPI_Cut(BRepPrimAPI_MakeCylinder(base, outer, h).Shape(),
+                                            BRepPrimAPI_MakeCylinder(base, inner, h).Shape())
+                                .Shape();
+        NamedShape tool(ring);
+        int caps = 0;
+        for (int i = 0; i < tool.faceCount(); ++i) {
+            BRepAdaptor_Surface fs(TopoDS::Face(tool.face(i)));
+            if (fs.GetType() == GeomAbs_Cylinder) {
+                tool.setFaceName(i, f.id + (std::abs(fs.Cylinder().Radius() - R2) < 1e-9 ? "/wall" : "/back"));
+            }
+            else {
+                tool.setFaceName(i, f.id + "/cap~" + std::to_string(caps++));
+            }
+        }
+        tool.deriveEdgeNames();
+        Feature g = f;
+        g.params["target"] = ref.body;
+        return applyTool(g, d.value() > 0 ? BoolOp::Join : BoolOp::Cut, std::move(tool), in, status);
     }
     // the outward normal at the face's centre (the face's orientation says which side is out)
     BRepGProp_Face gf(face);

@@ -1733,6 +1733,29 @@ private slots:
         QVERIFY(qobject_cast<HolePanel*>(w.featurePanel()));
         qobject_cast<FeaturePanel*>(w.featurePanel())->cancel();
         QTRY_VERIFY(w.featurePanel() == nullptr);
+        // a whole round face in the panel: a round boss pulled out 1 mm all round
+        {
+            jig::ScriptRunner r(w.document());
+            QVERIFY(r.runText("sketch id=s3 plane=XY\ncircle sketch=s3 center=60,0 d=10\nextrude id=e3 sketch=s3 distance=5 op=new\n").ok());
+        }
+        std::string round;
+        const auto& boss = *w.document().state().bodies.at("e3");
+        for (int i = 0; i < boss.faceCount(); ++i) {
+            if (jig::measureItem(boss.face(i)).radius) {
+                round = boss.faceName(i);
+            }
+        }
+        const double v0 = volume(w);
+        w.runCommand("solid.presspull");
+        pp = qobject_cast<PressPullPanel*>(w.featurePanel());
+        QVERIFY(pp);
+        QVERIFY(pp->useFace("e3", round));
+        pp->distance()->setText("1 mm");
+        QTest::qWait(300);
+        QTRY_VERIFY(pp->previewOk());
+        QVERIFY(pp->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        QVERIFY2(std::abs(volume(w) - v0 - M_PI * (36 - 25) * 5) < 1e-3, qPrintable(QString::number(volume(w) - v0)));
     }
 
     // Mirror one step (a hole) across a clicked face's plane; pattern a whole body.
