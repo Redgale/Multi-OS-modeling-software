@@ -200,6 +200,11 @@ jobs:
           gh release download -R pal1000/mesa-dist-win --pattern "*release-msvc.7z" -D mesa
           7z x (Get-ChildItem mesa/*.7z)[0].FullName -omesa/x -y | Out-Null
           Copy-Item mesa/x/x64/*.dll gltest/
+          # Qt loads opengl32.dll only from System32 (Windows' GL 1.1), so Mesa goes in as
+          # Qt's software OpenGL, opengl32sw.dll, and the app is told to use it.
+          Copy-Item -Force mesa/x/x64/opengl32.dll gltest/opengl32sw.dll
+          $env:QT_OPENGL = "software"
+          $env:GALLIUM_DRIVER = "llvmpipe"
           $p = Start-Process -FilePath gltest/jigsmith.exe -ArgumentList "--sample", "phone_stand", "--screenshot", "$PWD\screenshot-windows.png" -PassThru
           if (-not $p.WaitForExit(120000)) { $p.Kill(); throw "timed out" }
           if ($p.ExitCode -ne 0) {
