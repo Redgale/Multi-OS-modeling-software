@@ -23,6 +23,8 @@
 #include <QLineEdit>
 #include <QListWidget>
 #include <QMessageBox>
+#include <QMouseEvent>
+#include <QPainter>
 #include <QPushButton>
 #include <QTableWidget>
 #include <QTextDocumentFragment>
@@ -513,6 +515,64 @@ void FeaturePanel::cancel()
 
 // ---------------------------------------------------------------- Extrude
 
+// The extrude arrow: drawn from the profile's centre along the extrude direction; drag its
+// round tip to set the distance.
+class ExtrudeHandle : public Interactor
+{
+public:
+    explicit ExtrudeHandle(ExtrudePanel* p)
+        : p_(p)
+    {}
+    bool mousePress(QMouseEvent* e) override
+    {
+        auto tip = p_->handleTip();
+        dragging_ = tip && QLineF(*tip, e->position()).length() <= 12;
+        return dragging_;
+    }
+    bool mouseMove(QMouseEvent* e) override
+    {
+        if (dragging_) {
+            p_->dragHandleTo(e->position());
+            return true;
+        }
+        auto tip = p_->handleTip();
+        const bool over = tip && QLineF(*tip, e->position()).length() <= 12;
+        if (over != hover_ && p_->view_) {
+            hover_ = over;
+            p_->view_->setCursor(over ? Qt::SizeAllCursor : Qt::ArrowCursor);
+            p_->view_->update();
+        }
+        return false;
+    }
+    bool mouseRelease(QMouseEvent*) override
+    {
+        const bool was = dragging_;
+        dragging_ = false;
+        return was;
+    }
+    void paint(QPainter& g) override
+    {
+        auto tip = p_->handleTip();
+        if (!tip || !p_->view_) {
+            return;
+        }
+        const QPointF base = p_->view_->project(*p_->handleBase_);
+        const QColor c(255, 170, 40);
+        g.setRenderHint(QPainter::Antialiasing);
+        g.setPen(QPen(c, 2.5));
+        g.drawLine(base, *tip);
+        // the grip: a ring that fills when the cursor is on it (shape changes, not only colour)
+        g.setBrush(hover_ || dragging_ ? QBrush(c) : QBrush(Qt::NoBrush));
+        g.drawEllipse(*tip, 7, 7);
+        g.setPen(p_->view_->colors().text);
+        g.drawText(*tip + QPointF(12, -8), p_->distance_->text());
+    }
+
+private:
+    ExtrudePanel* p_;
+    bool dragging_ = false, hover_ = false;
+};
+
 ExtrudePanel::ExtrudePanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent)
     : FeaturePanel(doc, view, std::move(editId), parent)
 {
@@ -658,6 +718,10 @@ ExtrudePanel::ExtrudePanel(jig::Document& doc, Viewport* view, std::string editI
         updateVisibility();
         schedulePreview();
     });
+    if (view_) {
+        handle_ = std::make_unique<ExtrudeHandle>(this);
+        view_->setInteractor(handle_.get());
+    }
     updateVisibility();
     if (sketch_->count() == 0) {
         status_->setText("<b>✕ " + tr("There is no sketch to extrude yet. Create a sketch first.") + "</b>");
@@ -668,6 +732,76 @@ ExtrudePanel::ExtrudePanel(jig::Document& doc, Viewport* view, std::string editI
     }
     distance_->edit()->setFocus();
     distance_->edit()->selectAll();
+}
+
+ExtrudePanel::~ExtrudePanel()
+{
+    if (view_ && view_->interactor() == handle_.get()) {
+        view_->setInteractor(nullptr);
+    }
+}
+
+std::optional<QPointF> ExtrudePanel::handleTip() const
+{
+    if (!view_ || !handleBase_ || extent_->currentData().toString() != "distance" || !distance_->valid()) {
+        return std::nullopt;
+    }
+    return view_->project(*handleBase_ + handleDir_ * float(distance_->value()));
+}
+
+void ExtrudePanel::dragHandleTo(const QPointF& screen)
+{
+    if (!view_ || !handleBase_) {
+        return;
+    }
+    // how many pixels one millimetre along the arrow covers on screen
+    const QPointF s0 = view_->project(*handleBase_), s1 = view_->project(*handleBase_ + handleDir_ * 10.0f);
+    const QPointF axis = s1 - s0;
+    const double len2 = QPointF::dotProduct(axis, axis);
+    if (len2 < 1e-6) {
+        return;  // looking straight down the arrow: use the field instead
+    }
+    double d = QPointF::dotProduct(screen - s0, axis) / len2 * 10.0;
+    const bool inch = doc_.units() == jig::LengthUnit::Inch || doc_.units() == jig::LengthUnit::Foot;
+    const double step = inch ? 25.4 / 32 : 0.5;  // snaps: 1/32 in or 0.5 mm
+    d = std::round(d / step) * step;
+    if (std::abs(d) < step) {
+        d = d < 0 ? -step : step;
+    }
+    distance_->setText(QString::fromStdString(doc_.fmtLength(d)));
+}
+
+void ExtrudePanel::previewed(const jig::FeatureOutcome&)
+{
+    // the arrow starts at the centre of the first chosen area, on the sketch plane
+    handleBase_.reset();
+    const auto before = stateBefore();
+    auto it = before->sketches.find(sketch_->currentData().toString().toStdString());
+    if (it != before->sketches.end() && !it->second->profiles.regions.empty()) {
+        const jig::Profile* prof = &it->second->profiles.regions.front();
+        for (int i = 0; i < profiles_->count(); ++i) {
+            if (profiles_->item(i)->checkState() == Qt::Checked) {
+                for (auto& r : it->second->profiles.regions) {
+                    if (q(r.key) == profiles_->item(i)->data(Qt::UserRole).toString()) {
+                        prof = &r;
+                    }
+                }
+                break;
+            }
+        }
+        GProp_GProps g;
+        BRepGProp::SurfaceProperties(prof->face, g);
+        const gp_Pnt c = g.CentreOfMass();
+        gp_Dir n = it->second->frame.Direction();
+        if (direction_->currentData().toString() == "reverse") {
+            n.Reverse();
+        }
+        handleBase_ = QVector3D(float(c.X()), float(c.Y()), float(c.Z()));
+        handleDir_ = QVector3D(float(n.X()), float(n.Y()), float(n.Z()));
+    }
+    if (view_) {
+        view_->update();
+    }
 }
 
 void ExtrudePanel::useFace(const std::string& body, const std::string& name)

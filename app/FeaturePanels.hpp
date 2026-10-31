@@ -11,6 +11,9 @@
 #include <QDialog>
 #include <QPointer>
 #include <QWidget>
+#include <QVector3D>
+
+#include <optional>
 
 #include "jig/document.hpp"
 
@@ -127,11 +130,17 @@ private:
     void runPreview();
 };
 
+class ExtrudeHandle;
+
 class ExtrudePanel : public FeaturePanel
 {
     Q_OBJECT
 public:
     ExtrudePanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent = nullptr);
+    ~ExtrudePanel() override;
+    // The arrow on the canvas: where its tip is (screen), and dragging it to a screen point.
+    std::optional<QPointF> handleTip() const;
+    void dragHandleTo(const QPointF& screen);
     ExprField* distance() const
     {
         return distance_;
@@ -181,6 +190,11 @@ private:
     QString autoOperation() const;
     QComboBox *sketch_, *extent_, *direction_, *op_, *thinSide_, *to_;
     ExprField* toOffset_;
+    void previewed(const jig::FeatureOutcome& o) override;
+    friend class ExtrudeHandle;
+    std::unique_ptr<ExtrudeHandle> handle_;
+    std::optional<QVector3D> handleBase_;  // the arrow starts at the profile's centre
+    QVector3D handleDir_;                  // along the extrude direction
     QListWidget* profiles_;
     ExprField *distance_, *distance2_, *taper_, *thin_;
     QCheckBox* thinOn_;

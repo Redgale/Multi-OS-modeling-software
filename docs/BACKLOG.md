@@ -46,7 +46,7 @@ Done: Extrude and Fillet panels with live preview, Auto join/cut, edge picking, 
 timeline edit/rename/suppress/roll back/delete with dependents warning, Parameters dialog.
 
 - B-015 UI test for the Parameters dialog and timeline context menu.
-- B-017 Extrude drag handle on the canvas; two sides, to object, taper, thin.
+- ~~B-017~~ done: drag handle, two sides, up to a face, taper, thin (incl. open curves).
 - B-018 (reorder; Browser visibility, isolate, rename done) Timeline groups; find in timeline;
   saving visibility with the design.
 - B-019 (sketch window selection, selection filter done) Select Other; window selection in 3D.

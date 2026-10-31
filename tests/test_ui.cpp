@@ -943,6 +943,41 @@ private slots:
         }
     }
 
+    // Drag the extrude arrow: grab its tip, pull it to twice the length, the distance doubles.
+    void extrudeDragHandle()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        {
+            jig::ScriptRunner r(w.document());
+            QVERIFY(r.runText("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=40 h=30\n").ok());
+        }
+        Viewport* view = w.viewport();
+        view->homeView();
+        w.runCommand("solid.extrude");
+        auto* ep = qobject_cast<ExtrudePanel*>(w.featurePanel());
+        QVERIFY(ep);
+        ep->distance()->setText("10 mm");
+        QTRY_VERIFY(ep->previewOk());
+        QTRY_VERIFY(ep->handleTip().has_value());
+        const QPointF tip = *ep->handleTip();
+        const QPointF base = view->project(QVector3D(0, 0, 0));
+        const QPointF to = base + (tip - base) * 2.0;
+        QTest::mousePress(view, Qt::LeftButton, Qt::NoModifier, tip.toPoint());
+        QMouseEvent mv(QEvent::MouseMove, to, view->mapToGlobal(to), Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+        QApplication::sendEvent(view, &mv);
+        QTest::mouseRelease(view, Qt::LeftButton, Qt::NoModifier, to.toPoint());
+        const double d = ep->distance()->value();
+        QVERIFY2(std::abs(d - 20) <= 1.0, qPrintable(ep->distance()->text()));
+        QVERIFY(std::abs(d * 2 - std::round(d * 2)) < 1e-9);  // snapped to 0.5 mm
+        QTRY_VERIFY(ep->previewOk());
+        QVERIFY(ep->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        QVERIFY(std::abs(volume(w) - 1200 * d) < 1e-6);
+    }
+
     // A join that misses the body: the panel offers "Make it a new body", which fixes it.
     void oneClickFixNewBody()
     {
