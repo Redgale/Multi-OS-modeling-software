@@ -957,6 +957,11 @@
     </message>
     <message>
         <location line="+1" />
+        <source>Keep the current view of the design under a name, to come back to it from the Browser.</source>
+        <translation>[Kéép thé çürréñt vîéw öf thé désîgñ üñdér á ñámé, tö çömé báçk tö ît fröm thé Bröwsér.~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
         <source>Switch between a natural view and a measured, parallel view.</source>
         <translation>[Swîtçh bétwééñ á ñátürál vîéw áñd á méásüréd, párállél vîéw.~~~~~~~~~~~~~~~~]</translation>
     </message>

@@ -958,6 +958,11 @@
     </message>
     <message>
         <location line="+1"/>
+        <source>Keep the current view of the design under a name, to come back to it from the Browser.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>Switch between a natural view and a measured, parallel view.</source>
         <translation type="unfinished"></translation>
     </message>
