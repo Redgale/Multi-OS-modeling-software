@@ -983,11 +983,45 @@ FeatureOutcome applyRevolve(const Document& doc, const Feature& f, const std::sh
     if (!angle) {
         return failed(angle.error());
     }
+    double sweep = angle.value();
+    if (p.value("extent", std::string("angle")) == "to") {
+        // up to a plane or flat face the axis lies in: turn (the positive way) until the
+        // profile reaches it
+        auto to = planeFrame(p.value("to", nlohmann::json("XY")), in, status);
+        if (!to) {
+            return failed(to.error());
+        }
+        const gp_Vec d(axis.Direction()), n(to->Direction());
+        const double off = std::abs(gp_Vec(to->Location(), axis.Location()).Dot(n));
+        if (std::abs(d.Dot(n)) > 1e-6 || off > 1e-6) {
+            return failed("Revolve can only turn up to a plane or flat face that the axis lies in.",
+                          {"Pick a face or plane through the axis, or type an angle."});
+        }
+        GProp_GProps props;
+        BRepGProp::SurfaceProperties(profiles.front()->face, props);
+        gp_Vec r0(axis.Location(), props.CentreOfMass());
+        r0 -= d * r0.Dot(d);
+        if (r0.Magnitude() < 1e-7) {
+            return failed("The profile sits on the axis, so there is no way to tell where it starts turning.");
+        }
+        const gp_Vec t = d.Crossed(n);
+        double best = 0;
+        for (const gp_Vec& v : {t, -t}) {
+            double a = std::atan2(r0.Crossed(v).Dot(d), r0.Dot(v));
+            if (a <= 1e-7) {
+                a += 2 * std::numbers::pi;
+            }
+            if (best == 0 || a < best) {
+                best = a;
+            }
+        }
+        sweep = best;
+    }
     auto op = opFromString(p.value("op", std::string("new")));
     if (!op) {
         return failed("This revolve has an unknown operation.");
     }
-    auto tool = makeRevolution(f.id, profiles, axis, angle.value());
+    auto tool = makeRevolution(f.id, profiles, axis, sweep);
     if (!tool) {
         return failed(tool.error());
     }

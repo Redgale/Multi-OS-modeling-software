@@ -1780,7 +1780,7 @@
 <context>
     <name>jigapp::AxisPanel</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="+2155" />
+        <location filename="../app/FeaturePanels.cpp" line="+2236" />
         <source>Construction axis</source>
         <translation>[Çöñstrüçtîöñ áxîs~~~~~]</translation>
     </message>
@@ -1997,7 +1997,7 @@
 <context>
     <name>jigapp::ExprField</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="-2662" />
+        <location filename="../app/FeaturePanels.cpp" line="-2743" />
         <source>e.g. 45 deg</source>
         <translation>[é.g. 45 dég~]</translation>
     </message>
@@ -2433,7 +2433,7 @@
 <context>
     <name>jigapp::HolePanel</name>
     <message>
-        <location line="+268" />
+        <location line="+349" />
         <location line="+139" />
         <source>Hole</source>
         <translation>[Hölé~]</translation>
@@ -4799,18 +4799,43 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
 <context>
     <name>jigapp::RevolvePanel</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="-921" />
-        <location line="+98" />
+        <location filename="../app/FeaturePanels.cpp" line="-1002" />
+        <location line="+174" />
         <source>Revolve</source>
         <translation>[Révölvé~~]</translation>
     </message>
     <message>
-        <location line="-97" />
+        <location line="-173" />
         <source>Spin closed areas of a sketch around an axis, like a lathe. Draw half of the outline next to the axis; it must not cross it.</source>
         <translation>[Spîñ çlöséd áréás öf á skétçh áröüñd áñ áxîs, lîké á láthé. Dráw hálf öf thé öütlîñé ñéxt tö thé áxîs; ît müst ñöt çröss ît.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <location line="+7" />
+        <source>By an angle</source>
+        <translation>[Bý áñ áñglé~~~]</translation>
+    </message>
+    <message>
+        <location line="+0" />
+        <source>Up to a face or plane through the axis</source>
+        <translation>[Üp tö á fáçé ör pláñé thröügh thé áxîs~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+2" />
+        <source>Floor (XY)</source>
+        <translation>[Flöör (XÝ)~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Front (XZ)</source>
+        <translation>[Fröñt (XZ)~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Side (YZ)</source>
+        <translation>[Sîdé (ÝZ)~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
         <source>Join: add to the body</source>
         <translation>[Jöîñ: ádd tö thé bödý~~~~~]</translation>
     </message>
@@ -4846,8 +4871,18 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
     </message>
     <message>
         <location line="+1" />
+        <source>Extent</source>
+        <translation>[Éxtéñt~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
         <source>Angle</source>
         <translation>[Áñglé~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Up to</source>
+        <translation>[Üp tö~]</translation>
     </message>
     <message>
         <location line="+1" />
@@ -4855,12 +4890,23 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
         <translation>[Öpérátîöñ~~~]</translation>
     </message>
     <message>
-        <location line="+38" />
+        <location line="+20" />
+        <location line="+73" />
+        <source>Face %1</source>
+        <translation>[Fáçé %1~]</translation>
+    </message>
+    <message>
+        <location line="-27" />
         <source>There is no sketch to revolve yet. Create a sketch first.</source>
         <translation>[Théré îs ñö skétçh tö révölvé ýét. Çréáté á skétçh fîrst.~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+29" />
+        <location line="+20" />
+        <source>Click a flat face to turn up to.</source>
+        <translation>[Çlîçk á flát fáçé tö türñ üp tö.~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+50" />
         <source>Sketch line %1 (construction)</source>
         <translation>[Skétçh lîñé %1 (çöñstrüçtîöñ)~~~~~~~]</translation>
     </message>
@@ -4870,7 +4916,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
         <translation>[Skétçh lîñé %1~~~]</translation>
     </message>
     <message>
-        <location line="+31" />
+        <location line="+36" />
         <source>revolve</source>
         <translation>[révölvé~~]</translation>
     </message>
@@ -4941,7 +4987,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
 <context>
     <name>jigapp::ShellPanel</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="-247" />
+        <location filename="../app/FeaturePanels.cpp" line="-328" />
         <source>Shell</source>
         <translation>[Shéll~]</translation>
     </message>
@@ -5859,7 +5905,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
 <context>
     <name>jigapp::SplitPanel</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="+1486" />
+        <location filename="../app/FeaturePanels.cpp" line="+1567" />
         <source>Split body</source>
         <translation>[Splît bödý~~~]</translation>
     </message>

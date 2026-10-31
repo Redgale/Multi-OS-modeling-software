@@ -8,6 +8,8 @@
 #include "helpers.hpp"
 #include "jig/io.hpp"
 #include "jig/screws.hpp"
+#include <BRepBndLib.hxx>
+#include <Bnd_Box.hxx>
 
 using namespace jig;
 using namespace jigtest;
@@ -1384,4 +1386,49 @@ TEST(Point, TypedEdgeEndsAndFaceCentres)
     ScriptRunner r(*same);
     r.runText("point id=p1 at=0,0,0\naxis id=a1 from=O to=p1\n");
     EXPECT_NE(same->status(1).message.find("same place"), std::string::npos);
+}
+
+TEST(Revolve, UpToAPlaneOrFaceThroughTheAxis)
+{
+    // the profile is in the XZ plane on +X; turning about Z it meets the YZ plane after a
+    // quarter turn
+    auto doc = build(std::string(kProfile) + "revolve id=r1 sketch=s1 axis=Z extent=to to=YZ\n");
+    expectAllOk(*doc);
+    EXPECT_NEAR(props(*doc).volume, kTurned / 4, 1e-3);
+    // up to a construction plane at 30 degrees: a twelfth of the turn
+    auto at30 = build(std::string(kProfile) + "plane id=pl1 kind=angle base=XZ axis=Z angle=30deg\n"
+                                                "revolve id=r1 sketch=s1 axis=Z extent=to to=pl1\n");
+    expectAllOk(*at30);
+    const double v = props(*at30).volume;
+    EXPECT_TRUE(std::abs(v - kTurned / 12) < 1e-3 || std::abs(v - kTurned * 5 / 12) < 1e-3) << v;
+    // up to a flat face of a block on the -X side whose face at y=0 holds the axis: half a turn
+    auto face = build("sketch id=b plane=XY\nrect sketch=b corner=-30,0 w=20 h=30\nextrude id=e1 sketch=b distance=16\n"
+                      + std::string(kProfile));
+    std::string onAxis;
+    const auto& blk = *face->state().bodies.at("e1");
+    for (int i = 0; i < blk.faceCount(); ++i) {
+        const MeasureItem m = measureItem(blk.face(i));
+        Bnd_Box bb;
+        BRepBndLib::Add(blk.face(i), bb);
+        double x0, y0, z0, x1, y1, z1;
+        bb.Get(x0, y0, z0, x1, y1, z1);
+        if (m.normal && std::abs(y1) < 1e-6 && std::abs(y0) < 1e-6) {
+            onAxis = blk.faceName(i);
+        }
+    }
+    ASSERT_FALSE(onAxis.empty());
+    run(*face, "revolve id=r1 sketch=s1 axis=Z extent=to to=face:" + onAxis + " op=new");
+    expectAllOk(*face);
+    double turned = 0;
+    for (auto& [id, b] : face->state().bodies) {
+        if (id != "e1") {
+            turned += massProperties(b->shape()).volume;
+        }
+    }
+    EXPECT_NEAR(turned, kTurned / 2, 1e-3);
+    // a plane the axis does not lie in is explained
+    auto bad = std::make_unique<Document>();
+    ScriptRunner r(*bad);
+    r.runText(std::string(kProfile) + "revolve id=r1 sketch=s1 axis=Z extent=to to=XY\n");
+    EXPECT_NE(bad->status(1).message.find("axis lies in"), std::string::npos) << bad->status(1).message;
 }

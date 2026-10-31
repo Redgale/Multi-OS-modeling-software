@@ -1627,7 +1627,8 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
         return checkFeature(id);
     }
     if (a.verb == "revolve" || a.verb == "hole" || a.verb == "pattern" || a.verb == "mirror") {
-        // revolve sketch=s1 axis=X|Y|Z|line:<name> [angle=360deg] [op=new|join|cut|intersect] [profiles=…]
+        // revolve sketch=s1 axis=X|Y|Z|line:<name> [angle=360deg | extent=to to=<plane>|face:<name>]
+        //         [op=new|join|cut|intersect] [profiles=…]
         // hole sketch=s2 diameter=3.4mm (depth=10mm | extent=all) [type=simple|counterbore|countersink]
         //      [cbore_diameter= cbore_depth= | csink_diameter= csink_angle=] [size=M3|#6|1/4 [fit=close|normal|loose]] [tip=118deg]
         // pattern feature=e2 kind=circular axis=Z count=12 [angle=360deg]
@@ -1644,16 +1645,18 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
                 params[k] = v;
             }
         }
-        if (a.verb == "mirror" && a.get("plane", "").rfind("face:", 0) == 0) {
-            const std::string name = a.get("plane").substr(5);
-            params["plane"] = nullptr;
+        // a face named as a plane: the mirror plane, or the face a revolve turns up to
+        const char* faceKey = a.verb == "mirror" ? "plane" : a.verb == "revolve" ? "to" : nullptr;
+        if (faceKey && a.get(faceKey, "").rfind("face:", 0) == 0) {
+            const std::string name = a.get(faceKey).substr(5);
+            params[faceKey] = nullptr;
             for (auto& [bid, body] : doc.state().bodies) {
                 auto hits = body->findFaces(name);
                 if (hits.size() == 1) {
-                    params["plane"] = {{"face", body->faceRef(bid, hits[0]).toJson()}};
+                    params[faceKey] = {{"face", body->faceRef(bid, hits[0]).toJson()}};
                 }
             }
-            if (params["plane"].is_null()) {
+            if (params[faceKey].is_null()) {
                 return makeError("script.args", "There is no single face called '" + name + "'.");
             }
         }

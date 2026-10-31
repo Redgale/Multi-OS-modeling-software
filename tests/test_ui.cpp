@@ -1669,6 +1669,44 @@ private slots:
         QTRY_VERIFY(w.featurePanel() == nullptr);
     }
 
+    // Revolve up to a plane: the angle follows the plane, and the field for it is hidden.
+    void revolveUpToPlane()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        {
+            jig::ScriptRunner r(w.document());
+            QVERIFY(r.runText("sketch id=s1 plane=XZ\nrect sketch=s1 corner=10,0 w=10 h=16\n").ok());
+        }
+        w.runCommand("solid.revolve");
+        auto* rv = qobject_cast<RevolvePanel*>(w.featurePanel());
+        QVERIFY(rv);
+        rv->extent()->setCurrentIndex(rv->extent()->findData("to"));
+        QVERIFY(!rv->angle()->isVisible());
+        QComboBox* to = nullptr;
+        for (auto* c : rv->findChildren<QComboBox*>()) {
+            if (c->isVisible() && c->findData("\"YZ\"") >= 0) {
+                to = c;
+            }
+        }
+        QVERIFY(to);
+        to->setCurrentIndex(to->findData("\"YZ\""));
+        QTest::qWait(300);
+        QTRY_VERIFY(rv->previewOk());
+        QVERIFY(rv->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        const double quarter = M_PI * (20 * 20 - 10 * 10) * 16 / 4;
+        QVERIFY2(std::abs(volume(w) - quarter) < 1e-3, qPrintable(QString::number(volume(w))));
+        // reopening it from the timeline keeps the choice
+        w.editFeature(1);
+        rv = qobject_cast<RevolvePanel*>(w.featurePanel());
+        QVERIFY(rv);
+        QCOMPARE(rv->extent()->currentData().toString(), QString("to"));
+        rv->cancel();
+    }
+
     // Construction points: typed, then at the middle of a clicked edge; an axis through them.
     void constructionPoint()
     {

@@ -1781,7 +1781,7 @@
 <context>
     <name>jigapp::AxisPanel</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="+2155"/>
+        <location filename="../app/FeaturePanels.cpp" line="+2236"/>
         <source>Construction axis</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1998,7 +1998,7 @@
 <context>
     <name>jigapp::ExprField</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="-2662"/>
+        <location filename="../app/FeaturePanels.cpp" line="-2743"/>
         <source>e.g. 45 deg</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2436,7 +2436,7 @@
 <context>
     <name>jigapp::HolePanel</name>
     <message>
-        <location line="+268"/>
+        <location line="+349"/>
         <location line="+139"/>
         <source>Hole</source>
         <translation type="unfinished"></translation>
@@ -4803,18 +4803,43 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::RevolvePanel</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="-921"/>
-        <location line="+98"/>
+        <location filename="../app/FeaturePanels.cpp" line="-1002"/>
+        <location line="+174"/>
         <source>Revolve</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-97"/>
+        <location line="-173"/>
         <source>Spin closed areas of a sketch around an axis, like a lathe. Draw half of the outline next to the axis; it must not cross it.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+7"/>
+        <source>By an angle</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Up to a face or plane through the axis</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Floor (XY)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Front (XZ)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Side (YZ)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>Join: add to the body</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4850,7 +4875,17 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
     </message>
     <message>
         <location line="+1"/>
+        <source>Extent</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>Angle</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Up to</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -4859,12 +4894,23 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+38"/>
+        <location line="+20"/>
+        <location line="+73"/>
+        <source>Face %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-27"/>
         <source>There is no sketch to revolve yet. Create a sketch first.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+29"/>
+        <location line="+20"/>
+        <source>Click a flat face to turn up to.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+50"/>
         <source>Sketch line %1 (construction)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4874,7 +4920,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+31"/>
+        <location line="+36"/>
         <source>revolve</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4945,7 +4991,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::ShellPanel</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="-247"/>
+        <location filename="../app/FeaturePanels.cpp" line="-328"/>
         <source>Shell</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5869,7 +5915,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::SplitPanel</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="+1486"/>
+        <location filename="../app/FeaturePanels.cpp" line="+1567"/>
         <source>Split body</source>
         <translation type="unfinished"></translation>
     </message>

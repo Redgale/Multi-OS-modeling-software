@@ -299,6 +299,12 @@ public:
     {
         return axis_;
     }
+    QComboBox* extent() const
+    {
+        return extent_;
+    }
+    // a click on a flat face: turn up to it
+    void useFace(const std::string& body, const std::string& name);
 
 protected:
     jig::Feature draft() const override;
@@ -306,7 +312,8 @@ protected:
 
 private:
     void fillFromSketch();
-    QComboBox *sketch_, *axis_, *op_;
+    void updateVisibility();
+    QComboBox *sketch_, *axis_, *op_, *extent_, *to_;
     QListWidget* profiles_;
     ExprField* angle_;
 };

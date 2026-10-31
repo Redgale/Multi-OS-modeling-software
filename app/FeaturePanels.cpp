@@ -1399,6 +1399,11 @@ RevolvePanel::RevolvePanel(jig::Document& doc, Viewport* view, std::string editI
     profiles_->setMaximumHeight(110);
     axis_ = new QComboBox(this);
     angle_ = new ExprField(doc, jig::Dim::ang(), this);
+    extent_ = combo(this, {{tr("By an angle"), "angle"}, {tr("Up to a face or plane through the axis"), "to"}});
+    to_ = new QComboBox(this);
+    to_->addItem(tr("Floor (XY)"), "\"XY\"");
+    to_->addItem(tr("Front (XZ)"), "\"XZ\"");
+    to_->addItem(tr("Side (YZ)"), "\"YZ\"");
     op_ = combo(this, {{tr("Join: add to the body"), "join"},
                        {tr("Cut: remove material"), "cut"},
                        {tr("New body"), "new"},
@@ -1406,16 +1411,35 @@ RevolvePanel::RevolvePanel(jig::Document& doc, Viewport* view, std::string editI
     addRow(tr("Sketch"), sketch_);
     addRow(tr("Closed areas (profiles)"), profiles_);
     addRow(tr("Axis"), axis_);
+    addRow(tr("Extent"), extent_);
     addRow(tr("Angle"), angle_);
+    addRow(tr("Up to"), to_);
     addRow(tr("Operation"), op_);
     bindParam("op", op_);
     const auto before = stateBefore();
     fillSketches(sketch_, doc_, insertIndex(), *before);
+    for (int i = 0; i < insertIndex(); ++i) {
+        const auto& f = doc_.model().features[size_t(i)];
+        if (f.kind == jig::FeatureKind::Plane && before->planes.count(f.id)) {
+            to_->addItem(q(f.name), q(nlohmann::json(f.id).dump()));
+        }
+    }
     const jig::Feature* edit = editId_.empty() ? nullptr : doc_.feature(editId_);
     if (edit) {
         select(sketch_, edit->params.value("sketch", std::string {}));
         angle_->setText(q(edit->params.value("angle", std::string("360 deg"))));
         select(op_, edit->params.value("op", std::string("join")));
+        select(extent_, edit->params.value("extent", std::string("angle")));
+        if (edit->params.contains("to")) {
+            const auto& t = edit->params["to"];
+            const QString key = q(t.dump());
+            if (to_->findData(key) < 0) {
+                to_->addItem(t.is_object() ? tr("Face %1").arg(q(t.value("face", nlohmann::json::object()).value("name", std::string {})))
+                                           : key,
+                             key);
+            }
+            to_->setCurrentIndex(to_->findData(key));
+        }
     }
     else {
         sketch_->setCurrentIndex(sketch_->count() - 1);
@@ -1440,10 +1464,21 @@ RevolvePanel::RevolvePanel(jig::Document& doc, Viewport* view, std::string editI
         schedulePreview();
     });
     connect(profiles_, &QListWidget::itemChanged, this, [this] { schedulePreview(); });
-    for (auto* c : {axis_, op_}) {
-        connect(c, &QComboBox::currentIndexChanged, this, [this] { schedulePreview(); });
+    for (auto* c : {axis_, op_, extent_, to_}) {
+        connect(c, &QComboBox::currentIndexChanged, this, [this] {
+            updateVisibility();
+            schedulePreview();
+        });
     }
     connect(angle_, &ExprField::changed, this, [this] { schedulePreview(); });
+    if (view_) {
+        connect(view_.data(), &Viewport::faceClicked, this, [this](const QString& b, const QString& n, Qt::KeyboardModifiers) {
+            if (extent_->currentData().toString() == "to") {
+                useFace(b.toStdString(), n.toStdString());
+            }
+        });
+    }
+    updateVisibility();
     if (sketch_->count() == 0) {
         status_->setText("<b>✕ " + tr("There is no sketch to revolve yet. Create a sketch first.") + "</b>");
         ok_->setEnabled(false);
@@ -1451,6 +1486,47 @@ RevolvePanel::RevolvePanel(jig::Document& doc, Viewport* view, std::string editI
     else {
         schedulePreview();
     }
+}
+
+void RevolvePanel::useFace(const std::string& body, const std::string& name)
+{
+    const auto before = stateBefore();
+    auto it = before->bodies.find(body);
+    if (it == before->bodies.end()) {
+        return;
+    }
+    auto hits = it->second->findFaces(name);
+    if (hits.empty()) {
+        return;
+    }
+    if (jig::measureItem(it->second->face(hits[0])).kind != "flat face") {
+        status_->setText("<b>✕ " + tr("Click a flat face to turn up to.") + "</b>");
+        return;
+    }
+    extent_->setCurrentIndex(extent_->findData("to"));
+    const QString key = q(nlohmann::json {{"face", it->second->faceRef(body, hits[0]).toJson()}}.dump());
+    int i = to_->findData(key);
+    if (i < 0) {
+        to_->addItem(tr("Face %1").arg(q(name)), key);
+        i = to_->count() - 1;
+    }
+    to_->setCurrentIndex(i);
+}
+
+void RevolvePanel::updateVisibility()
+{
+    auto show = [this](QWidget* w, bool on) {
+        w->setVisible(on);
+        const int i = form_->indexOf(w);
+        if (i > 0) {
+            if (auto* item = form_->itemAt(i - 1); item && item->widget()) {
+                item->widget()->setVisible(on);
+            }
+        }
+    };
+    const bool upTo = extent_->currentData().toString() == "to";
+    show(angle_, !upTo);
+    show(to_, upTo);
 }
 
 void RevolvePanel::fillFromSketch()
@@ -1500,6 +1576,11 @@ jig::Feature RevolvePanel::draft() const
                 {"axis", axis},
                 {"angle", text(angle_, "360 deg")},
                 {"op", current(op_)}};
+    if (current(extent_) == "to") {
+        const std::string d = to_->currentData().toString().toStdString();
+        f.params["extent"] = "to";
+        f.params["to"] = nlohmann::json::parse(d.empty() ? "\"XY\"" : d, nullptr, false);
+    }
     return f;
 }
 
