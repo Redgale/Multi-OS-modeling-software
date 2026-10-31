@@ -33,6 +33,8 @@
 #include <BRepBuilderAPI_MakeWire.hxx>
 #include <BRepPrimAPI_MakePrism.hxx>
 #include <BRepPrimAPI_MakeRevol.hxx>
+#include <BRepOffsetAPI_MakeOffset.hxx>
+#include <LocOpe_DPrism.hxx>
 #include <gp_Lin.hxx>
 #include <BRepBuilderAPI_MakeVertex.hxx>
 #include <BRepExtrema_DistShapeShape.hxx>
@@ -71,6 +73,14 @@ std::string kernelText(const Standard_Failure& f)
     const char* m = f.GetMessageString();
     // typeid rather than DynamicType(): OCCT 8 no longer makes Standard_Failure a transient.
     return std::string(typeid(f).name()) + ": " + (m ? m : "");
+}
+
+std::string fmtMm(double v)
+{
+    std::ostringstream os;
+    os.precision(v < 10 ? 2 : 3);
+    os << v << " mm";
+    return os.str();
 }
 
 std::string surfaceTypeName(GeomAbs_SurfaceType t)
@@ -735,21 +745,167 @@ Result<NamedShape> makeExtrusion(const ExtrudeInput& in)
         return makeError("extrude.distance", "The extrude distance must be larger than zero.",
                          {"Type a distance such as 10 mm, or drag the arrow."});
     }
+    if (in.direction == ExtrudeDirection::TwoSides && !(in.distance2 >= 0)) {
+        return makeError("extrude.distance", "The second distance must not be negative.");
+    }
+    if (std::abs(in.taper) >= std::numbers::pi / 2 - 1e-3) {
+        return makeError("extrude.taper", "The taper angle must be between -89 and 89 degrees.");
+    }
     try {
         gp_Vec n(in.normal);
-        gp_Vec v = n * in.distance;
-        gp_Vec shift(0, 0, 0);
+        // `ahead` goes along the extrude direction from the sketch plane, `behind` the other way
+        double ahead = in.distance, behind = 0;
         if (in.direction == ExtrudeDirection::Reverse) {
-            v.Reverse();
+            n.Reverse();
         }
         else if (in.direction == ExtrudeDirection::Symmetric) {
-            shift = n * (-in.distance / 2);
+            ahead = behind = in.distance / 2;
         }
+        else if (in.direction == ExtrudeDirection::TwoSides) {
+            behind = in.distance2;
+        }
+        const gp_Vec v = n * (ahead + behind);
+        const gp_Vec shift = n * (-behind);
         const bool multi = in.profiles.size() > 1;
         std::unique_ptr<NamedShape> acc;
         for (const Profile* p : in.profiles) {
             TopoDS_Face face = p->face;
             TopTools_DataMapOfShapeInteger edgeEntity = p->edgeEntity;
+            if (in.thin > 1e-9) {
+                // a wall along the outline: the area between two offsets of the profile
+                const double t = in.thin;
+                const double outer = in.thinSide < 0 ? 0 : in.thinSide > 0 ? t : t / 2;
+                const double inner = outer - t;
+                auto offsetFace = [&](double d) -> std::optional<TopoDS_Shape> {
+                    if (std::abs(d) < 1e-12) {
+                        return TopoDS_Shape(p->face);
+                    }
+                    BRepOffsetAPI_MakeOffset off(p->face, GeomAbs_Intersection);
+                    off.Perform(d);
+                    if (!off.IsDone()) {
+                        return std::nullopt;
+                    }
+                    TopoDS_Shape f;
+                    for (TopExp_Explorer wx(off.Shape(), TopAbs_WIRE); wx.More(); wx.Next()) {
+                        f = BRepBuilderAPI_MakeFace(TopoDS::Wire(wx.Current()), true).Face();
+                        break;
+                    }
+                    if (f.IsNull()) {
+                        return std::nullopt;
+                    }
+                    return f;
+                };
+                auto o = offsetFace(outer), i = offsetFace(inner);
+                if (!o || !i) {
+                    return makeError("extrude.thin", "A wall of " + fmtMm(t) + " does not fit this outline.",
+                                     {"Use a thinner wall, or put it outside the outline."});
+                }
+                BRepAlgoAPI_Cut ring(*o, *i);
+                ring.Build();
+                TopoDS_Shape r = ring.Shape();
+                TopExp_Explorer fx(r, TopAbs_FACE);
+                if (!ring.IsDone() || !fx.More()) {
+                    return makeError("extrude.thin", "A wall of " + fmtMm(t) + " does not fit this outline.",
+                                     {"Use a thinner wall, or put it outside the outline."});
+                }
+                face = TopoDS::Face(fx.Current());
+                edgeEntity.Clear();  // the wall's sides are named outer/inner below
+            }
+            if (std::abs(in.taper) > 1e-12) {
+                // a drafted prism: the outline leans in (positive) or out as it goes
+                TopoDS_Face spine = face;
+                gp_Dir fn = BRepAdaptor_Surface(spine).Plane().Axis().Direction();
+                if (spine.Orientation() == TopAbs_REVERSED) {
+                    fn.Reverse();
+                }
+                if (fn.Dot(gp_Dir(n)) < 0) {
+                    spine.Reverse();
+                }
+                // One drafted prism per side, each narrowing away from the sketch plane.
+                // OCCT measures the height along the slanted side, hence the cosine.
+                const double c = std::cos(in.taper);
+                const std::string sfx = multi ? "[" + p->key + "]" : "";
+                std::unique_ptr<NamedShape> both;
+                for (int side = 0; side < 2; ++side) {
+                    const double h = side == 0 ? ahead : behind;
+                    if (h < 1e-9) {
+                        continue;
+                    }
+                    // the behind half: the profile mirrored in its own plane, so its surface
+                    // normal (which the drafted prism follows) points the other way
+                    TopoDS_Face sp = spine;
+                    std::map<int, int> mirroredEnt;
+                    TopTools_DataMapOfShapeInteger sideEnt;
+                    for (TopTools_DataMapIteratorOfDataMapOfShapeInteger it(edgeEntity); it.More(); it.Next()) {
+                        sideEnt.Bind(it.Key(), it.Value());
+                    }
+                    if (side == 1) {
+                        gp_Trsf m;
+                        m.SetMirror(gp_Ax2(BRepAdaptor_Surface(spine).Plane().Location(), gp_Dir(n)));
+                        BRepBuilderAPI_Transform tr(spine, m, true);
+                        sp = TopoDS::Face(tr.Shape());
+                        sideEnt.Clear();
+                        for (TopTools_DataMapIteratorOfDataMapOfShapeInteger it(edgeEntity); it.More(); it.Next()) {
+                            for (TopTools_ListIteratorOfListOfShape mm(tr.Modified(it.Key())); mm.More(); mm.Next()) {
+                                sideEnt.Bind(mm.Value(), it.Value());
+                            }
+                        }
+                    }
+                    LocOpe_DPrism dp(sp, h / c, in.taper);
+                    if (!dp.IsDone() || !BRepCheck_Analyzer(dp.Shape()).IsValid()) {
+                        return makeError("extrude.taper", "This taper is too steep for this shape and distance.",
+                                         {"Use a smaller angle or a shorter distance."});
+                    }
+                    NamedShape part(dp.Shape());
+                    for (TopExp_Explorer ee(sp, TopAbs_EDGE); ee.More(); ee.Next()) {
+                        int ent = 0;
+                        for (TopTools_DataMapIteratorOfDataMapOfShapeInteger it(sideEnt); it.More(); it.Next()) {
+                            if (it.Key().IsSame(ee.Current())) {
+                                ent = it.Value();
+                            }
+                        }
+                        assignNames(part, toVector(dp.Shapes(ee.Current()), TopAbs_FACE),
+                                    in.featureId + "/side:" + std::to_string(ent) + (side == 1 ? ":back" : ""));
+                    }
+                    // caps by position along the direction: the far one is "end" ahead and
+                    // "start" behind; the one on the sketch plane is "start" for a one-sided extrude
+                    const gp_Pnt o = BRepAdaptor_Surface(spine).Plane().Location();
+                    for (int fi = 0; fi < part.faceCount(); ++fi) {
+                        if (!part.faceName(fi).empty() || part.faceFingerprint(fi).type != "plane") {
+                            continue;
+                        }
+                        GProp_GProps g;
+                        BRepGProp::SurfaceProperties(part.face(fi), g);
+                        const double along = gp_Vec(o, g.CentreOfMass()).Dot(n);
+                        if (std::abs(std::abs(along) - h) < 1e-6) {
+                            assignNames(part, {part.face(fi)}, in.featureId + (side == 0 ? "/end" : "/start") + sfx);
+                        }
+                        else if (std::abs(along) < 1e-6 && side == 0 && behind < 1e-9) {
+                            assignNames(part, {part.face(fi)}, in.featureId + "/start" + sfx);
+                        }
+                    }
+                    nameLeftovers(part, in.featureId);
+                    if (!both) {
+                        both = std::make_unique<NamedShape>(std::move(part));
+                    }
+                    else {
+                        auto fused = booleanOp(in.featureId, BoolOp::Join, *both, part);
+                        if (!fused) {
+                            return fused.error();
+                        }
+                        both = std::make_unique<NamedShape>(std::move(fused.value()));
+                    }
+                }
+                NamedShape ns = std::move(*both);
+                if (!acc) {
+                    acc = std::make_unique<NamedShape>(std::move(ns));
+                }
+                else {
+                    auto fused = booleanOp(in.featureId, BoolOp::Join, *acc, ns);
+                    acc = std::make_unique<NamedShape>(fused ? std::move(fused.value()) : namedCompound({*acc, ns}));
+                }
+                continue;
+            }
             if (shift.Magnitude() > 0) {
                 gp_Trsf t;
                 t.SetTranslation(shift);
@@ -1249,13 +1405,6 @@ std::optional<TopoDS_Shape> tryEdgeOp(const TopoDS_Shape& shape,
     }
 }
 
-std::string fmtMm(double v)
-{
-    std::ostringstream os;
-    os.precision(v < 10 ? 2 : 3);
-    os << v << " mm";
-    return os.str();
-}
 
 }  // namespace
 

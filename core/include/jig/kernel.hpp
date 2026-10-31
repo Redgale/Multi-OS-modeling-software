@@ -213,7 +213,8 @@ enum class ExtrudeDirection
 {
     OneSide,
     Reverse,
-    Symmetric
+    Symmetric,
+    TwoSides  // `distance` one way, `distance2` the other
 };
 
 struct ExtrudeInput
@@ -223,6 +224,10 @@ struct ExtrudeInput
     gp_Dir normal;
     double distance = 10;  // mm, >0
     ExtrudeDirection direction = ExtrudeDirection::OneSide;
+    double distance2 = 0;  // TwoSides: how far it goes the other way
+    double taper = 0;      // draft angle in radians; positive narrows the shape as it goes
+    double thin = 0;       // > 0: a wall of this thickness along the outline instead of a solid
+    int thinSide = 0;      // 0 centred on the outline, -1 inside it, +1 outside it
 };
 
 // Builds the extruded tool body and names its faces.

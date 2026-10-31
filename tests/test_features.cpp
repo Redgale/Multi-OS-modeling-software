@@ -558,3 +558,46 @@ TEST(SketchOffset, OutlinesAndSingleCurves)
     ASSERT_FALSE(res.ok());
     EXPECT_NE(res.error().message.find("could not be offset"), std::string::npos) << res.error().message;
 }
+
+TEST(ExtrudeOptions, TwoSidesTaperAndThin)
+{
+    const std::string sq = "sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=20 h=20\n";
+    const double t5 = std::tan(5 * pi / 180);
+    auto frustum = [&](double h) {  // a 20 x 20 square narrowing at 5 degrees over h
+        const double c = 20 - 2 * h * t5;
+        return h / 3 * (400 + 20 * c + c * c);
+    };
+    auto two = build(sq + "extrude id=e1 sketch=s1 distance=10 direction=two distance2=4\n");
+    expectAllOk(*two);
+    EXPECT_NEAR(props(*two).volume, 400 * 14, 1e-6);
+    EXPECT_NEAR(props(*two).zmin, -4, 1e-9);
+    auto taper = build(sq + "extrude id=e1 sketch=s1 distance=10 taper=5deg\n");
+    expectAllOk(*taper);
+    EXPECT_NEAR(props(*taper).volume, frustum(10), 1e-6);
+    EXPECT_NEAR(props(*taper).zmax, 10, 1e-9);  // the height is the vertical distance
+    EXPECT_EQ(taper->state().bodies.at("e1")->findFaces("e1/end").size(), 1u);
+    EXPECT_EQ(taper->state().bodies.at("e1")->findFaces("e1/start").size(), 1u);
+    // both sides narrow away from the sketch plane
+    auto both = build(sq + "extrude id=e1 sketch=s1 distance=10 direction=two distance2=4 taper=5deg\n");
+    expectAllOk(*both);
+    EXPECT_NEAR(props(*both).volume, frustum(10) + frustum(4), 1e-6);
+    EXPECT_NEAR(props(*both).xmax, 10, 1e-9);
+    // a negative taper widens
+    auto out = build(sq + "extrude id=e1 sketch=s1 distance=10 taper=-5deg\n");
+    expectAllOk(*out);
+    EXPECT_NEAR(props(*out).xmax, 10 + 10 * t5, 1e-9);
+    // thin walls: centred, inside, outside
+    auto thin = build(sq + "extrude id=e1 sketch=s1 distance=10 thin=2mm\n");
+    expectAllOk(*thin);
+    EXPECT_NEAR(props(*thin).volume, (22 * 22 - 18 * 18) * 10, 1e-6);
+    auto inside = build(sq + "extrude id=e1 sketch=s1 distance=10 thin=2mm thin_side=inside\n");
+    EXPECT_NEAR(props(*inside).volume, (400 - 16 * 16) * 10, 1e-6);
+    auto outside = build(sq + "extrude id=e1 sketch=s1 distance=10 thin=2mm thin_side=outside\n");
+    EXPECT_NEAR(props(*outside).volume, (24 * 24 - 400) * 10, 1e-6);
+    // too steep is explained
+    auto bad = std::make_unique<Document>();
+    ScriptRunner r(*bad);
+    r.strict = false;
+    ASSERT_TRUE(r.runText(sq + "extrude id=e1 sketch=s1 distance=200 taper=10deg\n").ok());
+    EXPECT_EQ(int(bad->status(1).level), int(StatusLevel::Error));
+}

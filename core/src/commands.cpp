@@ -455,7 +455,7 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
     if (doc.units() != LengthUnit::Millimetre) {
         static const std::set<std::string> lengthKeys {
             "w", "h", "d", "r", "width", "height", "distance", "depth", "diameter", "thickness", "radius",
-            "offset", "dx", "dy", "dz", "spacing1", "spacing2", "cbore_diameter", "cbore_depth", "csink_diameter",
+            "offset", "dx", "dy", "dz", "distance2", "thin", "spacing1", "spacing2", "cbore_diameter", "cbore_depth", "csink_diameter",
             "center", "corner", "points", "c1", "c2", "p1", "p2", "at"};
         for (auto& [k, v] : a.kv) {
             if (!lengthKeys.count(k)) {
@@ -974,6 +974,11 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
             f.params["extent"] = a.get("extent", "distance");
             f.params["distance"] = a.get("distance", "10 mm");
             f.params["direction"] = a.get("direction", "one");
+            for (const char* key : {"distance2", "taper", "thin", "thin_side"}) {
+                if (a.has(key)) {
+                    f.params[key] = a.get(key);
+                }
+            }
             f.params["op"] = a.get("op", "new");
             if (a.has("target")) {
                 f.params["target"] = a.get("target");

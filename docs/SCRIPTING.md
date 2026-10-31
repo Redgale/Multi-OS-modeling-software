@@ -59,7 +59,7 @@ nothing is committed.
 
 | Command | Meaning |
 |---|---|
-| `extrude id=e1 sketch=s1 distance=<len> [direction=one\|reverse\|symmetric] [extent=distance\|all] [op=new\|join\|cut\|intersect] [profiles=all\|<key>;<key>] [target=<body id>]` | Extrude closed areas of a sketch. `extent=all` goes through everything |
+| `extrude id=e1 sketch=s1 distance=<len> [direction=one\|reverse\|symmetric\|two] [distance2=<len>] [taper=<angle>] [thin=<len> thin_side=center\|inside\|outside] [extent=distance\|all] [op=new\|join\|cut\|intersect] [profiles=all\|<key>;<key>] [target=<body id>]` | Extrude closed areas of a sketch. `extent=all` goes through everything; `direction=two` uses `distance2` for the other side; `taper` narrows the shape (negative widens); `thin` makes a wall along the outline |
 | `fillet id=f1 edges="<selector>;<selector>" radius=<len> [body=<id>]` | Round edges. Selectors: `all`, `face:<face name>` (all edges of that face), `feature:<id>` (edges touching faces made by that feature), `name:<edge name>` |
 | `chamfer id=c1 edges="<selector>;…" distance=<len> [body=<id>]` | Bevel edges (equal distance); same selectors as fillet |
 | `shell id=sh1 faces="face:<name>;…" thickness=<len> [body=<id>]` | Hollow a body leaving walls; the listed faces are removed (left open). `faces=none` makes a closed hollow |

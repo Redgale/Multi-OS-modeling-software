@@ -128,6 +128,26 @@ public:
     {
         return op_;
     }
+    QComboBox* direction() const
+    {
+        return direction_;
+    }
+    ExprField* distance2() const
+    {
+        return distance2_;
+    }
+    ExprField* taper() const
+    {
+        return taper_;
+    }
+    QCheckBox* thinWall() const
+    {
+        return thinOn_;
+    }
+    ExprField* thickness() const
+    {
+        return thin_;
+    }
 
 protected:
     jig::Feature draft() const override;
@@ -136,10 +156,12 @@ protected:
 
 private:
     void fillProfiles();
+    void updateVisibility();
     QString autoOperation() const;
-    QComboBox *sketch_, *extent_, *direction_, *op_;
+    QComboBox *sketch_, *extent_, *direction_, *op_, *thinSide_;
     QListWidget* profiles_;
-    ExprField* distance_;
+    ExprField *distance_, *distance2_, *taper_, *thin_;
+    QCheckBox* thinOn_;
 };
 
 // Fillet (round) and Chamfer (bevel) share this panel: pick edges, type one size.

@@ -436,7 +436,31 @@ FeatureOutcome applyExtrude(const Document& doc, const Feature& f, const std::sh
     std::string dir = p.value("direction", std::string("one"));
     ei.direction = dir == "symmetric" ? ExtrudeDirection::Symmetric
                  : dir == "reverse"   ? ExtrudeDirection::Reverse
+                 : dir == "two"       ? ExtrudeDirection::TwoSides
                                       : ExtrudeDirection::OneSide;
+    if (ei.direction == ExtrudeDirection::TwoSides) {
+        auto d2 = doc.evalLength(p.value("distance2", std::string("10 mm")));
+        if (!d2) {
+            return failed(d2.error());
+        }
+        ei.distance2 = d2.value();
+    }
+    if (p.contains("taper")) {
+        auto t = doc.evalAngle(p.value("taper", std::string("0 deg")));
+        if (!t) {
+            return failed(t.error());
+        }
+        ei.taper = t.value();
+    }
+    if (p.contains("thin")) {
+        auto t = doc.evalLength(p.value("thin", std::string("0 mm")));
+        if (!t) {
+            return failed(t.error());
+        }
+        ei.thin = t.value();
+        const std::string side = p.value("thin_side", std::string("center"));
+        ei.thinSide = side == "inside" ? -1 : side == "outside" ? 1 : 0;
+    }
     if (p.value("extent", std::string("distance")) == "all") {
         Bnd_Box all;
         for (auto& [id, b] : in->bodies) {

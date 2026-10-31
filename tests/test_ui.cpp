@@ -795,6 +795,57 @@ private slots:
         QCOMPARE(sk->report().dof, dofBefore + 1);
     }
 
+    // Extrude options in the panel: thin wall, then edit to two sides with a taper.
+    void extrudeThinTwoSidesTaper()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        Viewport* view = w.viewport();
+        QVERIFY(w.createSketchOn("XY"));
+        SketchEditor* sk = w.sketchEditor();
+        sk->setTool(SketchEditor::Tool::CenterRectangle);
+        QTest::mouseMove(view, sk->screenOf(0, 0));
+        QTest::mouseClick(view, Qt::LeftButton, Qt::NoModifier, sk->screenOf(0, 0));
+        QTest::mouseMove(view, sk->screenOf(10, 8));
+        sk->typeValues({"20 mm", "20 mm"});
+        w.runCommand("sketch.finish");
+        w.runCommand("solid.extrude");
+        auto* ex = qobject_cast<ExtrudePanel*>(w.featurePanel());
+        QVERIFY(ex);
+        ex->distance()->setText("10 mm");
+        QVERIFY(!ex->thickness()->isVisible());  // only shown when asked for
+        ex->thinWall()->setChecked(true);
+        QVERIFY(ex->thickness()->isVisible());
+        ex->thickness()->setText("2 mm");
+        QTest::qWait(300);
+        QTRY_VERIFY2(ex->previewOk(), qPrintable(ex->statusText()));
+        QVERIFY(ex->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        QVERIFY2(std::abs(volume(w) - (22 * 22 - 18 * 18) * 10) < 1e-6, qPrintable(QString::number(volume(w))));
+
+        w.editFeature(1);
+        auto* ed = qobject_cast<ExtrudePanel*>(w.featurePanel());
+        QVERIFY(ed);
+        QVERIFY(ed->thinWall()->isChecked());
+        ed->thinWall()->setChecked(false);
+        ed->direction()->setCurrentIndex(ed->direction()->findData("two"));
+        QVERIFY(ed->distance2()->isVisible());
+        ed->distance2()->setText("4 mm");
+        ed->taper()->setText("5 deg");
+        QTest::qWait(300);
+        QTRY_VERIFY2(ed->previewOk(), qPrintable(ed->statusText()));
+        QVERIFY(ed->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        const double t5 = std::tan(5 * M_PI / 180);
+        auto frustum = [&](double h) {
+            const double c = 20 - 2 * h * t5;
+            return h / 3 * (400 + 20 * c + c * c);
+        };
+        QVERIFY2(std::abs(volume(w) - (frustum(10) + frustum(4))) < 1e-6, qPrintable(QString::number(volume(w))));
+    }
+
     // Revolve a ring, drill it from its top face, repeat the hole around the axis,
     // and mirror the result: the M3 panels driven like a person would.
     void ringRevolveHolePatternMirror()

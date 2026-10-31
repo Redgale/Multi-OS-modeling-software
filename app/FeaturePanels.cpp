@@ -317,6 +317,15 @@ ExtrudePanel::ExtrudePanel(jig::Document& doc, Viewport* view, std::string editI
     direction_->addItem(tr("One side"), "one");
     direction_->addItem(tr("Other side"), "reverse");
     direction_->addItem(tr("Both sides (symmetric)"), "symmetric");
+    direction_->addItem(tr("Two sides (two distances)"), "two");
+    distance2_ = new ExprField(doc, jig::Dim::len(), this);
+    taper_ = new ExprField(doc, jig::Dim::ang(), this);
+    thinOn_ = new QCheckBox(tr("Thin wall instead of solid"), this);
+    thin_ = new ExprField(doc, jig::Dim::len(), this);
+    thinSide_ = new QComboBox(this);
+    thinSide_->addItem(tr("Centred on the outline"), "center");
+    thinSide_->addItem(tr("Inside the outline"), "inside");
+    thinSide_->addItem(tr("Outside the outline"), "outside");
     op_ = new QComboBox(this);
     op_->addItem(tr("Auto"), "auto");
     op_->addItem(tr("Join: add to the body"), "join");
@@ -328,6 +337,11 @@ ExtrudePanel::ExtrudePanel(jig::Document& doc, Viewport* view, std::string editI
     addRow(tr("Extent"), extent_);
     addRow(tr("Distance"), distance_);
     addRow(tr("Direction"), direction_);
+    addRow(tr("Other side distance"), distance2_);
+    addRow(tr("Taper (narrows as it goes; negative widens)"), taper_);
+    form_->addWidget(thinOn_);
+    addRow(tr("Wall thickness"), thin_);
+    addRow(tr("Wall position"), thinSide_);
     addRow(tr("Operation"), op_);
 
     // sketches available before the insertion point
@@ -346,11 +360,19 @@ ExtrudePanel::ExtrudePanel(jig::Document& doc, Viewport* view, std::string editI
         extent_->setCurrentIndex(std::max(0, extent_->findData(q(p.value("extent", std::string("distance"))))));
         distance_->setText(q(p.value("distance", std::string("10 mm"))));
         direction_->setCurrentIndex(std::max(0, direction_->findData(q(p.value("direction", std::string("one"))))));
+        distance2_->setText(q(p.value("distance2", doc_.defaultLength(10, 0.5))));
+        taper_->setText(q(p.value("taper", std::string("0 deg"))));
+        thinOn_->setChecked(p.contains("thin"));
+        thin_->setText(q(p.value("thin", doc_.defaultLength(2, 0.08))));
+        thinSide_->setCurrentIndex(std::max(0, thinSide_->findData(q(p.value("thin_side", std::string("center"))))));
         op_->setCurrentIndex(std::max(0, op_->findData(q(p.value("op", std::string("join"))))));
     }
     else {
         sketch_->setCurrentIndex(sketch_->count() - 1);
         distance_->setText(remembered().count("extrude.distance") ? remembered()["extrude.distance"] : q(doc_.defaultLength(10, 0.5)));
+        distance2_->setText(q(doc_.defaultLength(10, 0.5)));
+        taper_->setText("0 deg");
+        thin_->setText(q(doc_.defaultLength(2, 0.08)));
     }
     fillProfiles();
     if (edit && edit->params.contains("profiles") && edit->params["profiles"].is_array()) {
@@ -374,6 +396,16 @@ ExtrudePanel::ExtrudePanel(jig::Document& doc, Viewport* view, std::string editI
     connect(extent_, &QComboBox::currentIndexChanged, this,
             [this] { distance_->setEnabled(extent_->currentData().toString() == "distance"); });
     connect(distance_, &ExprField::changed, this, [this] { schedulePreview(); });
+    for (auto* f : {distance2_, taper_, thin_}) {
+        connect(f, &ExprField::changed, this, [this] { schedulePreview(); });
+    }
+    connect(thinSide_, &QComboBox::currentIndexChanged, this, [this] { schedulePreview(); });
+    connect(direction_, &QComboBox::currentIndexChanged, this, [this] { updateVisibility(); });
+    connect(thinOn_, &QCheckBox::toggled, this, [this] {
+        updateVisibility();
+        schedulePreview();
+    });
+    updateVisibility();
     if (sketch_->count() == 0) {
         status_->setText("<b>✕ " + tr("There is no sketch to extrude yet. Create a sketch first.") + "</b>");
         ok_->setEnabled(false);
@@ -383,6 +415,22 @@ ExtrudePanel::ExtrudePanel(jig::Document& doc, Viewport* view, std::string editI
     }
     distance_->edit()->setFocus();
     distance_->edit()->selectAll();
+}
+
+void ExtrudePanel::updateVisibility()
+{
+    auto show = [this](QWidget* w, bool on) {
+        w->setVisible(on);
+        const int i = form_->indexOf(w);
+        if (i > 0) {
+            if (auto* item = form_->itemAt(i - 1); item && item->widget()) {
+                item->widget()->setVisible(on);
+            }
+        }
+    };
+    show(distance2_, direction_->currentData().toString() == "two");
+    show(thin_, thinOn_->isChecked());
+    show(thinSide_, thinOn_->isChecked());
 }
 
 void ExtrudePanel::fillProfiles()
@@ -474,6 +522,16 @@ jig::Feature ExtrudePanel::draft() const
     p["extent"] = extent_->currentData().toString().toStdString();
     p["distance"] = distance_->text().isEmpty() ? std::string("10 mm") : distance_->text().toStdString();
     p["direction"] = direction_->currentData().toString().toStdString();
+    if (p["direction"] == "two") {
+        p["distance2"] = distance2_->text().isEmpty() ? std::string("10 mm") : distance2_->text().toStdString();
+    }
+    if (taper_->valid() && std::abs(taper_->value()) > 1e-12) {
+        p["taper"] = taper_->text().toStdString();
+    }
+    if (thinOn_->isChecked()) {
+        p["thin"] = thin_->text().isEmpty() ? std::string("2 mm") : thin_->text().toStdString();
+        p["thin_side"] = thinSide_->currentData().toString().toStdString();
+    }
     QString op = op_->currentData().toString();
     if (op == "auto") {
         op = autoOperation();
