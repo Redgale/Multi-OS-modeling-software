@@ -2,6 +2,9 @@
 // UI workflow test: drives the real application window the way a person would
 // (clicks in the 3D view, typed values, panel OK), and checks the resulting model.
 // Brief 7.1: "UI smoke and workflow tests that drive the real app", with screenshots.
+#include <BRepGProp.hxx>
+#include <GProp_GProps.hxx>
+#include <QComboBox>
 #include <QtTest>
 
 #include "FeaturePanels.hpp"
@@ -253,6 +256,125 @@ private slots:
         view->homeView();
         QTest::qWait(150);
         w.grab().save(shotPath("pen-cup"));
+    }
+
+    // Revolve a ring, drill it from its top face, repeat the hole around the axis,
+    // and mirror the result: the M3 panels driven like a person would.
+    void ringRevolveHolePatternMirror()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        Viewport* view = w.viewport();
+
+        // 1. A 10 x 16 rectangle on the front plane, 10 mm from the vertical axis.
+        QVERIFY(w.createSketchOn("XZ"));
+        SketchEditor* sk = w.sketchEditor();
+        QVERIFY(sk);
+        sk->setTool(SketchEditor::Tool::Rectangle);
+        const QPoint corner = sk->screenOf(10, 0);
+        QTest::mouseMove(view, corner);
+        QTest::mouseClick(view, Qt::LeftButton, Qt::NoModifier, corner);
+        QTest::mouseMove(view, sk->screenOf(15, 8));
+        sk->typeValues({"10", "16"});
+        w.runCommand("sketch.finish");
+
+        // 2. Revolve around the Z axis (the default when the sketch has no construction line).
+        w.runCommand("solid.revolve");
+        auto* rv = qobject_cast<RevolvePanel*>(w.featurePanel());
+        QVERIFY(rv);
+        QCOMPARE(rv->axis()->currentData().toString(), QString("Z"));
+        QTRY_VERIFY(rv->previewOk());
+        QVERIFY(rv->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        const double ring = M_PI * (20 * 20 - 10 * 10) * 16;
+        QVERIFY2(std::abs(volume(w) - ring) < 1e-3, qPrintable(QString::number(volume(w))));
+
+        // 3. Sketch on the flat top (z = 16) and place one point at radius 15.
+        const std::string bodyId = w.document().state().bodies.begin()->first;
+        const auto& body = *w.document().state().bodies.begin()->second;
+        int top = -1;
+        for (int i = 0; i < body.faceCount(); ++i) {
+            GProp_GProps g;
+            BRepGProp::SurfaceProperties(body.face(i), g);
+            if (std::abs(g.CentreOfMass().Z() - 16) < 1e-6 && std::abs(g.Mass() - M_PI * 300) < 1e-3) {
+                top = i;
+            }
+        }
+        QVERIFY(top >= 0);
+        QVERIFY(w.createSketchOn({}, bodyId, top));
+        sk = w.sketchEditor();
+        QVERIFY(sk);
+        sk->setTool(SketchEditor::Tool::Point);
+        QTRY_VERIFY(view->meshesReady());
+        const QPoint at = view->project(QVector3D(15, 0, 16)).toPoint();
+        QTest::mouseMove(view, at);
+        QTest::mouseClick(view, Qt::LeftButton, Qt::NoModifier, at);
+        w.runCommand("sketch.finish");
+
+        // 4. A 4 mm hole straight through.
+        w.runCommand("solid.hole");
+        auto* hp = qobject_cast<HolePanel*>(w.featurePanel());
+        QVERIFY(hp);
+        hp->diameter()->setText("4 mm");
+        QComboBox* extent = nullptr;
+        for (auto* c : hp->findChildren<QComboBox*>()) {
+            if (c->findData("all") >= 0) {
+                extent = c;
+            }
+        }
+        QVERIFY(extent);
+        extent->setCurrentIndex(extent->findData("all"));
+        QTest::qWait(300);
+        QTRY_VERIFY(hp->previewOk());
+        QVERIFY(hp->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        const double hole = M_PI * 4 * 16;
+        QVERIFY2(std::abs(volume(w) - (ring - hole)) < 1e-3, qPrintable(QString::number(volume(w))));
+
+        // 5. Ring copy of the hole: six around the axis.
+        w.runCommand("solid.pattern_circ");
+        auto* pp = qobject_cast<PatternPanel*>(w.featurePanel());
+        QVERIFY(pp);
+        QCOMPARE(pp->source()->currentData().toString().left(1), QString("h"));
+        pp->count()->setText("6");
+        QTest::qWait(300);
+        QTRY_VERIFY(pp->previewOk());
+        QVERIFY(pp->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        QVERIFY2(std::abs(volume(w) - (ring - 6 * hole)) < 1e-3, qPrintable(QString::number(volume(w))));
+        QTRY_VERIFY(view->meshesReady());
+        view->homeView();
+        QTest::qWait(300);
+        w.grab().save(shotPath("ring-pattern"));
+
+        // 6. Mirror under the floor as a separate body.
+        w.runCommand("solid.mirror");
+        auto* mp = qobject_cast<MirrorPanel*>(w.featurePanel());
+        QVERIFY(mp);
+        mp->plane()->setCurrentIndex(mp->plane()->findData("XY"));
+        QComboBox* op = nullptr;
+        for (auto* c : mp->findChildren<QComboBox*>()) {
+            if (c->findData("new") >= 0) {
+                op = c;
+            }
+        }
+        QVERIFY(op);
+        op->setCurrentIndex(op->findData("new"));
+        QTest::qWait(300);
+        QTRY_VERIFY(mp->previewOk());
+        QVERIFY(mp->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        QCOMPARE(int(w.document().state().bodies.size()), 2);
+
+        // Editing the hole from the timeline reopens its panel with the stored values.
+        w.editFeature(3);
+        auto* again = qobject_cast<HolePanel*>(w.featurePanel());
+        QVERIFY(again);
+        QCOMPARE(again->diameter()->text(), QString("4 mm"));
+        again->cancel();
+        QTRY_VERIFY(w.featurePanel() == nullptr);
     }
 };
 

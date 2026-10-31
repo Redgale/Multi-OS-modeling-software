@@ -114,9 +114,9 @@ CommandRegistry::CommandRegistry()
     add({"solid.extrude", "Extrude", "Extrude", "CREATE", "Push a closed sketch area into 3D, adding or cutting material.", "E", {"pull up", "thicken", "make 3d", "pocket", "cut through"}, true, false, true, m2});
     add({"solid.revolve", "Revolve", "Revolve", "CREATE", "Spin a profile around an axis, like a lathe: knobs, cups, wheels.", "", {"lathe", "spin", "turn"}, true, false, false, m4});
     add({"solid.hole", "Hole", "Hole", "CREATE", "Drill a plain, counterbored or countersunk hole for a screw.", "H", {"drill", "screw hole", "bore", "countersink", "counterbore"}, true, false, false, m3});
-    add({"solid.mirror", "Mirror", "Mirror", "CREATE", "Copy features or bodies across a plane.", "", {"symmetric", "flip copy"}, false, false, false, m3});
-    add({"solid.pattern_rect", "Grid copy", "Rectangular Pattern", "CREATE", "Repeat features or bodies in rows and columns.", "", {"array", "grid", "repeat"}, false, false, false, m3});
-    add({"solid.pattern_circ", "Ring copy", "Circular Pattern", "CREATE", "Repeat features or bodies around an axis.", "", {"array", "repeat around", "spokes"}, true, false, false, m3});
+    add({"solid.mirror", "Mirror", "Mirror", "CREATE", "Copy a body across a plane, e.g. to make a symmetric part.", "", {"symmetric", "flip copy"}, false, false, false, m3});
+    add({"solid.pattern_rect", "Grid copy", "Rectangular Pattern", "CREATE", "Repeat a feature in rows and columns.", "", {"array", "grid", "repeat"}, false, false, false, m3});
+    add({"solid.pattern_circ", "Ring copy", "Circular Pattern", "CREATE", "Repeat a feature around an axis.", "", {"array", "repeat around", "spokes"}, true, false, false, m3});
     add({"solid.presspull", "Press pull", "Press Pull", "MODIFY", "Drag a face to push or pull it; adapts to what you pick.", "Q", {"push", "pull", "drag face"}, false, false, false, m3});
     add({"solid.fillet", "Fillet", "Fillet", "MODIFY", "Round off edges so parts look finished and are comfortable to hold.", "F", {"round the edges", "round", "soften", "radius"}, true, false, true, m3});
     add({"solid.chamfer", "Chamfer", "Chamfer", "MODIFY", "Cut a flat bevel on edges; great for the bottom of 3D prints.", "", {"bevel", "angled edge", "elephant foot"}, true, false, true, m3});
@@ -139,14 +139,14 @@ CommandRegistry::CommandRegistry()
     add({"help.tutorial", "Your first part (15 min)", "Tutorial", "HELP", "A guided tour that builds a phone stand with you.", "", {"learn", "tutorial", "getting started", "help"}, true, false, false, m7});
     // clang-format on
 
-    // Usable from the desktop app as of milestone M1/M2 (sketching, extrude, fillet,
-    // parameters). Everything else above keeps its "coming in" note.
+    // Usable from the desktop app as of milestone M1/M2/M3 (sketching, extrude, fillet,
+    // shell, revolve, hole, patterns, mirror, parameters). Everything else above keeps its "coming in" note.
     static const std::set<std::string> inApp {
         "sketch.create", "sketch.finish", "sketch.line", "sketch.rectangle", "sketch.circle", "sketch.point",
         "sketch.dimension", "sketch.construction", "constraint.coincident", "constraint.midpoint", "constraint.fix",
         "constraint.parallel", "constraint.perpendicular", "constraint.horizontal", "constraint.tangent",
         "constraint.symmetric", "constraint.equal", "solid.extrude", "solid.fillet", "solid.chamfer", "solid.shell",
-        "modify.parameters"};
+        "solid.revolve", "solid.hole", "solid.mirror", "solid.pattern_rect", "solid.pattern_circ", "modify.parameters"};
     for (auto& c : commands_) {
         if (inApp.count(c.id)) {
             c.available = true;

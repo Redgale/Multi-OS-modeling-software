@@ -118,6 +118,14 @@ QString kindWord(jig::FeatureKind k)
             return MainWindow::tr("Chamfer");
         case jig::FeatureKind::Shell:
             return MainWindow::tr("Shell");
+        case jig::FeatureKind::Revolve:
+            return MainWindow::tr("Revolve");
+        case jig::FeatureKind::Hole:
+            return MainWindow::tr("Hole");
+        case jig::FeatureKind::Pattern:
+            return MainWindow::tr("Pattern");
+        case jig::FeatureKind::Mirror:
+            return MainWindow::tr("Mirror");
     }
     return {};
 }
@@ -1065,6 +1073,18 @@ void MainWindow::runCommand(const QString& id)
     else if (id == "solid.shell") {
         openShell();
     }
+    else if (id == "solid.revolve") {
+        openRevolve();
+    }
+    else if (id == "solid.hole") {
+        openHole();
+    }
+    else if (id == "solid.pattern_circ" || id == "solid.pattern_rect") {
+        openPattern({}, id == "solid.pattern_circ");
+    }
+    else if (id == "solid.mirror") {
+        openMirror();
+    }
     else if (id == "modify.parameters") {
         openParameters();
     }
@@ -1555,6 +1575,50 @@ void MainWindow::openShell(const std::string& editId)
     showPanel(new ShellPanel(*doc_, view_, editId, panelHost_));
 }
 
+void MainWindow::openRevolve(const std::string& editId)
+{
+    if (sketch_) {
+        exitSketch();
+    }
+    cancelPicker();
+    showPanel(new RevolvePanel(*doc_, view_, editId, panelHost_));
+}
+
+void MainWindow::openHole(const std::string& editId)
+{
+    if (sketch_) {
+        exitSketch();
+    }
+    cancelPicker();
+    if (doc_->stateBefore(editId.empty() ? doc_->activeCount() : doc_->featureIndex(editId)).bodies.empty()) {
+        statusBar()->showMessage(tr("There is no 3D body to drill yet: sketch and extrude first."), 5000);
+        return;
+    }
+    showPanel(new HolePanel(*doc_, view_, editId, panelHost_));
+}
+
+void MainWindow::openPattern(const std::string& editId, bool circular)
+{
+    if (sketch_) {
+        exitSketch();
+    }
+    cancelPicker();
+    showPanel(new PatternPanel(*doc_, view_, editId, panelHost_, circular));
+}
+
+void MainWindow::openMirror(const std::string& editId)
+{
+    if (sketch_) {
+        exitSketch();
+    }
+    cancelPicker();
+    if (doc_->stateBefore(editId.empty() ? doc_->activeCount() : doc_->featureIndex(editId)).bodies.empty()) {
+        statusBar()->showMessage(tr("There is no 3D body to mirror yet: sketch and extrude first."), 5000);
+        return;
+    }
+    showPanel(new MirrorPanel(*doc_, view_, editId, panelHost_));
+}
+
 void MainWindow::openParameters()
 {
     ParametersDialog d(*doc_, this);
@@ -1604,6 +1668,18 @@ void MainWindow::editFeature(int index)
             break;
         case jig::FeatureKind::Shell:
             openShell(f.id);
+            break;
+        case jig::FeatureKind::Revolve:
+            openRevolve(f.id);
+            break;
+        case jig::FeatureKind::Hole:
+            openHole(f.id);
+            break;
+        case jig::FeatureKind::Pattern:
+            openPattern(f.id);
+            break;
+        case jig::FeatureKind::Mirror:
+            openMirror(f.id);
             break;
     }
 }

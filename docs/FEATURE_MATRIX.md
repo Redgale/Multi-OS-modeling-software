@@ -99,7 +99,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Auto join/cut from drag direction | 14 | v0.1 M2 | **app** (Auto: from the typed direction; drag handle not yet) | Principle 10 |
 | Extrude from selected face | 14 | v0.1 M3 (via Press Pull) | — | |
 | Press Pull | 14, 17 | v0.1 M3 | — | |
-| Revolve (full, angle, to object) | 15 | v0.1 M4 | — | |
+| Revolve (full, angle, to object) | 15 | v0.1 M4 | **app** + scripts: full and angle, origin axis or sketch line; to object not yet | |
 | Sweep, Loft, Rib, Web, Emboss, Coil, Pipe | 15 | v0.2 (Web v0.3+) | — | Brief v0.2 list |
 | Thicken, Boundary fill | 15 | v0.3+ | — | Surface workflows |
 | Derive, Insert into design | 13, 22 | v0.3+ | — | Multi-file projects |
@@ -107,8 +107,8 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Create Form (T-splines) | 13, 26 | v0.3+ | — | |
 | Create base feature | 13, 24 | v0.3+ | — | |
 | Create PCB | 13 | never | — | Electronics out of scope |
-| Hole: simple, counterbore, countersink; distance/all; drill point | 16 | v0.1 M3 | — | |
-| Hole from sketch points | 16 | v0.1 M3 | — | |
+| Hole: simple, counterbore, countersink; distance/all; drill point | 16 | v0.1 M3 | **app** + scripts: all three types, depth or through; flat bottom (no drill point yet) | |
+| Hole from sketch points | 16 | v0.1 M3 | **app** + scripts | |
 | Clearance hole sizes | 16 | v0.1 M3 | — | Hobby tip table |
 | Tapped holes, Thread (modelled/cosmetic) | 16 | v0.2 | — | |
 | Fillet constant | 18 | v0.1 M3 | **app** (edge picking, preview, one-click fix) + scripts | |
@@ -126,10 +126,10 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Align | 17 | v0.2 | — | |
 | Delete body/feature | 17 | v0.1 M2 | — | |
 | Compute all | 17 | v0.1 | automatic (incremental recompute) | |
-| Patterns: rectangular, circular (features, bodies) | 19 | v0.1 M3 | — | |
+| Patterns: rectangular, circular (features, bodies) | 19 | v0.1 M3 | **app** + scripts: features (Extrude, Revolve, Hole); bodies not yet | |
 | Pattern on path | 19 | v0.2 | — | |
 | Pattern compute options (optimised/identical/adjust) | 19 | v0.2 | — | Adjust only in v0.1 |
-| Mirror (features, bodies) | 19 | v0.1 M3 | — | |
+| Mirror (features, bodies) | 19 | v0.1 M3 | **app** + scripts: bodies across origin planes; features not yet | |
 | Construct: offset plane, plane at angle, midplane | 20 | v0.1 M4 | offset plane via `sketch offset=` | |
 | Tangent plane, plane through edges/points, along path | 20 | v0.2 | — | Needed for sweep and pen cup emboss |
 | Axis (through cylinder, two points, perpendicular) | 20 | v0.1 M4 | — | |
@@ -182,7 +182,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 |---|---|---|---|
 | 1. Phone stand | v0.1 (A1, A4, A7) | sketch, rectangle, polyline, slot, extrude join/cut/symmetric, sketch on face, fillet, export | **Builds headlessly** (`samples/phone_stand.jigs`); golden test passes; edit-early regression passes |
 | 2. Hinged box | v0.2 | components, shell, project/offset, patterns, revolute joint, interference | — |
-| 3. Knob | v0.1 (A2) | revolve, arc, trim, axis, circular pattern, cut, fillet, text | — (needs M1, M4, M5) |
+| 3. Knob | v0.1 (A2) | revolve, arc, trim, axis, circular pattern, cut, fillet, text | **builds** (`samples/knob.jigs`: revolve, D-bore from an arc, 12 scallops, top round; golden and parameter tests); text waits for M5 |
 | 4. Pen cup | v0.1 (A3) | parameters, circle, extrude, shell, fillets, text + cut | **builds** (`samples/pen_cup.jigs`, golden test, parameter changes); engraved text waits for Text (M5) |
 
 ## Shortcuts (PDF ch. 45)

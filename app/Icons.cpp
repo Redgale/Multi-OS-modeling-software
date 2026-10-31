@@ -112,6 +112,10 @@ const std::map<QString, QString>& icons()
         {"feature.fillet", "M4 20 L4 4 L20 4 f M4 20 L12 20 Q20 20 20 12 L20 4 L4 4 Z"},
         {"feature.chamfer", "M4 4 L20 4 L20 20 L4 20 Z f M12 20 L20 12 L20 20 Z a M12 20 L20 12"},
         {"feature.shell", "M4 7 L12 3 L20 7 L20 17 L12 21 L4 17 Z f M8 8.5 L12 6.5 L16 8.5 L12 10.5 Z"},
+        {"feature.revolve", "M8 4 L8 20 d M12 3 L12 21 a M17 9 A12 12 5 0 -270 M12 7 L15 6"},
+        {"feature.hole", "M3 9 L9 5 L21 5 L15 9 Z M3 9 L3 19 L15 19 L15 9 M15 19 L21 15 L21 5 f E12 7 3 1.2 a M9 9 L9 16 M15 9 L15 16"},
+        {"feature.pattern", "t O12 12 7.5 f R10 3 4 4 R17 10 4 4 R10 17 4 4 R3 10 4 4"},
+        {"feature.mirror", "M3 7 L9 4 L9 18 L3 19 Z d M12 2 L12 22 a M21 7 L15 4 L15 18 L21 19 Z"},
     };
     return m;
 }

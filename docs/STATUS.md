@@ -8,9 +8,10 @@ Session 1 did Phase 0 and the Phase 1 spikes (**GO for M1**, `docs/PHASE1_REPORT
 Session 2 delivered the core of **M1 (interactive sketching)** and **M2 (Extrude, Fillet,
 timeline editing, parameters)** in the desktop app, an original **icon set** for every
 tool, build-from-source support for **Void, Fedora, Arch and openSUSE**, and a publish job
-for downloadable builds, then Chamfer and Shell (part of M3) with the pen cup sample.
-58 tests, including UI workflow tests that drive the real
-window.
+for downloadable builds, then Chamfer and Shell (part of M3) with the pen cup sample,
+then Revolve, Hole, rectangular and circular Patterns and Mirror with panels, and the
+knob sample (acceptance scenario A2, without the engraved text). 69 tests, including UI
+workflow tests that drive the real window.
 
 ## What works, and how it was verified
 
@@ -33,6 +34,7 @@ window.
 | Fillet panel (M2) | Edge picking in the view (GPU, hidden edges rejected), tangent-chain selection, live preview on the rounded body (clicks map back by persistent name), failure message with one-click working radius | UI test: real edge picks, 4 edges, volume matches the analytic value; 30 mm radius refused with "too big" |
 | Timeline editing (M2) | Double-click to edit, right-click: rename, suppress/unsuppress, roll back to here, delete with a dependents warning | `Document.DependentsAreFound`; UI test edits a step |
 | Chamfer and Shell (M3 part) | Chamfer panel (edge picking, distance), Shell panel (click faces to leave open; none = closed hollow), failure explanations with a working value; inner walls get stable names (`sh1/inner:<outer face>`) | `Golden.PenCupWithParameters` (A3 without text), `Chamfer.*`, `Shell.*` (closed hollow found and fixed an OCCT behaviour: no open face returns only the offset solid); UI test builds a pen cup by clicking the top face |
+| Revolve, Hole, Pattern, Mirror (M3/M4 part) | Revolve around an origin axis or a sketch line, full or partial (outlines crossing the axis refused with an explanation); Hole (simple, counterbore, countersink; depth or through) at every free point of a sketch; Ring copy and Grid copy of an Extrude, Revolve or Hole; Mirror a body across an origin plane (join or new body). Panels with live preview; edit from the timeline. Faces named by role (`h1/wall:p5`, `p1/3:e2/side:2`) | `tests/test_features.cpp` (11 tests, volumes against hand calculations: revolve, D-bore, lens-shaped scallops, counterbore and countersink cones, grid of holes); `Golden.Knob` and `Golden.KnobFollowsItsParameters` (A2 without text); UI test `ringRevolveHolePatternMirror` revolves a ring, drills it from its top face, rings the hole six times and mirrors it |
 | Parameters (M5 part) | Table dialog: name, value with units/expressions, kind, live result, comment; refuses invalid names, duplicates, cycles | exercised manually under Xvfb only (no automated UI test yet: B-015) |
 | Performance | All headless budgets met | `jigsmith-bench`, numbers in PHASE1_REPORT.md |
 
@@ -65,8 +67,11 @@ Clang 18 as well as GCC 13.
 - M2 still missing: extrude drag handle on the canvas, two-sides/to-object/taper/thin,
   Browser visibility/isolate/rename, selection filters, Select Other, timeline reorder and
   groups, one-click "fix this" beyond the fillet radius.
-- M3 still missing: Hole, Mirror, patterns, Press Pull, variable fillet.
-- Not built yet: Revolve, construction tools,
+- M3 still missing: Press Pull, variable fillet, clearance-size table for holes, patterns
+  of bodies, mirror of features or across a face, pattern along a path.
+- M4 still missing: construction planes/axes/points, Combine, Split, Move/Copy; revolve
+  "to object".
+- Not built yet:
   Measure, Section, Text, SVG/DXF import, 3MF, local versions, tutorial, marking menu.
 - Reorder of timeline steps (model supports it; no command or tests yet, B-002).
 - libslvs comparison (B-001).
@@ -90,8 +95,8 @@ Clang 18 as well as GCC 13.
 
 ## Next three tasks
 
-1. Finish M1's remaining sketch tools (Arc, Slot, Polygon, Trim, Offset) and constraint
-   selection/deletion; then M3 core features (Chamfer, Shell, Hole) with panels.
+1. Finish M1's remaining sketch tools in the app (Arc, Slot, Polygon, Trim, Offset) and
+   constraint selection/deletion; construction planes and axes (M4).
 2. **B-001 libslvs spike** in an environment where building SolveSpace is allowed.
 3. Windows/macOS GUI screenshots in CI (B-003); Windows DLL audit (B-011).
 

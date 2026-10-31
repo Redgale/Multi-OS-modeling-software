@@ -198,6 +198,105 @@ private:
     QLabel* count_;
 };
 
+// Revolve: spin closed areas of a sketch around a sketch line or an origin axis.
+class RevolvePanel : public FeaturePanel
+{
+    Q_OBJECT
+public:
+    RevolvePanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent = nullptr);
+    ExprField* angle() const
+    {
+        return angle_;
+    }
+    QComboBox* axis() const
+    {
+        return axis_;
+    }
+
+protected:
+    jig::Feature draft() const override;
+    QString title() const override;
+
+private:
+    void fillFromSketch();
+    QComboBox *sketch_, *axis_, *op_;
+    QListWidget* profiles_;
+    ExprField* angle_;
+};
+
+// Hole: plain, counterbored or countersunk holes at the points of a sketch.
+class HolePanel : public FeaturePanel
+{
+    Q_OBJECT
+public:
+    HolePanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent = nullptr);
+    ExprField* diameter() const
+    {
+        return diameter_;
+    }
+    QComboBox* type() const
+    {
+        return type_;
+    }
+
+protected:
+    jig::Feature draft() const override;
+    QString title() const override;
+    void rememberValues() override;
+
+private:
+    void updateVisibility();
+    QComboBox *sketch_, *type_, *extent_;
+    ExprField *diameter_, *depth_, *cboreDiameter_, *cboreDepth_, *csinkDiameter_, *csinkAngle_;
+    QLabel* points_;
+};
+
+// Pattern: repeat an Extrude, Revolve or Hole around an axis or in a grid.
+class PatternPanel : public FeaturePanel
+{
+    Q_OBJECT
+public:
+    PatternPanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent = nullptr,
+                 bool circular = true);
+    QComboBox* source() const
+    {
+        return source_;
+    }
+    ExprField* count() const
+    {
+        return count_;
+    }
+
+protected:
+    jig::Feature draft() const override;
+    QString title() const override;
+
+private:
+    void updateVisibility();
+    QComboBox *source_, *kind_, *axis_, *dir1_, *dir2_;
+    ExprField *count_, *angle_, *count1_, *spacing1_, *count2_, *spacing2_;
+    QWidget *circular_, *grid_;
+};
+
+// Mirror: copy a body across an origin plane.
+class MirrorPanel : public FeaturePanel
+{
+    Q_OBJECT
+public:
+    MirrorPanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent = nullptr);
+    QComboBox* plane() const
+    {
+        return plane_;
+    }
+
+protected:
+    jig::Feature draft() const override;
+    QString title() const override;
+
+private:
+    QComboBox *body_, *plane_, *op_;
+};
+
 // Modify ▸ Parameters: the named values (width, wall, clearance) that drive the design.
 class ParametersDialog : public QDialog
 {

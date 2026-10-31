@@ -75,6 +75,10 @@ public:
     void openFillet(const std::string& editId = {});
     void openChamfer(const std::string& editId = {});
     void openShell(const std::string& editId = {});
+    void openRevolve(const std::string& editId = {});
+    void openHole(const std::string& editId = {});
+    void openPattern(const std::string& editId = {}, bool circular = true);
+    void openMirror(const std::string& editId = {});
     void openParameters();
     void editFeature(int index);
     void runCommand(const QString& id);

@@ -51,10 +51,11 @@ timeline edit/rename/suppress/roll back/delete with dependents warning, Paramete
 
 ## Later v0.1 milestones
 
-- M3: Fillet (dialog, variable, tangent chain), Chamfer, Shell, Hole (+clearance table),
-  Mirror, Patterns, Press Pull.
-- M4: Revolve, construction planes (offset/angle/midplane), axis, point, Combine,
-  Split, Move/Copy. Knob acceptance test (A2).
+- M3 (done in session 2: Fillet, Chamfer, Shell, Hole, Mirror of bodies, Patterns of
+  features): variable fillet, hole clearance table and drill point, pattern of bodies,
+  mirror of features, Press Pull.
+- M4 (Revolve and the knob, A2, done in session 2): revolve to object, construction planes
+  (offset/angle/midplane), axis, point, Combine, Split, Move/Copy.
 - M5: Parameters table UI, Project/Include, Text (FreeType/HarfBuzz spike, 5.4f), SVG and
   DXF import with unit detection. Pen cup acceptance (A3).
 - M6: Measure, Section, Properties with density; 3MF export; local versions; autosave

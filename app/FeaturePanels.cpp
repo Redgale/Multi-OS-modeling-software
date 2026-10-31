@@ -4,6 +4,7 @@
 #include <cctype>
 #include <map>
 #include <regex>
+#include <set>
 
 #include <BRepGProp.hxx>
 #include <GProp_GProps.hxx>
@@ -784,6 +785,559 @@ QString ShellPanel::title() const
 void ShellPanel::rememberValues()
 {
     remembered()["shell.thickness"] = thickness_->text();
+}
+
+// ---------------------------------------------------------------- shared helpers
+
+namespace
+{
+
+QLabel* heading(QWidget* parent, const QString& title, const QString& text)
+{
+    auto* l = new QLabel("<h3>" + title + "</h3><p>" + text + "</p>", parent);
+    l->setWordWrap(true);
+    return l;
+}
+
+QComboBox* combo(QWidget* parent, const std::vector<std::pair<QString, QString>>& items)
+{
+    auto* c = new QComboBox(parent);
+    for (auto& [label, data] : items) {
+        c->addItem(label, data);
+    }
+    return c;
+}
+
+void select(QComboBox* c, const std::string& data)
+{
+    const int i = c->findData(q(data));
+    if (i >= 0) {
+        c->setCurrentIndex(i);
+    }
+}
+
+std::string current(const QComboBox* c)
+{
+    return c->currentData().toString().toStdString();
+}
+
+std::string text(const ExprField* f, const char* fallback)
+{
+    return f->text().isEmpty() ? std::string(fallback) : f->text().toStdString();
+}
+
+// Sketches before the insertion point.
+void fillSketches(QComboBox* c, const jig::Document& doc, int limit, const jig::ModelState& before)
+{
+    for (int i = 0; i < limit; ++i) {
+        const auto& f = doc.model().features[size_t(i)];
+        if (f.kind == jig::FeatureKind::Sketch && before.sketches.count(f.id)) {
+            c->addItem(q(f.name), q(f.id));
+        }
+    }
+}
+
+void fillProfileList(QListWidget* list, const jig::SketchState* sk, const nlohmann::json& chosen)
+{
+    list->blockSignals(true);
+    list->clear();
+    if (sk) {
+        std::set<std::string> keys;
+        if (chosen.is_array()) {
+            for (auto& k : chosen) {
+                keys.insert(k.get<std::string>());
+            }
+        }
+        int n = 1;
+        for (auto& r : sk->profiles.regions) {
+            auto* item = new QListWidgetItem(QObject::tr("Area %1 · %2 mm²").arg(n++).arg(r.area, 0, 'f', 1), list);
+            item->setData(Qt::UserRole, q(r.key));
+            item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+            item->setCheckState(keys.empty() || keys.count(r.key) ? Qt::Checked : Qt::Unchecked);
+        }
+        if (sk->profiles.regions.empty()) {
+            new QListWidgetItem(QObject::tr("(no closed areas: the outline has a gap)"), list);
+        }
+    }
+    list->blockSignals(false);
+}
+
+nlohmann::json chosenProfiles(const QListWidget* list)
+{
+    nlohmann::json keys = nlohmann::json::array();
+    bool all = true;
+    for (int i = 0; i < list->count(); ++i) {
+        auto* it = list->item(i);
+        if (it->data(Qt::UserRole).toString().isEmpty()) {
+            continue;
+        }
+        if (it->checkState() == Qt::Checked) {
+            keys.push_back(it->data(Qt::UserRole).toString().toStdString());
+        }
+        else {
+            all = false;
+        }
+    }
+    return all ? nlohmann::json("all") : keys;
+}
+
+// A new feature's id and name, or the edited feature.
+jig::Feature startDraft(const jig::Document& doc, const std::string& editId, const std::string& prefix,
+                        const QString& word)
+{
+    if (!editId.empty()) {
+        return *doc.feature(editId);
+    }
+    jig::Feature f;
+    jig::Model tmp = doc.model();
+    f.id = jig::Document::newId(tmp, prefix);
+    f.name = QString("%1 %2").arg(word, q(f.id.substr(prefix.size()))).toStdString();
+    return f;
+}
+
+const std::vector<std::pair<QString, QString>> kAxes {
+    {QObject::tr("Z axis (up)"), "Z"}, {QObject::tr("X axis"), "X"}, {QObject::tr("Y axis"), "Y"}};
+
+}  // namespace
+
+// ---------------------------------------------------------------- Revolve
+
+RevolvePanel::RevolvePanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent)
+    : FeaturePanel(doc, view, std::move(editId), parent)
+{
+    form_->addWidget(heading(this, tr("Revolve"),
+                             tr("Spin closed areas of a sketch around an axis, like a lathe. Draw half of the "
+                                "outline next to the axis; it must not cross it.")));
+    sketch_ = new QComboBox(this);
+    profiles_ = new QListWidget(this);
+    profiles_->setMaximumHeight(110);
+    axis_ = new QComboBox(this);
+    angle_ = new ExprField(doc, jig::Dim::ang(), this);
+    op_ = combo(this, {{tr("Join: add to the body"), "join"},
+                       {tr("Cut: remove material"), "cut"},
+                       {tr("New body"), "new"},
+                       {tr("Intersect: keep the overlap"), "intersect"}});
+    addRow(tr("Sketch"), sketch_);
+    addRow(tr("Closed areas (profiles)"), profiles_);
+    addRow(tr("Axis"), axis_);
+    addRow(tr("Angle"), angle_);
+    addRow(tr("Operation"), op_);
+    const auto before = stateBefore();
+    fillSketches(sketch_, doc_, insertIndex(), *before);
+    const jig::Feature* edit = editId_.empty() ? nullptr : doc_.feature(editId_);
+    if (edit) {
+        select(sketch_, edit->params.value("sketch", std::string {}));
+        angle_->setText(q(edit->params.value("angle", std::string("360 deg"))));
+        select(op_, edit->params.value("op", std::string("join")));
+    }
+    else {
+        sketch_->setCurrentIndex(sketch_->count() - 1);
+        angle_->setText("360 deg");
+        select(op_, before->bodies.empty() ? "new" : "join");
+    }
+    fillFromSketch();
+    if (edit) {
+        const auto ax = edit->params.value("axis", nlohmann::json::object());
+        if (ax.contains("line")) {
+            select(axis_, "line:" + std::to_string(ax["line"].get<int>()));
+        }
+        else {
+            select(axis_, ax.value("origin", std::string("Z")));
+        }
+    }
+    connect(sketch_, &QComboBox::currentIndexChanged, this, [this] {
+        fillFromSketch();
+        schedulePreview();
+    });
+    connect(profiles_, &QListWidget::itemChanged, this, [this] { schedulePreview(); });
+    for (auto* c : {axis_, op_}) {
+        connect(c, &QComboBox::currentIndexChanged, this, [this] { schedulePreview(); });
+    }
+    connect(angle_, &ExprField::changed, this, [this] { schedulePreview(); });
+    if (sketch_->count() == 0) {
+        status_->setText("<b>✕ " + tr("There is no sketch to revolve yet. Create a sketch first.") + "</b>");
+        ok_->setEnabled(false);
+    }
+    else {
+        schedulePreview();
+    }
+}
+
+void RevolvePanel::fillFromSketch()
+{
+    const auto before = stateBefore();
+    auto it = before->sketches.find(current(sketch_));
+    const jig::SketchState* sk = it == before->sketches.end() ? nullptr : it->second.get();
+    const jig::Feature* edit = editId_.empty() ? nullptr : doc_.feature(editId_);
+    fillProfileList(profiles_, sk, edit ? edit->params.value("profiles", nlohmann::json("all")) : nlohmann::json("all"));
+    axis_->blockSignals(true);
+    axis_->clear();
+    // Lines of the sketch first (construction lines are the usual choice), then the origin axes.
+    int firstConstruction = -1;
+    if (sk) {
+        int n = 1;
+        for (auto& [id, e] : sk->solved.entities()) {
+            if (e.type != jig::EntityType::Line) {
+                continue;
+            }
+            if (e.construction && firstConstruction < 0) {
+                firstConstruction = axis_->count();
+            }
+            axis_->addItem(e.construction ? tr("Sketch line %1 (construction)").arg(n) : tr("Sketch line %1").arg(n),
+                           q("line:" + std::to_string(id)));
+            ++n;
+        }
+    }
+    for (auto& [label, d] : kAxes) {
+        axis_->addItem(label, d);
+    }
+    axis_->setCurrentIndex(firstConstruction >= 0 ? firstConstruction : axis_->findData("Z"));
+    axis_->blockSignals(false);
+}
+
+jig::Feature RevolvePanel::draft() const
+{
+    jig::Feature f = startDraft(doc_, editId_, "r", tr("Revolve"));
+    f.kind = jig::FeatureKind::Revolve;
+    const std::string ax = current(axis_);
+    nlohmann::json axis = ax.rfind("line:", 0) == 0 ? nlohmann::json {{"line", std::stoi(ax.substr(5))}}
+                                                    : nlohmann::json {{"origin", ax.empty() ? "Z" : ax}};
+    f.params = {{"sketch", current(sketch_)},
+                {"profiles", chosenProfiles(profiles_)},
+                {"axis", axis},
+                {"angle", text(angle_, "360 deg")},
+                {"op", current(op_)}};
+    return f;
+}
+
+QString RevolvePanel::title() const
+{
+    return tr("revolve");
+}
+
+// ---------------------------------------------------------------- Hole
+
+HolePanel::HolePanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent)
+    : FeaturePanel(doc, view, std::move(editId), parent)
+{
+    form_->addWidget(heading(this, tr("Hole"),
+                             tr("Drill a hole at every point of a sketch. Sketch on the face to drill, place a "
+                                "Point at each hole centre, then pick the sketch here.")));
+    sketch_ = new QComboBox(this);
+    points_ = new QLabel(this);
+    type_ = combo(this, {{tr("Simple"), "simple"},
+                         {tr("Counterbore (screw head sits below the surface)"), "counterbore"},
+                         {tr("Countersink (for flat-head screws)"), "countersink"}});
+    extent_ = combo(this, {{tr("Depth"), "distance"}, {tr("Through everything"), "all"}});
+    diameter_ = new ExprField(doc, jig::Dim::len(), this);
+    depth_ = new ExprField(doc, jig::Dim::len(), this);
+    cboreDiameter_ = new ExprField(doc, jig::Dim::len(), this);
+    cboreDepth_ = new ExprField(doc, jig::Dim::len(), this);
+    csinkDiameter_ = new ExprField(doc, jig::Dim::len(), this);
+    csinkAngle_ = new ExprField(doc, jig::Dim::ang(), this);
+    addRow(tr("Sketch with hole points"), sketch_);
+    form_->addWidget(points_);
+    addRow(tr("Type"), type_);
+    addRow(tr("Diameter"), diameter_);
+    addRow(tr("Extent"), extent_);
+    addRow(tr("Depth"), depth_);
+    addRow(tr("Counterbore diameter"), cboreDiameter_);
+    addRow(tr("Counterbore depth"), cboreDepth_);
+    addRow(tr("Countersink diameter"), csinkDiameter_);
+    addRow(tr("Countersink angle"), csinkAngle_);
+    auto* tip = new QLabel(tr("Clearance for an M3 screw: 3.4 mm. Add 0.2–0.4 mm for 3D prints."), this);
+    tip->setWordWrap(true);
+    form_->addWidget(tip);
+    const auto before = stateBefore();
+    fillSketches(sketch_, doc_, insertIndex(), *before);
+    const jig::Feature* edit = editId_.empty() ? nullptr : doc_.feature(editId_);
+    auto value = [&](const char* key, const char* def) {
+        if (edit) {
+            return q(edit->params.value(key, std::string(def)));
+        }
+        auto it = remembered().find(QString("hole.") + key);
+        return it != remembered().end() ? it->second : QString(def);
+    };
+    if (edit) {
+        select(sketch_, edit->params.value("sketch", std::string {}));
+    }
+    else {
+        sketch_->setCurrentIndex(sketch_->count() - 1);
+    }
+    select(type_, value("type", "simple").toStdString());
+    select(extent_, value("extent", "distance").toStdString());
+    diameter_->setText(value("diameter", "3.4 mm"));
+    depth_->setText(value("depth", "10 mm"));
+    cboreDiameter_->setText(value("cbore_diameter", "6.5 mm"));
+    cboreDepth_->setText(value("cbore_depth", "3.5 mm"));
+    csinkDiameter_->setText(value("csink_diameter", "6.5 mm"));
+    csinkAngle_->setText(value("csink_angle", "90 deg"));
+    for (auto* c : {sketch_, type_, extent_}) {
+        connect(c, &QComboBox::currentIndexChanged, this, [this] {
+            updateVisibility();
+            schedulePreview();
+        });
+    }
+    for (auto* e : {diameter_, depth_, cboreDiameter_, cboreDepth_, csinkDiameter_, csinkAngle_}) {
+        connect(e, &ExprField::changed, this, [this] { schedulePreview(); });
+    }
+    updateVisibility();
+    if (sketch_->count() == 0) {
+        status_->setText("<b>✕ " + tr("Make a sketch with a Point at each hole centre first.") + "</b>");
+        ok_->setEnabled(false);
+    }
+    else {
+        schedulePreview();
+    }
+}
+
+void HolePanel::updateVisibility()
+{
+    const std::string t = current(type_);
+    auto show = [this](QWidget* w, bool on) {
+        w->setVisible(on);
+        // the bold label added by addRow sits right before the field
+        const int i = form_->indexOf(w);
+        if (i > 0) {
+            if (auto* item = form_->itemAt(i - 1); item && item->widget()) {
+                item->widget()->setVisible(on);
+            }
+        }
+    };
+    show(depth_, current(extent_) == "distance");
+    show(cboreDiameter_, t == "counterbore");
+    show(cboreDepth_, t == "counterbore");
+    show(csinkDiameter_, t == "countersink");
+    show(csinkAngle_, t == "countersink");
+    // how many hole points the sketch has
+    const auto before = stateBefore();
+    auto it = before->sketches.find(current(sketch_));
+    int n = 0;
+    if (it != before->sketches.end()) {
+        std::set<int> used;
+        for (auto& [id, e] : it->second->solved.entities()) {
+            if (e.type != jig::EntityType::Point) {
+                used.insert({e.p1, e.p2, e.center});
+            }
+        }
+        for (auto& [id, e] : it->second->solved.entities()) {
+            n += e.type == jig::EntityType::Point && !e.internal && !e.construction && !used.count(id);
+        }
+    }
+    points_->setText(n == 1 ? tr("1 hole point") : tr("%1 hole points").arg(n));
+}
+
+jig::Feature HolePanel::draft() const
+{
+    jig::Feature f = startDraft(doc_, editId_, "h", tr("Hole"));
+    f.kind = jig::FeatureKind::Hole;
+    f.params = {{"sketch", current(sketch_)},
+                {"type", current(type_)},
+                {"extent", current(extent_)},
+                {"diameter", text(diameter_, "3.4 mm")},
+                {"depth", text(depth_, "10 mm")}};
+    if (current(type_) == "counterbore") {
+        f.params["cbore_diameter"] = text(cboreDiameter_, "6.5 mm");
+        f.params["cbore_depth"] = text(cboreDepth_, "3.5 mm");
+    }
+    if (current(type_) == "countersink") {
+        f.params["csink_diameter"] = text(csinkDiameter_, "6.5 mm");
+        f.params["csink_angle"] = text(csinkAngle_, "90 deg");
+    }
+    return f;
+}
+
+QString HolePanel::title() const
+{
+    return tr("hole");
+}
+
+void HolePanel::rememberValues()
+{
+    remembered()["hole.type"] = q(current(type_));
+    remembered()["hole.extent"] = q(current(extent_));
+    remembered()["hole.diameter"] = diameter_->text();
+    remembered()["hole.depth"] = depth_->text();
+    remembered()["hole.cbore_diameter"] = cboreDiameter_->text();
+    remembered()["hole.cbore_depth"] = cboreDepth_->text();
+    remembered()["hole.csink_diameter"] = csinkDiameter_->text();
+    remembered()["hole.csink_angle"] = csinkAngle_->text();
+}
+
+// ---------------------------------------------------------------- Pattern
+
+PatternPanel::PatternPanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent, bool circular)
+    : FeaturePanel(doc, view, std::move(editId), parent)
+{
+    form_->addWidget(heading(this, tr("Pattern"),
+                             tr("Repeat an earlier Extrude, Revolve or Hole around an axis (ring) or in rows and "
+                                "columns (grid). Each copy adds or removes material the same way.")));
+    source_ = new QComboBox(this);
+    kind_ = combo(this, {{tr("Ring (around an axis)"), "circular"}, {tr("Grid (rows and columns)"), "rectangular"}});
+    addRow(tr("Step to repeat"), source_);
+    addRow(tr("Kind"), kind_);
+
+    circular_ = new QWidget(this);
+    auto* cl = new QVBoxLayout(circular_);
+    cl->setContentsMargins(0, 0, 0, 0);
+    axis_ = combo(circular_, kAxes);
+    count_ = new ExprField(doc, jig::Dim::none(), circular_);
+    angle_ = new ExprField(doc, jig::Dim::ang(), circular_);
+    for (auto [label, w] : {std::pair<QString, QWidget*> {tr("Axis"), axis_},
+                            {tr("Number of copies (including the original)"), count_},
+                            {tr("Total angle"), angle_}}) {
+        cl->addWidget(new QLabel("<b>" + label + "</b>", circular_));
+        cl->addWidget(w);
+    }
+    grid_ = new QWidget(this);
+    auto* gl = new QVBoxLayout(grid_);
+    gl->setContentsMargins(0, 0, 0, 0);
+    dir1_ = combo(grid_, {{tr("X"), "X"}, {tr("Y"), "Y"}, {tr("Z"), "Z"}});
+    dir2_ = combo(grid_, {{tr("Y"), "Y"}, {tr("X"), "X"}, {tr("Z"), "Z"}});
+    count1_ = new ExprField(doc, jig::Dim::none(), grid_);
+    spacing1_ = new ExprField(doc, jig::Dim::len(), grid_);
+    count2_ = new ExprField(doc, jig::Dim::none(), grid_);
+    spacing2_ = new ExprField(doc, jig::Dim::len(), grid_);
+    for (auto [label, w] : {std::pair<QString, QWidget*> {tr("First direction"), dir1_},
+                            {tr("Copies along it"), count1_},
+                            {tr("Spacing"), spacing1_},
+                            {tr("Second direction"), dir2_},
+                            {tr("Copies along it (1 = a single row)"), count2_},
+                            {tr("Spacing"), spacing2_}}) {
+        gl->addWidget(new QLabel("<b>" + label + "</b>", grid_));
+        gl->addWidget(w);
+    }
+    form_->addWidget(circular_);
+    form_->addWidget(grid_);
+
+    const auto before = stateBefore();
+    const int limit = insertIndex();
+    for (int i = 0; i < limit; ++i) {
+        const auto& f = doc_.model().features[size_t(i)];
+        if (before->tools.count(f.id)) {
+            source_->addItem(q(f.name), q(f.id));
+        }
+    }
+    const jig::Feature* edit = editId_.empty() ? nullptr : doc_.feature(editId_);
+    auto value = [&](const char* key, const char* def) { return q(edit ? edit->params.value(key, std::string(def)) : def); };
+    if (edit) {
+        select(source_, edit->params.value("feature", std::string {}));
+        select(kind_, edit->params.value("kind", std::string("circular")));
+    }
+    else {
+        source_->setCurrentIndex(source_->count() - 1);
+        select(kind_, circular ? "circular" : "rectangular");
+    }
+    select(axis_, value("axis", "Z").toStdString());
+    count_->setText(value("count", "6"));
+    angle_->setText(value("angle", "360 deg"));
+    select(dir1_, value("dir1", "X").toStdString());
+    select(dir2_, value("dir2", "Y").toStdString());
+    count1_->setText(value("count1", "3"));
+    spacing1_->setText(value("spacing1", "10 mm"));
+    count2_->setText(value("count2", "1"));
+    spacing2_->setText(value("spacing2", "10 mm"));
+    for (auto* c : {source_, kind_, axis_, dir1_, dir2_}) {
+        connect(c, &QComboBox::currentIndexChanged, this, [this] {
+            updateVisibility();
+            schedulePreview();
+        });
+    }
+    for (auto* e : {count_, angle_, count1_, spacing1_, count2_, spacing2_}) {
+        connect(e, &ExprField::changed, this, [this] { schedulePreview(); });
+    }
+    updateVisibility();
+    if (source_->count() == 0) {
+        status_->setText("<b>✕ " + tr("There is no Extrude, Revolve or Hole to repeat yet.") + "</b>");
+        ok_->setEnabled(false);
+    }
+    else {
+        schedulePreview();
+    }
+}
+
+void PatternPanel::updateVisibility()
+{
+    const bool circ = current(kind_) == "circular";
+    circular_->setVisible(circ);
+    grid_->setVisible(!circ);
+}
+
+jig::Feature PatternPanel::draft() const
+{
+    jig::Feature f = startDraft(doc_, editId_, "p", tr("Pattern"));
+    f.kind = jig::FeatureKind::Pattern;
+    f.params = {{"feature", current(source_)}, {"kind", current(kind_)}};
+    if (current(kind_) == "circular") {
+        f.params["axis"] = current(axis_);
+        f.params["count"] = text(count_, "6");
+        f.params["angle"] = text(angle_, "360 deg");
+    }
+    else {
+        f.params["dir1"] = current(dir1_);
+        f.params["count1"] = text(count1_, "3");
+        f.params["spacing1"] = text(spacing1_, "10 mm");
+        f.params["dir2"] = current(dir2_);
+        f.params["count2"] = text(count2_, "1");
+        f.params["spacing2"] = text(spacing2_, "10 mm");
+    }
+    return f;
+}
+
+QString PatternPanel::title() const
+{
+    return tr("pattern");
+}
+
+// ---------------------------------------------------------------- Mirror
+
+MirrorPanel::MirrorPanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent)
+    : FeaturePanel(doc, view, std::move(editId), parent)
+{
+    form_->addWidget(heading(this, tr("Mirror"),
+                             tr("Copy a body across an origin plane. Model one half up to the plane, then mirror "
+                                "and join for a symmetric part.")));
+    body_ = new QComboBox(this);
+    plane_ = combo(this, {{tr("Side plane (YZ): flips left and right"), "YZ"},
+                          {tr("Front plane (XZ): flips front and back"), "XZ"},
+                          {tr("Floor plane (XY): flips up and down"), "XY"}});
+    op_ = combo(this, {{tr("Join to the original"), "join"}, {tr("New body"), "new"}});
+    addRow(tr("Body"), body_);
+    addRow(tr("Mirror plane"), plane_);
+    addRow(tr("Result"), op_);
+    const auto before = stateBefore();
+    for (auto& [id, b] : before->bodies) {
+        const jig::Feature* bf = doc_.feature(id);
+        body_->addItem(bf ? q(bf->name) : q(id), q(id));
+    }
+    if (const jig::Feature* edit = editId_.empty() ? nullptr : doc_.feature(editId_)) {
+        select(body_, edit->params.value("body", std::string {}));
+        select(plane_, edit->params.value("plane", std::string("YZ")));
+        select(op_, edit->params.value("op", std::string("join")));
+    }
+    for (auto* c : {body_, plane_, op_}) {
+        connect(c, &QComboBox::currentIndexChanged, this, [this] { schedulePreview(); });
+    }
+    if (body_->count() == 0) {
+        status_->setText("<b>✕ " + tr("There is no body to mirror yet.") + "</b>");
+        ok_->setEnabled(false);
+    }
+    else {
+        schedulePreview();
+    }
+}
+
+jig::Feature MirrorPanel::draft() const
+{
+    jig::Feature f = startDraft(doc_, editId_, "m", tr("Mirror"));
+    f.kind = jig::FeatureKind::Mirror;
+    f.params = {{"body", current(body_)}, {"plane", current(plane_)}, {"op", current(op_)}};
+    return f;
+}
+
+QString MirrorPanel::title() const
+{
+    return tr("mirror");
 }
 
 // ---------------------------------------------------------------- Parameters
