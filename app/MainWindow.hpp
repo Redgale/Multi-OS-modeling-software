@@ -9,6 +9,9 @@
 #include "jig/document.hpp"
 
 class QAction;
+class QDockWidget;
+class QStackedWidget;
+class QToolBar;
 class QLabel;
 class QListWidget;
 class QSlider;
@@ -20,6 +23,10 @@ namespace jigapp
 {
 
 class Viewport;
+class SketchEditor;
+class FeaturePanel;
+class ToolPanel;
+class PlanePicker;
 
 enum class Theme
 {
@@ -47,6 +54,40 @@ public:
     // Offers to restore an autosave left by a session that did not end cleanly.
     void checkRecovery();
 
+    // ---- modelling workflow (also used by UI tests)
+    jig::Document& document()
+    {
+        return *doc_;
+    }
+    SketchEditor* sketchEditor() const
+    {
+        return sketch_;
+    }
+    ToolPanel* featurePanel() const
+    {
+        return panel_;
+    }
+    void startCreateSketch();
+    // plane: "XY", "XZ" or "YZ"; or a planar face of a body
+    bool createSketchOn(const std::string& plane, const std::string& faceBody = {}, int faceIndex = -1);
+    void enterSketch(const std::string& id);
+    void exitSketch();
+    void openExtrude(const std::string& editId = {});
+    void openFillet(const std::string& editId = {});
+    void openChamfer(const std::string& editId = {});
+    void openShell(const std::string& editId = {});
+    void openRevolve(const std::string& editId = {});
+    void openHole(const std::string& editId = {});
+    void openPattern(const std::string& editId = {}, bool circular = true);
+    void openMirror(const std::string& editId = {});
+    void openMeasure();
+    void openBodyTool(const std::string& tool, const std::string& editId = {});  // combine, split, move
+    void openPlane(const std::string& editId = {}, const std::string& kind = "offset");
+    void openProperties();
+    void openParameters();
+    void editFeature(int index);
+    void runCommand(const QString& id);
+
 protected:
     void closeEvent(QCloseEvent* e) override;
 
@@ -56,12 +97,21 @@ private:
     void buildToolbar();
     void buildDocks();
     void refreshAll();  // after any model change
+    void refreshDatums();
     void refreshBrowser();
     void refreshTimeline();
     void refreshWorkflow();
     void showFeatureDetails(int index);
     void openPalette();
-    void runCommand(const QString& id);
+    void applyIcons();
+    void showPanel(ToolPanel* p);
+    void closePanel();
+    void cancelPicker();
+    void escape();
+    void timelineMenu(const QPoint& pos);
+    void deleteFeature(const std::string& id);
+    void renameFeature(const std::string& id);
+    void updateSketchInfo();
     bool save(bool askPath);
     void exportAs(const QString& format);
     bool maybeKeepChanges();
@@ -85,6 +135,17 @@ private:
     QLabel* statusInfo_ = nullptr;
     QTimer* autosaveTimer_ = nullptr;
     std::map<QString, QAction*> actions_;
+    SketchEditor* sketch_ = nullptr;
+    ToolPanel* panel_ = nullptr;
+    std::unique_ptr<PlanePicker> picker_;
+    QToolBar* toolsBar_ = nullptr;
+    QToolBar* sketchBar_ = nullptr;
+    QDockWidget* propsDock_ = nullptr;
+    QStackedWidget* sideStack_ = nullptr;
+    QWidget* panelHost_ = nullptr;
+    QWidget* sketchPanel_ = nullptr;
+    QLabel* sketchInfo_ = nullptr;
+    QAction* centerRect_ = nullptr;
     Theme theme_ = Theme::Light;
     bool updatingRollback_ = false;
 };

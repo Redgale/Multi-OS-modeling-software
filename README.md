@@ -6,16 +6,49 @@ telemetry, no paywall. Your designs are files on your computer.
 
 ![The phone stand sample in Jigsmith](docs/images/phone_stand_light.png)
 
-> **Status: early development (pre-v0.1, "walking skeleton").** The modelling engine,
-> file format and a viewer-style app work; interactive sketching and feature dialogs
-> are being built milestone by milestone. See [docs/STATUS.md](docs/STATUS.md) for
-> exactly what works today and how it was verified. Tools that are not ready are shown
-> disabled with the milestone they arrive in.
+| Sketching | Fillet with live preview | Pen cup (shell + chamfer) |
+|---|---|---|
+| ![Sketch mode](docs/images/sketch_mode.png) | ![Fillet panel](docs/images/fillet_panel.png) | ![Pen cup](docs/images/pen_cup.png) |
+
+> **Status: early development (pre-v0.1).** You can sketch, extrude and fillet a part in
+> the app, edit any step later, and export it. Many v0.1 tools (Revolve, Hole, Shell,
+> patterns…) are still being built. See [docs/STATUS.md](docs/STATUS.md) for exactly what
+> works today and how it was verified. Tools that are not ready are shown disabled with
+> the milestone they arrive in.
+
+## Download a development build
+
+Every green build of the development branch is published as the
+[**continuous** pre-release](https://github.com/Redgale/Multi-OS-modeling-software/releases/tag/continuous)
+(no GitHub account needed):
+
+| Platform | File |
+|---|---|
+| Linux x86_64 (glibc) | `Jigsmith-linux-x86_64.AppImage`: `chmod +x` it and run |
+| macOS Apple silicon | `Jigsmith-macos-15.dmg` |
+| macOS Intel | `Jigsmith-macos-15-intel.dmg` |
+| Windows x64 | `Jigsmith-windows-x64-portable.zip`: unzip, run `jigsmith.exe` |
+
+They are unsigned, so macOS Gatekeeper and Windows SmartScreen will warn the first time.
+On Void (especially musl), Alpine or other distributions where the AppImage does not
+run, build from source; it takes a few minutes.
 
 ## What works today
 
-- Open the built-in **phone stand** sample (File ▸ Open a sample): parameters, a
-  10-step timeline, rollback marker, undo/redo, face picking with persistent face names.
+- **Sketch** on a plane or a flat face: Line, Rectangle (corner or centre), Circle, Point,
+  Dimension, construction lines, and constraints (coincident, horizontal/vertical, parallel,
+  perpendicular, tangent, equal, midpoint, symmetry, fix). Type sizes while drawing (Tab
+  between fields), drag geometry with the live solver, and see what is still free: hollow
+  points can move, filled squares are fixed. Gaps in an outline are ringed in red.
+- **Extrude** with a live preview: distance or through everything, one side, other side or
+  symmetric, and Join / Cut / New body / Intersect, with **Auto** choosing Join or Cut.
+- **Fillet** and **Chamfer** by clicking edges (tangent chains in one click), and **Shell**
+  by clicking the faces to leave open. A size that does not fit is explained, with a
+  one-click working value.
+- **Edit any step** later (double-click it in the timeline), rename, suppress, roll back,
+  delete with a warning about steps that depend on it; **Parameters** table with units and
+  expressions; unlimited undo.
+- Open the built-in **phone stand** sample (File ▸ Open a sample).
 - Save and open `.jig` designs; export **STL** (binary) and **STEP**.
 - Find any tool by intent: **Ctrl+K** (⌘K on macOS) or **S**, then type “round the edges”.
 - Headless modelling with scripts: `jigsmith-cli --run samples/phone_stand.jigs --report -`.
@@ -27,11 +60,24 @@ telemetry, no paywall. Your designs are files on your computer.
 You need a C++20 compiler, CMake ≥ 3.24, Ninja, and the dependencies below. Every platform
 uses prebuilt dependencies, so a typical machine builds Jigsmith in 5 to 15 minutes.
 
-### Linux (Ubuntu 24.04 / Debian 13)
+### Linux (any distribution)
+
+`scripts/install-deps.sh` installs the dependencies with your package manager. It knows
+**Debian/Ubuntu, Void (glibc and musl), Fedora, Arch and openSUSE Tumbleweed**, and each of
+those is built and tested in CI inside the distribution's official container image. Run
+it with no arguments to see the exact command before anything is installed:
 
 ```bash
-sudo apt install build-essential cmake ninja-build libocct-modeling-algorithms-dev libocct-modeling-data-dev libocct-data-exchange-dev libocct-foundation-dev libtbb-dev libeigen3-dev libboost-dev nlohmann-json3-dev libgtest-dev qt6-base-dev libgl-dev
+scripts/install-deps.sh
 ```
+
+For example, on **Void Linux** it runs:
+
+```bash
+sudo xbps-install -Sy base-devel cmake ninja pkg-config occt-devel qt6-base-devel eigen boost-headers json-c++ gtest-devel tbb-devel freetype-devel MesaLib-devel
+```
+
+Then build, test and run (same on every distribution):
 
 ```bash
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -45,10 +91,26 @@ cmake --build build && ctest --test-dir build
 ./build/app/jigsmith
 ```
 
+**No Open CASCADE package on your distribution** (or one older than 7.6)? Build it into
+`./deps/occt` first (only the parts Jigsmith needs; about 15 to 40 minutes), then point
+CMake at it:
+
+```bash
+scripts/build-occt.sh
+```
+
+```bash
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$PWD/deps/occt"
+```
+
+Other distribution not listed? Install the equivalents of: a C++20 compiler (GCC ≥ 13
+or Clang ≥ 17), CMake ≥ 3.24, Ninja, OCCT ≥ 7.6 development files, Qt 6 base development
+files, Eigen 3, Boost headers, nlohmann/json, GoogleTest and OpenGL headers.
+
 ### macOS (Apple silicon or Intel, Homebrew)
 
 ```bash
-brew install cmake ninja opencascade qt eigen boost nlohmann-json googletest
+brew install cmake ninja opencascade qt eigen boost nlohmann-json googletest freetype
 ```
 
 ```bash

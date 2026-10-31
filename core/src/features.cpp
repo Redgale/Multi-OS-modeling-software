@@ -4,11 +4,17 @@
 // A failing feature returns no state: the document keeps the previous geometry
 // (clean rollback) and marks the step in the timeline.
 #include <algorithm>
+#include <cctype>
 #include <cmath>
+#include <numbers>
+#include <set>
 #include <sstream>
 
 #include <BRepBndLib.hxx>
 #include <Bnd_Box.hxx>
+#include <gp_Trsf.hxx>
+#include <BRepPrimAPI_MakeBox.hxx>
+#include <gp_Ax2.hxx>
 
 #include "jig/document.hpp"
 
@@ -59,6 +65,114 @@ std::string mm(double v)
     return os.str();
 }
 
+// ---------------------------------------------------------------- planes
+
+// A plane reference: "XY"/"XZ"/"YZ", the id of a construction plane, or {"face": ref}
+// (a flat face). Used by sketches and construction planes.
+Result<gp_Ax3> planeFrame(const nlohmann::json& ref, const std::shared_ptr<const ModelState>& in, FeatureStatus& status)
+{
+    if (ref.is_string()) {
+        const std::string name = ref.get<std::string>();
+        if (auto o = planeFromString(name)) {
+            return originPlaneFrame(*o, 0);
+        }
+        auto it = in->planes.find(name);
+        if (it == in->planes.end()) {
+            return makeError("plane.missing", "The plane '" + name + "' is missing or comes later in the timeline.",
+                             {"Pick another plane."});
+        }
+        return it->second;
+    }
+    if (ref.is_object() && ref.contains("face")) {
+        ShapeRef fr = ShapeRef::fromJson(ref["face"]);
+        auto bit = in->bodies.find(fr.body);
+        if (bit == in->bodies.end()) {
+            return makeError("plane.face", "The body of the face this step uses no longer exists.");
+        }
+        Resolution r = resolve(*bit->second, fr);
+        if (r.status == ResolveStatus::Missing || r.status == ResolveStatus::Ambiguous) {
+            return makeError("plane.face", "The face this step uses no longer exists or was split.",
+                             {"Edit the step and pick the face again."});
+        }
+        if (r.status == ResolveStatus::Rebound && status.level == StatusLevel::Ok) {
+            status.level = StatusLevel::Warning;
+            status.message = "The original face changed; the most similar face is used. Check it.";
+        }
+        return faceFrame(bit->second->face(r.index));
+    }
+    return makeError("plane.ref", "This step refers to a plane in a way Jigsmith does not understand.");
+}
+
+FeatureOutcome applyPlane(const Document& doc, const Feature& f, const std::shared_ptr<const ModelState>& in)
+{
+    const auto& p = f.params;
+    FeatureStatus status;
+    const std::string kind = p.value("kind", std::string("offset"));
+    auto base = planeFrame(p.value("base", nlohmann::json("XY")), in, status);
+    if (!base) {
+        return failed(base.error());
+    }
+    gp_Ax3 frame = base.value();
+    if (kind == "offset") {
+        auto d = doc.evalLength(p.value("distance", std::string("10 mm")));
+        if (!d) {
+            return failed(d.error());
+        }
+        frame.Translate(gp_Vec(frame.Direction()) * d.value());
+    }
+    else if (kind == "angle") {
+        auto a = doc.evalAngle(p.value("angle", std::string("45 deg")));
+        if (!a) {
+            return failed(a.error());
+        }
+        gp_Ax1 axis;
+        const auto ax = p.value("axis", nlohmann::json("X"));
+        if (ax.is_object() && ax.contains("edge")) {
+            ShapeRef er = ShapeRef::fromJson(ax["edge"]);
+            auto bit = in->bodies.find(er.body);
+            if (bit == in->bodies.end()) {
+                return failed("The body of the edge this plane turns around no longer exists.");
+            }
+            Resolution r = resolve(*bit->second, er);
+            if (r.status == ResolveStatus::Missing || r.status == ResolveStatus::Ambiguous) {
+                return failed("The edge this plane turns around no longer exists.", {"Edit the plane and pick an edge."});
+            }
+            const MeasureItem m = measureItem(bit->second->edge(r.index));
+            if (m.kind != "straight edge" || !m.axis) {
+                return failed("A plane can only turn around a straight edge.");
+            }
+            axis = *m.axis;
+        }
+        else {
+            const std::string n = ax.is_string() ? ax.get<std::string>() : "X";
+            axis = gp_Ax1(gp_Pnt(0, 0, 0), n == "Y" ? gp_Dir(0, 1, 0) : n == "Z" ? gp_Dir(0, 0, 1) : gp_Dir(1, 0, 0));
+        }
+        if (std::abs(axis.Direction().Dot(frame.Direction())) > 1e-6) {
+            return failed("The turning axis must lie in the base plane (it is not parallel to it).",
+                          {"Pick an axis or edge that lies in the base plane."});
+        }
+        frame.Rotate(axis, a.value());
+    }
+    else if (kind == "midplane") {
+        auto other = planeFrame(p.value("base2", nlohmann::json("XY")), in, status);
+        if (!other) {
+            return failed(other.error());
+        }
+        const gp_Dir n1 = frame.Direction(), n2 = other->Direction();
+        if (!n1.IsParallel(n2, 1e-6)) {
+            return failed("A midplane needs two parallel faces or planes.", {"Pick two faces that face each other."});
+        }
+        const double gap = gp_Vec(frame.Location(), other->Location()).Dot(gp_Vec(n1));
+        frame.Translate(gp_Vec(n1) * (gap / 2));
+    }
+    else {
+        return failed("This construction plane has an unknown kind.");
+    }
+    auto out = copyState(in);
+    out->planes[f.id] = frame;
+    return {out, status};
+}
+
 // ---------------------------------------------------------------- sketch
 
 FeatureOutcome applySketch(const Document& doc, const Feature& f, const std::shared_ptr<const ModelState>& in)
@@ -90,6 +204,14 @@ FeatureOutcome applySketch(const Document& doc, const Feature& f, const std::sha
                              "similar face. Check it is the right one.";
         }
         auto fr = faceFrame(bit->second->face(r.index));
+        if (!fr) {
+            return failed(fr.error());
+        }
+        st->frame = fr.value();
+    }
+    else if (const std::string pl = p.value("plane", std::string("XY")); !planeFromString(pl)) {
+        // a construction plane, by id
+        auto fr = planeFrame(nlohmann::json(pl), in, status);
         if (!fr) {
             return failed(fr.error());
         }
@@ -130,6 +252,10 @@ FeatureOutcome applySketch(const Document& doc, const Feature& f, const std::sha
         return failed(prof.error());
     }
     st->profiles = std::move(prof.value());
+    if (!st->profiles.notes.empty() && status.level == StatusLevel::Ok) {
+        status.level = StatusLevel::Warning;
+        status.message = st->profiles.notes.front();
+    }
 
     if (st->report.state == SolveState::OverConstrained && status.level == StatusLevel::Ok) {
         status.level = StatusLevel::Warning;
@@ -194,19 +320,10 @@ Bnd_Box boxOf(const TopoDS_Shape& s)
     return b;
 }
 
-FeatureOutcome applyExtrude(const Document& doc, const Feature& f, const std::shared_ptr<const ModelState>& in)
+// Chooses the closed areas a feature uses ("all" or a list of region keys).
+std::optional<FeatureOutcome> selectProfiles(const SketchState& sk, const nlohmann::json& p, FeatureStatus& status,
+                                             const std::string& what, std::vector<const Profile*>& profiles)
 {
-    const auto& p = f.params;
-    FeatureStatus status;
-    std::string sketchId = p.value("sketch", std::string {});
-    auto sit = in->sketches.find(sketchId);
-    if (sit == in->sketches.end()) {
-        return failed("The sketch this extrude uses (" + sketchId + ") is missing or has a problem.",
-                      {"Fix the sketch first: it is marked in the timeline.",
-                       "Edit this extrude and pick another sketch."});
-    }
-    const SketchState& sk = *sit->second;
-    std::vector<const Profile*> profiles;
     const auto& want = p.contains("profiles") ? p["profiles"] : nlohmann::json("all");
     if (want.is_string() && want.get<std::string>() == "all") {
         for (auto& r : sk.profiles.regions) {
@@ -216,35 +333,102 @@ FeatureOutcome applyExtrude(const Document& doc, const Feature& f, const std::sh
     else {
         for (auto& k : want) {
             const std::string key = k.get<std::string>();
-            const Profile* hit = nullptr;
             for (auto& r : sk.profiles.regions) {
                 if (r.key == key) {
-                    hit = &r;
+                    profiles.push_back(&r);
                 }
-            }
-            if (hit) {
-                profiles.push_back(hit);
             }
         }
         if (profiles.size() < want.size()) {
             if (want.size() == 1 && sk.profiles.regions.size() == 1) {
                 profiles = {&sk.profiles.regions[0]};
                 status.level = StatusLevel::Warning;
-                status.message = "The sketch's closed area changed shape; the extrude now uses its "
-                                 "only closed area. Check the result.";
+                status.message = "The sketch's closed area changed shape; the " + what +
+                                 " now uses its only closed area. Check the result.";
             }
             else {
-                return failed("Some of the closed areas this extrude used are gone from the sketch.",
-                              {"Edit the extrude and pick the areas again."});
+                return failed("Some of the closed areas this " + what + " used are gone from the sketch.",
+                              {"Edit the " + what + " and pick the areas again."});
             }
         }
     }
     if (profiles.empty()) {
-        return failed("The sketch has no closed area to extrude.",
+        return failed("The sketch has no closed area to " + what + ".",
                       {"Close the outline: look for small gaps between line ends.",
                        "Turn on 'Show gaps' in the sketch."});
     }
+    return std::nullopt;
+}
 
+// Applies a tool shape to the bodies with Join/Cut/Intersect/New body, and records it
+// so a Pattern can repeat it.
+FeatureOutcome applyTool(const Feature& f, BoolOp op, NamedShape tool, const std::shared_ptr<const ModelState>& in,
+                         FeatureStatus status)
+{
+    const auto& p = f.params;
+    auto toolPtr = std::make_shared<const NamedShape>(std::move(tool));
+    auto out = copyState(in);
+    if (op == BoolOp::NewBody || (in->bodies.empty() && op == BoolOp::Join)) {
+        out->bodies[f.id] = toolPtr;
+        out->tools[f.id] = {toolPtr, BoolOp::NewBody, f.id};
+        return {out, status};
+    }
+    if (in->bodies.empty()) {
+        return failed("There is no body to " + std::string(op == BoolOp::Cut ? "cut" : "intersect") + " yet.",
+                      {"Use 'New body' for the first shape."});
+    }
+    std::string target = p.value("target", std::string {});
+    if (target.empty()) {
+        Bnd_Box tb = boxOf(toolPtr->shape());
+        for (auto& [id, b] : in->bodies) {
+            if (!boxOf(b->shape()).IsOut(tb)) {
+                target = id;
+                break;
+            }
+        }
+        if (target.empty()) {
+            target = in->bodies.begin()->first;
+        }
+    }
+    auto bit = in->bodies.find(target);
+    if (bit == in->bodies.end()) {
+        return failed("The body this step should change no longer exists.", {"Edit the step and choose a body."});
+    }
+    auto res = booleanOp(f.id, op, *bit->second, *toolPtr);
+    if (!res) {
+        return failed(res.error());
+    }
+    out->bodies[target] = std::make_shared<NamedShape>(std::move(res.value()));
+    out->tools[f.id] = {toolPtr, op, target};
+    return {out, status};
+}
+
+const SketchState* findSketch(const std::shared_ptr<const ModelState>& in, const std::string& id)
+{
+    auto it = in->sketches.find(id);
+    return it == in->sketches.end() ? nullptr : it->second.get();
+}
+
+FeatureOutcome missingSketch(const std::string& what, const std::string& id)
+{
+    return failed("The sketch this " + what + " uses (" + id + ") is missing or has a problem.",
+                  {"Fix the sketch first: it is marked in the timeline.", "Edit this " + what + " and pick another sketch."});
+}
+
+FeatureOutcome applyExtrude(const Document& doc, const Feature& f, const std::shared_ptr<const ModelState>& in)
+{
+    const auto& p = f.params;
+    FeatureStatus status;
+    const std::string sketchId = p.value("sketch", std::string {});
+    const SketchState* skp = findSketch(in, sketchId);
+    if (!skp) {
+        return missingSketch("extrude", sketchId);
+    }
+    const SketchState& sk = *skp;
+    std::vector<const Profile*> profiles;
+    if (auto bad = selectProfiles(sk, p, status, "extrude", profiles)) {
+        return *bad;
+    }
     ExtrudeInput ei;
     ei.featureId = f.id;
     ei.profiles = profiles;
@@ -283,49 +467,438 @@ FeatureOutcome applyExtrude(const Document& doc, const Feature& f, const std::sh
     if (!tool) {
         return failed(tool.error());
     }
+    return applyTool(f, *op, std::move(tool.value()), in, status);
+}
 
+// ---------------------------------------------------------------- combine, split, move
+
+std::vector<std::string> bodyList(const nlohmann::json& v)
+{
+    std::vector<std::string> out;
+    if (v.is_string()) {
+        out.push_back(v.get<std::string>());
+    }
+    else if (v.is_array()) {
+        for (auto& x : v) {
+            out.push_back(x.get<std::string>());
+        }
+    }
+    return out;
+}
+
+FeatureOutcome applyCombine(const Document&, const Feature& f, const std::shared_ptr<const ModelState>& in)
+{
+    const auto& p = f.params;
+    FeatureStatus status;
+    const std::string target = p.value("target", std::string {});
+    auto tit = in->bodies.find(target);
+    if (tit == in->bodies.end()) {
+        return failed("The body to combine into no longer exists.", {"Edit the step and choose a body."});
+    }
+    auto op = opFromString(p.value("op", std::string("join")));
+    if (!op || *op == BoolOp::NewBody) {
+        return failed("Combine joins, cuts or intersects; choose one of those.");
+    }
+    const auto tools = bodyList(p.value("tools", nlohmann::json::array()));
+    if (tools.empty()) {
+        return failed("Pick at least one body to combine with.");
+    }
+    NamedShape acc = *tit->second;
     auto out = copyState(in);
-    if (*op == BoolOp::NewBody || (in->bodies.empty() && *op == BoolOp::Join)) {
-        out->bodies[f.id] = std::make_shared<NamedShape>(std::move(tool.value()));
-        return {out, status};
+    for (const std::string& t : tools) {
+        auto it = in->bodies.find(t);
+        if (it == in->bodies.end() || t == target) {
+            return failed("A body this combine uses no longer exists.", {"Edit the step and pick the bodies again."});
+        }
+        auto r = booleanOp(f.id, *op, acc, *it->second);
+        if (!r) {
+            return failed(r.error());
+        }
+        acc = std::move(r.value());
+        if (!p.value("keep_tools", false)) {
+            out->bodies.erase(t);
+        }
     }
-    if (in->bodies.empty()) {
-        return failed("There is no body to " + std::string(*op == BoolOp::Cut ? "cut" : "intersect") + " yet.",
-                      {"Use 'New body' for the first shape."});
+    out->bodies[target] = std::make_shared<NamedShape>(std::move(acc));
+    return {out, status};
+}
+
+FeatureOutcome applySplit(const Document&, const Feature& f, const std::shared_ptr<const ModelState>& in)
+{
+    const auto& p = f.params;
+    FeatureStatus status;
+    const std::string bodyId = p.value("body", std::string {});
+    auto bit = in->bodies.find(bodyId);
+    if (bit == in->bodies.end()) {
+        return failed("The body to split no longer exists.", {"Edit the step and choose a body."});
     }
-    std::string target = p.value("target", std::string {});
-    if (target.empty()) {
-        Bnd_Box tb = boxOf(tool->shape());
-        for (auto& [id, b] : in->bodies) {
-            if (!boxOf(b->shape()).IsOut(tb)) {
-                target = id;
-                break;
+    auto fr = planeFrame(p.value("plane", nlohmann::json("YZ")), in, status);
+    if (!fr) {
+        return failed(fr.error());
+    }
+    // Two big boxes, one on each side of the plane; each piece is the body minus the
+    // other side. The new faces are named <split id>/split.
+    Bnd_Box bb = boxOf(bit->second->shape());
+    const double L = std::sqrt(bb.SquareExtent()) * 2 + gp_Vec(gp_Pnt(0, 0, 0), fr->Location()).Magnitude() + 10;
+    auto halfBox = [&](double side) {
+        const gp_Ax3& a = fr.value();
+        gp_Pnt corner(a.Location().XYZ() - a.XDirection().XYZ() * L - a.YDirection().XYZ() * L
+                      + (side < 0 ? a.Direction().XYZ() * (-L) : gp_XYZ(0, 0, 0)));
+        TopoDS_Shape box = BRepPrimAPI_MakeBox(gp_Ax2(corner, a.Direction(), a.XDirection()), 2 * L, 2 * L, L).Shape();
+        NamedShape ns(box);
+        for (int i = 0; i < ns.faceCount(); ++i) {
+            ns.setFaceName(i, f.id + "/split");
+        }
+        ns.deriveEdgeNames();
+        return ns;
+    };
+    auto above = booleanOp(f.id, BoolOp::Cut, *bit->second, halfBox(-1));
+    auto below = booleanOp(f.id, BoolOp::Cut, *bit->second, halfBox(+1));
+    if (!above || !below) {
+        return failed("The split plane does not cross this body, so there is nothing to split.",
+                      {"Pick a plane that passes through the body.", "Use an offset plane to move it."});
+    }
+    auto out = copyState(in);
+    out->bodies[bodyId] = std::make_shared<NamedShape>(std::move(above.value()));
+    out->bodies[f.id] = std::make_shared<NamedShape>(std::move(below.value()));
+    return {out, status};
+}
+
+FeatureOutcome applyMove(const Document& doc, const Feature& f, const std::shared_ptr<const ModelState>& in)
+{
+    const auto& p = f.params;
+    FeatureStatus status;
+    std::vector<std::string> bodies = bodyList(p.value("bodies", nlohmann::json::array()));
+    if (bodies.empty()) {
+        return failed("Pick at least one body to move.");
+    }
+    double d[3] = {0, 0, 0};
+    const char* keys[3] = {"dx", "dy", "dz"};
+    for (int k = 0; k < 3; ++k) {
+        auto v = doc.evalLength(p.value(keys[k], std::string("0 mm")));
+        if (!v) {
+            return failed(v.error());
+        }
+        d[k] = v.value();
+    }
+    auto ang = doc.evalAngle(p.value("angle", std::string("0 deg")));
+    if (!ang) {
+        return failed(ang.error());
+    }
+    const std::string axis = p.value("axis", std::string("Z"));
+    gp_Trsf rot, move;
+    rot.SetRotation(gp_Ax1(gp_Pnt(0, 0, 0), axis == "X" ? gp_Dir(1, 0, 0) : axis == "Y" ? gp_Dir(0, 1, 0) : gp_Dir(0, 0, 1)),
+                    ang.value());
+    move.SetTranslation(gp_Vec(d[0], d[1], d[2]));
+    const gp_Trsf t = move * rot;  // turn about the origin axis, then shift
+    const bool copy = p.value("copy", false);
+    auto out = copyState(in);
+    int k = 0;
+    for (const std::string& b : bodies) {
+        auto it = in->bodies.find(b);
+        if (it == in->bodies.end()) {
+            return failed("A body this step moves no longer exists.", {"Edit the step and pick the bodies again."});
+        }
+        if (copy) {
+            const std::string id = bodies.size() == 1 ? f.id : f.id + "." + std::to_string(++k);
+            out->bodies[id] = std::make_shared<NamedShape>(transformedCopy(*it->second, t, f.id + "/copy:"));
+        }
+        else {
+            out->bodies[b] = std::make_shared<NamedShape>(transformedCopy(*it->second, t, ""));
+        }
+    }
+    return {out, status};
+}
+
+// ---------------------------------------------------------------- revolve
+
+FeatureOutcome applyRevolve(const Document& doc, const Feature& f, const std::shared_ptr<const ModelState>& in)
+{
+    const auto& p = f.params;
+    FeatureStatus status;
+    const std::string sketchId = p.value("sketch", std::string {});
+    const SketchState* skp = findSketch(in, sketchId);
+    if (!skp) {
+        return missingSketch("revolve", sketchId);
+    }
+    const SketchState& sk = *skp;
+    // Axis: a line of the sketch (usually a construction line), or an origin axis.
+    gp_Ax1 axis;
+    const nlohmann::json ax = p.value("axis", nlohmann::json::object());
+    if (ax.contains("line")) {
+        const auto* e = sk.solved.entity(ax["line"].get<int>());
+        if (!e || e->type != EntityType::Line) {
+            return failed("The axis line of this revolve is gone from the sketch.",
+                          {"Edit the revolve and pick an axis again."});
+        }
+        auto to3d = [&](int pid) {
+            auto [x, y] = sk.solved.pointXY(pid);
+            return gp_Pnt(sk.frame.Location().XYZ() + sk.frame.XDirection().XYZ() * x + sk.frame.YDirection().XYZ() * y);
+        };
+        const gp_Pnt a = to3d(e->p1), b = to3d(e->p2);
+        if (a.Distance(b) < 1e-9) {
+            return failed("The axis line has no length.");
+        }
+        axis = gp_Ax1(a, gp_Dir(gp_Vec(a, b)));
+    }
+    else {
+        const std::string name = ax.value("origin", std::string("Z"));
+        axis = gp_Ax1(gp_Pnt(0, 0, 0), name == "X" ? gp_Dir(1, 0, 0) : name == "Y" ? gp_Dir(0, 1, 0) : gp_Dir(0, 0, 1));
+    }
+    // profiles: the axis line itself never forms a region (it is usually construction)
+    std::vector<const Profile*> profiles;
+    if (auto bad = selectProfiles(sk, p, status, "revolve", profiles)) {
+        return *bad;
+    }
+    auto angle = doc.evalAngle(p.value("angle", std::string("360 deg")));
+    if (!angle) {
+        return failed(angle.error());
+    }
+    auto op = opFromString(p.value("op", std::string("new")));
+    if (!op) {
+        return failed("This revolve has an unknown operation.");
+    }
+    auto tool = makeRevolution(f.id, profiles, axis, angle.value());
+    if (!tool) {
+        return failed(tool.error());
+    }
+    return applyTool(f, *op, std::move(tool.value()), in, status);
+}
+
+// ---------------------------------------------------------------- hole
+
+FeatureOutcome applyHole(const Document& doc, const Feature& f, const std::shared_ptr<const ModelState>& in)
+{
+    const auto& p = f.params;
+    FeatureStatus status;
+    const std::string sketchId = p.value("sketch", std::string {});
+    const SketchState* skp = findSketch(in, sketchId);
+    if (!skp) {
+        return missingSketch("hole", sketchId);
+    }
+    const SketchState& sk = *skp;
+    // Hole centres: sketch points that are not the end or centre of a curve, or the
+    // points listed in "points".
+    std::set<int> used;
+    for (auto& [id, e] : sk.solved.entities()) {
+        if (e.type != EntityType::Point) {
+            used.insert({e.p1, e.p2, e.center});
+        }
+    }
+    for (auto& [id, t] : sk.solved.texts()) {
+        used.insert(t.anchor);  // a text's anchor is not a hole centre
+    }
+    std::set<int> wanted;
+    if (p.contains("points") && p["points"].is_array()) {
+        for (auto& v : p["points"]) {
+            wanted.insert(v.get<int>());
+        }
+    }
+    std::vector<HolePoint> pts;
+    for (auto& [id, e] : sk.solved.entities()) {
+        if (e.type != EntityType::Point || e.construction) {
+            continue;
+        }
+        if (wanted.empty() ? (!used.count(id) && !e.internal) : wanted.count(id) > 0) {
+            pts.push_back({id, e.x, e.y});
+        }
+    }
+    if (pts.empty()) {
+        return failed("The hole sketch has no points to put holes at.",
+                      {"Add a Point in the sketch where each hole should go."});
+    }
+    HoleSpec spec;
+    const std::string type = p.value("type", std::string("simple"));
+    spec.type = type == "counterbore" ? HoleSpec::Type::Counterbore
+              : type == "countersink" ? HoleSpec::Type::Countersink
+                                      : HoleSpec::Type::Simple;
+    auto len = [&](const char* key, const char* def) { return doc.evalLength(p.value(key, std::string(def))); };
+    auto d = len("diameter", "3.4 mm");
+    if (!d) {
+        return failed(d.error());
+    }
+    spec.diameter = d.value();
+    spec.through = p.value("extent", std::string("distance")) == "all";
+    if (!spec.through) {
+        auto dp = len("depth", "10 mm");
+        if (!dp) {
+            return failed(dp.error());
+        }
+        spec.depth = dp.value();
+    }
+    if (spec.type == HoleSpec::Type::Counterbore) {
+        auto cd = len("cbore_diameter", "6.5 mm"), ch = len("cbore_depth", "3.5 mm");
+        if (!cd || !ch) {
+            return failed(!cd ? cd.error() : ch.error());
+        }
+        spec.cboreDiameter = cd.value();
+        spec.cboreDepth = ch.value();
+    }
+    if (spec.type == HoleSpec::Type::Countersink) {
+        auto cd = len("csink_diameter", "6.5 mm");
+        auto ca = doc.evalAngle(p.value("csink_angle", std::string("90 deg")));
+        if (!cd || !ca) {
+            return failed(!cd ? cd.error() : ca.error());
+        }
+        spec.csinkDiameter = cd.value();
+        spec.csinkAngle = ca.value();
+    }
+    Bnd_Box all;
+    for (auto& [id, b] : in->bodies) {
+        all.Add(boxOf(b->shape()));
+    }
+    const double through = all.IsVoid() ? 1000 : std::sqrt(all.SquareExtent()) * 2 + 10;
+    auto tool = makeHoleTool(f.id, sk.frame, pts, spec, through);
+    if (!tool) {
+        return failed(tool.error());
+    }
+    return applyTool(f, BoolOp::Cut, std::move(tool.value()), in, status);
+}
+
+// ---------------------------------------------------------------- pattern
+
+FeatureOutcome applyPattern(const Document& doc, const Feature& f, const std::shared_ptr<const ModelState>& in)
+{
+    const auto& p = f.params;
+    FeatureStatus status;
+    const std::string src = p.value("feature", std::string {});
+    auto rit = in->tools.find(src);
+    if (rit == in->tools.end()) {
+        return failed("The step this pattern repeats (" + src + ") is missing, after the pattern, or has a problem.",
+                      {"Pattern an Extrude, Revolve or Hole that comes earlier in the timeline."});
+    }
+    const ToolRecord& rec = rit->second;
+    const std::string kind = p.value("kind", std::string("circular"));
+    auto dirOf = [](const std::string& n) {
+        return n == "X" ? gp_Dir(1, 0, 0) : n == "Y" ? gp_Dir(0, 1, 0) : gp_Dir(0, 0, 1);
+    };
+    std::vector<gp_Trsf> moves;
+    if (kind == "circular") {
+        auto n = evaluate(p.value("count", std::string("6")), doc.lookup());
+        if (!n || !(n->dim == Dim::none()) || n->value < 2 || n->value > 1000) {
+            return failed("The number of copies must be a whole number from 2 to 1000.");
+        }
+        auto ang = doc.evalAngle(p.value("angle", std::string("360 deg")));
+        if (!ang) {
+            return failed(ang.error());
+        }
+        const int cnt = int(std::lround(n->value));
+        const bool full = std::abs(ang.value() - 2 * std::numbers::pi) < 1e-9;
+        const double step = full ? ang.value() / cnt : ang.value() / (cnt - 1);
+        const gp_Ax1 axis(gp_Pnt(0, 0, 0), dirOf(p.value("axis", std::string("Z"))));
+        for (int k = 1; k < cnt; ++k) {
+            gp_Trsf t;
+            t.SetRotation(axis, step * k);
+            moves.push_back(t);
+        }
+    }
+    else {
+        auto count = [&](const char* key) -> std::optional<int> {
+            auto n = evaluate(p.value(key, std::string("1")), doc.lookup());
+            if (!n || !(n->dim == Dim::none()) || n->value < 1 || n->value > 1000) {
+                return std::nullopt;
+            }
+            return int(std::lround(n->value));
+        };
+        auto n1 = count("count1"), n2 = count("count2");
+        auto s1 = doc.evalLength(p.value("spacing1", std::string("10 mm")));
+        auto s2 = doc.evalLength(p.value("spacing2", std::string("10 mm")));
+        if (!n1 || !n2) {
+            return failed("The number of copies in each direction must be a whole number from 1 to 1000.");
+        }
+        if (!s1 || !s2) {
+            return failed(!s1 ? s1.error() : s2.error());
+        }
+        const gp_Dir d1 = dirOf(p.value("dir1", std::string("X"))), d2 = dirOf(p.value("dir2", std::string("Y")));
+        for (int i = 0; i < *n1; ++i) {
+            for (int j = 0; j < *n2; ++j) {
+                if (i == 0 && j == 0) {
+                    continue;
+                }
+                gp_Trsf t;
+                t.SetTranslation(gp_Vec(d1) * (s1.value() * i) + gp_Vec(d2) * (s2.value() * j));
+                moves.push_back(t);
             }
         }
-        if (target.empty()) {
-            target = in->bodies.begin()->first;
+    }
+    if (moves.empty()) {
+        return failed("This pattern makes no copies.", {"Use a count of 2 or more."});
+    }
+    std::vector<NamedShape> copies;
+    for (size_t k = 0; k < moves.size(); ++k) {
+        copies.push_back(transformedCopy(*rec.tool, moves[k], f.id + "/" + std::to_string(k + 1) + ":"));
+    }
+    NamedShape all = namedCompound(copies);
+    if (rec.op == BoolOp::NewBody) {
+        auto out = copyState(in);
+        for (size_t k = 0; k < copies.size(); ++k) {
+            out->bodies[f.id + "." + std::to_string(k + 1)] = std::make_shared<NamedShape>(copies[k]);
         }
+        return {out, status};
     }
-    auto bit = in->bodies.find(target);
+    auto bit = in->bodies.find(rec.target);
     if (bit == in->bodies.end()) {
-        return failed("The body this extrude should change no longer exists.",
-                      {"Edit the extrude and choose a body."});
+        return failed("The body the pattern should change no longer exists.");
     }
-    auto res = booleanOp(f.id, *op, *bit->second, tool.value());
+    auto res = booleanOp(f.id, rec.op, *bit->second, all);
     if (!res) {
-        return failed(res.error());
+        Error e = res.error();
+        if (e.code == "boolean.not_touching") {
+            e.message = "Some copies do not touch the body, so they cannot be joined.";
+            e.suggestions = {"Use fewer copies or a smaller spacing.", "Check the pattern axis or directions."};
+        }
+        return failed(e);
     }
-    out->bodies[target] = std::make_shared<NamedShape>(std::move(res.value()));
+    auto out = copyState(in);
+    out->bodies[rec.target] = std::make_shared<NamedShape>(std::move(res.value()));
+    return {out, status};
+}
+
+// ---------------------------------------------------------------- mirror
+
+FeatureOutcome applyMirror(const Document&, const Feature& f, const std::shared_ptr<const ModelState>& in)
+{
+    const auto& p = f.params;
+    FeatureStatus status;
+    std::string bodyId = p.value("body", std::string {});
+    if (bodyId.empty() && in->bodies.size() == 1) {
+        bodyId = in->bodies.begin()->first;
+    }
+    auto bit = in->bodies.find(bodyId);
+    if (bit == in->bodies.end()) {
+        return failed("There is no body to mirror.", {"Edit the mirror and choose a body."});
+    }
+    const std::string plane = p.value("plane", std::string("YZ"));
+    const gp_Dir n = plane == "XY" ? gp_Dir(0, 0, 1) : plane == "XZ" ? gp_Dir(0, 1, 0) : gp_Dir(1, 0, 0);
+    gp_Trsf t;
+    t.SetMirror(gp_Ax2(gp_Pnt(0, 0, 0), n));
+    NamedShape copy = transformedCopy(*bit->second, t, f.id + "/mirror:");
+    auto out = copyState(in);
+    if (p.value("op", std::string("join")) == "new") {
+        out->bodies[f.id] = std::make_shared<NamedShape>(std::move(copy));
+        return {out, status};
+    }
+    auto res = booleanOp(f.id, BoolOp::Join, *bit->second, copy);
+    if (!res) {
+        Error e = res.error();
+        if (e.code == "boolean.not_touching") {
+            e.message = "The mirrored copy does not touch the original, so they cannot be joined.";
+            e.suggestions = {"Mirror as a new body instead.", "Model the half so it meets the mirror plane."};
+        }
+        return failed(e);
+    }
+    out->bodies[bodyId] = std::make_shared<NamedShape>(std::move(res.value()));
     return {out, status};
 }
 
 // ---------------------------------------------------------------- fillet
 
-FeatureOutcome applyFillet(const Document& doc, const Feature& f, const std::shared_ptr<const ModelState>& in)
+FeatureOutcome applyFillet(const Document& doc, const Feature& f, const std::shared_ptr<const ModelState>& in,
+                           bool chamfer = false)
 {
     const auto& p = f.params;
     FeatureStatus status;
-    auto r = doc.evalLength(p.value("radius", std::string("1 mm")));
+    auto r = doc.evalLength(p.value(chamfer ? "distance" : "radius", std::string("1 mm")));
     if (!r) {
         return failed(r.error());
     }
@@ -369,23 +942,26 @@ FeatureOutcome applyFillet(const Document& doc, const Feature& f, const std::sha
     if (missing || ambiguous) {
         std::string msg;
         if (missing) {
-            msg += std::to_string(missing) + " of the edges this fillet rounded no longer exist. ";
+            msg += std::to_string(missing) + (chamfer ? " of the edges this chamfer bevelled no longer exist. "
+                                                      : " of the edges this fillet rounded no longer exist. ");
         }
         if (ambiguous) {
             msg += std::to_string(ambiguous) + " edge" + (ambiguous == 1 ? " was" : "s were")
                  + " split, and Jigsmith can't tell which piece you meant.";
         }
         return failed(msg,
-                      {"Edit the fillet and pick the edges again.",
+                      {chamfer ? "Edit the chamfer and pick the edges again." : "Edit the fillet and pick the edges again.",
                        "Or roll back to the step that changed them."},
                       unresolved);
     }
     std::sort(edges.begin(), edges.end());
     edges.erase(std::unique(edges.begin(), edges.end()), edges.end());
     if (edges.empty()) {
-        return failed("This fillet has no edges.", {"Edit the fillet and pick edges to round."});
+        return failed(chamfer ? "This chamfer has no edges." : "This fillet has no edges.",
+                      {chamfer ? "Edit the chamfer and pick edges to bevel." : "Edit the fillet and pick edges to round."});
     }
-    auto res = filletEdges(f.id, *in->bodies.at(bodyId), edges, r.value());
+    auto res = chamfer ? chamferEdges(f.id, *in->bodies.at(bodyId), edges, r.value())
+                       : filletEdges(f.id, *in->bodies.at(bodyId), edges, r.value());
     if (!res) {
         return failed(res.error());
     }
@@ -393,6 +969,65 @@ FeatureOutcome applyFillet(const Document& doc, const Feature& f, const std::sha
         status.level = StatusLevel::Warning;
         status.message = std::to_string(rebound) + " edge" + (rebound == 1 ? " was" : "s were")
                        + " re-attached by shape similarity after an earlier change. Check the result.";
+    }
+    auto out = copyState(in);
+    out->bodies[bodyId] = std::make_shared<NamedShape>(std::move(res.value()));
+    return {out, status};
+}
+
+// ---------------------------------------------------------------- shell
+
+FeatureOutcome applyShell(const Document& doc, const Feature& f, const std::shared_ptr<const ModelState>& in)
+{
+    const auto& p = f.params;
+    FeatureStatus status;
+    auto t = doc.evalLength(p.value("thickness", std::string("2 mm")));
+    if (!t) {
+        return failed(t.error());
+    }
+    std::string bodyId = p.value("body", std::string {});
+    std::vector<int> faces;
+    int missing = 0, ambiguous = 0, rebound = 0;
+    for (auto& jr : p.value("faces", nlohmann::json::array())) {
+        ShapeRef ref = ShapeRef::fromJson(jr);
+        if (bodyId.empty()) {
+            bodyId = ref.body;
+        }
+        auto bit = in->bodies.find(ref.body);
+        if (bit == in->bodies.end()) {
+            ++missing;
+            continue;
+        }
+        Resolution res = resolve(*bit->second, ref);
+        if (res.status == ResolveStatus::Exact || res.status == ResolveStatus::Rebound) {
+            faces.push_back(res.index);
+            rebound += res.status == ResolveStatus::Rebound;
+        }
+        else if (res.status == ResolveStatus::Ambiguous) {
+            ++ambiguous;
+        }
+        else {
+            ++missing;
+        }
+    }
+    if (missing || ambiguous) {
+        return failed("Some of the faces this shell left open no longer exist or were split.",
+                      {"Edit the shell and pick the open faces again."});
+    }
+    if (bodyId.empty() && in->bodies.size() == 1) {
+        bodyId = in->bodies.begin()->first;
+    }
+    auto bit = in->bodies.find(bodyId);
+    if (bit == in->bodies.end()) {
+        return failed("There is no body to hollow out.", {"Create a solid first, then shell it."});
+    }
+    auto res = shellSolid(f.id, *bit->second, faces, t.value());
+    if (!res) {
+        return failed(res.error());
+    }
+    if (rebound) {
+        status.level = StatusLevel::Warning;
+        status.message = "An open face was re-attached by shape similarity after an earlier change. Check it.";
     }
     auto out = copyState(in);
     out->bodies[bodyId] = std::make_shared<NamedShape>(std::move(res.value()));
@@ -411,6 +1046,26 @@ FeatureOutcome applyFeature(const Document& doc, const Feature& f, const std::sh
                 return applyExtrude(doc, f, in);
             case FeatureKind::Fillet:
                 return applyFillet(doc, f, in);
+            case FeatureKind::Chamfer:
+                return applyFillet(doc, f, in, true);
+            case FeatureKind::Shell:
+                return applyShell(doc, f, in);
+            case FeatureKind::Revolve:
+                return applyRevolve(doc, f, in);
+            case FeatureKind::Hole:
+                return applyHole(doc, f, in);
+            case FeatureKind::Pattern:
+                return applyPattern(doc, f, in);
+            case FeatureKind::Mirror:
+                return applyMirror(doc, f, in);
+            case FeatureKind::Plane:
+                return applyPlane(doc, f, in);
+            case FeatureKind::Combine:
+                return applyCombine(doc, f, in);
+            case FeatureKind::Split:
+                return applySplit(doc, f, in);
+            case FeatureKind::Move:
+                return applyMove(doc, f, in);
         }
     }
     catch (const std::exception& ex) {

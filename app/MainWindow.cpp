@@ -1,7 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "MainWindow.hpp"
 
+#include <array>
+
 #include <QAction>
+#include <QCheckBox>
+#include <QPainter>
+#include <QInputDialog>
+#include <QMenu>
+#include <QShortcut>
+#include <QStackedWidget>
 #include <QActionGroup>
 #include <QApplication>
 #include <QCloseEvent>
@@ -34,15 +42,31 @@
 #include <QVBoxLayout>
 #include <QWhatsThis>
 
+#include "FeaturePanels.hpp"
+#include "InspectPanels.hpp"
+#include "Icons.hpp"
+#include "SketchEditor.hpp"
 #include "Viewport.hpp"
 #include "jig/commands.hpp"
 #include "jig/io.hpp"
 #include "jig/version.hpp"
 
+// Resources live in the static jigsmith_ui library: register them explicitly.
+static void initJigResources()
+{
+    Q_INIT_RESOURCE(resources);
+}
+
 namespace jigapp
 {
 namespace
 {
+
+QColor accentFor(const QPalette& pal)
+{
+    // blue on light backgrounds, amber on dark ones
+    return pal.color(QPalette::Window).lightness() > 128 ? QColor(37, 110, 222) : QColor(255, 190, 80);
+}
 
 QString q(const std::string& s)
 {
@@ -93,6 +117,26 @@ QString kindWord(jig::FeatureKind k)
             return MainWindow::tr("Extrude");
         case jig::FeatureKind::Fillet:
             return MainWindow::tr("Fillet");
+        case jig::FeatureKind::Chamfer:
+            return MainWindow::tr("Chamfer");
+        case jig::FeatureKind::Shell:
+            return MainWindow::tr("Shell");
+        case jig::FeatureKind::Revolve:
+            return MainWindow::tr("Revolve");
+        case jig::FeatureKind::Hole:
+            return MainWindow::tr("Hole");
+        case jig::FeatureKind::Pattern:
+            return MainWindow::tr("Pattern");
+        case jig::FeatureKind::Mirror:
+            return MainWindow::tr("Mirror");
+        case jig::FeatureKind::Plane:
+            return MainWindow::tr("Plane");
+        case jig::FeatureKind::Combine:
+            return MainWindow::tr("Combine");
+        case jig::FeatureKind::Split:
+            return MainWindow::tr("Split");
+        case jig::FeatureKind::Move:
+            return MainWindow::tr("Move");
     }
     return {};
 }
@@ -161,7 +205,8 @@ private:
             if (!c.available) {
                 line += "   " + tr("(coming in %1)").arg(q(c.comingIn.empty() ? "a later version" : c.comingIn));
             }
-            auto* it = new QListWidgetItem(line, list_);
+            auto* it = new QListWidgetItem(toolIcon(q(c.id), palette().color(QPalette::Text), accentFor(palette())),
+                                           line, list_);
             it->setData(Qt::UserRole, q(c.id));
             it->setToolTip(q(c.tooltip));
             if (!c.available) {
@@ -211,8 +256,182 @@ private:
 
 // ---------------------------------------------------------------- construction
 
+// ---------------------------------------------------------------- plane picker
+
+// "Create sketch": shows the three origin planes; click one, or a flat face of a body.
+// Corners of the square that shows a construction plane, half-size s.
+std::array<QVector3D, 4> planeCorners(const gp_Ax3& f, float s)
+{
+    auto at = [&](double u, double v) {
+        const gp_XYZ p = f.Location().XYZ() + f.XDirection().XYZ() * u + f.YDirection().XYZ() * v;
+        return QVector3D(float(p.X()), float(p.Y()), float(p.Z()));
+    };
+    return {at(-s, -s), at(s, -s), at(s, s), at(-s, s)};
+}
+
+const QColor kDatum(222, 150, 40);  // construction planes: amber, with a name label
+
+class PlanePicker : public Interactor
+{
+public:
+    PlanePicker(MainWindow* w, Viewport* v)
+        : w_(w)
+        , v_(v)
+    {
+        rebuild();
+    }
+    ~PlanePicker() override
+    {
+        v_->setOverlay({});
+    }
+    bool mouseMove(QMouseEvent* e) override
+    {
+        const Hit h = hitAt(e->position());
+        if (h.plane != hover_.plane || h.face != hover_.face) {
+            hover_ = h;
+            rebuild();
+        }
+        return true;
+    }
+    bool mouseRelease(QMouseEvent* e) override
+    {
+        const Hit h = hitAt(e->position());
+        if (h.face >= 0) {
+            w_->createSketchOn({}, h.body, h.face);
+        }
+        else if (!h.plane.isEmpty()) {
+            w_->createSketchOn(h.plane.toStdString());
+        }
+        return true;
+    }
+    void paint(QPainter& p) override
+    {
+        QFont f = p.font();
+        f.setBold(true);
+        p.setFont(f);
+        const QString msg = QObject::tr("Click a plane, a construction plane or a flat face to sketch on.  Esc cancels.");
+        const QRectF box(10, 10, p.fontMetrics().horizontalAdvance(msg) + 20, 26);
+        QColor bg = v_->colors().background;
+        bg.setAlpha(230);
+        p.setPen(Qt::NoPen);
+        p.setBrush(bg);
+        p.drawRoundedRect(box, 5, 5);
+        p.setPen(v_->colors().text);
+        p.drawText(box, Qt::AlignCenter, msg);
+        const float s = size();
+        const std::pair<QString, QVector3D> labels[] = {{QObject::tr("XY · floor"), {s * 0.75f, -s * 0.75f, 0}},
+                                                         {QObject::tr("XZ · front"), {s * 0.75f, 0, s * 0.85f}},
+                                                         {QObject::tr("YZ · side"), {0, s * 0.75f, s * 0.85f}}};
+        for (auto& [t, w] : labels) {
+            p.drawText(v_->project(w), t);
+        }
+    }
+
+private:
+    struct Hit
+    {
+        QString plane;
+        std::string body;
+        int face = -1;
+    };
+    float size() const
+    {
+        float s = 60;
+        for (auto& [id, b] : w_->document().state().bodies) {
+            auto mp = jig::massProperties(b->shape());
+            s = std::max({s, float(mp.xmax - mp.xmin), float(mp.ymax - mp.ymin), float(mp.zmax - mp.zmin)});
+        }
+        return s * 0.6f;
+    }
+    Hit hitAt(const QPointF& px) const
+    {
+        Hit h;
+        if (auto f = v_->pickFaceAt(px.toPoint())) {
+            auto it = w_->document().state().bodies.find(f->body);
+            if (it != w_->document().state().bodies.end() && it->second->faceFingerprint(f->face).type == "plane") {
+                h.body = f->body;
+                h.face = f->face;
+                return h;
+            }
+        }
+        QVector3D o, d;
+        v_->ray(px, o, d);
+        const float s = size();
+        float best = 1e30f;
+        auto test = [&](const QString& name, int axis) {
+            const float denom = axis == 0 ? d.z() : axis == 1 ? d.y() : d.x();
+            if (std::abs(denom) < 1e-6f) {
+                return;
+            }
+            const float t = -(axis == 0 ? o.z() : axis == 1 ? o.y() : o.x()) / denom;
+            const QVector3D p = o + d * t;
+            const float a = axis == 2 ? p.y() : p.x(), b = axis == 0 ? p.y() : p.z();
+            if (t > 0 && std::abs(a) <= s && std::abs(b) <= s && t < best) {
+                best = t;
+                h.plane = name;
+            }
+        };
+        test("XY", 0);
+        test("XZ", 1);
+        test("YZ", 2);
+        for (auto& [id, f] : w_->document().state().planes) {
+            const gp_Dir n = f.Direction();
+            const QVector3D N(float(n.X()), float(n.Y()), float(n.Z()));
+            const float denom = QVector3D::dotProduct(N, d);
+            if (std::abs(denom) < 1e-6f) {
+                continue;
+            }
+            const QVector3D L(float(f.Location().X()), float(f.Location().Y()), float(f.Location().Z()));
+            const float t = QVector3D::dotProduct(L - o, N) / denom;
+            const QVector3D q = o + d * t - L;
+            const gp_Dir X = f.XDirection(), Y = f.YDirection();
+            const float u = QVector3D::dotProduct(q, QVector3D(float(X.X()), float(X.Y()), float(X.Z())));
+            const float v = QVector3D::dotProduct(q, QVector3D(float(Y.X()), float(Y.Y()), float(Y.Z())));
+            if (t > 0 && std::abs(u) <= s && std::abs(v) <= s && t < best) {
+                best = t;
+                h.plane = QString::fromStdString(id);
+            }
+        }
+        return h;
+    }
+    void rebuild()
+    {
+        SceneOverlay ov;
+        const float s = size();
+        auto quad = [&](const QString& name, QVector3D a, QVector3D b, QVector3D c, QVector3D d, QColor col) {
+            QColor fill = col;
+            fill.setAlpha(hover_.plane == name ? 90 : 38);
+            for (auto& p : {a, b, c, a, c, d}) {
+                ov.tris.push_back({p, fill});
+            }
+            col.setAlpha(200);
+            for (auto [p, q2] : {std::pair {a, b}, std::pair {b, c}, std::pair {c, d}, std::pair {d, a}}) {
+                ov.lines.push_back({p, col});
+                ov.lines.push_back({q2, col});
+            }
+        };
+        quad("XY", {-s, -s, 0}, {s, -s, 0}, {s, s, 0}, {-s, s, 0}, QColor(60, 110, 230));
+        quad("XZ", {-s, 0, -s}, {s, 0, -s}, {s, 0, s}, {-s, 0, s}, QColor(64, 170, 90));
+        quad("YZ", {0, -s, -s}, {0, s, -s}, {0, s, s}, {0, -s, s}, QColor(214, 64, 69));
+        for (auto& [id, f] : w_->document().state().planes) {
+            if (hover_.plane == QString::fromStdString(id)) {
+                auto c = planeCorners(f, s);
+                quad(hover_.plane, c[0], c[1], c[2], c[3], kDatum);
+            }
+        }
+        v_->setOverlay(std::move(ov));
+        if (hover_.face >= 0) {
+            v_->selectFaceForScreenshot(-1);
+        }
+    }
+    MainWindow* w_;
+    Viewport* v_;
+    Hit hover_;
+};
+
 MainWindow::MainWindow()
 {
+    initJigResources();
     setWindowTitle(tr("Jigsmith"));
     setObjectName("MainWindow");
     view_ = new Viewport(this);
@@ -269,6 +488,9 @@ MainWindow::MainWindow()
 
     setDocument(std::make_unique<jig::Document>(), {});
     resize(1360, 860);
+    // Esc: cancel the open panel, the plane picker, or the sketch tool in progress
+    auto* esc = new QShortcut(QKeySequence(Qt::Key_Escape), this);
+    connect(esc, &QShortcut::activated, this, &MainWindow::escape);
 }
 
 MainWindow::~MainWindow() = default;
@@ -329,6 +551,8 @@ void MainWindow::buildMenus()
     file->addSeparator();
     auto* samples = file->addMenu(tr("Open a sample"));
     samples->addAction(tr("Phone stand"), this, [this] { openSample("phone_stand"); });
+    samples->addAction(tr("Knob (revolve, pattern, text)"), this, [this] { openSample("knob"); });
+    samples->addAction(tr("Pen cup (parameters, shell)"), this, [this] { openSample("pen_cup"); });
     file->addSeparator();
     for (const char* id : {"file.export_stl", "file.export_step", "file.export_3mf"}) {
         file->addAction(registryAction(id));
@@ -429,9 +653,12 @@ void MainWindow::buildToolbar()
 
     // Row 2: panels with the essential tools, text labels (icons alone confuse beginners).
     auto* tools = addToolBar(tr("Tools"));
+    toolsBar_ = tools;
     tools->setObjectName("ToolsBar");
     tools->setMovable(false);
-    tools->setToolButtonStyle(Qt::ToolButtonTextOnly);
+    // icon with its name under it: icons alone confuse beginners (brief section 6)
+    tools->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
+    tools->setIconSize(QSize(24, 24));
     for (const char* panel : {"CREATE", "MODIFY", "CONSTRUCT", "INSPECT", "INSERT"}) {
         auto* title = new QLabel(QString("<small><b>%1</b></small>").arg(tr(panel)), this);
         title->setContentsMargins(10, 0, 4, 0);
@@ -448,6 +675,46 @@ void MainWindow::buildToolbar()
     all->setToolTip(tr("Search every tool, including ones that are not on the toolbar."));
     connect(all, &QToolButton::clicked, this, &MainWindow::openPalette);
     tools->addWidget(all);
+
+    // The contextual sketch toolbar replaces the tools while a sketch is open.
+    sketchBar_ = addToolBar(tr("Sketch"));
+    sketchBar_->setObjectName("SketchBar");
+    sketchBar_->setMovable(false);
+    sketchBar_->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
+    sketchBar_->setIconSize(QSize(24, 24));
+    centerRect_ = new QAction(tr("Center rectangle"), this);
+    centerRect_->setObjectName("sketch.rectangle_center");
+    centerRect_->setToolTip(tr("<b>Center rectangle</b><br>Draw a rectangle outward from its centre: good for parts "
+                               "centred on the origin."));
+    connect(centerRect_, &QAction::triggered, this, [this] {
+        if (sketch_) {
+            sketch_->setTool(SketchEditor::Tool::CenterRectangle);
+        }
+    });
+    auto title = [&](const QString& t) {
+        auto* l = new QLabel(QString("<small><b>%1</b></small>").arg(t), this);
+        l->setContentsMargins(10, 0, 4, 0);
+        sketchBar_->addWidget(l);
+    };
+    title(tr("SKETCH"));
+    for (const char* id : {"sketch.line", "sketch.rectangle"}) {
+        sketchBar_->addAction(registryAction(id));
+    }
+    sketchBar_->addAction(centerRect_);
+    for (const char* id : {"sketch.circle", "sketch.arc", "sketch.slot", "sketch.polygon", "sketch.text",
+                           "sketch.point", "sketch.dimension", "sketch.construction", "sketch.trim", "sketch.offset"}) {
+        sketchBar_->addAction(registryAction(id));
+    }
+    sketchBar_->addSeparator();
+    title(tr("CONSTRAIN"));
+    for (const char* id : {"constraint.coincident", "constraint.horizontal", "constraint.parallel",
+                           "constraint.perpendicular", "constraint.tangent", "constraint.equal", "constraint.midpoint",
+                           "constraint.symmetric", "constraint.fix"}) {
+        sketchBar_->addAction(registryAction(id));
+    }
+    sketchBar_->addSeparator();
+    sketchBar_->addAction(registryAction("sketch.finish"));
+    sketchBar_->hide();
 }
 
 void MainWindow::buildDocks()
@@ -463,13 +730,65 @@ void MainWindow::buildDocks()
     addDockWidget(Qt::LeftDockWidgetArea, bdock);
 
     auto* ddock = new QDockWidget(tr("Properties"), this);
+    propsDock_ = ddock;
     ddock->setObjectName("PropertiesDock");
+    sideStack_ = new QStackedWidget(ddock);
     details_ = new QTextBrowser(ddock);
     details_->setOpenExternalLinks(false);
     details_->setAccessibleName(tr("Properties and help"));
     details_->setWhatsThis(tr("Details about what you selected, and explanations and fixes for any step "
                               "marked with a problem."));
-    ddock->setWidget(details_);
+    sideStack_->addWidget(details_);
+    panelHost_ = new QWidget(sideStack_);
+    new QVBoxLayout(panelHost_);
+    panelHost_->layout()->setContentsMargins(0, 0, 0, 0);
+    sideStack_->addWidget(panelHost_);
+    // sketch palette: state in words and shapes, plus display options
+    sketchPanel_ = new QWidget(sideStack_);
+    {
+        auto* lay = new QVBoxLayout(sketchPanel_);
+        sketchInfo_ = new QLabel(sketchPanel_);
+        sketchInfo_->setWordWrap(true);
+        sketchInfo_->setTextFormat(Qt::RichText);
+        lay->addWidget(sketchInfo_);
+        auto opt = [&](const QString& text, bool SketchEditor::Options::*field) {
+            auto* cb = new QCheckBox(text, sketchPanel_);
+            cb->setChecked(true);
+            connect(cb, &QCheckBox::toggled, this, [this, field](bool on) {
+                if (sketch_) {
+                    auto o = sketch_->options;
+                    o.*field = on;
+                    sketch_->setOptions(o);
+                    view_->update();
+                }
+            });
+            lay->addWidget(cb);
+        };
+        opt(tr("Snap to grid"), &SketchEditor::Options::snapGrid);
+        opt(tr("Show constraints and dimensions"), &SketchEditor::Options::showConstraints);
+        opt(tr("Shade closed areas (profiles)"), &SketchEditor::Options::showProfiles);
+        opt(tr("Show gaps (open line ends)"), &SketchEditor::Options::showGaps);
+        auto* look = new QPushButton(tr("Look at the sketch"), sketchPanel_);
+        connect(look, &QPushButton::clicked, this, [this] {
+            if (sketch_) {
+                sketch_->lookAt();
+            }
+        });
+        lay->addWidget(look);
+        auto* legend = new QLabel(tr("<p><b>Reading the sketch</b><br>○ hollow point: can still move<br>■ filled "
+                                     "square: fixed in place<br>dashed: construction (ignored by Extrude)<br>red ring: "
+                                     "an open end that stops the outline closing</p><p>Hold <b>Ctrl</b> while drawing "
+                                     "to stop snapping and automatic constraints.</p>"),
+                                  sketchPanel_);
+        legend->setWordWrap(true);
+        lay->addWidget(legend);
+        lay->addStretch();
+        auto* finish = new QPushButton(tr("Finish sketch"), sketchPanel_);
+        connect(finish, &QPushButton::clicked, this, [this] { exitSketch(); });
+        lay->addWidget(finish);
+    }
+    sideStack_->addWidget(sketchPanel_);
+    ddock->setWidget(sideStack_);
     addDockWidget(Qt::RightDockWidgetArea, ddock);
 
     auto* tdock = new QDockWidget(tr("Timeline"), this);
@@ -480,13 +799,18 @@ void MainWindow::buildDocks()
     timeline_ = new QListWidget(tw);
     timeline_->setFlow(QListView::LeftToRight);
     timeline_->setWrapping(false);
-    timeline_->setFixedHeight(56);
+    timeline_->setFixedHeight(64);
     timeline_->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     timeline_->setAccessibleName(tr("Timeline of steps"));
     timeline_->setWhatsThis(tr("Every step you took, in order. Click a step to see its details and any "
                                "problem. Drag the rollback marker below to see the design at an earlier "
                                "step; new steps are inserted there."));
     connect(timeline_, &QListWidget::currentRowChanged, this, &MainWindow::showFeatureDetails);
+    timeline_->setIconSize(QSize(20, 20));
+    timeline_->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(timeline_, &QListWidget::customContextMenuRequested, this, &MainWindow::timelineMenu);
+    connect(timeline_, &QListWidget::itemDoubleClicked, this,
+            [this](QListWidgetItem* it) { editFeature(timeline_->row(it)); });
     auto* rl = new QHBoxLayout();
     auto* rlabel = new QLabel(tr("Rollback marker:"), tw);
     rollback_ = new QSlider(Qt::Horizontal, tw);
@@ -527,12 +851,46 @@ void MainWindow::buildDocks()
 
 void MainWindow::setDocument(std::unique_ptr<jig::Document> doc, const QString& path)
 {
+    if (panel_) {
+        panel_->cancel();
+    }
+    cancelPicker();
+    if (sketch_) {
+        exitSketch();
+    }
     doc_ = std::move(doc);
     path_ = path;
     savedRevision_ = doc_->revision();
     autosavedRevision_ = savedRevision_;
     refreshAll();
     view_->homeView();
+}
+
+void MainWindow::refreshDatums()
+{
+    SceneOverlay ov;
+    std::vector<std::pair<QString, QVector3D>> labels;
+    float s = 30;
+    for (auto& [id, b] : doc_->state().bodies) {
+        auto mp = jig::massProperties(b->shape());
+        s = std::max({s, float(mp.xmax - mp.xmin) * 0.6f, float(mp.ymax - mp.ymin) * 0.6f, float(mp.zmax - mp.zmin) * 0.6f});
+    }
+    for (auto& [id, f] : doc_->state().planes) {
+        const auto c = planeCorners(f, s);
+        QColor fill = kDatum, edge = kDatum;
+        fill.setAlpha(34);
+        edge.setAlpha(210);
+        for (int k : {0, 1, 2, 0, 2, 3}) {
+            ov.tris.push_back({c[size_t(k)], fill});
+        }
+        for (int k = 0; k < 4; ++k) {
+            ov.lines.push_back({c[size_t(k)], edge});
+            ov.lines.push_back({c[size_t((k + 1) % 4)], edge});
+        }
+        const jig::Feature* feat = doc_->feature(id);
+        labels.emplace_back(feat ? q(feat->name) : q(id), c[3]);
+    }
+    view_->setDatums(std::move(ov), std::move(labels));
 }
 
 void MainWindow::refreshAll()
@@ -545,10 +903,11 @@ void MainWindow::refreshAll()
         bodies.push_back({id, b});
     }
     view_->setBodies(std::move(bodies));
-    view_->setEmptyHint(doc_->model().features.empty()
-                            ? tr("Start here: every part begins as a flat sketch on a plane.\n"
-                                 "Interactive sketching arrives in milestone M1. For now, open the phone "
-                                 "stand sample (File ▸ Open a sample) to explore a finished part.")
+    refreshDatums();
+    view_->setEmptyHint(doc_->model().features.empty() && !sketch_ && !picker_
+                            ? tr("Start here: every part begins as a flat sketch.\n"
+                                 "Click Sketch on the toolbar, then click a plane.\n"
+                                 "Or open the phone stand sample (File ▸ Open a sample).")
                             : QString());
     refreshBrowser();
     refreshTimeline();
@@ -561,7 +920,7 @@ void MainWindow::refreshAll()
     r->setText(doc_->canRedo() ? tr("Redo %1").arg(q(doc_->redoLabel())) : tr("Redo"));
     const bool dirty = doc_->revision() != savedRevision_;
     const QString name = path_.isEmpty() ? tr("Untitled") : QFileInfo(path_).completeBaseName();
-    setWindowTitle(QString("%1%2 — Jigsmith").arg(name, dirty ? " •" : ""));
+    setWindowTitle(QString("%1[*] — Jigsmith").arg(name));  // [*]: the platform's "unsaved" marker
     setWindowModified(dirty);
     statusInfo_->setText(tr("mm · Z up · rebuilt %1 step(s) in %2 ms")
                              .arg(doc_->recomputedLastTime())
@@ -624,12 +983,14 @@ void MainWindow::refreshTimeline()
                                                                  q(feats[i].name)),
                                        timeline_);
         it->setTextAlignment(Qt::AlignCenter);
+        it->setIcon(toolIcon(QString("feature.") + jig::toString(feats[i].kind), palette().color(QPalette::WindowText),
+                             accentFor(palette())));
         QString tip = statusWord(st.level);
         if (!st.message.empty()) {
             tip += ": " + q(st.message);
         }
         it->setToolTip(tip);
-        it->setSizeHint(QSize(124, 46));
+        it->setSizeHint(QSize(150, 52));
         if (st.level == jig::StatusLevel::RolledBack || st.level == jig::StatusLevel::Suppressed) {
             it->setForeground(palette().color(QPalette::PlaceholderText));
         }
@@ -706,8 +1067,8 @@ void MainWindow::showFeatureDetails(int index)
         }
         html += "</ul>";
     }
-    html += tr("<p><i>Editing a step's values arrives in milestone M2. Parameters, undo and the rollback "
-               "marker work now.</i></p>");
+    html += tr("<p><i>Double-click the step to change it. Right-click for rename, suppress, roll back and "
+               "delete.</i></p>");
     details_->setHtml(html);
 }
 
@@ -748,12 +1109,17 @@ void MainWindow::runCommand(const QString& id)
     else if (id == "file.export_step") {
         exportAs("step");
     }
-    else if (id == "edit.undo") {
-        doc_->undo();
-        refreshAll();
+    else if (id == "file.export_3mf") {
+        exportAs("3mf");
     }
-    else if (id == "edit.redo") {
-        doc_->redo();
+    else if (id == "edit.undo" || id == "edit.redo") {
+        if (panel_) {
+            panel_->cancel();
+        }
+        id == "edit.undo" ? doc_->undo() : doc_->redo();
+        if (sketch_ && !sketch_->refreshFromDocument()) {
+            exitSketch();
+        }
         refreshAll();
     }
     else if (id == "edit.palette") {
@@ -768,6 +1134,92 @@ void MainWindow::runCommand(const QString& id)
     else if (id == "view.projection") {
         view_->setPerspective(!view_->perspective());
         registryAction("view.projection")->setChecked(view_->perspective());
+    }
+    else if (id == "sketch.create") {
+        startCreateSketch();
+    }
+    else if (id == "sketch.finish") {
+        exitSketch();
+    }
+    else if (id == "solid.extrude") {
+        openExtrude();
+    }
+    else if (id == "solid.fillet") {
+        openFillet();
+    }
+    else if (id == "solid.chamfer") {
+        openChamfer();
+    }
+    else if (id == "solid.shell") {
+        openShell();
+    }
+    else if (id == "solid.revolve") {
+        openRevolve();
+    }
+    else if (id == "solid.hole") {
+        openHole();
+    }
+    else if (id == "solid.pattern_circ" || id == "solid.pattern_rect") {
+        openPattern({}, id == "solid.pattern_circ");
+    }
+    else if (id == "solid.mirror") {
+        openMirror();
+    }
+    else if (id == "inspect.measure") {
+        openMeasure();
+    }
+    else if (id == "solid.combine" || id == "solid.split" || id == "solid.move") {
+        openBodyTool(id.toStdString());
+    }
+    else if (id == "construct.offset_plane" || id == "construct.angle_plane" || id == "construct.midplane") {
+        openPlane({}, id == "construct.angle_plane" ? "angle" : id == "construct.midplane" ? "midplane" : "offset");
+    }
+    else if (id == "inspect.properties") {
+        openProperties();
+    }
+    else if (id == "inspect.section") {
+        if (doc_->state().bodies.empty()) {
+            statusBar()->showMessage(tr("There is nothing to slice yet: make a 3D body first."), 5000);
+        }
+        else {
+            if (sketch_) {
+                exitSketch();
+            }
+            cancelPicker();
+            showPanel(new SectionPanel(*doc_, view_, panelHost_));
+        }
+    }
+    else if (id == "modify.parameters") {
+        openParameters();
+    }
+    else if (id.startsWith("sketch.") || id.startsWith("constraint.")) {
+        if (!sketch_) {
+            statusBar()->showMessage(tr("Open a sketch first: click Sketch, then a plane."), 5000);
+            return;
+        }
+        using T = SketchEditor::Tool;
+        using CT = jig::ConstraintType;
+        static const std::map<QString, T> tools {
+            {"sketch.line", T::Line},       {"sketch.rectangle", T::Rectangle}, {"sketch.circle", T::Circle},
+            {"sketch.arc", T::Arc},         {"sketch.slot", T::Slot},           {"sketch.polygon", T::Polygon},
+            {"sketch.text", T::Text},
+            {"sketch.point", T::Point},     {"sketch.dimension", T::Dimension}};
+        static const std::map<QString, CT> cons {
+            {"constraint.coincident", CT::Coincident}, {"constraint.horizontal", CT::Horizontal},
+            {"constraint.parallel", CT::Parallel},     {"constraint.perpendicular", CT::Perpendicular},
+            {"constraint.tangent", CT::Tangent},       {"constraint.equal", CT::Equal},
+            {"constraint.midpoint", CT::Midpoint},     {"constraint.symmetric", CT::Symmetric},
+            {"constraint.fix", CT::Fix}};
+        if (auto t = tools.find(id); t != tools.end()) {
+            sketch_->setTool(t->second);
+        }
+        else if (auto c = cons.find(id); c != cons.end()) {
+            sketch_->applyConstraint(c->second);
+        }
+        else if (id == "sketch.construction") {
+            sketch_->toggleConstruction();
+        }
+        view_->setFocus();
     }
     else {
         statusBar()->showMessage(tr("That tool is not available yet."), 4000);
@@ -846,7 +1298,9 @@ void MainWindow::exportAs(const QString& format)
         QMessageBox::information(this, tr("Nothing to export"), tr("There is no 3D body yet."));
         return;
     }
-    const QString filter = format == "stl" ? tr("STL mesh for slicers (*.stl)") : tr("STEP solid (*.step *.stp)");
+    const QString filter = format == "stl"   ? tr("STL mesh for slicers (*.stl)")
+                         : format == "3mf" ? tr("3MF print file (*.3mf)")
+                                           : tr("STEP solid (*.step *.stp)");
     QString p = QFileDialog::getSaveFileName(this, tr("Export"), {}, filter);
     if (p.isEmpty()) {
         return;
@@ -854,8 +1308,19 @@ void MainWindow::exportAs(const QString& format)
     if (!p.contains('.')) {
         p += "." + format;
     }
-    auto shape = doc_->combinedShape();
-    auto r = format == "stl" ? jig::exportStl(shape, p.toStdString()) : jig::exportStep(shape, p.toStdString());
+    jig::Result<bool> r = true;
+    if (format == "3mf") {
+        std::vector<std::pair<std::string, TopoDS_Shape>> bodies;
+        for (auto& [id, b] : doc_->state().bodies) {
+            const jig::Feature* f = doc_->feature(id);
+            bodies.emplace_back(f ? f->name : id, b->shape());
+        }
+        r = jig::export3mf(bodies, p.toStdString());
+    }
+    else {
+        auto shape = doc_->combinedShape();
+        r = format == "stl" ? jig::exportStl(shape, p.toStdString()) : jig::exportStep(shape, p.toStdString());
+    }
     if (!r) {
         QMessageBox::warning(this, tr("Could not export"), q(r.error().message));
         return;
@@ -1005,6 +1470,503 @@ void MainWindow::setTheme(Theme t)
     }
     qApp->setPalette(p);
     view_->setColors(vc);
+    applyIcons();
+    if (doc_) {
+        refreshTimeline();
+    }
+}
+
+// ---------------------------------------------------------------- icons
+
+void MainWindow::applyIcons()
+{
+    const QColor ink = palette().color(QPalette::WindowText), accent = accentFor(palette());
+    for (auto& [id, a] : actions_) {
+        a->setIcon(toolIcon(id, ink, accent));
+    }
+    if (centerRect_) {
+        centerRect_->setIcon(toolIcon("sketch.rectangle", ink, accent));
+    }
+}
+
+// ---------------------------------------------------------------- sketching
+
+void MainWindow::startCreateSketch()
+{
+    if (panel_) {
+        panel_->cancel();
+    }
+    if (sketch_) {
+        exitSketch();
+    }
+    cancelPicker();
+    picker_ = std::make_unique<PlanePicker>(this, view_);
+    view_->setInteractor(picker_.get());
+    view_->setPickMode(PickMode::None);
+    view_->setEmptyHint({});
+    statusBar()->showMessage(tr("Click a plane or a flat face to sketch on. Esc cancels."));
+}
+
+void MainWindow::cancelPicker()
+{
+    if (!picker_) {
+        return;
+    }
+    view_->setInteractor(nullptr);
+    view_->setPickMode(PickMode::Faces);
+    picker_.reset();
+    statusBar()->clearMessage();
+}
+
+bool MainWindow::createSketchOn(const std::string& plane, const std::string& faceBody, int faceIndex)
+{
+    std::string id;
+    auto r = doc_->transact(tr("New sketch").toStdString(), [&](jig::Model& m) -> jig::Result<bool> {
+        jig::Feature f;
+        f.id = jig::Document::newId(m, "s");
+        f.name = tr("Sketch %1").arg(q(f.id.substr(1))).toStdString();
+        f.kind = jig::FeatureKind::Sketch;
+        if (faceIndex >= 0) {
+            auto it = doc_->state().bodies.find(faceBody);
+            if (it == doc_->state().bodies.end()) {
+                return jig::makeError("sketch.face", "That body no longer exists.");
+            }
+            f.params["face"] = it->second->faceRef(faceBody, faceIndex).toJson();
+        }
+        else {
+            f.params["plane"] = plane;
+        }
+        f.params["geometry"] = jig::Sketch().toJson();
+        id = f.id;
+        jig::Document::insertAtMarker(m, std::move(f));
+        return true;
+    });
+    QTimer::singleShot(0, this, [this] { cancelPicker(); });
+    if (!r) {
+        QMessageBox::warning(this, tr("Sketch"), q(r.error().message));
+        return false;
+    }
+    cancelPicker();
+    enterSketch(id);
+    return true;
+}
+
+void MainWindow::enterSketch(const std::string& id)
+{
+    if (panel_) {
+        panel_->cancel();
+    }
+    cancelPicker();
+    if (sketch_) {
+        exitSketch();
+    }
+    sketch_ = new SketchEditor(view_, *doc_, id, this);
+    view_->setInteractor(sketch_);
+    view_->setPickMode(PickMode::None);
+    connect(sketch_, &SketchEditor::committed, this, [this] { refreshAll(); });
+    connect(sketch_, &SketchEditor::stateChanged, this, &MainWindow::updateSketchInfo);
+    connect(sketch_, &SketchEditor::finishRequested, this, &MainWindow::exitSketch);
+    toolsBar_->hide();
+    sketchBar_->show();
+    sideStack_->setCurrentWidget(sketchPanel_);
+    propsDock_->setWindowTitle(tr("Sketch"));
+    sketch_->lookAt();
+    sketch_->setTool(SketchEditor::Tool::Line);  // the tool beginners need first
+    refreshAll();
+    updateSketchInfo();
+    view_->setFocus();
+}
+
+void MainWindow::exitSketch()
+{
+    if (!sketch_) {
+        return;
+    }
+    view_->setInteractor(nullptr);
+    view_->setOverlay({});
+    view_->setPickMode(PickMode::Faces);
+    sketch_->deleteLater();
+    sketch_ = nullptr;
+    sketchBar_->hide();
+    toolsBar_->show();
+    sideStack_->setCurrentWidget(details_);
+    propsDock_->setWindowTitle(tr("Properties"));
+    refreshAll();
+    view_->homeView();
+}
+
+void MainWindow::updateSketchInfo()
+{
+    if (!sketch_) {
+        return;
+    }
+    const auto& rep = sketch_->report();
+    const jig::Feature* f = doc_->feature(sketch_->featureId());
+    QString state = rep.dof == 0 && rep.state != jig::SolveState::Failed
+                        ? tr("■ <b>Fully defined</b>: nothing can move.")
+                        : tr("○ <b>%n degree(s) of freedom</b> left: hollow points can still move.", "", rep.dof);
+    if (rep.state == jig::SolveState::OverConstrained) {
+        state = "⚠ " + q(rep.message).toHtmlEscaped();
+    }
+    QString html = QString("<h3>%1</h3><p>%2</p><p>%3</p>")
+                       .arg(f ? q(f->name).toHtmlEscaped() : QString(), state, sketch_->toolHint().toHtmlEscaped());
+    if (!sketch_->message().isEmpty()) {
+        html += "<p style='color:#c53030'><b>" + sketch_->message().toHtmlEscaped() + "</b></p>";
+    }
+    sketchInfo_->setText(html);
+    view_->update();
+}
+
+// ---------------------------------------------------------------- feature panels
+
+void MainWindow::showPanel(ToolPanel* p)
+{
+    if (panel_) {
+        panel_->cancel();
+    }
+    panel_ = p;
+    panelHost_->layout()->addWidget(p);
+    sideStack_->setCurrentWidget(panelHost_);
+    propsDock_->setWindowTitle(tr("Change"));
+    propsDock_->show();
+    connect(p, &ToolPanel::finished, this, [this](bool) { closePanel(); });
+}
+
+void MainWindow::closePanel()
+{
+    if (!panel_) {
+        return;
+    }
+    panel_->hide();
+    panel_->deleteLater();
+    panel_ = nullptr;
+    sideStack_->setCurrentWidget(details_);
+    propsDock_->setWindowTitle(tr("Properties"));
+    view_->setModelTint(std::nullopt);
+    refreshAll();
+}
+
+void MainWindow::openExtrude(const std::string& editId)
+{
+    if (sketch_) {
+        exitSketch();
+    }
+    cancelPicker();
+    showPanel(new ExtrudePanel(*doc_, view_, editId, panelHost_));
+}
+
+void MainWindow::openFillet(const std::string& editId)
+{
+    if (sketch_) {
+        exitSketch();
+    }
+    cancelPicker();
+    if (doc_->stateBefore(editId.empty() ? doc_->activeCount() : doc_->featureIndex(editId)).bodies.empty()) {
+        statusBar()->showMessage(tr("There is no 3D body to round yet: sketch and extrude first."), 5000);
+        return;
+    }
+    showPanel(new FilletPanel(*doc_, view_, editId, panelHost_));
+}
+
+void MainWindow::openChamfer(const std::string& editId)
+{
+    if (sketch_) {
+        exitSketch();
+    }
+    cancelPicker();
+    if (doc_->stateBefore(editId.empty() ? doc_->activeCount() : doc_->featureIndex(editId)).bodies.empty()) {
+        statusBar()->showMessage(tr("There is no 3D body to bevel yet: sketch and extrude first."), 5000);
+        return;
+    }
+    showPanel(new FilletPanel(*doc_, view_, editId, panelHost_, true));
+}
+
+void MainWindow::openShell(const std::string& editId)
+{
+    if (sketch_) {
+        exitSketch();
+    }
+    cancelPicker();
+    if (doc_->stateBefore(editId.empty() ? doc_->activeCount() : doc_->featureIndex(editId)).bodies.empty()) {
+        statusBar()->showMessage(tr("There is no 3D body to hollow yet: sketch and extrude first."), 5000);
+        return;
+    }
+    showPanel(new ShellPanel(*doc_, view_, editId, panelHost_));
+}
+
+void MainWindow::openRevolve(const std::string& editId)
+{
+    if (sketch_) {
+        exitSketch();
+    }
+    cancelPicker();
+    showPanel(new RevolvePanel(*doc_, view_, editId, panelHost_));
+}
+
+void MainWindow::openHole(const std::string& editId)
+{
+    if (sketch_) {
+        exitSketch();
+    }
+    cancelPicker();
+    if (doc_->stateBefore(editId.empty() ? doc_->activeCount() : doc_->featureIndex(editId)).bodies.empty()) {
+        statusBar()->showMessage(tr("There is no 3D body to drill yet: sketch and extrude first."), 5000);
+        return;
+    }
+    showPanel(new HolePanel(*doc_, view_, editId, panelHost_));
+}
+
+void MainWindow::openPattern(const std::string& editId, bool circular)
+{
+    if (sketch_) {
+        exitSketch();
+    }
+    cancelPicker();
+    showPanel(new PatternPanel(*doc_, view_, editId, panelHost_, circular));
+}
+
+void MainWindow::openMirror(const std::string& editId)
+{
+    if (sketch_) {
+        exitSketch();
+    }
+    cancelPicker();
+    if (doc_->stateBefore(editId.empty() ? doc_->activeCount() : doc_->featureIndex(editId)).bodies.empty()) {
+        statusBar()->showMessage(tr("There is no 3D body to mirror yet: sketch and extrude first."), 5000);
+        return;
+    }
+    showPanel(new MirrorPanel(*doc_, view_, editId, panelHost_));
+}
+
+void MainWindow::openBodyTool(const std::string& tool, const std::string& editId)
+{
+    if (sketch_) {
+        exitSketch();
+    }
+    cancelPicker();
+    if (doc_->stateBefore(editId.empty() ? doc_->activeCount() : doc_->featureIndex(editId)).bodies.empty()) {
+        statusBar()->showMessage(tr("There is no 3D body yet: sketch and extrude first."), 5000);
+        return;
+    }
+    if (tool == "solid.combine") {
+        showPanel(new CombinePanel(*doc_, view_, editId, panelHost_));
+    }
+    else if (tool == "solid.split") {
+        showPanel(new SplitPanel(*doc_, view_, editId, panelHost_));
+    }
+    else {
+        showPanel(new MovePanel(*doc_, view_, editId, panelHost_));
+    }
+}
+
+void MainWindow::openPlane(const std::string& editId, const std::string& kind)
+{
+    if (sketch_) {
+        exitSketch();
+    }
+    cancelPicker();
+    showPanel(new PlanePanel(*doc_, view_, editId, panelHost_, kind));
+}
+
+void MainWindow::openMeasure()
+{
+    if (sketch_) {
+        exitSketch();
+    }
+    cancelPicker();
+    if (doc_->state().bodies.empty()) {
+        statusBar()->showMessage(tr("There is nothing to measure yet: make a 3D body first."), 5000);
+        return;
+    }
+    showPanel(new MeasurePanel(*doc_, view_, panelHost_));
+}
+
+void MainWindow::openProperties()
+{
+    if (doc_->state().bodies.empty()) {
+        statusBar()->showMessage(tr("There is no 3D body yet."), 5000);
+        return;
+    }
+    PropertiesDialog d(*doc_, this);
+    d.exec();
+}
+
+void MainWindow::openParameters()
+{
+    ParametersDialog d(*doc_, this);
+    if (d.exec() == QDialog::Accepted) {
+        if (sketch_) {
+            sketch_->refreshFromDocument();
+        }
+        refreshAll();
+    }
+}
+
+void MainWindow::escape()
+{
+    if (panel_) {
+        panel_->cancel();
+    }
+    else if (picker_) {
+        cancelPicker();
+        refreshAll();
+    }
+    else if (sketch_) {
+        QKeyEvent ev(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
+        sketch_->key(&ev);
+    }
+}
+
+// ---------------------------------------------------------------- timeline editing
+
+void MainWindow::editFeature(int index)
+{
+    if (!doc_ || index < 0 || index >= int(doc_->model().features.size())) {
+        return;
+    }
+    const jig::Feature& f = doc_->model().features[size_t(index)];
+    switch (f.kind) {
+        case jig::FeatureKind::Sketch:
+            enterSketch(f.id);
+            break;
+        case jig::FeatureKind::Extrude:
+            openExtrude(f.id);
+            break;
+        case jig::FeatureKind::Fillet:
+            openFillet(f.id);
+            break;
+        case jig::FeatureKind::Chamfer:
+            openChamfer(f.id);
+            break;
+        case jig::FeatureKind::Shell:
+            openShell(f.id);
+            break;
+        case jig::FeatureKind::Revolve:
+            openRevolve(f.id);
+            break;
+        case jig::FeatureKind::Hole:
+            openHole(f.id);
+            break;
+        case jig::FeatureKind::Pattern:
+            openPattern(f.id);
+            break;
+        case jig::FeatureKind::Mirror:
+            openMirror(f.id);
+            break;
+        case jig::FeatureKind::Plane:
+            openPlane(f.id);
+            break;
+        case jig::FeatureKind::Combine:
+            openBodyTool("solid.combine", f.id);
+            break;
+        case jig::FeatureKind::Split:
+            openBodyTool("solid.split", f.id);
+            break;
+        case jig::FeatureKind::Move:
+            openBodyTool("solid.move", f.id);
+            break;
+    }
+}
+
+void MainWindow::timelineMenu(const QPoint& pos)
+{
+    const int row = timeline_->row(timeline_->itemAt(pos));
+    if (row < 0) {
+        return;
+    }
+    const jig::Feature f = doc_->model().features[size_t(row)];
+    QMenu m(this);
+    m.addAction(tr("Edit…"), this, [this, row] { editFeature(row); });
+    m.addAction(tr("Rename…"), this, [this, id = f.id] { renameFeature(id); });
+    m.addAction(f.suppressed ? tr("Unsuppress (use this step again)") : tr("Suppress (skip this step)"), this,
+                [this, id = f.id, on = !f.suppressed] {
+                    doc_->transact((on ? tr("Suppress") : tr("Unsuppress")).toStdString(),
+                                   [&](jig::Model& mm) -> jig::Result<bool> {
+                                       if (auto* x = jig::Document::findFeature(mm, id)) {
+                                           x->suppressed = on;
+                                       }
+                                       return true;
+                                   });
+                    refreshAll();
+                });
+    m.addAction(tr("Roll back to before this step"), this, [this, row] {
+        doc_->transact(tr("Move rollback marker").toStdString(), [row](jig::Model& mm) -> jig::Result<bool> {
+            mm.rollback = row;
+            return true;
+        });
+        refreshAll();
+    });
+    m.addSeparator();
+    m.addAction(toolIcon("sketch.trim", palette().color(QPalette::WindowText), accentFor(palette())), tr("Delete…"),
+                this, [this, id = f.id] { deleteFeature(id); });
+    m.exec(timeline_->viewport()->mapToGlobal(pos));
+}
+
+void MainWindow::renameFeature(const std::string& id)
+{
+    const jig::Feature* f = doc_->feature(id);
+    if (!f) {
+        return;
+    }
+    bool ok = false;
+    const QString name = QInputDialog::getText(this, tr("Rename step"), tr("Name:"), QLineEdit::Normal, q(f->name), &ok)
+                             .trimmed();
+    if (!ok || name.isEmpty()) {
+        return;
+    }
+    doc_->transact(tr("Rename").toStdString(), [&](jig::Model& m) -> jig::Result<bool> {
+        if (auto* x = jig::Document::findFeature(m, id)) {
+            x->name = name.toStdString();
+        }
+        return true;
+    });
+    refreshAll();
+}
+
+void MainWindow::deleteFeature(const std::string& id)
+{
+    const jig::Feature* f = doc_->feature(id);
+    if (!f) {
+        return;
+    }
+    const auto deps = doc_->dependents(id);
+    if (!deps.empty()) {
+        QStringList names;
+        for (auto& d : deps) {
+            if (const jig::Feature* x = doc_->feature(d)) {
+                names << q(x->name);
+            }
+        }
+        auto b = QMessageBox::question(this, tr("Delete step"),
+                                       tr("“%1” is used by later steps: %2.\n\nThey will show a problem until you fix "
+                                          "them. You can undo this. Delete anyway?")
+                                           .arg(q(f->name), names.join(", ")));
+        if (b != QMessageBox::Yes) {
+            return;
+        }
+    }
+    if (sketch_ && sketch_->featureId() == id) {
+        exitSketch();
+    }
+    doc_->transact(tr("Delete %1").arg(q(f->name)).toStdString(), [&](jig::Model& m) -> jig::Result<bool> {
+        const int i = [&] {
+            for (size_t k = 0; k < m.features.size(); ++k) {
+                if (m.features[k].id == id) {
+                    return int(k);
+                }
+            }
+            return -1;
+        }();
+        if (i < 0) {
+            return jig::makeError("delete.gone", "That step no longer exists.");
+        }
+        m.features.erase(m.features.begin() + i);
+        if (m.rollback > i) {
+            --m.rollback;
+        }
+        return true;
+    });
+    refreshAll();
 }
 
 }  // namespace jigapp

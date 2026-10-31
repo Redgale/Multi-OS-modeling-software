@@ -1,0 +1,9 @@
+# LeakSanitizer suppressions for allocations third-party libraries keep for the whole
+# process on purpose (registries and caches freed by the OS at exit). Our own code is
+# still checked. Used by the sanitizer CI job: LSAN_OPTIONS=suppressions=tools/lsan.supp
+leak:libTKXSBase
+leak:libTKSTEP
+leak:libTKSTEPBase
+leak:libTKSTEPAttr
+leak:libTKDESTEP
+leak:libTKDE.so

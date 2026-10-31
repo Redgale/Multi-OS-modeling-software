@@ -8,3 +8,4 @@ CMakeUserPresets.json
 .vscode/
 .idea/
 .DS_Store
+/deps/

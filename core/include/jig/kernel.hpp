@@ -25,7 +25,9 @@
 #include <TopTools_IndexedMapOfShape.hxx>
 #include <TopoDS_Face.hxx>
 #include <TopoDS_Shape.hxx>
+#include <gp_Ax1.hxx>
 #include <gp_Ax3.hxx>
+#include <gp_Trsf.hxx>
 #include <nlohmann/json.hpp>
 
 #include "jig/result.hpp"
@@ -176,9 +178,20 @@ struct Profile
 struct ProfileSet
 {
     std::vector<Profile> regions;
+    std::vector<std::string> notes;  // e.g. a missing font was replaced
 };
 
-// Finds every closed region of the sketch's non-construction curves.
+// Glyph outlines of a sketch text as flat faces in the sketch plane, centred on (x, y).
+struct TextOutline
+{
+    std::vector<TopoDS_Face> faces;
+    std::string note;  // set when the requested font was not available
+};
+Result<TextOutline> textFaces(const SketchText& t, double x, double y, const gp_Ax3& frame);
+
+// Finds every closed region of the sketch's non-construction curves. Each glyph
+// outline of a sketch text is a closed region too (key "T<text id>.<n>"); text is
+// not split by the other curves.
 Result<ProfileSet> buildProfiles(const Sketch& sketch, const gp_Ax3& frame);
 
 // ---------------------------------------------------------------- features
@@ -210,6 +223,47 @@ struct ExtrudeInput
 // Builds the extruded tool body and names its faces.
 Result<NamedShape> makeExtrusion(const ExtrudeInput& in);
 
+// Spins profiles around an axis. angle in radians (2*pi = full turn). Faces are named
+// "<feature>/side:<sketch curve>", plus "start"/"end" caps for partial turns.
+Result<NamedShape> makeRevolution(const std::string& featureId,
+                                  const std::vector<const Profile*>& profiles,
+                                  const gp_Ax1& axis,
+                                  double angle);
+
+struct HoleSpec
+{
+    enum class Type
+    {
+        Simple,
+        Counterbore,
+        Countersink
+    } type = Type::Simple;
+    double diameter = 3;     // mm
+    double depth = 10;       // mm, ignored when through
+    bool through = false;
+    double cboreDiameter = 6, cboreDepth = 3;
+    double csinkDiameter = 6, csinkAngle = 1.5707963267948966;  // 90 degrees
+};
+
+struct HolePoint
+{
+    int id;       // sketch point id (stable): faces are named "<feature>/wall:p<id>" etc.
+    double x, y;  // in the sketch frame
+};
+
+// The cutting tool for holes at sketch points, drilled along -normal of the frame.
+Result<NamedShape> makeHoleTool(const std::string& featureId,
+                                const gp_Ax3& frame,
+                                const std::vector<HolePoint>& points,
+                                const HoleSpec& spec,
+                                double throughDepth);
+
+// A moved/rotated/mirrored copy whose faces are renamed "<prefix><original name>".
+NamedShape transformedCopy(const NamedShape& src, const gp_Trsf& t, const std::string& prefix);
+
+// Several named shapes as one compound (names kept), e.g. pattern copies.
+NamedShape namedCompound(const std::vector<NamedShape>& parts);
+
 // Boolean between a named target and a named tool; names propagate from both.
 Result<NamedShape> booleanOp(const std::string& featureId,
                              BoolOp op,
@@ -222,6 +276,25 @@ Result<NamedShape> filletEdges(const std::string& featureId,
                                const NamedShape& body,
                                const std::vector<int>& edgeIndices,
                                double radius);
+
+// Equal-distance chamfer (bevel) of resolved edges; failures are diagnosed like fillets.
+Result<NamedShape> chamferEdges(const std::string& featureId,
+                                const NamedShape& body,
+                                const std::vector<int>& edgeIndices,
+                                double distance);
+
+// Hollow the body with walls of `thickness` (inward), removing `openFaces` (may be
+// empty: a closed hollow). Inner walls are named "<feature>/inner:<outer face>".
+Result<NamedShape> shellSolid(const std::string& featureId,
+                              const NamedShape& body,
+                              const std::vector<int>& openFaces,
+                              double thickness);
+
+// True when the point lies strictly inside the solid (used to choose Join or Cut).
+bool pointInside(const TopoDS_Shape& solid, double x, double y, double z);
+
+// Edges connected to `edge` through smooth (tangent) joins, including `edge` itself.
+std::vector<int> tangentChain(const NamedShape& body, int edge, double angleTolDeg = 2.0);
 
 // ---------------------------------------------------------------- inspect
 
@@ -236,6 +309,28 @@ struct MassProperties
 };
 
 MassProperties massProperties(const TopoDS_Shape& s);
+
+// ---------------------------------------------------------------- measure
+
+// What one picked face or edge is, in plain words, with its size.
+struct MeasureItem
+{
+    std::string kind;       // "flat face", "round face", "straight edge", "circle", "arc", "curved face", …
+    double size = 0;        // area (faces, mm^2) or length (edges, mm)
+    std::optional<double> radius;            // circles, arcs, cylinders, cones at their base
+    std::optional<gp_Ax1> axis;              // circles and cylinders: centre and axis; lines: direction
+    std::optional<gp_Dir> normal;            // flat faces
+};
+MeasureItem measureItem(const TopoDS_Shape& faceOrEdge);
+
+struct MeasureBetween
+{
+    double distance = 0;            // shortest distance (0 when they touch)
+    gp_Pnt p1, p2;                  // where it is measured
+    std::optional<double> angle;    // radians, 0..pi/2, for flat faces and straight edges
+    std::optional<double> centres;  // centre-to-centre distance of two round things with parallel axes
+};
+Result<MeasureBetween> measureBetween(const TopoDS_Shape& a, const TopoDS_Shape& b);
 
 // ---------------------------------------------------------------- display
 

@@ -79,7 +79,7 @@ CommandRegistry::CommandRegistry()
     add({"sketch.line", "Line", "Line", "SKETCH CREATE", "Draw straight lines; keep clicking to chain them.", "L", {"draw line", "polyline", "segment"}, true, false, true, m1});
     add({"sketch.rectangle", "Rectangle", "Rectangle", "SKETCH CREATE", "Draw a rectangle from corner to corner or from its center.", "R", {"box", "square"}, true, false, true, m1});
     add({"sketch.circle", "Circle", "Circle", "SKETCH CREATE", "Draw a circle from its center and diameter.", "C", {"round", "hole outline", "disc"}, true, false, true, m1});
-    add({"sketch.arc", "Arc", "Arc", "SKETCH CREATE", "Draw part of a circle: 3-point, tangent or center arc.", "", {"curve", "bend"}, false, false, false, m1});
+    add({"sketch.arc", "Arc", "Arc", "SKETCH CREATE", "Draw part of a circle from its center, start and end.", "", {"curve", "bend"}, false, false, false, m1});
     add({"sketch.polygon", "Polygon", "Polygon", "SKETCH CREATE", "Draw a shape with equal sides, like a hex nut.", "", {"hexagon", "nut"}, false, false, false, m1});
     add({"sketch.ellipse", "Ellipse", "Ellipse", "SKETCH CREATE", "Draw an oval from its center and two axes.", "", {"oval"}, false, false, false, m1});
     add({"sketch.slot", "Slot", "Slot", "SKETCH CREATE", "Draw a rounded-end slot, ideal for adjustable screws.", "", {"oblong", "obround"}, false, false, true, m1});
@@ -114,13 +114,13 @@ CommandRegistry::CommandRegistry()
     add({"solid.extrude", "Extrude", "Extrude", "CREATE", "Push a closed sketch area into 3D, adding or cutting material.", "E", {"pull up", "thicken", "make 3d", "pocket", "cut through"}, true, false, true, m2});
     add({"solid.revolve", "Revolve", "Revolve", "CREATE", "Spin a profile around an axis, like a lathe: knobs, cups, wheels.", "", {"lathe", "spin", "turn"}, true, false, false, m4});
     add({"solid.hole", "Hole", "Hole", "CREATE", "Drill a plain, counterbored or countersunk hole for a screw.", "H", {"drill", "screw hole", "bore", "countersink", "counterbore"}, true, false, false, m3});
-    add({"solid.mirror", "Mirror", "Mirror", "CREATE", "Copy features or bodies across a plane.", "", {"symmetric", "flip copy"}, false, false, false, m3});
-    add({"solid.pattern_rect", "Grid copy", "Rectangular Pattern", "CREATE", "Repeat features or bodies in rows and columns.", "", {"array", "grid", "repeat"}, false, false, false, m3});
-    add({"solid.pattern_circ", "Ring copy", "Circular Pattern", "CREATE", "Repeat features or bodies around an axis.", "", {"array", "repeat around", "spokes"}, true, false, false, m3});
+    add({"solid.mirror", "Mirror", "Mirror", "CREATE", "Copy a body across a plane, e.g. to make a symmetric part.", "", {"symmetric", "flip copy"}, false, false, false, m3});
+    add({"solid.pattern_rect", "Grid copy", "Rectangular Pattern", "CREATE", "Repeat a feature in rows and columns.", "", {"array", "grid", "repeat"}, false, false, false, m3});
+    add({"solid.pattern_circ", "Ring copy", "Circular Pattern", "CREATE", "Repeat a feature around an axis.", "", {"array", "repeat around", "spokes"}, true, false, false, m3});
     add({"solid.presspull", "Press pull", "Press Pull", "MODIFY", "Drag a face to push or pull it; adapts to what you pick.", "Q", {"push", "pull", "drag face"}, false, false, false, m3});
     add({"solid.fillet", "Fillet", "Fillet", "MODIFY", "Round off edges so parts look finished and are comfortable to hold.", "F", {"round the edges", "round", "soften", "radius"}, true, false, true, m3});
-    add({"solid.chamfer", "Chamfer", "Chamfer", "MODIFY", "Cut a flat bevel on edges; great for the bottom of 3D prints.", "", {"bevel", "angled edge", "elephant foot"}, true, false, false, m3});
-    add({"solid.shell", "Shell", "Shell", "MODIFY", "Hollow out a solid, leaving walls of a set thickness.", "", {"hollow", "wall", "empty inside", "cup"}, true, false, false, m3});
+    add({"solid.chamfer", "Chamfer", "Chamfer", "MODIFY", "Cut a flat bevel on edges; great for the bottom of 3D prints.", "", {"bevel", "angled edge", "elephant foot"}, true, false, true, m3});
+    add({"solid.shell", "Shell", "Shell", "MODIFY", "Hollow out a solid, leaving walls of a set thickness.", "", {"hollow", "wall", "empty inside", "cup"}, true, false, true, m3});
     add({"solid.combine", "Combine", "Combine", "MODIFY", "Join, cut or intersect two bodies.", "", {"boolean", "merge", "subtract", "union"}, false, false, false, m4});
     add({"solid.split", "Split body", "Split Body", "MODIFY", "Cut a body into pieces with a plane, e.g. to fit a small printer.", "", {"slice", "cut in half", "divide"}, false, false, false, m4});
     add({"solid.move", "Move / copy", "Move/Copy", "MODIFY", "Move, rotate or copy bodies.", "M", {"translate", "rotate", "position", "duplicate"}, false, false, false, m4});
@@ -138,6 +138,25 @@ CommandRegistry::CommandRegistry()
     add({"modify.parameters", "Parameters", "Change Parameters", "MODIFY", "Name sizes like width or wall and use them in any field.", "", {"variables", "named values", "change size"}, true, false, true, m5});
     add({"help.tutorial", "Your first part (15 min)", "Tutorial", "HELP", "A guided tour that builds a phone stand with you.", "", {"learn", "tutorial", "getting started", "help"}, true, false, false, m7});
     // clang-format on
+
+    // Usable from the desktop app as of milestone M1/M2/M3 (sketching, extrude, fillet,
+    // shell, revolve, hole, patterns, mirror, parameters). Everything else above keeps its "coming in" note.
+    static const std::set<std::string> inApp {
+        "sketch.create", "sketch.finish", "sketch.line", "sketch.rectangle", "sketch.circle", "sketch.point",
+        "sketch.arc", "sketch.slot", "sketch.polygon", "sketch.text",
+        "sketch.dimension", "sketch.construction", "constraint.coincident", "constraint.midpoint", "constraint.fix",
+        "constraint.parallel", "constraint.perpendicular", "constraint.horizontal", "constraint.tangent",
+        "constraint.symmetric", "constraint.equal", "solid.extrude", "solid.fillet", "solid.chamfer", "solid.shell",
+        "solid.revolve", "solid.hole", "solid.mirror", "solid.pattern_rect", "solid.pattern_circ", "modify.parameters",
+        "inspect.measure", "inspect.properties", "file.export_3mf", "construct.offset_plane", "construct.angle_plane",
+        "construct.midplane", "solid.combine", "solid.split", "solid.move",
+        "inspect.section"};
+    for (auto& c : commands_) {
+        if (inApp.count(c.id)) {
+            c.available = true;
+            c.comingIn.clear();
+        }
+    }
 }
 
 const CommandRegistry& CommandRegistry::instance()
@@ -343,23 +362,12 @@ Result<std::pair<std::string, std::string>> parsePairExpr(const std::string& s)
 
 Feature* findFeature(Model& m, const std::string& id)
 {
-    for (auto& f : m.features) {
-        if (f.id == id) {
-            return &f;
-        }
-    }
-    return nullptr;
+    return Document::findFeature(m, id);
 }
 
-// Inserts a feature at the rollback marker (end of timeline when not rolled back).
 void insertFeature(Model& m, Feature f)
 {
-    int n = int(m.features.size());
-    int at = m.rollback < 0 ? n : std::min(m.rollback, n);
-    m.features.insert(m.features.begin() + at, std::move(f));
-    if (m.rollback >= 0) {
-        m.rollback = at + 1;
-    }
+    Document::insertAtMarker(m, std::move(f));
 }
 
 }  // namespace
@@ -706,45 +714,137 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
             if (!w || !x1 || !y1 || !x2 || !y2) {
                 return makeError("script.args", "Slot needs c1=x,y c2=x,y width=w with valid values.");
             }
-            double r = w.value() / 2;
-            double ux = x2.value() - x1.value(), uy = y2.value() - y1.value();
-            double L = std::hypot(ux, uy);
-            if (L < 1e-9) {
+            if (std::hypot(x2.value() - x1.value(), y2.value() - y1.value()) < 1e-9) {
                 return makeError("script.args", "The two slot centers must be different points.");
             }
-            ux /= L;
-            uy /= L;
-            double ang = std::atan2(uy, ux);
-            constexpr double h = std::numbers::pi / 2;
-            int a1 = s.addArc(x2.value(), y2.value(), r, ang - h, ang + h);  // far end
-            int a2 = s.addArc(x1.value(), y1.value(), r, ang + h, ang + 3 * h);  // near end
-            const SketchEntity A1 = *s.entity(a1), A2 = *s.entity(a2);
-            auto [sx1, sy1] = s.pointXY(A1.p2);
-            auto [ex1, ey1] = s.pointXY(A2.p1);
-            auto [sx2, sy2] = s.pointXY(A2.p2);
-            auto [ex2, ey2] = s.pointXY(A1.p1);
-            int top = s.addLine(sx1, sy1, ex1, ey1);
-            int bot = s.addLine(sx2, sy2, ex2, ey2);
-            const SketchEntity T = *s.entity(top), Bt = *s.entity(bot);
-            s.addConstraint(ConstraintType::Coincident, T.p1, A1.p2);
-            s.addConstraint(ConstraintType::Coincident, T.p2, A2.p1);
-            s.addConstraint(ConstraintType::Coincident, Bt.p1, A2.p2);
-            s.addConstraint(ConstraintType::Coincident, Bt.p2, A1.p1);
-            // Tangency at a shared endpoint is expressed as "side line perpendicular to the
-            // radius through that endpoint". A distance-style tangent plus coincidence is
-            // rank-deficient at the solution and would be reported as redundant.
-            for (auto [line, arcCenter, endPt] : {std::tuple {top, A1.center, A1.p2}, std::tuple {top, A2.center, A2.p1},
-                                                  std::tuple {bot, A2.center, A2.p2}, std::tuple {bot, A1.center, A1.p1}}) {
-                int radial = s.addLine(arcCenter, endPt);
-                s.setConstruction(radial, true);
-                s.addConstraint(ConstraintType::Perpendicular, line, radial);
-            }
+            const auto ids = s.addSlot(x1.value(), y1.value(), x2.value(), y2.value(), w.value() / 2);
+            const int a1 = ids.arc1;
+            const SketchEntity A1 = *s.entity(ids.arc1), A2 = *s.entity(ids.arc2);
             s.addConstraint(ConstraintType::Radius, a1, 0, 0, "(" + we + ") / 2");
-            s.addConstraint(ConstraintType::Equal, a1, a2);
             s.addConstraint(ConstraintType::DistanceX, A1.center, 0, 0, c2->first);
             s.addConstraint(ConstraintType::DistanceY, A1.center, 0, 0, c2->second);
             s.addConstraint(ConstraintType::DistanceX, A2.center, 0, 0, c1->first);
             s.addConstraint(ConstraintType::DistanceY, A2.center, 0, 0, c1->second);
+            return true;
+        });
+    }
+    if (a.verb == "line" || a.verb == "point" || a.verb == "arc") {
+        // line p1=x,y p2=x,y [construction=yes] [name=axis]
+        // point at=x,y [name=..]                       (hole centres)
+        // arc center=x,y r=<len> from=<angle> to=<angle> [chord=yes] [name=..]   (counter-clockwise)
+        const std::string sid = a.get("sketch", last_);
+        int made = 0;
+        auto res = editSketch(a.verb == "line" ? "Line" : a.verb == "point" ? "Point" : "Arc", sid,
+                              [&](Sketch& s, const Document&) -> Result<bool> {
+            auto pos = [&](const std::string& key) -> Result<std::pair<std::pair<double, double>, std::pair<std::string, std::string>>> {
+                auto pe = parsePairExpr(a.get(key, "0,0"));
+                if (!pe) {
+                    return pe.error();
+                }
+                auto x = len(pe->first), y = len(pe->second);
+                if (!x || !y) {
+                    return !x ? x.error() : y.error();
+                }
+                return std::pair {std::pair {x.value(), y.value()}, *pe};
+            };
+            auto fixPoint = [&](int pid, const std::pair<std::string, std::string>& e) {
+                s.addConstraint(ConstraintType::DistanceX, pid, 0, 0, e.first);
+                s.addConstraint(ConstraintType::DistanceY, pid, 0, 0, e.second);
+            };
+            if (a.verb == "point") {
+                auto at = pos("at");
+                if (!at) {
+                    return at.error();
+                }
+                made = s.addPoint(at->first.first, at->first.second);
+                fixPoint(made, at->second);
+            }
+            else if (a.verb == "line") {
+                auto p1 = pos("p1"), p2 = pos("p2");
+                if (!p1 || !p2) {
+                    return !p1 ? p1.error() : p2.error();
+                }
+                made = s.addLine(p1->first.first, p1->first.second, p2->first.first, p2->first.second);
+                fixPoint(s.entity(made)->p1, p1->second);
+                fixPoint(s.entity(made)->p2, p2->second);
+            }
+            else {
+                auto c = pos("center");
+                const std::string re = a.get("r");
+                auto r = len(re);
+                auto a0 = doc.evalAngle(a.get("from", "0 deg")), a1 = doc.evalAngle(a.get("to", "90 deg"));
+                if (!c || !r || !a0 || !a1) {
+                    return makeError("script.args", "Arc needs center=x,y r=<len> from=<angle> to=<angle> with valid values.");
+                }
+                made = s.addArc(c->first.first, c->first.second, r.value(), a0.value(), a1.value());
+                const SketchEntity A = *s.entity(made);
+                fixPoint(A.center, c->second);
+                s.addConstraint(ConstraintType::Radius, made, 0, 0, re);
+                // the end angles stay free (the solver keeps them where they are)
+                if (a.get("chord", "no") == "yes") {
+                    s.addLine(A.p1, A.p2);  // closes the arc into a "D"
+                }
+            }
+            if (a.get("construction", "no") == "yes") {
+                s.setConstruction(made, true);
+            }
+            return true;
+        });
+        if (res && a.has("name")) {
+            names_[sid + "." + a.get("name")] = made;
+        }
+        return res;
+    }
+    if (a.verb == "text") {
+        // text center=x,y height=<len> text="ABC" [font=<file or name>] [angle=<angle>]
+        const std::string sid = a.get("sketch", last_);
+        return editSketch("Text", sid, [&](Sketch& s, const Document&) -> Result<bool> {
+            auto pe = parsePairExpr(a.get("center", "0,0"));
+            if (!pe) {
+                return pe.error();
+            }
+            auto px = len(pe->first), py = len(pe->second);
+            const std::string he = a.get("height", "5 mm");
+            auto h = len(he);
+            auto ang = doc.evalAngle(a.get("angle", "0 deg"));
+            if (!px || !py || !h || !ang) {
+                return makeError("script.args", "Text needs center=x,y height=<len> text=\"…\" with valid values.");
+            }
+            if (a.get("text").empty()) {
+                return makeError("script.args", "Say what the text reads: text=\"…\".");
+            }
+            const int id = s.addText(px.value(), py.value(), a.get("text"), he, h.value(), a.get("font"), ang.value());
+            const int anchor = s.texts().at(id).anchor;
+            s.addConstraint(ConstraintType::DistanceX, anchor, 0, 0, pe->first);
+            s.addConstraint(ConstraintType::DistanceY, anchor, 0, 0, pe->second);
+            return true;
+        });
+    }
+    if (a.verb == "polygon") {
+        // polygon center=x,y d=<len> sides=<n>   (d = diameter of the circle through the corners)
+        const std::string sid = a.get("sketch", last_);
+        return editSketch("Polygon", sid, [&](Sketch& s, const Document&) -> Result<bool> {
+            auto pe = parsePairExpr(a.get("center", "0,0"));
+            if (!pe) {
+                return pe.error();
+            }
+            const std::string de = a.get("d");
+            auto d = len(de);
+            auto px = len(pe->first), py = len(pe->second);
+            auto n = evaluate(a.get("sides", "6"), doc.lookup());
+            if (!d || !px || !py) {
+                return makeError("script.args", "Polygon needs center=x,y d=<len> with valid values.");
+            }
+            if (!n || n->value < 3 || n->value > 64) {
+                return makeError("script.args", "A polygon needs 3 to 64 sides.");
+            }
+            const auto ids = s.addPolygon(px.value(), py.value(), d.value() / 2, int(std::lround(n->value)), std::numbers::pi / 2);
+            const int c = s.entity(ids.circle)->center;
+            s.addConstraint(ConstraintType::Diameter, ids.circle, 0, 0, de);
+            s.addConstraint(ConstraintType::DistanceX, c, 0, 0, pe->first);
+            s.addConstraint(ConstraintType::DistanceY, c, 0, 0, pe->second);
+            // first corner straight above the centre: fixes the rotation
+            s.addConstraint(ConstraintType::Vertical, c, s.entity(ids.sides[0])->p1);
             return true;
         });
     }
@@ -796,8 +896,10 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
         }
         return checkFeature(id);
     }
-    if (a.verb == "fillet") {
+    if (a.verb == "fillet" || a.verb == "chamfer") {
         // fillet edges="<sel>;<sel>" radius=2mm [body=e1]
+        // chamfer edges="<sel>;<sel>" distance=1mm [body=e1]
+        const bool isChamfer = a.verb == "chamfer";
         // selectors: all | face:<face name> | feature:<feature id> | name:<edge name>
         const ModelState& st = doc.state();
         std::string bodyId = a.get("body");
@@ -865,20 +967,244 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
             }
         }
         std::string id;
-        auto r = doc.transact("Fillet", [&](Model& m) -> Result<bool> {
+        auto r = doc.transact(isChamfer ? "Chamfer" : "Fillet", [&](Model& m) -> Result<bool> {
             Feature f;
-            f.id = a.get("id", Document::newId(m, "f"));
+            f.id = a.get("id", Document::newId(m, isChamfer ? "c" : "f"));
             if (findFeature(m, f.id)) {
                 return makeError("script.args", "The id '" + f.id + "' is already used.");
             }
-            f.name = a.get("name", "Fillet " + f.id.substr(1));
-            f.kind = FeatureKind::Fillet;
-            f.params["radius"] = a.get("radius", "1 mm");
+            f.name = a.get("name", (isChamfer ? "Chamfer " : "Fillet ") + f.id.substr(1));
+            f.kind = isChamfer ? FeatureKind::Chamfer : FeatureKind::Fillet;
+            if (isChamfer) {
+                f.params["distance"] = a.get("distance", "1 mm");
+            }
+            else {
+                f.params["radius"] = a.get("radius", "1 mm");
+            }
             nlohmann::json refs = nlohmann::json::array();
             for (int e : picked) {
                 refs.push_back(body.edgeRef(bodyId, e).toJson());
             }
             f.params["edges"] = refs;
+            id = f.id;
+            insertFeature(m, std::move(f));
+            return true;
+        });
+        if (!r) {
+            return r;
+        }
+        return checkFeature(id);
+    }
+    if (a.verb == "shell") {
+        // shell faces="face:<name>;face:<name>" thickness=2mm [body=e1]   (faces=none: closed hollow)
+        const ModelState& st = doc.state();
+        std::string bodyId = a.get("body");
+        if (bodyId.empty()) {
+            if (st.bodies.size() != 1) {
+                return makeError("script.args", "Say which body to shell with body=<id>.");
+            }
+            bodyId = st.bodies.begin()->first;
+        }
+        auto bit = st.bodies.find(bodyId);
+        if (bit == st.bodies.end()) {
+            return makeError("script.args", "There is no body called '" + bodyId + "'.");
+        }
+        const NamedShape& body = *bit->second;
+        nlohmann::json refs = nlohmann::json::array();
+        const std::string sel = a.get("faces", "none");
+        if (sel != "none") {
+            for (auto& one : split(sel, ';')) {
+                if (one.rfind("face:", 0) != 0) {
+                    return makeError("script.args", "Shell faces are given as face:<face name>.");
+                }
+                auto hits = body.findFaces(one.substr(5));
+                if (hits.size() != 1) {
+                    return makeError("script.args", "No single face called '" + one.substr(5) + "'.");
+                }
+                refs.push_back(body.faceRef(bodyId, hits[0]).toJson());
+            }
+        }
+        std::string id;
+        auto r = doc.transact("Shell", [&](Model& m) -> Result<bool> {
+            Feature f;
+            f.id = a.get("id", Document::newId(m, "sh"));
+            if (findFeature(m, f.id)) {
+                return makeError("script.args", "The id '" + f.id + "' is already used.");
+            }
+            f.name = a.get("name", "Shell " + f.id.substr(2));
+            f.kind = FeatureKind::Shell;
+            f.params = {{"faces", refs}, {"thickness", a.get("thickness", "2 mm")}, {"body", bodyId}};
+            id = f.id;
+            insertFeature(m, std::move(f));
+            return true;
+        });
+        if (!r) {
+            return r;
+        }
+        return checkFeature(id);
+    }
+    if (a.verb == "combine" || a.verb == "split" || a.verb == "move") {
+        // combine target=<body> tools="<body>;<body>" [op=join|cut|intersect] [keep=yes]
+        // split body=<body> plane=XY|XZ|YZ|<plane id>|face:<name>
+        // move bodies="<body>;…" [dx= dy= dz=] [axis=X|Y|Z angle=<angle>] [copy=yes]
+        nlohmann::json params = nlohmann::json::object();
+        FeatureKind kind = FeatureKind::Combine;
+        std::string prefix = "cb";
+        if (a.verb == "combine") {
+            params = {{"target", a.get("target")}, {"tools", split(a.get("tools"), ';')}, {"op", a.get("op", "join")},
+                      {"keep_tools", a.get("keep", "no") == "yes"}};
+        }
+        else if (a.verb == "split") {
+            kind = FeatureKind::Split;
+            prefix = "sp";
+            const std::string pl = a.get("plane", "YZ");
+            nlohmann::json ref = pl;
+            if (pl.rfind("face:", 0) == 0) {
+                ref = nullptr;
+                for (auto& [bid, body] : doc.state().bodies) {
+                    auto hits = body->findFaces(pl.substr(5));
+                    if (hits.size() == 1) {
+                        ref = {{"face", body->faceRef(bid, hits[0]).toJson()}};
+                    }
+                }
+                if (ref.is_null()) {
+                    return makeError("script.args", "There is no single face called '" + pl.substr(5) + "'.");
+                }
+            }
+            params = {{"body", a.get("body")}, {"plane", ref}};
+        }
+        else {
+            kind = FeatureKind::Move;
+            prefix = "mv";
+            params = {{"bodies", split(a.get("bodies"), ';')}, {"copy", a.get("copy", "no") == "yes"}};
+            for (const char* key : {"dx", "dy", "dz", "axis", "angle"}) {
+                if (a.has(key)) {
+                    params[key] = a.get(key);
+                }
+            }
+        }
+        std::string label = a.verb;
+        label[0] = char(std::toupper(label[0]));
+        std::string id;
+        auto r = doc.transact(label, [&](Model& m) -> Result<bool> {
+            Feature f;
+            f.id = a.get("id", Document::newId(m, prefix));
+            if (findFeature(m, f.id)) {
+                return makeError("script.args", "The id '" + f.id + "' is already used.");
+            }
+            f.name = a.get("name", label + " " + f.id.substr(prefix.size()));
+            f.kind = kind;
+            f.params = params;
+            id = f.id;
+            insertFeature(m, std::move(f));
+            return true;
+        });
+        if (!r) {
+            return r;
+        }
+        return checkFeature(id);
+    }
+    if (a.verb == "plane") {
+        // plane id=pl1 [kind=offset|angle|midplane] base=XY|<plane id>|face:<name>
+        //       [distance=<len>] [axis=X|Y|Z|edge:<name> angle=<angle>] [base2=…]
+        const ModelState& st = doc.state();
+        auto ref = [&](const std::string& v) -> Result<nlohmann::json> {
+            for (const char* pre : {"face:", "edge:"}) {
+                if (v.rfind(pre, 0) != 0) {
+                    continue;
+                }
+                const bool face = pre[0] == 'f';
+                const std::string name = v.substr(5);
+                for (auto& [bid, body] : st.bodies) {
+                    auto hits = face ? body->findFaces(name) : body->findEdges(name);
+                    if (hits.size() == 1) {
+                        return nlohmann::json {{face ? "face" : "edge",
+                                                (face ? body->faceRef(bid, hits[0]) : body->edgeRef(bid, hits[0])).toJson()}};
+                    }
+                }
+                return makeError("script.args", "There is no single " + std::string(face ? "face" : "edge") + " called '" + name + "'.");
+            }
+            return nlohmann::json(v);
+        };
+        nlohmann::json params {{"kind", a.get("kind", "offset")}};
+        for (const char* key : {"base", "base2", "axis"}) {
+            if (a.has(key)) {
+                auto r = ref(a.get(key));
+                if (!r) {
+                    return r.error();
+                }
+                params[key] = r.value();
+            }
+        }
+        for (const char* key : {"distance", "angle"}) {
+            if (a.has(key)) {
+                params[key] = a.get(key);
+            }
+        }
+        std::string id;
+        auto r = doc.transact("Construction plane", [&](Model& m) -> Result<bool> {
+            Feature f;
+            f.id = a.get("id", Document::newId(m, "pl"));
+            if (findFeature(m, f.id)) {
+                return makeError("script.args", "The id '" + f.id + "' is already used.");
+            }
+            f.name = a.get("name", "Plane " + f.id.substr(2));
+            f.kind = FeatureKind::Plane;
+            f.params = params;
+            id = f.id;
+            insertFeature(m, std::move(f));
+            return true;
+        });
+        if (!r) {
+            return r;
+        }
+        return checkFeature(id);
+    }
+    if (a.verb == "revolve" || a.verb == "hole" || a.verb == "pattern" || a.verb == "mirror") {
+        // revolve sketch=s1 axis=X|Y|Z|line:<name> [angle=360deg] [op=new|join|cut|intersect] [profiles=…]
+        // hole sketch=s2 diameter=3.4mm (depth=10mm | extent=all) [type=simple|counterbore|countersink]
+        //      [cbore_diameter= cbore_depth= | csink_diameter= csink_angle=]
+        // pattern feature=e2 kind=circular axis=Z count=12 [angle=360deg]
+        // pattern feature=h1 kind=rectangular dir1=X count1=3 spacing1=20mm [dir2=Y count2=2 spacing2=15mm]
+        // mirror [body=e1] plane=YZ|XZ|XY [op=join|new]
+        static const std::map<std::string, std::pair<FeatureKind, std::string>> kinds {
+            {"revolve", {FeatureKind::Revolve, "r"}}, {"hole", {FeatureKind::Hole, "h"}},
+            {"pattern", {FeatureKind::Pattern, "p"}}, {"mirror", {FeatureKind::Mirror, "m"}}};
+        const auto& [kind, prefix] = kinds.at(a.verb);
+        nlohmann::json params = nlohmann::json::object();
+        for (auto& [k, v] : a.kv) {
+            if (k != "id" && k != "name") {
+                params[k] = v;
+            }
+        }
+        if (a.verb == "revolve") {
+            const std::string ax = a.get("axis", "Z");
+            if (ax.rfind("line:", 0) == 0) {
+                auto it = names_.find(a.get("sketch") + "." + ax.substr(5));
+                if (it == names_.end()) {
+                    return makeError("script.args", "No line called '" + ax.substr(5) + "' in sketch '" + a.get("sketch") + "'.",
+                                     {"Name the axis line: line … name=axis"});
+                }
+                params["axis"] = {{"line", it->second}};
+            }
+            else {
+                params["axis"] = {{"origin", ax}};
+            }
+            params["profiles"] = a.has("profiles") && a.get("profiles") != "all" ? nlohmann::json(split(a.get("profiles"), ';'))
+                                                                                  : nlohmann::json("all");
+        }
+        std::string label = a.verb;
+        label[0] = char(std::toupper(label[0]));
+        std::string id;
+        auto r = doc.transact(label, [&](Model& m) -> Result<bool> {
+            Feature f;
+            f.id = a.get("id", Document::newId(m, prefix));
+            if (findFeature(m, f.id)) {
+                return makeError("script.args", "The id '" + f.id + "' is already used.");
+            }
+            f.name = a.get("name", label + " " + f.id.substr(prefix.size()));
+            f.kind = kind;
+            f.params = params;
             id = f.id;
             insertFeature(m, std::move(f));
             return true;
@@ -964,15 +1290,100 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
     }
 
     // ---- output
+    if (a.verb == "measure") {
+        // measure [body=<id>] a=face:<name>|edge:<name> [b=face:<name>|edge:<name>]  -> JSON
+        const ModelState& st = doc.state();
+        std::string bodyId = a.get("body");
+        if (bodyId.empty() && st.bodies.size() == 1) {
+            bodyId = st.bodies.begin()->first;
+        }
+        auto bit = st.bodies.find(bodyId);
+        if (bit == st.bodies.end()) {
+            return makeError("script.args", "Say which body to measure with body=<id>.");
+        }
+        const NamedShape& body = *bit->second;
+        auto pick = [&](const std::string& sel) -> Result<TopoDS_Shape> {
+            if (sel.rfind("face:", 0) == 0) {
+                auto hits = body.findFaces(sel.substr(5));
+                if (hits.size() == 1) {
+                    return TopoDS_Shape(body.face(hits[0]));
+                }
+            }
+            else if (sel.rfind("edge:", 0) == 0) {
+                auto hits = body.findEdges(sel.substr(5));
+                if (hits.size() == 1) {
+                    return TopoDS_Shape(body.edge(hits[0]));
+                }
+            }
+            return makeError("script.args", "No single face or edge called '" + sel + "'.",
+                             {"Use face:<name> or edge:<name>; the faces command lists face names."});
+        };
+        auto sa = pick(a.get("a"));
+        if (!sa) {
+            return sa.error();
+        }
+        auto info = [](const MeasureItem& m) {
+            nlohmann::json j {{"kind", m.kind}, {m.kind.find("face") != std::string::npos || m.kind == "cone" ? "area" : "length", m.size}};
+            if (m.radius) {
+                j["radius"] = *m.radius;
+            }
+            return j;
+        };
+        nlohmann::json out {{"a", info(measureItem(sa.value()))}};
+        if (a.has("b")) {
+            auto sb = pick(a.get("b"));
+            if (!sb) {
+                return sb.error();
+            }
+            out["b"] = info(measureItem(sb.value()));
+            auto mb = measureBetween(sa.value(), sb.value());
+            if (!mb) {
+                return mb.error();
+            }
+            out["distance"] = mb->distance;
+            if (mb->angle) {
+                out["angle_deg"] = *mb->angle * 180 / std::numbers::pi;
+            }
+            if (mb->centres) {
+                out["centre_distance"] = *mb->centres;
+            }
+        }
+        output_.push_back(out.dump(2));
+        return true;
+    }
+    if (a.verb == "faces") {
+        // faces [body=<id>]: prints the body's face names, for writing face:<name> selectors
+        const ModelState& st = doc.state();
+        nlohmann::json out = nlohmann::json::object();
+        for (auto& [id, b] : st.bodies) {
+            if (a.has("body") && a.get("body") != id) {
+                continue;
+            }
+            auto& list = out[id] = nlohmann::json::array();
+            for (int i = 0; i < b->faceCount(); ++i) {
+                list.push_back(b->faceName(i));
+            }
+        }
+        output_.push_back(out.dump(2));
+        return true;
+    }
     if (a.verb == "report") {
         output_.push_back(reportJson(doc).dump(2));
         return true;
     }
     if (a.verb == "export") {
         if (a.positional.size() < 2) {
-            return makeError("script.args", "Use: export stl|step <path>");
+            return makeError("script.args", "Use: export stl|step|3mf <path>");
         }
         const std::string fmt = lower(a.positional[0]), path = a.positional[1];
+        if (fmt == "3mf") {
+            std::vector<std::pair<std::string, TopoDS_Shape>> bodies;
+            for (auto& [id, b] : doc.state().bodies) {
+                const Feature* f = doc.feature(id);
+                bodies.emplace_back(f ? f->name : id, b->shape());
+            }
+            return export3mf(bodies, path);
+        }
         TopoDS_Shape s = doc.combinedShape();
         Result<bool> r = fmt == "stl"    ? exportStl(s, path)
                        : fmt == "step"   ? exportStep(s, path)

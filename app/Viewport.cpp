@@ -5,7 +5,10 @@
 #include <cmath>
 #include <future>
 #include <map>
+#include <set>
 
+#include <QCoreApplication>
+#include <QKeyEvent>
 #include <QMouseEvent>
 #include <QNativeGestureEvent>
 #include <QOpenGLFramebufferObject>
@@ -27,6 +30,7 @@ layout(location = 1) in vec3 aNormal;
 layout(location = 2) in float aPick;
 uniform mat4 uMvp;
 uniform mat4 uView;
+uniform vec4 uClip;  // section view: keep dot(uClip.xyz, p) <= uClip.w
 out vec3 vN;
 out vec3 vPosV;
 flat out int vPick;
@@ -34,6 +38,7 @@ void main() {
     vN = mat3(uView) * aNormal;
     vPosV = (uView * vec4(aPos, 1.0)).xyz;
     vPick = int(aPick + 0.5);
+    gl_ClipDistance[0] = uClip.w - dot(uClip.xyz, aPos);
     gl_Position = uMvp * vec4(aPos, 1.0);
 })";
 
@@ -46,6 +51,8 @@ uniform vec3 uHover;
 uniform vec3 uSel;
 uniform int uHoverId;
 uniform int uSelId;
+uniform int uSection;   // 1 while a section view is on
+uniform vec3 uInside;   // colour of surfaces seen from inside the material
 out vec4 frag;
 void main() {
     vec3 n = normalize(vN);
@@ -55,6 +62,10 @@ void main() {
     float d = max(dot(n, L), 0.0);
     float s = pow(max(dot(reflect(-L, n), V), 0.0), 40.0) * 0.18;
     vec3 base = vPick == uSelId ? uSel : (vPick == uHoverId ? uHover : uColor);
+    if (uSection == 1 && !gl_FrontFacing) {  // looking into the cut: flat, unlit
+        frag = vec4(uInside, 1.0);
+        return;
+    }
     frag = vec4(base * (0.38 + 0.62 * d) + vec3(s), 1.0);
 })";
 
@@ -72,12 +83,28 @@ void main() {
 const char* kLineVs = R"(#version 330 core
 layout(location = 0) in vec3 aPos;
 uniform mat4 uMvp;
-void main() { gl_Position = uMvp * vec4(aPos, 1.0); })";
+uniform vec4 uClip;
+void main() {
+    gl_ClipDistance[0] = uClip.w - dot(uClip.xyz, aPos);
+    gl_Position = uMvp * vec4(aPos, 1.0);
+})";
 
 const char* kLineFs = R"(#version 330 core
 uniform vec4 uColor;
 out vec4 frag;
 void main() { frag = uColor; })";
+
+const char* kColorVs = R"(#version 330 core
+layout(location = 0) in vec3 aPos;
+layout(location = 1) in vec4 aColor;
+uniform mat4 uMvp;
+out vec4 vColor;
+void main() { vColor = aColor; gl_Position = uMvp * vec4(aPos, 1.0); })";
+
+const char* kColorFs = R"(#version 330 core
+in vec4 vColor;
+out vec4 frag;
+void main() { frag = vColor; })";
 
 QVector3D col(const QColor& c)
 {
@@ -101,6 +128,17 @@ std::vector<Job>& jobs(const Viewport* v)
     return all[v];
 }
 }  // namespace
+
+void configureSurfaceFormat()
+{
+    QSurfaceFormat fmt;
+    fmt.setVersion(3, 3);
+    fmt.setProfile(QSurfaceFormat::CoreProfile);
+    fmt.setDepthBufferSize(24);
+    fmt.setSamples(4);
+    QSurfaceFormat::setDefaultFormat(fmt);
+    QCoreApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
+}
 
 Viewport::Viewport(QWidget* parent)
     : QOpenGLWidget(parent)
@@ -251,6 +289,11 @@ void Viewport::uploadMesh(const std::string& body, std::shared_ptr<const jig::Na
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), nullptr);
     g->vaoEdge.release();
     g->edgeVertexCount = int(m.edgeLines.size() / 3);
+    g->edgeLines = std::move(m.edgeLines);
+    g->segEdge = std::move(m.segEdge);
+    g->positions = std::move(m.positions);
+    g->indices = std::move(m.indices);
+    g->triFace = std::move(m.triFace);
     meshes_.push_back(std::move(g));
 }
 
@@ -306,6 +349,12 @@ void Viewport::initializeGL()
     lineProg_->addShaderFromSourceCode(QOpenGLShader::Vertex, kLineVs);
     lineProg_->addShaderFromSourceCode(QOpenGLShader::Fragment, kLineFs);
     lineProg_->link();
+    colorProg_ = std::make_unique<QOpenGLShaderProgram>();
+    colorProg_->addShaderFromSourceCode(QOpenGLShader::Vertex, kColorVs);
+    colorProg_->addShaderFromSourceCode(QOpenGLShader::Fragment, kColorFs);
+    colorProg_->link();
+    ovVao_.create();
+    ovVbo_.create();
     buildGrid();
     glReady_ = true;
 }
@@ -355,10 +404,14 @@ void Viewport::drawScene(bool pickPass)
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_POLYGON_OFFSET_FILL);
     glPolygonOffset(1.0f, 1.0f);
+    // section view: everything on the far side of the plane is clipped away
+    const QVector4D clip = section_ ? *section_ : QVector4D(0, 0, 0, 1);  // 1 - 0 > 0 keeps all
+    glEnable(GL_CLIP_DISTANCE0);
     auto* prog = pickPass ? pickProg_.get() : meshProg_.get();
     prog->bind();
     prog->setUniformValue("uMvp", mvp);
     prog->setUniformValue("uView", view);
+    prog->setUniformValue("uClip", clip);
     if (!pickPass) {
         auto pickId = [&](const std::optional<PickResult>& r) {
             if (!r) {
@@ -371,11 +424,13 @@ void Viewport::drawScene(bool pickPass)
             }
             return -1;
         };
-        prog->setUniformValue("uColor", col(colors_.model));
+        prog->setUniformValue("uColor", col(tint_ ? *tint_ : colors_.model));
         prog->setUniformValue("uHover", col(colors_.hover));
         prog->setUniformValue("uSel", col(colors_.selected));
         prog->setUniformValue("uHoverId", pickId(hover_));
         prog->setUniformValue("uSelId", pickId(selected_));
+        prog->setUniformValue("uSection", section_ ? 1 : 0);
+        prog->setUniformValue("uInside", col(QColor(205, 92, 72)));  // brick red, also lighter than the model
     }
     for (auto& m : meshes_) {
         m->vaoTri.bind();
@@ -389,15 +444,19 @@ void Viewport::drawScene(bool pickPass)
     }
     lineProg_->bind();
     lineProg_->setUniformValue("uMvp", mvp);
+    lineProg_->setUniformValue("uClip", clip);
     lineProg_->setUniformValue("uColor", colors_.edge);
     for (auto& m : meshes_) {
         m->vaoEdge.bind();
         glDrawArrays(GL_LINES, 0, m->edgeVertexCount);
         m->vaoEdge.release();
     }
+    lineProg_->setUniformValue("uClip", QVector4D(0, 0, 0, 1));  // the grid is never cut
+    glDisable(GL_CLIP_DISTANCE0);
     // grid last, depth-tested, so the model hides it
     glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    // blend colour only: the widget composites its framebuffer, so its alpha must stay 1
+    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ZERO, GL_ONE);
     gridVao_.bind();
     lineProg_->setUniformValue("uColor", colors_.grid);
     glDrawArrays(GL_LINES, 0, gridMinorCount_);
@@ -411,6 +470,281 @@ void Viewport::drawScene(bool pickPass)
     gridVao_.release();
     glDisable(GL_BLEND);
     lineProg_->release();
+    drawOverlay();
+}
+
+// ---------------------------------------------------------------- overlay (tools)
+
+void Viewport::setOverlay(SceneOverlay o)
+{
+    overlayData_ = std::move(o);
+    overlayDirty_ = true;
+    update();
+}
+
+void Viewport::setSection(std::optional<QVector4D> plane)
+{
+    section_ = plane;
+    update();
+}
+
+void Viewport::setDatums(SceneOverlay geometry, std::vector<std::pair<QString, QVector3D>> labels)
+{
+    datums_ = std::move(geometry);
+    datumLabels_ = std::move(labels);
+    overlayDirty_ = true;
+    update();
+}
+
+void Viewport::setEdgeHighlight(const std::string& body, std::vector<int> edges)
+{
+    hlBody_ = body;
+    hlEdges_ = std::move(edges);
+    overlayDirty_ = true;
+    update();
+}
+
+void Viewport::setFaceHighlight(const std::string& body, std::vector<int> faces)
+{
+    hlFaceBody_ = body;
+    hlFaces_ = std::move(faces);
+    overlayDirty_ = true;
+    update();
+}
+
+void Viewport::setModelTint(std::optional<QColor> c)
+{
+    tint_ = c;
+    update();
+}
+
+void Viewport::setInteractor(Interactor* i)
+{
+    interactor_ = i;
+    if (hover_) {
+        hover_.reset();
+        emit hovered({});
+    }
+    update();
+}
+
+void Viewport::setPickMode(PickMode m)
+{
+    pickMode_ = m;
+    hover_.reset();
+    hoverEdge_.reset();
+    overlayDirty_ = true;
+    update();
+}
+
+void Viewport::uploadOverlay()
+{
+    std::vector<float> v;
+    auto push = [&](const QVector3D& p, const QColor& c) {
+        v.insert(v.end(), {p.x(), p.y(), p.z(), float(c.redF()), float(c.greenF()), float(c.blueF()),
+                           float(c.alphaF())});
+    };
+    // highlighted (selected) edges, then the hovered edge, then the tool's overlay
+    auto edgeSegs = [&](const std::string& body, int edge, const QColor& c) {
+        for (auto& m : meshes_) {
+            if (m->body != body) {
+                continue;
+            }
+            for (size_t s = 0; s < m->segEdge.size(); ++s) {
+                if (int(m->segEdge[s]) == edge) {
+                    const float* f = &m->edgeLines[s * 6];
+                    push({f[0], f[1], f[2]}, c);
+                    push({f[3], f[4], f[5]}, c);
+                }
+            }
+        }
+    };
+    for (int e : hlEdges_) {
+        edgeSegs(hlBody_, e, colors_.selected);
+    }
+    if (hoverEdge_) {
+        edgeSegs(hoverEdge_->body, hoverEdge_->edge, colors_.hover);
+    }
+    for (auto& ov : datums_.lines) {
+        push(ov.p, ov.c);
+    }
+    for (auto& ov : overlayData_.lines) {
+        push(ov.p, ov.c);
+    }
+    ovLineCount_ = int(v.size() / 7);
+    for (auto& ov : datums_.tris) {
+        push(ov.p, ov.c);
+    }
+    for (auto& ov : overlayData_.tris) {
+        push(ov.p, ov.c);
+    }
+    if (!hlFaces_.empty()) {
+        QColor fc = colors_.selected;
+        fc.setAlpha(110);
+        const std::set<int> want(hlFaces_.begin(), hlFaces_.end());
+        for (auto& m : meshes_) {
+            if (m->body != hlFaceBody_) {
+                continue;
+            }
+            for (size_t t = 0; t < m->triFace.size(); ++t) {
+                if (!want.count(int(m->triFace[t]))) {
+                    continue;
+                }
+                for (int k = 0; k < 3; ++k) {
+                    const uint32_t idx = m->indices[t * 3 + k];
+                    push({m->positions[idx * 3], m->positions[idx * 3 + 1], m->positions[idx * 3 + 2]}, fc);
+                }
+            }
+        }
+    }
+    ovTriCount_ = int(v.size() / 7) - ovLineCount_;
+    ovVao_.bind();
+    ovVbo_.bind();
+    ovVbo_.allocate(v.data(), int(v.size() * sizeof(float)));
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 7 * sizeof(float), nullptr);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 7 * sizeof(float), reinterpret_cast<void*>(3 * sizeof(float)));
+    ovVao_.release();
+    overlayDirty_ = false;
+}
+
+void Viewport::drawOverlay()
+{
+    if (overlayDirty_) {
+        uploadOverlay();
+    }
+    if (ovLineCount_ + ovTriCount_ == 0) {
+        return;
+    }
+    colorProg_->bind();
+    colorProg_->setUniformValue("uMvp", projMatrix() * viewMatrix());
+    ovVao_.bind();
+    glEnable(GL_BLEND);
+    // blend colour only: the widget composites its framebuffer, so its alpha must stay 1
+    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ZERO, GL_ONE);
+    // Tool geometry is drawn on top so sketches on faces never disappear into them.
+    glDisable(GL_DEPTH_TEST);
+    glDepthMask(GL_FALSE);
+    if (ovTriCount_ > 0) {
+        glDrawArrays(GL_TRIANGLES, ovLineCount_, ovTriCount_);
+    }
+    glDrawArrays(GL_LINES, 0, ovLineCount_);
+    glDepthMask(GL_TRUE);
+    glEnable(GL_DEPTH_TEST);
+    glDisable(GL_BLEND);
+    ovVao_.release();
+    colorProg_->release();
+}
+
+// ---------------------------------------------------------------- geometry helpers
+
+void Viewport::ray(const QPointF& px, QVector3D& origin, QVector3D& dir) const
+{
+    const QMatrix4x4 inv = (projMatrix() * viewMatrix()).inverted();
+    const float nx = float(2.0 * px.x() / std::max(width(), 1) - 1), ny = float(1 - 2.0 * px.y() / std::max(height(), 1));
+    QVector3D a = inv.map(QVector3D(nx, ny, -1)), b = inv.map(QVector3D(nx, ny, 1));
+    origin = a;
+    dir = (b - a).normalized();
+}
+
+QPointF Viewport::project(const QVector3D& w) const
+{
+    QVector3D n = (projMatrix() * viewMatrix()).map(w);
+    return {(n.x() + 1) * 0.5 * width(), (1 - n.y()) * 0.5 * height()};
+}
+
+float Viewport::worldPerPixel() const
+{
+    return 2 * distance_ * std::tan(qDegreesToRadians(kFovDeg / 2)) / float(std::max(height(), 1));
+}
+
+void Viewport::lookAlong(const QVector3D& normal, const QVector3D& up, const QVector3D& center)
+{
+    QVector3D n = normal.normalized();
+    pitch_ = std::clamp(float(qRadiansToDegrees(std::asin(std::clamp(n.z(), -1.0f, 1.0f)))), -89.9f, 89.9f);
+    if (std::abs(n.z()) > 0.999f) {
+        // looking straight down/up: choose yaw so the plane's "up" is up on screen
+        const float s = n.z() > 0 ? 1.0f : -1.0f;
+        yaw_ = float(qRadiansToDegrees(std::atan2(-up.y() * s, -up.x() * s)));
+    }
+    else {
+        yaw_ = float(qRadiansToDegrees(std::atan2(n.y(), n.x())));
+    }
+    target_ = center;
+    update();
+}
+
+std::optional<EdgePick> Viewport::pickEdgeAt(const QPoint& pos)
+{
+    if (!glReady_ || meshes_.empty()) {
+        return std::nullopt;
+    }
+    struct Cand
+    {
+        double dist;
+        std::string body;
+        int edge;
+        QVector3D world;
+    };
+    std::vector<Cand> cands;
+    const QMatrix4x4 mvp = projMatrix() * viewMatrix();
+    for (auto& m : meshes_) {
+        for (size_t s = 0; s < m->segEdge.size(); ++s) {
+            const float* f = &m->edgeLines[s * 6];
+            QVector3D a(f[0], f[1], f[2]), b(f[3], f[4], f[5]);
+            QPointF pa = project(a), pb = project(b);
+            QPointF ab = pb - pa, ap = QPointF(pos) - pa;
+            double len2 = ab.x() * ab.x() + ab.y() * ab.y();
+            double t = len2 > 0 ? std::clamp((ap.x() * ab.x() + ap.y() * ab.y()) / len2, 0.0, 1.0) : 0.0;
+            QPointF c = pa + ab * t;
+            double d = QLineF(c, QPointF(pos)).length();
+            const QVector3D w = a + (b - a) * float(t);
+            const bool cutAway = section_ && QVector3D::dotProduct(section_->toVector3D(), w) > section_->w();
+            if (d < 8 && !cutAway) {
+                cands.push_back({d, m->body, int(m->segEdge[s]), w});
+            }
+        }
+    }
+    if (cands.empty()) {
+        return std::nullopt;
+    }
+    std::sort(cands.begin(), cands.end(), [](auto& x, auto& y) { return x.dist < y.dist; });
+    // Reject edges hidden behind faces using the depth of the pick pass.
+    makeCurrent();
+    const qreal dpr = devicePixelRatioF();
+    const QSize sz(int(width() * dpr), int(height() * dpr));
+    if (!pickFbo_ || pickFbo_->size() != sz) {
+        pickFbo_ = std::make_unique<QOpenGLFramebufferObject>(sz, QOpenGLFramebufferObject::Depth);
+    }
+    pickFbo_->bind();
+    glViewport(0, 0, sz.width(), sz.height());
+    glClearColor(0, 0, 0, 0);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    drawScene(true);
+    std::optional<EdgePick> result;
+    for (size_t i = 0; i < std::min<size_t>(cands.size(), 8) && !result; ++i) {
+        QVector3D n = mvp.map(cands[i].world);
+        QPointF px = project(cands[i].world);
+        float depth = 1;
+        const int x = std::clamp(int(px.x() * dpr), 0, sz.width() - 1);
+        const int y = std::clamp(sz.height() - 1 - int(px.y() * dpr), 0, sz.height() - 1);
+        glReadPixels(x, y, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &depth);
+        if (n.z() * 0.5f + 0.5f <= depth + 2e-3f) {
+            result = EdgePick {cands[i].body, cands[i].edge};
+        }
+    }
+    pickFbo_->release();
+    doneCurrent();
+    return result;
+}
+
+void Viewport::keyPressEvent(QKeyEvent* e)
+{
+    if (interactor_ && interactor_->key(e)) {
+        return;
+    }
+    QOpenGLWidget::keyPressEvent(e);
 }
 
 void Viewport::paintGL()
@@ -433,6 +767,7 @@ void Viewport::paintGL()
             }
             uploadMesh(it->body, it->shape, std::move(m));
             changed = true;
+            overlayDirty_ = true;
         }
         it = js.erase(it);
     }
@@ -451,6 +786,19 @@ void Viewport::paintGL()
 void Viewport::paintOverlay(QPainter& p)
 {
     p.setRenderHint(QPainter::Antialiasing);
+    if (interactor_) {
+        p.save();
+        interactor_->paint(p);
+        p.restore();
+    }
+    if (!datumLabels_.empty()) {
+        p.save();
+        p.setPen(colors_.text);
+        for (auto& [text, at] : datumLabels_) {
+            p.drawText(project(at) + QPointF(4, -4), text);
+        }
+        p.restore();
+    }
     drawGizmo(p);
     if (meshes_.empty() && !emptyHint_.isEmpty() && pending_ == 0) {
         QFont f = font();
@@ -672,6 +1020,9 @@ void Viewport::mousePressEvent(QMouseEvent* e)
     if (e->button() == Qt::RightButton) {
         drag_ = shift ? Drag::Pan : Drag::Orbit;
     }
+    if (drag_ == Drag::None && e->button() == Qt::LeftButton && gizmoHit(lastPos_) < 0 && interactor_) {
+        interactor_->mousePress(e);
+    }
 }
 
 void Viewport::mouseMoveEvent(QMouseEvent* e)
@@ -687,7 +1038,47 @@ void Viewport::mouseMoveEvent(QMouseEvent* e)
         pan(d);
         return;
     }
-    if (e->buttons() == Qt::NoButton) {
+    if (interactor_ && interactor_->mouseMove(e)) {
+        return;
+    }
+    if (e->buttons() == Qt::NoButton && (pickMode_ == PickMode::Edges || pickMode_ == PickMode::Any)) {
+        auto h = pickEdgeAt(pos);
+        if (!h && pickMode_ == PickMode::Any) {
+            if (hoverEdge_) {
+                hoverEdge_.reset();
+                overlayDirty_ = true;
+            }
+            auto f = pickAt(pos);
+            const bool same = (f.has_value() == hover_.has_value()) && (!f || (f->body == hover_->body && f->face == hover_->face));
+            if (!same) {
+                hover_ = f;
+                emit hovered(f ? describe(*f) : QString());
+                update();
+            }
+            return;
+        }
+        if (h && pickMode_ == PickMode::Any && hover_) {
+            hover_.reset();
+        }
+        bool same = (h.has_value() == hoverEdge_.has_value()) && (!h || (h->body == hoverEdge_->body && h->edge == hoverEdge_->edge));
+        if (!same) {
+            hoverEdge_ = h;
+            overlayDirty_ = true;
+            if (h) {
+                for (auto& m : meshes_) {
+                    if (m->body == h->body) {
+                        emit hovered(tr("Edge “%1”").arg(QString::fromStdString(m->shape->edgeName(h->edge))));
+                    }
+                }
+            }
+            else {
+                emit hovered({});
+            }
+            update();
+        }
+        return;
+    }
+    if (e->buttons() == Qt::NoButton && pickMode_ == PickMode::Faces) {
         auto h = pickAt(pos);
         bool same = (h.has_value() == hover_.has_value()) && (!h || (h->body == hover_->body && h->face == hover_->face));
         if (!same) {
@@ -713,9 +1104,50 @@ void Viewport::mouseReleaseEvent(QMouseEvent* e)
             case 7: fitAll(); return;
             default: break;
         }
+        if (interactor_ && interactor_->mouseRelease(e)) {
+            drag_ = Drag::None;
+            return;
+        }
+        if (pickMode_ == PickMode::Edges || pickMode_ == PickMode::Any) {
+            auto h = pickEdgeAt(pos);
+            if (!h && pickMode_ == PickMode::Any) {
+                if (auto f = pickAt(pos)) {
+                    for (auto& m : meshes_) {
+                        if (m->body == f->body && f->face < m->shape->faceCount()) {
+                            emit faceClicked(QString::fromStdString(f->body),
+                                             QString::fromStdString(m->shape->faceName(f->face)), e->modifiers());
+                        }
+                    }
+                }
+                drag_ = Drag::None;
+                return;
+            }
+            if (h) {
+                for (auto& m : meshes_) {
+                    if (m->body == h->body && h->edge < m->shape->edgeCount()) {
+                        emit edgeClicked(QString::fromStdString(h->body),
+                                         QString::fromStdString(m->shape->edgeName(h->edge)), e->modifiers());
+                    }
+                }
+            }
+            drag_ = Drag::None;
+            return;
+        }
+        if (pickMode_ == PickMode::None) {
+            drag_ = Drag::None;
+            return;
+        }
         selected_ = pickAt(pos);
         emit selectionChanged(selected_ ? QString::fromStdString(selected_->body) : QString(),
                               selected_ ? selected_->face : -1);
+        if (selected_) {
+            for (auto& m : meshes_) {
+                if (m->body == selected_->body && selected_->face < m->shape->faceCount()) {
+                    emit faceClicked(QString::fromStdString(selected_->body),
+                                     QString::fromStdString(m->shape->faceName(selected_->face)), e->modifiers());
+                }
+            }
+        }
         update();
     }
     drag_ = Drag::None;
@@ -723,6 +1155,9 @@ void Viewport::mouseReleaseEvent(QMouseEvent* e)
 
 void Viewport::mouseDoubleClickEvent(QMouseEvent* e)
 {
+    if (e->button() == Qt::LeftButton && interactor_ && interactor_->mouseDoubleClick(e)) {
+        return;
+    }
     if (e->button() == Qt::MiddleButton) {
         fitAll();
     }

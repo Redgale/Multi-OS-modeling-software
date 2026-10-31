@@ -6,7 +6,10 @@
 
 #include <gtest/gtest.h>
 
+#include <map>
+
 #include "helpers.hpp"
+#include "jig/io.hpp"
 
 using namespace jig;
 using namespace jigtest;
@@ -159,6 +162,40 @@ TEST(Interchange, BinaryStl)
     EXPECT_GT(n, 500u);
 }
 
+TEST(Interchange, ThreeMfIsWatertightAndKeepsVolume)
+{
+    auto doc = buildSample("knob.jigs");
+    const auto& body = *doc->state().bodies.begin()->second;
+    const Mesh m = meshOf(body.shape());
+    ASSERT_GT(m.triangles.size(), 300u);
+    // every directed edge appears once, and its reverse once: closed and consistently oriented
+    std::map<std::pair<uint32_t, uint32_t>, int> half;
+    for (size_t i = 0; i < m.triangles.size(); i += 3) {
+        for (int k = 0; k < 3; ++k) {
+            ++half[{m.triangles[i + size_t(k)], m.triangles[i + size_t((k + 1) % 3)]}];
+        }
+    }
+    int bad = 0;
+    for (auto& [e, n] : half) {
+        auto twin = half.find({e.second, e.first});
+        bad += n != 1 || twin == half.end() || twin->second != 1;
+    }
+    EXPECT_EQ(bad, 0);
+    double vol = 0;
+    auto P = [&](uint32_t i) { return gp_XYZ(m.xyz[3 * i], m.xyz[3 * i + 1], m.xyz[3 * i + 2]); };
+    for (size_t i = 0; i < m.triangles.size(); i += 3) {
+        vol += P(m.triangles[i]).Dot(P(m.triangles[i + 1]).Crossed(P(m.triangles[i + 2]))) / 6;
+    }
+    EXPECT_NEAR(vol, props(*doc).volume, props(*doc).volume * 1e-3);
+    const auto path = (tempDir() / "knob.3mf").string();
+    ScriptRunner r(*doc);
+    ASSERT_TRUE(r.runLine("export 3mf " + path).ok());
+    const std::string bytes = readFile(path);
+    EXPECT_EQ(bytes.substr(0, 2), "PK");
+    EXPECT_NE(bytes.find("3D/3dmodel.model"), std::string::npos);
+    EXPECT_NE(bytes.find("[Content_Types].xml"), std::string::npos);
+}
+
 TEST(Interchange, MalformedStepIsRejected)
 {
     const auto path = (tempDir() / "junk.step").string();
@@ -180,4 +217,119 @@ TEST(Display, TessellationHasFaceIds)
     }
     EXPECT_EQ(int(maxFace) + 1, props(*doc).faces);
     EXPECT_FALSE(m.edgeLines.empty());
+}
+
+TEST(Queries, PointInsideAndTangentChain)
+{
+    auto doc = build("sketch id=s1\nrect center=0,0 w=60 h=40\nextrude sketch=s1 distance=10\n"
+                     "fillet edges=all radius=3mm\n");
+    const auto& body = *doc->state().bodies.begin()->second;
+    EXPECT_TRUE(pointInside(body.shape(), 0, 0, 5));
+    EXPECT_FALSE(pointInside(body.shape(), 0, 0, 15));
+    // with every edge rounded, the top face is a rounded rectangle: its outline is one
+    // tangent-continuous loop, so the chain is at least that loop
+    int topEdge = body.edgesOfFace(body.findFaces("e1/end")[0])[0];
+    EXPECT_GE(tangentChain(body, topEdge).size(), body.edgesOfFace(body.findFaces("e1/end")[0]).size());
+    // on the plain block, edges meet at right angles: no chain
+    auto plain = build("sketch id=s1\nrect center=0,0 w=60 h=40\nextrude sketch=s1 distance=10\n");
+    const auto& pb = *plain->state().bodies.begin()->second;
+    EXPECT_EQ(tangentChain(pb, 0).size(), 1u);
+}
+
+TEST(Golden, PenCupWithParameters)
+{
+    // Scenario A3: height, dia and wall drive the cup; changing them keeps it valid.
+    auto doc = buildSample("pen_cup.jigs");
+    expectAllOk(*doc);
+    auto p = props(*doc);
+    ASSERT_TRUE(p.valid);
+    // analytic shell volume, less the 2 mm base round and the two 1 mm rim rounds
+    const double shell = M_PI * 40 * 40 * 95 - M_PI * 37.6 * 37.6 * (95 - 2.4);
+    const double rounds = (4 - M_PI) * 4 / 4 * 2 * M_PI * 40 * 1.0          // base: (1 - pi/4) r^2 L, r = 2
+                          + (1 - M_PI / 4) * 1 * (2 * M_PI * 40 + 2 * M_PI * 37.6);  // rim, r = 1
+    double mark = 0;  // the maker's mark cut 0.6 mm into the underside
+    for (auto& r : doc->state().sketches.at("s2")->profiles.regions) {
+        mark += r.area * 0.6;
+    }
+    EXPECT_EQ(doc->state().sketches.at("s2")->profiles.regions.size(), 8u);  // J I G S M I T H
+    EXPECT_NEAR(p.volume, shell - rounds - mark, 5.0);
+    EXPECT_NEAR(p.zmax, 95, 1e-6);
+    // a mini version, as the guide suggests
+    run(*doc, "param height = 60 mm");
+    run(*doc, "param dia = 50 mm");
+    expectAllOk(*doc);
+    auto q = props(*doc);
+    EXPECT_TRUE(q.valid);
+    EXPECT_NEAR(q.zmax, 60, 1e-6);
+    EXPECT_NEAR(q.xmax - q.xmin, 50, 1e-6);
+    EXPECT_EQ(q.faces, p.faces);
+    // thicker walls also work
+    run(*doc, "param wall = 3 mm");
+    expectAllOk(*doc);
+    EXPECT_EQ(props(*doc).solids, 1);
+}
+
+TEST(Chamfer, BevelsAndExplains)
+{
+    auto doc = build("sketch id=s1\nrect center=0,0 w=60 h=40\nextrude sketch=s1 distance=10\n"
+                     "chamfer id=c1 edges=face:e1/start distance=1mm\n");
+    expectAllOk(*doc);
+    // an equal-distance chamfer along the 200 mm bottom outline removes d^2/2 per mm, and the
+    // four corner mitres give back d^3/3 each: exactly 24000 - 100 + 4/3
+    EXPECT_NEAR(props(*doc).volume, 24000 - 0.5 * 200 + 4.0 / 3.0, 1e-3);
+    ScriptRunner r(*doc);
+    r.strict = false;
+    ASSERT_TRUE(r.runLine("set c1 distance=12mm").ok());
+    const auto& st = doc->status(doc->featureIndex("c1"));
+    ASSERT_EQ(int(st.level), int(StatusLevel::Error));
+    EXPECT_NE(st.message.find("too big"), std::string::npos) << st.message;
+    ASSERT_FALSE(st.suggestions.empty());
+    EXPECT_EQ(st.suggestions[0].rfind("Try ", 0), 0u) << st.suggestions[0];
+}
+
+TEST(Shell, TooThickIsExplainedWithAWorkingValue)
+{
+    auto doc = std::make_unique<Document>();
+    ScriptRunner r(*doc);
+    r.strict = false;
+    ASSERT_TRUE(r.runText("sketch id=s1\nrect center=0,0 w=60 h=40\nextrude sketch=s1 distance=10\n"
+                          "shell id=sh1 faces=face:e1/end thickness=12mm\n").ok());  // taller than the 10 mm box
+    const auto& st = doc->status(doc->featureIndex("sh1"));
+    ASSERT_EQ(int(st.level), int(StatusLevel::Error));
+    EXPECT_NE(st.message.find("does not fit"), std::string::npos) << st.message;
+    ASSERT_FALSE(st.suggestions.empty());
+    ASSERT_EQ(st.suggestions[0].rfind("Try ", 0), 0u) << st.suggestions[0];
+    const double t = std::stod(st.suggestions[0].substr(4));
+    ASSERT_TRUE(r.runLine("set sh1 thickness=\"" + std::to_string(t) + " mm\"").ok());
+    EXPECT_EQ(int(doc->status(doc->featureIndex("sh1")).level), int(StatusLevel::Ok));
+    EXPECT_NEAR(props(*doc).volume, 24000.0 - (60 - 2 * t) * (40 - 2 * t) * (10 - t), 1e-3);
+}
+
+TEST(Shell, InnerWallsHaveStableNames)
+{
+    // A fillet on an inside edge of the shell must survive resizing the box.
+    auto doc = build("param w = 60 mm\nsketch id=s1\nrect center=0,0 w=w h=40\nextrude sketch=s1 distance=20\n"
+                     "shell id=sh1 faces=face:e1/end thickness=2mm\n");
+    const auto& body = *doc->state().bodies.begin()->second;
+    int inner = 0;
+    for (int i = 0; i < body.faceCount(); ++i) {
+        inner += body.faceName(i).rfind("sh1/inner:", 0) == 0;
+    }
+    EXPECT_EQ(inner, 5);  // four inner walls and the inner floor
+    const auto floorName = std::string("sh1/inner:e1/start");
+    ASSERT_EQ(body.findFaces(floorName).size(), 1u);
+    run(*doc, "fillet id=f1 edges=face:" + floorName + " radius=1mm");
+    run(*doc, "param w = 80 mm");
+    expectAllOk(*doc);
+}
+
+TEST(Shell, ClosedHollowKeepsOuterNames)
+{
+    auto doc = build("sketch id=s1\nrect center=0,0 w=60 h=40\nextrude sketch=s1 distance=20\n"
+                     "shell id=sh1 faces=none thickness=2mm\n");
+    const auto& body = *doc->state().bodies.begin()->second;
+    EXPECT_EQ(body.findFaces("e1/end").size(), 1u);
+    EXPECT_EQ(body.findFaces("e1/start").size(), 1u);
+    EXPECT_EQ(body.findFaces("sh1/inner:e1/end").size(), 1u);
+    EXPECT_NEAR(props(*doc).volume, 60 * 40 * 20 - 56 * 36 * 16, 1e-3);
 }

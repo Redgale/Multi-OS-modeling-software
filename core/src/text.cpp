@@ -1,0 +1,348 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Sketch text: glyph outlines from FreeType turned into flat faces (brief 5.4f, D-014).
+// No OCCT visualisation toolkits and no window system: the core stays headless.
+#include <algorithm>
+#include <cmath>
+#include <cstdint>
+#include <filesystem>
+#include <mutex>
+
+#include <BRepBuilderAPI_MakeEdge.hxx>
+#include <BRepBuilderAPI_MakeFace.hxx>
+#include <BRepBuilderAPI_MakeWire.hxx>
+#include <BRepCheck_Analyzer.hxx>
+#include <Geom_BezierCurve.hxx>
+#include <ShapeFix_Face.hxx>
+#include <TColgp_Array1OfPnt.hxx>
+#include <TopoDS.hxx>
+#include <gp_Pln.hxx>
+
+#include <ft2build.h>
+#include FT_FREETYPE_H
+#include FT_OUTLINE_H
+
+#include "jig/kernel.hpp"
+
+extern const unsigned char jig_font_inter_regular[];
+extern const std::size_t jig_font_inter_regular_size;
+
+namespace jig
+{
+namespace
+{
+
+// One closed glyph contour in font units: a list of segments (2 points = line,
+// 3 = quadratic, 4 = cubic Bezier), plus a dense polyline for containment tests.
+struct Contour
+{
+    std::vector<std::vector<gp_XY>> segments;
+    std::vector<gp_XY> poly;
+    double area = 0;  // signed, from the polyline
+};
+
+struct Decomposer
+{
+    std::vector<Contour> contours;
+    gp_XY last;
+
+    void add(std::vector<gp_XY> seg)
+    {
+        auto& c = contours.back();
+        // flatten for the containment test
+        const int n = seg.size() == 2 ? 1 : 8;
+        for (int k = 1; k <= n; ++k) {
+            const double t = double(k) / n;
+            gp_XY p;
+            if (seg.size() == 2) {
+                p = seg[0] * (1 - t) + seg[1] * t;
+            }
+            else if (seg.size() == 3) {
+                p = seg[0] * ((1 - t) * (1 - t)) + seg[1] * (2 * t * (1 - t)) + seg[2] * (t * t);
+            }
+            else {
+                const double u = 1 - t;
+                p = seg[0] * (u * u * u) + seg[1] * (3 * u * u * t) + seg[2] * (3 * u * t * t) + seg[3] * (t * t * t);
+            }
+            c.poly.push_back(p);
+        }
+        last = seg.back();
+        c.segments.push_back(std::move(seg));
+    }
+};
+
+gp_XY xy(const FT_Vector* v)
+{
+    return gp_XY(double(v->x), double(v->y));
+}
+
+int moveTo(const FT_Vector* to, void* user)
+{
+    auto* d = static_cast<Decomposer*>(user);
+    d->contours.emplace_back();
+    d->last = xy(to);
+    d->contours.back().poly.push_back(d->last);
+    return 0;
+}
+
+int lineTo(const FT_Vector* to, void* user)
+{
+    auto* d = static_cast<Decomposer*>(user);
+    if ((xy(to) - d->last).Modulus() > 1e-9) {
+        d->add({d->last, xy(to)});
+    }
+    return 0;
+}
+
+int conicTo(const FT_Vector* c, const FT_Vector* to, void* user)
+{
+    auto* d = static_cast<Decomposer*>(user);
+    d->add({d->last, xy(c), xy(to)});
+    return 0;
+}
+
+int cubicTo(const FT_Vector* c1, const FT_Vector* c2, const FT_Vector* to, void* user)
+{
+    auto* d = static_cast<Decomposer*>(user);
+    d->add({d->last, xy(c1), xy(c2), xy(to)});
+    return 0;
+}
+
+bool inside(const std::vector<gp_XY>& poly, const gp_XY& p)
+{
+    bool in = false;
+    for (size_t i = 0, j = poly.size() - 1; i < poly.size(); j = i++) {
+        const gp_XY& a = poly[i];
+        const gp_XY& b = poly[j];
+        if ((a.Y() > p.Y()) != (b.Y() > p.Y()) && p.X() < (b.X() - a.X()) * (p.Y() - a.Y()) / (b.Y() - a.Y()) + a.X()) {
+            in = !in;
+        }
+    }
+    return in;
+}
+
+std::vector<char32_t> utf8(const std::string& s)
+{
+    std::vector<char32_t> out;
+    for (size_t i = 0; i < s.size();) {
+        const auto c = static_cast<unsigned char>(s[i]);
+        int n = c < 0x80 ? 1 : (c >> 5) == 6 ? 2 : (c >> 4) == 14 ? 3 : (c >> 3) == 30 ? 4 : 0;
+        if (n == 0 || i + size_t(n) > s.size()) {
+            out.push_back(U'�');
+            ++i;
+            continue;
+        }
+        char32_t cp = n == 1 ? c : c & (0x7F >> n);
+        for (int k = 1; k < n; ++k) {
+            cp = (cp << 6) | (static_cast<unsigned char>(s[i + size_t(k)]) & 0x3F);
+        }
+        out.push_back(cp);
+        i += size_t(n);
+    }
+    return out;
+}
+
+// FreeType is not thread-safe per library/face; one lock guards it.
+std::mutex& ftLock()
+{
+    static std::mutex m;
+    return m;
+}
+
+FT_Library library()
+{
+    static FT_Library lib = [] {
+        FT_Library l = nullptr;
+        FT_Init_FreeType(&l);
+        return l;
+    }();
+    return lib;
+}
+
+}  // namespace
+
+Result<TextOutline> textFaces(const SketchText& t, double x, double y, const gp_Ax3& frame)
+{
+    std::lock_guard<std::mutex> guard(ftLock());
+    FT_Library lib = library();
+    if (!lib) {
+        return makeError("text.font", "The text engine could not start.");
+    }
+    TextOutline result;
+    FT_Face face = nullptr;
+    if (!t.font.empty() && std::filesystem::exists(t.font)) {
+        if (FT_New_Face(lib, t.font.c_str(), 0, &face) != 0) {
+            face = nullptr;
+            result.note = "The font file " + t.font + " could not be read; using the built-in font (Inter).";
+        }
+    }
+    else if (!t.font.empty() && t.font != "Inter") {
+        result.note = "The font '" + t.font + "' is not available here; using the built-in font (Inter).";
+    }
+    if (!face && FT_New_Memory_Face(lib, jig_font_inter_regular, FT_Long(jig_font_inter_regular_size), 0, &face) != 0) {
+        return makeError("text.font", "The built-in font could not be loaded.");
+    }
+    struct FaceCloser
+    {
+        FT_Face f;
+        ~FaceCloser()
+        {
+            FT_Done_Face(f);
+        }
+    } closer {face};
+
+    // Unscaled outlines (font units), scaled exactly to the requested size: no hinting.
+    const double scale = t.heightValue / double(face->units_per_EM);
+    FT_Outline_Funcs funcs {};
+    funcs.move_to = moveTo;
+    funcs.line_to = lineTo;
+    funcs.conic_to = conicTo;
+    funcs.cubic_to = cubicTo;
+
+    struct Glyph
+    {
+        std::vector<Contour> contours;
+        double penX;
+    };
+    std::vector<Glyph> glyphs;
+    double pen = 0;
+    double xmin = 1e300, xmax = -1e300, ymin = 1e300, ymax = -1e300;
+    FT_UInt prev = 0;
+    const bool kerning = FT_HAS_KERNING(face);
+    for (char32_t cp : utf8(t.text)) {
+        const FT_UInt gi = FT_Get_Char_Index(face, FT_ULong(cp));
+        if (kerning && prev && gi) {
+            FT_Vector k;
+            if (FT_Get_Kerning(face, prev, gi, FT_KERNING_UNSCALED, &k) == 0) {
+                pen += double(k.x);
+            }
+        }
+        prev = gi;
+        if (FT_Load_Glyph(face, gi, FT_LOAD_NO_SCALE | FT_LOAD_NO_HINTING | FT_LOAD_NO_BITMAP) != 0) {
+            continue;
+        }
+        if (face->glyph->format == FT_GLYPH_FORMAT_OUTLINE) {
+            Decomposer d;
+            FT_Outline_Decompose(&face->glyph->outline, &funcs, &d);
+            Glyph g {{}, pen};
+            for (auto& c : d.contours) {
+                if (c.segments.empty()) {
+                    continue;
+                }
+                // close the contour if the font left it open
+                if ((c.segments.back().back() - c.segments.front().front()).Modulus() > 1e-9) {
+                    c.segments.push_back({c.segments.back().back(), c.segments.front().front()});
+                }
+                double a = 0;
+                for (size_t i = 0, j = c.poly.size() - 1; i < c.poly.size(); j = i++) {
+                    a += c.poly[j].X() * c.poly[i].Y() - c.poly[i].X() * c.poly[j].Y();
+                }
+                c.area = a / 2;
+                if (std::abs(c.area) < 1e-6 || c.poly.size() < 3) {
+                    continue;
+                }
+                for (auto& p : c.poly) {
+                    xmin = std::min(xmin, p.X() + pen);
+                    xmax = std::max(xmax, p.X() + pen);
+                    ymin = std::min(ymin, p.Y());
+                    ymax = std::max(ymax, p.Y());
+                }
+                g.contours.push_back(std::move(c));
+            }
+            if (!g.contours.empty()) {
+                glyphs.push_back(std::move(g));
+            }
+        }
+        pen += double(face->glyph->advance.x);
+    }
+    if (glyphs.empty()) {
+        return result;  // empty or whitespace-only text: no areas
+    }
+
+    // Centre the lettering on the anchor and place it in the sketch plane.
+    const gp_XY centre((xmin + xmax) / 2, (ymin + ymax) / 2);
+    const double ca = std::cos(t.angle), sa = std::sin(t.angle);
+    auto to3d = [&](const gp_XY& fontPt, double penX) {
+        const double u = (fontPt.X() + penX - centre.X()) * scale;
+        const double v = (fontPt.Y() - centre.Y()) * scale;
+        const double lx = x + u * ca - v * sa;
+        const double ly = y + u * sa + v * ca;
+        return gp_Pnt(frame.Location().XYZ() + frame.XDirection().XYZ() * lx + frame.YDirection().XYZ() * ly);
+    };
+    const gp_Pln plane(frame);
+
+    try {
+        for (const Glyph& g : glyphs) {
+            // Outer contours have an even number of contours around them; holes an odd
+            // number. This works whichever winding direction the font uses.
+            const size_t n = g.contours.size();
+            std::vector<int> depth(n, 0);
+            for (size_t i = 0; i < n; ++i) {
+                for (size_t j = 0; j < n; ++j) {
+                    if (i != j && std::abs(g.contours[j].area) > std::abs(g.contours[i].area)
+                        && inside(g.contours[j].poly, g.contours[i].poly.front())) {
+                        ++depth[i];
+                    }
+                }
+            }
+            auto wireOf = [&](const Contour& c) {
+                BRepBuilderAPI_MakeWire mw;
+                for (auto& seg : c.segments) {
+                    if (seg.size() == 2) {
+                        const gp_Pnt a = to3d(seg[0], g.penX), b = to3d(seg[1], g.penX);
+                        if (a.Distance(b) < 1e-9) {
+                            continue;
+                        }
+                        mw.Add(BRepBuilderAPI_MakeEdge(a, b).Edge());
+                    }
+                    else {
+                        TColgp_Array1OfPnt poles(1, int(seg.size()));
+                        for (size_t k = 0; k < seg.size(); ++k) {
+                            poles.SetValue(int(k) + 1, to3d(seg[k], g.penX));
+                        }
+                        Handle(Geom_BezierCurve) bez = new Geom_BezierCurve(poles);
+                        mw.Add(BRepBuilderAPI_MakeEdge(bez).Edge());
+                    }
+                }
+                return mw;
+            };
+            for (size_t i = 0; i < n; ++i) {
+                if (depth[i] % 2 != 0) {
+                    continue;  // a hole: added to its outer contour below
+                }
+                auto outer = wireOf(g.contours[i]);
+                if (!outer.IsDone()) {
+                    continue;
+                }
+                BRepBuilderAPI_MakeFace mf(plane, outer.Wire(), true);
+                for (size_t j = 0; j < n; ++j) {
+                    // holes directly inside this outer contour
+                    if (depth[j] == depth[i] + 1 && std::abs(g.contours[j].area) < std::abs(g.contours[i].area)
+                        && inside(g.contours[i].poly, g.contours[j].poly.front())) {
+                        auto hole = wireOf(g.contours[j]);
+                        if (hole.IsDone()) {
+                            mf.Add(hole.Wire());
+                        }
+                    }
+                }
+                if (!mf.IsDone()) {
+                    continue;
+                }
+                ShapeFix_Face fix(mf.Face());
+                fix.FixOrientation();
+                fix.Perform();
+                const TopoDS_Face f = TopoDS::Face(fix.Face());
+                if (BRepCheck_Analyzer(f).IsValid()) {
+                    result.faces.push_back(f);
+                }
+            }
+        }
+    }
+    catch (const Standard_Failure& f) {
+        const char* m = f.GetMessageString();
+        return makeError("text.outline", "This text could not be turned into shapes.", {"Try another font."},
+                         m ? m : "");
+    }
+    return result;
+}
+
+}  // namespace jig

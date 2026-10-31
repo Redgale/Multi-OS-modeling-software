@@ -16,7 +16,7 @@ TEST(Document, TransactionErrorLeavesModelUntouched)
     Document doc;
     auto before = doc.toJson();
     auto r = doc.transact("bad", [](Model& m) -> Result<bool> {
-        m.parameters.push_back({"x", "1 mm"});
+        m.parameters.push_back({"x", "1 mm", ParamKind::Length, {}});
         return makeError("test", "no");
     });
     EXPECT_FALSE(r.ok());
@@ -181,4 +181,16 @@ TEST(Document, AtomicSaveLeavesNoPartialFile)
     // saving into a folder that does not exist fails with an explanation, no crash
     auto bad = saveDocument(*doc, (tempDir() / "no" / "such" / "dir" / "x.jig").string());
     EXPECT_FALSE(bad.ok());
+}
+
+TEST(Document, DependentsAreFound)
+{
+    auto doc = buildSample("phone_stand.jigs");
+    auto d = doc->dependents("s1");
+    ASSERT_EQ(d.size(), 1u);
+    EXPECT_EQ(d[0], "e1");
+    auto e1 = doc->dependents("e1");  // the lip sketch sits on e1's face; fillets use e1 edges
+    EXPECT_NE(std::find(e1.begin(), e1.end(), "s3"), e1.end());
+    EXPECT_NE(std::find(e1.begin(), e1.end(), "f1"), e1.end());
+    EXPECT_TRUE(doc->dependents("f2").empty());
 }

@@ -38,6 +38,9 @@ if(NOT Boost_FOUND)
     message(STATUS "Boost headers (no CMake package) at ${JIG_BOOST_INCLUDE}")
 endif()
 
+# --- FreeType (FTL, BSD-style), glyph outlines for sketch text (D-014) ---------------
+find_package(Freetype 2.8 REQUIRED)
+
 # --- nlohmann/json (MIT) -----------------------------------------------------------
 find_package(nlohmann_json 3.10 QUIET CONFIG)
 if(NOT nlohmann_json_FOUND)
@@ -72,4 +75,7 @@ endif()
 # --- Qt 6 (LGPL-3.0 modules only: Core, Gui, Widgets, OpenGL, OpenGLWidgets) -------
 if(JIG_BUILD_GUI)
     find_package(Qt6 6.4 REQUIRED COMPONENTS Core Gui Widgets OpenGL OpenGLWidgets)
+    if(JIG_BUILD_TESTS)
+        find_package(Qt6 6.4 REQUIRED COMPONENTS Test)  # UI tests drive the real windows
+    endif()
 endif()

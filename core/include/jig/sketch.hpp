@@ -80,6 +80,19 @@ enum class SolveState
     Failed
 };
 
+// Lettering placed in a sketch. The text is centred on its anchor point (a normal,
+// draggable and dimensionable sketch point); its glyph outlines become closed areas.
+struct SketchText
+{
+    int id = 0;
+    int anchor = 0;          // point entity id
+    std::string text;        // UTF-8
+    std::string font;        // family name; empty = the bundled font (Inter)
+    std::string height = "5 mm";  // expression: the font size (about 1.4 x capital height)
+    double heightValue = 5;  // evaluated on solve
+    double angle = 0;        // radians, counter-clockwise
+};
+
 struct SolveReport
 {
     SolveState state = SolveState::Failed;
@@ -110,7 +123,26 @@ public:
     int addCircle(double cx, double cy, double r);
     // Counter-clockwise arc from angle a0 to a1 around (cx, cy).
     int addArc(double cx, double cy, double r, double a0, double a1);
-    bool remove(int entityId);  // also removes dependent constraints and internal points
+    // Composite shapes with the constraints that keep them in shape (but no sizes).
+    struct SlotIds
+    {
+        int arc1 = 0, arc2 = 0, side1 = 0, side2 = 0;  // arc1 at (x2, y2), arc2 at (x1, y1)
+    };
+    // Centre-to-centre slot of radius r: two equal arcs joined by tangent lines.
+    SlotIds addSlot(double x1, double y1, double x2, double y2, double r);
+    struct PolygonIds
+    {
+        int circle = 0;              // construction circle through the corners
+        std::vector<int> sides;      // lines, all equal
+    };
+    // Regular polygon with n corners on a circle of radius r; first corner at angle a0.
+    PolygonIds addPolygon(double cx, double cy, double r, int n, double a0);
+    // Text centred at (x, y); returns the text id (its anchor is a new point).
+    int addText(double x, double y, std::string text, std::string heightExpr, double heightValue,
+                std::string font = {}, double angle = 0);
+    // Removes a curve, point or text. Also removes dependent constraints, internal
+    // points, and text anchored to a removed point.
+    bool remove(int entityId);
     void setConstruction(int entityId, bool on);
 
     // ---- constraints ----------------------------------------------------
@@ -135,6 +167,11 @@ public:
     {
         return constraints_;
     }
+    const std::map<int, SketchText>& texts() const
+    {
+        return texts_;
+    }
+    SketchText* text(int id);
     const SketchEntity* entity(int id) const;
     SketchEntity* entity(int id);
     // Point coordinates by point id (curves' endpoints are kept in sync on solve).
@@ -150,6 +187,7 @@ private:
 
     std::map<int, SketchEntity> entities_;
     std::map<int, SketchConstraint> constraints_;
+    std::map<int, SketchText> texts_;
     int nextId_ = 1;
 };
 

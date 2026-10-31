@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <tuple>
 #include <memory>
 #include <numbers>
 #include <set>
@@ -171,8 +172,88 @@ int Sketch::addArc(double cx, double cy, double r, double a0, double a1)
     return e.id;
 }
 
+Sketch::SlotIds Sketch::addSlot(double x1, double y1, double x2, double y2, double r)
+{
+    const double ang = std::atan2(y2 - y1, x2 - x1);
+    constexpr double h = std::numbers::pi / 2;
+    SlotIds ids;
+    ids.arc1 = addArc(x2, y2, r, ang - h, ang + h);      // far end
+    ids.arc2 = addArc(x1, y1, r, ang + h, ang + 3 * h);  // near end
+    const SketchEntity A1 = entities_.at(ids.arc1), A2 = entities_.at(ids.arc2);
+    auto [sx1, sy1] = pointXY(A1.p2);
+    auto [ex1, ey1] = pointXY(A2.p1);
+    auto [sx2, sy2] = pointXY(A2.p2);
+    auto [ex2, ey2] = pointXY(A1.p1);
+    ids.side1 = addLine(sx1, sy1, ex1, ey1);
+    ids.side2 = addLine(sx2, sy2, ex2, ey2);
+    const SketchEntity T = entities_.at(ids.side1), B = entities_.at(ids.side2);
+    addConstraint(ConstraintType::Coincident, T.p1, A1.p2);
+    addConstraint(ConstraintType::Coincident, T.p2, A2.p1);
+    addConstraint(ConstraintType::Coincident, B.p1, A2.p2);
+    addConstraint(ConstraintType::Coincident, B.p2, A1.p1);
+    // Tangency at a shared endpoint is expressed as "side line perpendicular to the
+    // radius through that endpoint". A distance-style tangent plus coincidence is
+    // rank-deficient at the solution and would be reported as redundant.
+    for (auto [line, arcCenter, endPt] : {std::tuple {ids.side1, A1.center, A1.p2}, std::tuple {ids.side1, A2.center, A2.p1},
+                                          std::tuple {ids.side2, A2.center, A2.p2}, std::tuple {ids.side2, A1.center, A1.p1}}) {
+        const int radial = addLine(arcCenter, endPt);
+        setConstruction(radial, true);
+        addConstraint(ConstraintType::Perpendicular, line, radial);
+    }
+    addConstraint(ConstraintType::Equal, ids.arc1, ids.arc2);
+    return ids;
+}
+
+Sketch::PolygonIds Sketch::addPolygon(double cx, double cy, double r, int n, double a0)
+{
+    PolygonIds ids;
+    ids.circle = addCircle(cx, cy, r);
+    setConstruction(ids.circle, true);
+    std::vector<int> corners;
+    for (int k = 0; k < n; ++k) {
+        const double a = a0 + 2 * std::numbers::pi * k / n;
+        corners.push_back(addPoint(cx + r * std::cos(a), cy + r * std::sin(a), true));
+    }
+    for (int k = 0; k < n; ++k) {
+        ids.sides.push_back(addLine(corners[size_t(k)], corners[size_t((k + 1) % n)]));
+        addConstraint(ConstraintType::PointOnCurve, corners[size_t(k)], ids.circle);
+    }
+    for (size_t k = 1; k < ids.sides.size(); ++k) {
+        addConstraint(ConstraintType::Equal, ids.sides[0], ids.sides[k]);
+    }
+    return ids;
+}
+
+int Sketch::addText(double x, double y, std::string text, std::string heightExpr, double heightValue,
+                    std::string font, double angle)
+{
+    SketchText t;
+    t.anchor = addPoint(x, y);
+    t.id = nextId_++;
+    t.text = std::move(text);
+    t.height = std::move(heightExpr);
+    t.heightValue = heightValue;
+    t.font = std::move(font);
+    t.angle = angle;
+    texts_[t.id] = t;
+    return t.id;
+}
+
+SketchText* Sketch::text(int id)
+{
+    auto it = texts_.find(id);
+    return it == texts_.end() ? nullptr : &it->second;
+}
+
 bool Sketch::remove(int entityId)
 {
+    if (auto t = texts_.find(entityId); t != texts_.end()) {
+        const int anchor = t->second.anchor;
+        texts_.erase(t);
+        remove(anchor);
+        return true;
+    }
+    std::erase_if(texts_, [&](const auto& kv) { return kv.second.anchor == entityId; });
     auto it = entities_.find(entityId);
     if (it == entities_.end()) {
         return false;
@@ -276,6 +357,16 @@ void Sketch::syncCurvePoints()
 
 SolveReport Sketch::solve(const ParamLookup& lookup)
 {
+    for (auto& [id, t] : texts_) {
+        auto q = evaluate(t.height, lookup, Dim::len());
+        if (!q || !(q->value > 0)) {
+            SolveReport r;
+            r.state = SolveState::Failed;
+            r.message = q ? "Text height must be larger than zero." : "Text height: " + q.error().message;
+            return r;
+        }
+        t.heightValue = q->value;
+    }
     return runSolver(lookup, nullptr, 0, 0);
 }
 
@@ -800,7 +891,23 @@ nlohmann::json Sketch::toJson() const
         }
         cons.push_back(j);
     }
-    return {{"entities", ents}, {"constraints", cons}, {"next_id", nextId_}};
+    nlohmann::json j {{"entities", ents}, {"constraints", cons}, {"next_id", nextId_}};
+    if (!texts_.empty()) {
+        nlohmann::json txt = nlohmann::json::array();
+        for (auto& [id, t] : texts_) {
+            nlohmann::json jt {{"id", id}, {"anchor", t.anchor}, {"text", t.text}, {"height", t.height},
+                               {"height_value", t.heightValue}};
+            if (!t.font.empty()) {
+                jt["font"] = t.font;
+            }
+            if (t.angle != 0) {
+                jt["angle"] = t.angle;
+            }
+            txt.push_back(jt);
+        }
+        j["texts"] = txt;
+    }
+    return j;
 }
 
 Result<Sketch> Sketch::fromJson(const nlohmann::json& j)
@@ -844,8 +951,25 @@ Result<Sketch> Sketch::fromJson(const nlohmann::json& j)
             k.fy = jc.value("fy", 0.0);
             s.constraints_[k.id] = k;
         }
+        for (auto& jt : j.value("texts", nlohmann::json::array())) {
+            SketchText t;
+            t.id = jt.at("id").get<int>();
+            t.anchor = jt.at("anchor").get<int>();
+            t.text = jt.value("text", std::string {});
+            t.height = jt.value("height", std::string("5 mm"));
+            t.heightValue = jt.value("height_value", 5.0);
+            t.font = jt.value("font", std::string {});
+            t.angle = jt.value("angle", 0.0);
+            if (!s.entities_.count(t.anchor)) {
+                return makeError("file.sketch", "A text in this file has lost its anchor point.");
+            }
+            s.texts_[t.id] = t;
+        }
         s.nextId_ = j.value("next_id", 1);
         int maxId = 0;
+        for (auto& [id, t] : s.texts_) {
+            maxId = std::max(maxId, id);
+        }
         for (auto& [id, e] : s.entities_) {
             maxId = std::max(maxId, id);
         }

@@ -326,3 +326,43 @@ only. conda-forge's OCCT is built with its own toolchain (MSVC-compatible C++ AB
 
 **How to reverse.** Restore a `vcpkg.json` (git history) and the previous CI job; consider
 a prebuilt-binary cache hosted by the project.
+
+## D-014 Sketch text: FreeType outlines in the core, Inter built in (accepted)
+
+**Context.** Brief 5.4f: the Text tool needs cross-platform fonts, "the platform's font
+enumeration plus FreeType/HarfBuzz", glyphs turned into sketch geometry, tested on all
+three OSes. Acceptance scenarios A2 (knob) and A3 (pen cup) need engraved lettering, and
+the core must stay headless (architecture rule 1).
+
+**Options.** (a) OCCT's `Font_BRepFont`/`Font_BRepTextBuilder`: ready-made, but they live
+in TKV3d/TKService, the visualisation toolkits, which pull X11/OpenGL libraries into the
+headless core and CLI; checked on Ubuntu's OCCT 7.6.3 (`nm`: `StdPrs_BRepFont` is in
+libTKV3d). (b) **FreeType directly**: load unscaled outlines, convert lines and quadratic/
+cubic Béziers to OCCT edges, classify outer contours and holes by nesting depth (works
+for TrueType and CFF winding), make planar faces. About 300 lines, no window system.
+(c) Qt's `QPainterPath::addText`: easy, but Qt is not allowed in the core.
+(d) HarfBuzz shaping on top of (b): needed for Arabic, Indic and other complex scripts;
+another dependency and more testing.
+
+**Decision.** (b) for v0.1, without HarfBuzz: one glyph per character with FreeType
+kerning (Latin, Greek, Cyrillic and other simple scripts). A sketch text is a block
+anchored to a normal sketch point (so it can be dragged and dimensioned); its glyph
+outlines become closed areas (`T<id>.<n>` profile keys) that any feature can use. The
+built-in font is Inter Regular (SIL OFL 1.1, the brief's suggestion), embedded in
+`jig_core` so results do not depend on the computer. A font given by file path is used
+when present; anything else falls back to Inter with a visible warning.
+
+**Evidence.** `tests/test_features.cpp` `Text.*`: 5 valid solids for "Jig 8" with holes
+kept as holes, the cut volume equals the outline area times the depth, area scales with
+the square of the size, save/load round trip, font fallback warning. Cross-check
+against a prototype using OCCT's builder (option a) on "Jigsmith 8" at size 10 with Inter:
+both give 11 faces and 106.146 mm² of area. Inter's CFF outlines and DejaVu's TrueType outlines both produce valid faces.
+
+**Consequences.** New dependency FreeType (FTL, dynamic; every target platform packages
+it). Text is not split by other sketch curves, and text does not wrap around curved faces
+(Emboss, v0.2). System font enumeration by family name is not implemented yet (B-020).
+Results with Inter are identical everywhere; a different FreeType version could in
+principle change outlines, so golden tests record the FreeType version.
+
+**How to reverse.** Replace `core/src/text.cpp`; the sketch format (`texts` with text,
+font, height expression, angle, anchor) does not depend on the engine.

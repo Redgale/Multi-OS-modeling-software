@@ -1,5 +1,7 @@
 <!DOCTYPE RCC><RCC version="1.0">
 <qresource prefix="/samples">
     <file alias="phone_stand.jigs">../samples/phone_stand.jigs</file>
+    <file alias="knob.jigs">../samples/knob.jigs</file>
+    <file alias="pen_cup.jigs">../samples/pen_cup.jigs</file>
 </qresource>
 </RCC>

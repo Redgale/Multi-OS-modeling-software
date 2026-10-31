@@ -75,6 +75,19 @@ Copyright © Intel Corporation and the UXL Foundation. Apache License 2.0.
 https://github.com/uxlfoundation/oneTBB. Present only when the platform's OCCT build
 was compiled with TBB (for example Debian/Ubuntu packages).
 
+## FreeType
+
+Portions of this software are copyright © The FreeType Project (www.freetype.org).
+All rights reserved. Used under the FreeType License (FTL), dynamically linked, to read
+glyph outlines for sketch text. https://freetype.org
+
+## Inter font
+
+Inter (`assets/fonts/Inter-Regular.otf`, version 4.0), copyright 2016-2023 The Inter
+Project Authors, https://github.com/rsms/inter. Licensed under the SIL Open Font License
+1.1; the full licence is in `assets/fonts/OFL.txt`. The font is embedded unmodified in
+`jig_core` as the built-in font for sketch text. It is not sold by itself.
+
 ## OCCT runtime libraries on Windows (FreeType, FreeImage and others from conda-forge)
 
 The Windows build takes a prebuilt OCCT 8.0.1 from conda-forge, together with the
@@ -86,6 +99,6 @@ development artifact, not a release.
 ## Assets
 
 The application icon (`packaging/linux/jigsmith.svg`) is an original placeholder
-made for Jigsmith and dedicated to the public domain (CC0). The UI currently uses
-text labels only and ships no third-party icons or fonts; `docs/ASSETS.md` records
-the source and license of every asset as they are added.
+made for Jigsmith and dedicated to the public domain (CC0). The tool icons are original
+drawings made for Jigsmith. The only third-party asset is the Inter font (above);
+`docs/ASSETS.md` records the source and licence of every asset.

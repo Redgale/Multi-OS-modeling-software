@@ -22,13 +22,7 @@ int main(int argc, char** argv)
 {
     QElapsedTimer startup;
     startup.start();
-    QSurfaceFormat fmt;
-    fmt.setVersion(3, 3);
-    fmt.setProfile(QSurfaceFormat::CoreProfile);
-    fmt.setDepthBufferSize(24);
-    fmt.setSamples(4);
-    QSurfaceFormat::setDefaultFormat(fmt);
-    QApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
+    jigapp::configureSurfaceFormat();
 
     QApplication app(argc, argv);
     QApplication::setApplicationName("Jigsmith");
@@ -40,7 +34,7 @@ int main(int argc, char** argv)
     cli.addHelpOption();
     cli.addVersionOption();
     QCommandLineOption shot("screenshot", "Render the window to <png> and quit.", "png");
-    QCommandLineOption sample("sample", "Open a built-in sample (phone_stand).", "name");
+    QCommandLineOption sample("sample", "Open a built-in sample (phone_stand, knob, pen_cup).", "name");
     QCommandLineOption size("size", "Window size for screenshots, e.g. 1360x860.", "WxH", "1360x860");
     QCommandLineOption theme("theme", "light, dark or contrast.", "name");
     QCommandLineOption select("select-face", "Screenshot helper: select a face by index.", "n");

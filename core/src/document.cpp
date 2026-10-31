@@ -21,6 +21,26 @@ const char* toString(FeatureKind k)
             return "extrude";
         case FeatureKind::Fillet:
             return "fillet";
+        case FeatureKind::Chamfer:
+            return "chamfer";
+        case FeatureKind::Shell:
+            return "shell";
+        case FeatureKind::Revolve:
+            return "revolve";
+        case FeatureKind::Hole:
+            return "hole";
+        case FeatureKind::Pattern:
+            return "pattern";
+        case FeatureKind::Mirror:
+            return "mirror";
+        case FeatureKind::Plane:
+            return "plane";
+        case FeatureKind::Combine:
+            return "combine";
+        case FeatureKind::Split:
+            return "split";
+        case FeatureKind::Move:
+            return "move";
     }
     return "sketch";
 }
@@ -35,6 +55,18 @@ std::optional<FeatureKind> featureKindFromString(std::string_view s)
     }
     if (s == "fillet") {
         return FeatureKind::Fillet;
+    }
+    if (s == "chamfer") {
+        return FeatureKind::Chamfer;
+    }
+    if (s == "shell") {
+        return FeatureKind::Shell;
+    }
+    for (auto k : {FeatureKind::Revolve, FeatureKind::Hole, FeatureKind::Pattern, FeatureKind::Mirror, FeatureKind::Plane,
+                   FeatureKind::Combine, FeatureKind::Split, FeatureKind::Move}) {
+        if (s == toString(k)) {
+            return k;
+        }
     }
     return std::nullopt;
 }
@@ -224,6 +256,46 @@ std::string Document::newId(Model& m, const std::string& prefix)
         n = 1;
     }
     return prefix + std::to_string(n++);
+}
+
+void Document::insertAtMarker(Model& m, Feature f)
+{
+    const int n = int(m.features.size());
+    const int at = m.rollback < 0 ? n : std::min(m.rollback, n);
+    m.features.insert(m.features.begin() + at, std::move(f));
+    if (m.rollback >= 0) {
+        m.rollback = at + 1;
+    }
+}
+
+Feature* Document::findFeature(Model& m, const std::string& id)
+{
+    for (auto& f : m.features) {
+        if (f.id == id) {
+            return &f;
+        }
+    }
+    return nullptr;
+}
+
+std::vector<std::string> Document::dependents(const std::string& id) const
+{
+    std::vector<std::string> out;
+    const int i = featureIndex(id);
+    if (i < 0) {
+        return out;
+    }
+    const std::string quoted = "\"" + id + "\"", prefix = "\"" + id + "/", inName = "|" + id + "/",
+                      inEdge = "[" + id + "/", inFillet = ":" + id + "/";
+    for (size_t k = size_t(i) + 1; k < model_.features.size(); ++k) {
+        const std::string d = model_.features[k].params.dump();
+        if (d.find(quoted) != std::string::npos || d.find(prefix) != std::string::npos
+            || d.find(inName) != std::string::npos || d.find(inEdge) != std::string::npos
+            || d.find(inFillet) != std::string::npos) {
+            out.push_back(model_.features[k].id);
+        }
+    }
+    return out;
 }
 
 Result<bool> Document::transact(const std::string& label, const Edit& edit)

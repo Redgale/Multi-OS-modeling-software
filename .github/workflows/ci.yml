@@ -3,9 +3,16 @@
 # on every push and pull request. A red run blocks merging (branch protection).
 name: CI
 
+# Cost control: every push runs the fast Linux checks (audit, build + all tests incl. UI,
+# sanitizers). The full matrix (Windows, both macOS, other distributions, OCCT from source,
+# publishing) runs on pull requests, pushes to main, weekly, on demand (Actions tab ▸ CI ▸
+# Run workflow), and on pushes whose message contains [full ci]. macOS minutes cost about
+# 10x Linux minutes.
 on:
   push:
   pull_request:
+  schedule:
+    - cron: "17 4 * * 1"
   workflow_dispatch:
 
 permissions:
@@ -30,14 +37,16 @@ jobs:
           sudo apt-get install -y --no-install-recommends ninja-build \
             libocct-modeling-algorithms-dev libocct-modeling-data-dev libocct-data-exchange-dev \
             libocct-foundation-dev libtbb-dev libeigen3-dev libboost-dev nlohmann-json3-dev \
-            libgtest-dev qt6-base-dev libgl-dev xvfb xauth libgl1-mesa-dri \
+            libgtest-dev qt6-base-dev libgl-dev libfreetype-dev xvfb xauth libgl1-mesa-dri \
             libfuse2 file
       - name: Configure
         run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
       - name: Build
         run: cmake --build build
-      - name: Test
-        run: ctest --test-dir build --output-on-failure -j4
+      - name: Test (including UI workflow tests under Xvfb)
+        run: |
+          export XDG_RUNTIME_DIR=$(mktemp -d)
+          xvfb-run -a -s "-screen 0 1600x1000x24" ctest --test-dir build --output-on-failure -j4
       - name: Benchmarks
         run: ./build/bench/jigsmith-bench | tee bench-linux.json
       - name: GUI smoke test and screenshot
@@ -65,6 +74,7 @@ jobs:
           path: |
             *.AppImage
             screenshot-linux.png
+            build/ui-*.png
             bench-linux.json
 
   sanitizers:
@@ -76,16 +86,19 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends ninja-build \
             libocct-modeling-algorithms-dev libocct-modeling-data-dev libocct-data-exchange-dev \
-            libocct-foundation-dev libtbb-dev libeigen3-dev libboost-dev nlohmann-json3-dev libgtest-dev
+            libocct-foundation-dev libtbb-dev libeigen3-dev libboost-dev nlohmann-json3-dev libgtest-dev libfreetype-dev
       - run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DJIG_BUILD_GUI=OFF -DJIG_BUILD_BENCH=OFF -DJIG_SANITIZE=address,undefined
       - run: cmake --build build
       - run: ctest --test-dir build --output-on-failure -j4
         env:
-          ASAN_OPTIONS: detect_leaks=0  # OCCT keeps global caches alive at exit
-          UBSAN_OPTIONS: print_stacktrace=1
+          # leak checking on; only OCCT's STEP registries (kept for the whole process) are suppressed
+          ASAN_OPTIONS: detect_leaks=1
+          LSAN_OPTIONS: suppressions=${{ github.workspace }}/tools/lsan.supp
+          UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
 
   macos:
     name: macOS (${{ matrix.arch }})
+    if: ${{ github.event_name != 'push' || github.ref == 'refs/heads/main' || contains(github.event.head_commit.message, '[full ci]') }}
     strategy:
       fail-fast: false
       matrix:
@@ -98,13 +111,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies
-        run: brew install ninja opencascade qt eigen boost nlohmann-json googletest
+        run: brew install ninja opencascade qt eigen boost nlohmann-json googletest freetype
       - name: Configure
         run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$(brew --prefix qt);$(brew --prefix)"
       - name: Build
         run: cmake --build build
-      - name: Test
-        run: ctest --test-dir build --output-on-failure -j3
+      - name: Test (UI tests need a display session; they run in the Linux job)
+        run: ctest --test-dir build --output-on-failure -j3 -LE ui
       - name: Benchmarks
         run: ./build/bench/jigsmith-bench | tee bench-macos.json
       - name: Package .dmg (unsigned)
@@ -120,6 +133,7 @@ jobs:
 
   windows:
     name: Windows (x64)
+    if: ${{ github.event_name != 'push' || github.ref == 'refs/heads/main' || contains(github.event.head_commit.message, '[full ci]') }}
     runs-on: windows-2022
     timeout-minutes: 60
     defaults:
@@ -143,8 +157,8 @@ jobs:
         run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release "-DCMAKE_PREFIX_PATH=%CONDA_PREFIX%\Library;%QT_ROOT_DIR%"
       - name: Build
         run: cmake --build build
-      - name: Test
-        run: ctest --test-dir build --output-on-failure -j4
+      - name: Test (UI tests run in the Linux job)
+        run: ctest --test-dir build --output-on-failure -j4 -LE ui
       - name: Benchmarks
         run: build\bench\jigsmith-bench.exe > bench-windows.json && type bench-windows.json
       - name: Package portable zip (unverified on a clean machine)
@@ -163,3 +177,116 @@ jobs:
           path: |
             Jigsmith-windows-x64-portable.zip
             bench-windows.json
+
+  distros:
+    # Builds and tests inside other distributions' official images, using only
+    # scripts/install-deps.sh, so the "build from source" instructions stay true.
+    # No JavaScript actions here: they cannot run in musl containers.
+    name: Linux ${{ matrix.name }}
+    if: ${{ github.event_name != 'push' || github.ref == 'refs/heads/main' || contains(github.event.head_commit.message, '[full ci]') }}
+    runs-on: ubuntu-24.04
+    container: ${{ matrix.image }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Void (glibc)
+            image: ghcr.io/void-linux/void-glibc-full:latest
+            prep: xbps-install -Syu xbps && xbps-install -Sy git ca-certificates
+          - name: Void (musl)
+            image: ghcr.io/void-linux/void-musl-full:latest
+            prep: xbps-install -Syu xbps && xbps-install -Sy git ca-certificates
+          - name: Fedora
+            image: fedora:latest
+            prep: dnf install -y git
+          - name: Arch
+            image: archlinux:latest
+            prep: pacman -Syu --noconfirm git
+          - name: openSUSE Tumbleweed
+            image: opensuse/tumbleweed:latest
+            # the minimal image ships busybox-gawk, which blocks real gawk (needed via Qt's cups deps)
+            prep: zypper --non-interactive install --force-resolution git gzip tar gawk
+    steps:
+      - name: Get git
+        run: ${{ matrix.prep }}
+      - name: Check out (plain git)
+        run: |
+          git init -q src && cd src
+          git remote add origin "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}"
+          git fetch -q --depth 1 origin "${{ github.sha }}"
+          git checkout -q FETCH_HEAD
+      - name: Install dependencies with scripts/install-deps.sh
+        run: cd src && sh scripts/install-deps.sh --yes
+      - name: Configure
+        run: cd src && cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cd src && cmake --build build
+      - name: Test (headless; UI tests run in the Linux job)
+        run: cd src && ctest --test-dir build --output-on-failure -j4 -LE ui
+
+  occt-from-source:
+    # For distributions without an OCCT package: scripts/build-occt.sh, then Jigsmith.
+    name: Linux, OCCT built from source
+    if: ${{ github.event_name != 'push' || github.ref == 'refs/heads/main' || contains(github.event.head_commit.message, '[full ci]') }}
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install everything except OCCT
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ninja-build libeigen3-dev libboost-dev \
+            nlohmann-json3-dev libgtest-dev libx11-dev libgl-dev libfreetype-dev
+      - name: Cache OCCT build
+        id: occt-cache
+        uses: actions/cache@v4
+        with:
+          path: deps/occt
+          key: occt-src-${{ hashFiles('scripts/build-occt.sh') }}
+      - name: Build OCCT with scripts/build-occt.sh
+        if: steps.occt-cache.outputs.cache-hit != 'true'
+        run: scripts/build-occt.sh
+      - name: Configure, build and test Jigsmith (core + CLI)
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DJIG_BUILD_GUI=OFF -DCMAKE_PREFIX_PATH="$PWD/deps/occt"
+          cmake --build build
+          ctest --test-dir build --output-on-failure -j4
+
+  publish:
+    # Rolling pre-release with the latest green build for every platform, downloadable
+    # without a GitHub account: https://github.com/<owner>/<repo>/releases/tag/continuous
+    name: Publish builds (continuous pre-release)
+    if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || contains(github.event.head_commit.message, '[full ci]')) }}
+    needs: [linux, macos, windows]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    concurrency:
+      group: publish-continuous
+      cancel-in-progress: false
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Collect files
+        run: |
+          mkdir -p upload
+          find artifacts -type f \( -name '*.AppImage' -o -name '*.dmg' -o -name '*.zip' \) -exec cp {} upload/ \;
+          for f in upload/*.AppImage; do mv "$f" upload/Jigsmith-linux-x86_64.AppImage; done
+          cp artifacts/jigsmith-linux/screenshot-linux.png upload/ || true
+          ls -la upload
+      - name: Replace the continuous pre-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release delete continuous --yes --cleanup-tag || true
+          cat > notes.md <<NOTES
+          Development build of Jigsmith from commit ${{ github.sha }} (branch ${{ github.ref_name }}).
+          Pre-v0.1: see docs/STATUS.md for what works. These builds are **unsigned**:
+          - **Linux**: \`chmod +x Jigsmith-linux-x86_64.AppImage\` then run it (x86_64, glibc).
+          - **macOS**: open the .dmg (Apple silicon: \`Jigsmith-macos-15.dmg\`; Intel: \`Jigsmith-macos-15-intel.dmg\`). Gatekeeper will warn: right-click the app, choose Open.
+          - **Windows**: unzip \`Jigsmith-windows-x64-portable.zip\` and run \`jigsmith.exe\`. SmartScreen may warn.
+          Other Linux distributions (Void, Fedora, Arch, openSUSE…): build from source, see README.
+          NOTES
+          gh release create continuous upload/* --prerelease --target "${{ github.sha }}" \
+            --title "Jigsmith development build (continuous)" --notes-file notes.md

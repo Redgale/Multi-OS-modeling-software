@@ -21,7 +21,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Contextual sketch tab | 4, 9 | v0.1 M1 | — | Behaviour "implement exactly" |
 | Browser tree (settings, named views, origin, bodies, sketches) | 4, 7 | v0.1 | settings, origin, sketches, bodies, parameters | Named views in M8 |
 | Browser visibility, isolate, rename, find in timeline | 7 | v0.1 M2 | — | |
-| Timeline with icons, edit, rollback, reorder, group, playback | 4 | v0.1 (playback v0.2) | list, status glyphs, rollback marker, details | Principle 6 |
+| Timeline with icons, edit, rollback, reorder, group, playback | 4 | v0.1 (playback v0.2) | **app**: icons, edit, rename, suppress, roll back, delete; reorder/group not yet | Principle 6 |
 | Marking menu | 4 | v0.1 SHOULD (M7), v0.2 MUST | — | Brief |
 | Quick-access search (S) | 4 | v0.1 | yes: Ctrl/Cmd+K and S, alias search | Principle 9 |
 | Data panel, hubs, projects (cloud) | 3 | never | — | Local-first; replaced by files + local versions |
@@ -37,32 +37,32 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Named views | 5 | v0.1 M8 | — | |
 | Document settings: units, up axis | 8 | v0.1 (mm, Z fixed) | shown in browser | Safe defaults |
 | Capture design history on/off | 8, 24 | v0.3+ | — | Direct modelling is later |
-| Appearances and physical material | 8, 34 | v0.2 (density in v0.1 Properties M6) | — | Mass needs density |
+| Appearances and physical material | 8, 34 | v0.2 (density in v0.1 Properties M6) | density chooser in Properties (not stored in the design yet) | Mass needs density |
 
 ## Sketching (PDF ch. 9 to 12)
 
 | Feature | Ch. | Release | Now | Rationale |
 |---|---|---|---|---|
-| Create sketch on plane | 9 | v0.1 M1 | scripts | |
-| Sketch on planar face (parametrically attached) | 9 | v0.1 M1 | scripts (`sketch on=<face>`), stays attached in tests | Naming spike |
-| Finish sketch | 9 | v0.1 M1 | — | |
-| Look At | 9 | v0.1 M1 | — | |
+| Create sketch on plane | 9 | v0.1 M1 | **app** (click a plane) + scripts | |
+| Sketch on planar face (parametrically attached) | 9 | v0.1 M1 | **app** (click a flat face) + scripts; stays attached in tests | Naming spike |
+| Finish sketch | 9 | v0.1 M1 | **app** | |
+| Look At | 9 | v0.1 M1 | **app** (automatic on entering a sketch, and a button) | |
 | Slice | 9 | v0.1 M1 | — | |
-| Show profile, points, dimensions, constraints | 9 | v0.1 M1 | profiles computed | |
+| Show profile, points, dimensions, constraints | 9 | v0.1 M1 | **app** (toggles in the sketch panel) | |
 | 3D sketch | 9 | v0.3+ | — | Sweep paths are v0.2 |
-| Typed values with Tab while drawing | 9 | v0.1 M1 | expression engine ready | Principle 3 |
-| Line (with drag-to-tangent-arc) | 10 | v0.1 M1 | scripts (`polyline`) | |
-| Rectangle 2-point, 3-point, center | 10 | v0.1 M1 | scripts (corner, center) | |
-| Circle center, 2-point, 3-point, 2/3-tangent | 10 | v0.1 M1 (3-tangent v0.2) | scripts (center) | Brief lists "tangent" |
-| Arc 3-point, tangent, center | 10 | v0.1 M1 | solver supports arcs | |
-| Polygon (inscribed, circumscribed, edge) | 10 | v0.1 M1 | — | |
+| Typed values with Tab while drawing | 9 | v0.1 M1 | **app** | Principle 3 |
+| Line (with drag-to-tangent-arc) | 10 | v0.1 M1 | **app** (chains; tangent-arc drag not yet) | |
+| Rectangle 2-point, 3-point, center | 10 | v0.1 M1 | **app** (corner, centre); 3-point not yet | |
+| Circle center, 2-point, 3-point, 2/3-tangent | 10 | v0.1 M1 (3-tangent v0.2) | **app** (centre) | Brief lists "tangent" |
+| Arc 3-point, tangent, center | 10 | v0.1 M1 | **app**: center arc (typed radius and angle); scripts: `arc`. 3-point and tangent not yet | |
+| Polygon (inscribed, circumscribed, edge) | 10 | v0.1 M1 | **app** + scripts: inscribed (corners on the circle) | |
 | Ellipse | 10 | v0.1 M1 | — | Needs solver ellipse entities |
-| Slot (center-to-center, overall, arc slots) | 10 | v0.1 M1 (arc slots v0.2) | scripts (center-to-center) | |
+| Slot (center-to-center, overall, arc slots) | 10 | v0.1 M1 (arc slots v0.2) | **app** + scripts: center-to-center | |
 | Fit-point spline | 10 | v0.1 M1 | — | |
 | Control-point spline | 10 | v0.2 | — | Not in brief's v0.1 list |
 | Conic curve | 10 | v0.2 | — | Not in brief's v0.1 list |
-| Point | 10 | v0.1 M1 | solver supports points | |
-| Text (font, height, alignment) | 10 | v0.1 M5 | — | Fonts spike (5.4f) |
+| Point | 10 | v0.1 M1 | **app** | |
+| Text (font, height, alignment) | 10 | v0.1 M5 | **app** + scripts: built-in Inter or a font file, size as an expression, angle, centred on a draggable point; edit by double-click (D-014). Installed fonts by name, bold/italic, multi-line not yet (B-020) | Fonts spike (5.4f) |
 | Text on path | 10 | v0.2 | — | |
 | Sketch mirror, circular and rectangular pattern | 10 | v0.1 M1 | — | |
 | Project / Include, Intersect | 10 | v0.1 M5 (Project); Intersect v0.2 | — | Brief lists Project/Include |
@@ -73,33 +73,33 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Offset (chains) | 11 | v0.1 M1 | — | |
 | Move/Copy (sketch) | 11 | v0.1 M1 | — | |
 | Stretch | 11 | v0.2 | — | |
-| Delete | 11 | v0.1 M1 | core `Sketch::remove` | |
+| Delete | 11 | v0.1 M1 | **app** | |
 | Change parameters from sketch | 11 | v0.1 M5 | — | |
-| Constraints: coincident, collinear, concentric, midpoint, fix, parallel, perpendicular, horizontal/vertical, tangent, symmetry, equal | 12 | v0.1 M1 | all but collinear and concentric in the solver wrapper | |
+| Constraints: coincident, collinear, concentric, midpoint, fix, parallel, perpendicular, horizontal/vertical, tangent, symmetry, equal | 12 | v0.1 M1 | **app**: all but collinear and concentric | |
 | Smooth (G2) | 12 | v0.2 | — | Needs splines |
-| Auto-constraints with glyphs, override with modifier | 12 | v0.1 M1 | — | Principle 5 |
-| Sketch dimension (length, angle, diameter, radius, point-line) | 12 | v0.1 M1 | solver: all of these | |
+| Auto-constraints with glyphs, override with modifier | 12 | v0.1 M1 | **app**: coincident (snap) and H/V, Ctrl overrides | Principle 5 |
+| Sketch dimension (length, angle, diameter, radius, point-line) | 12 | v0.1 M1 | **app**: all but angle | |
 | Driven (reference) dimensions | 12 | v0.1 M1 | model field exists | |
-| Under/fully constrained display, not by colour alone | 12 | v0.1 M1 | DOF count and free-entity list computed | Principle 4 |
-| Over-constrained diagnosis (which constraints) | 12 | v0.1 M1 | conflicting and redundant ids reported | 5.4c |
-| Gap finder | 12, 46 | v0.1 M1 | core `openEndpoints`, sketch status message | Beginner trap |
+| Under/fully constrained display, not by colour alone | 12 | v0.1 M1 | **app** (marker shapes + DOF in words) | Principle 4 |
+| Over-constrained diagnosis (which constraints) | 12 | v0.1 M1 | **app** refuses conflicting constraints with a message | 5.4c |
+| Gap finder | 12, 46 | v0.1 M1 | **app** (red rings with gap size) | Beginner trap |
 
 ## Solid modelling (PDF ch. 13 to 23)
 
 | Feature | Ch. | Release | Now | Rationale |
 |---|---|---|---|---|
 | New component | 13 | v0.2 | — | Parts model (PREFLIGHT A-3) |
-| Extrude: one side, two sides, symmetric | 14 | v0.1 M2 | scripts: one side, reverse, symmetric | Two sides in M2 |
+| Extrude: one side, two sides, symmetric | 14 | v0.1 M2 | **app**: one side, other side, symmetric | Two sides in M2 |
 | Extrude extents: distance, to object, all | 14 | v0.1 M2 | distance, all | |
 | Extrude start: profile plane, offset, object | 14 | v0.1 M2 | profile plane | |
 | Extrude taper | 14 | v0.1 M2 | — | |
 | Extrude thin | 14 | v0.1 M2 | — | |
-| Extrude ops: join, cut, new body, intersect | 14 | v0.1 M2 | all four | |
+| Extrude ops: join, cut, new body, intersect | 14 | v0.1 M2 | **app**: all four | |
 | Extrude new component | 14 | v0.2 | — | Components |
-| Auto join/cut from drag direction | 14 | v0.1 M2 | — | Principle 10 |
+| Auto join/cut from drag direction | 14 | v0.1 M2 | **app** (Auto: from the typed direction; drag handle not yet) | Principle 10 |
 | Extrude from selected face | 14 | v0.1 M3 (via Press Pull) | — | |
 | Press Pull | 14, 17 | v0.1 M3 | — | |
-| Revolve (full, angle, to object) | 15 | v0.1 M4 | — | |
+| Revolve (full, angle, to object) | 15 | v0.1 M4 | **app** + scripts: full and angle, origin axis or sketch line; to object not yet | |
 | Sweep, Loft, Rib, Web, Emboss, Coil, Pipe | 15 | v0.2 (Web v0.3+) | — | Brief v0.2 list |
 | Thicken, Boundary fill | 15 | v0.3+ | — | Surface workflows |
 | Derive, Insert into design | 13, 22 | v0.3+ | — | Multi-file projects |
@@ -107,37 +107,37 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Create Form (T-splines) | 13, 26 | v0.3+ | — | |
 | Create base feature | 13, 24 | v0.3+ | — | |
 | Create PCB | 13 | never | — | Electronics out of scope |
-| Hole: simple, counterbore, countersink; distance/all; drill point | 16 | v0.1 M3 | — | |
-| Hole from sketch points | 16 | v0.1 M3 | — | |
+| Hole: simple, counterbore, countersink; distance/all; drill point | 16 | v0.1 M3 | **app** + scripts: all three types, depth or through; flat bottom (no drill point yet) | |
+| Hole from sketch points | 16 | v0.1 M3 | **app** + scripts | |
 | Clearance hole sizes | 16 | v0.1 M3 | — | Hobby tip table |
 | Tapped holes, Thread (modelled/cosmetic) | 16 | v0.2 | — | |
-| Fillet constant | 18 | v0.1 M3 | scripts, with failure explanation and working-radius search | |
+| Fillet constant | 18 | v0.1 M3 | **app** (edge picking, preview, one-click fix) + scripts | |
 | Fillet variable | 18 | v0.1 M3 | — | |
 | Fillet chord length, setback corners, G2 | 18 | v0.2 | — | |
-| Tangent chain selection | 18, 23 | v0.1 M3 | — | |
-| Chamfer: equal, two distances, distance+angle | 18 | v0.1 M3 | — | |
-| Shell (inside/outside, openings) | 18 | v0.1 M3 | — | |
+| Tangent chain selection | 18, 23 | v0.1 M3 | **app** | |
+| Chamfer: equal, two distances, distance+angle | 18 | v0.1 M3 | **app**: equal distance; two distances / angle not yet | |
+| Shell (inside/outside, openings) | 18 | v0.1 M3 | **app**: inside, openings or closed hollow; outside not yet | |
 | Draft | 18 | v0.2 | — | |
 | Scale | 17, 18 | v0.2 | — | |
-| Combine join/cut/intersect, keep tools | 17 | v0.1 M4 | kernel booleans exist | |
+| Combine join/cut/intersect, keep tools | 17 | v0.1 M4 | **app** + scripts (`combine`) | |
 | Offset face, replace face, split face, silhouette split | 17 | v0.3+ | — | Direct modelling |
-| Split body (plane) | 17, 18 | v0.1 M4 | — | |
-| Move/Copy bodies (free, translate, rotate, point-to-point) | 17 | v0.1 M4 | — | |
+| Split body (plane) | 17, 18 | v0.1 M4 | **app** + scripts (`split`): origin plane, construction plane or flat face | |
+| Move/Copy bodies (free, translate, rotate, point-to-point) | 17 | v0.1 M4 | **app** + scripts (`move`): typed X/Y/Z shift and turn about an origin axis, copy; free drag and point-to-point not yet | |
 | Align | 17 | v0.2 | — | |
 | Delete body/feature | 17 | v0.1 M2 | — | |
 | Compute all | 17 | v0.1 | automatic (incremental recompute) | |
-| Patterns: rectangular, circular (features, bodies) | 19 | v0.1 M3 | — | |
+| Patterns: rectangular, circular (features, bodies) | 19 | v0.1 M3 | **app** + scripts: features (Extrude, Revolve, Hole); bodies not yet | |
 | Pattern on path | 19 | v0.2 | — | |
 | Pattern compute options (optimised/identical/adjust) | 19 | v0.2 | — | Adjust only in v0.1 |
-| Mirror (features, bodies) | 19 | v0.1 M3 | — | |
-| Construct: offset plane, plane at angle, midplane | 20 | v0.1 M4 | offset plane via `sketch offset=` | |
+| Mirror (features, bodies) | 19 | v0.1 M3 | **app** + scripts: bodies across origin planes; features not yet | |
+| Construct: offset plane, plane at angle, midplane | 20 | v0.1 M4 | **app** + scripts (`plane`): from origin planes, construction planes or flat faces; angle around an origin axis or straight edge | |
 | Tangent plane, plane through edges/points, along path | 20 | v0.2 | — | Needed for sweep and pen cup emboss |
 | Axis (through cylinder, two points, perpendicular) | 20 | v0.1 M4 | — | |
 | Point (vertex, edges, planes, center) | 20 | v0.1 M4 | — | |
 | Pattern construction geometry, user coordinate system | 20 | v0.3+ | — | |
-| Measure | 21 | v0.1 M6 | kernel properties | |
-| Section analysis | 21 | v0.1 M6 | — | |
-| Properties: volume, area, mass, center of mass | 21 | v0.1 M6 | CLI `report` and browser volume | |
+| Measure | 21 | v0.1 M6 | **app** + scripts: size of a face/edge, distance, angle, centre-to-centre, X/Y/Z offsets | |
+| Section analysis | 21 | v0.1 M6 | **app**: view-only cut along origin or construction planes, movable, flippable; inside shown in a distinct colour; cut faces not capped yet | |
+| Properties: volume, area, mass, center of mass | 21 | v0.1 M6 | **app**: volume, weight by material or density, filament length, area, size, centre of mass; CLI `report` | |
 | Interference | 21 | v0.2 | — | Needs parts |
 | Curvature comb, zebra, draft, curvature map, isocurve, accessibility, min radius | 21 | v0.3+ | — | Surface-quality tools |
 | Component colours | 21 | v0.2 | — | |
@@ -162,7 +162,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Mesh: insert, repair, reduce, remesh, plane cut, convert to solid | 27 | v0.2 | Brief |
 | Sheet metal with flat-pattern DXF | 28 | v0.3+ | Brief |
 | Plastic tab (boss, snap fit, grill, lip and groove) | 29 | never as a tab; v0.3+ as plugins | Niche; plugin ecosystem |
-| 3D print utility (send to slicer) | 29, 40 | v0.1 export; "open in slicer" v0.2 | Export is the core need |
+| 3D print utility (send to slicer) | 29, 40 | v0.1 export (**done**: STL, STEP and 3MF with one named object per body); "open in slicer" v0.2 | Export is the core need |
 | Scripts and add-ins (Python API) | 29 | v0.2 | Core designed for it now (commands are data) |
 | AI assistant | 29, 42 | never (for now) | Requires network/cloud; violates "free means free" defaults |
 | Components, joints (7 types), limits, drive, as-built, rigid group | 7, 30, 31 | v0.2 | Brief |
@@ -182,8 +182,8 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 |---|---|---|---|
 | 1. Phone stand | v0.1 (A1, A4, A7) | sketch, rectangle, polyline, slot, extrude join/cut/symmetric, sketch on face, fillet, export | **Builds headlessly** (`samples/phone_stand.jigs`); golden test passes; edit-early regression passes |
 | 2. Hinged box | v0.2 | components, shell, project/offset, patterns, revolute joint, interference | — |
-| 3. Knob | v0.1 (A2) | revolve, arc, trim, axis, circular pattern, cut, fillet, text | — (needs M1, M4, M5) |
-| 4. Pen cup | v0.1 (A3) | parameters, circle, extrude, shell, fillets, text + cut | parameters and extrude work; shell M3, text M5 |
+| 3. Knob | v0.1 (A2) | revolve, arc, trim, axis, circular pattern, cut, fillet, text | **builds completely** (`samples/knob.jigs`: revolve, D-bore from an arc, 12 scallops, top round, engraved "VOL"; golden and parameter tests) |
+| 4. Pen cup | v0.1 (A3) | parameters, circle, extrude, shell, fillets, text + cut | **builds completely** (`samples/pen_cup.jigs`: maker's mark cut into the underside, sized from `dia`; golden test, parameter changes). Text wrapped around the wall needs Emboss (v0.2) |
 
 ## Shortcuts (PDF ch. 45)
 
