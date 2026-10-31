@@ -38,6 +38,9 @@ Windows and macOS (Apple silicon and Intel).
 | macOS 15 Apple silicon (Homebrew, OCCT 7.9.3, Eigen 5): build, 50 tests, bench, .dmg | ✓ passed (run 5), after two portability fixes (Eigen 5 version check; no floating `from_chars` in Apple libc++) |
 | macOS 15 Intel: build, 50 tests, bench, .dmg | ✓ passed (run 5) |
 | Windows 2022 (conda-forge OCCT 8.0.1, Qt 6.8.3, MSVC 14.44): build, 50 tests, bench, portable zip | ✓ passed (run 41146742253). First vcpkg attempt spent 89+ min compiling OCCT and was cancelled; switched to prebuilt conda-forge OCCT (D-013, dependencies install in about 3 min). Two fixes on the way: Boost headers without a CMake package; OCCT 8 removed `Standard_Failure::DynamicType()` |
+| Void Linux glibc and musl, Fedora, Arch (official container images, `scripts/install-deps.sh` only): build + 50 tests | ✓ passed (run 41148659255) |
+| openSUSE Tumbleweed | first run failed inside the minimal container (busybox-gawk conflict, not a Jigsmith package); fixed in CI prep, re-run pending |
+| Publish `continuous` pre-release | builds collected; **release creation refused (HTTP 403)** because the repository limits the workflow token to read-only. Owner action: Settings ▸ Actions ▸ General ▸ Workflow permissions ▸ "Read and write permissions", then re-run the job |
 
 Also verified locally: the whole tree builds warning-clean and passes all tests with
 Clang 18 as well as GCC 13.
@@ -60,6 +63,8 @@ Clang 18 as well as GCC 13.
 - Code of Conduct contact: the owner should add a dedicated contact address.
 
 ## Decisions waiting for the owner
+
+0. **Allow CI to publish releases**: enable read-and-write workflow permissions (see the CI table) so the `continuous` pre-release can be created.
 
 1. **Trademark**: Jigsmith passed package-registry and web checks, but a formal
    trademark search (USPTO/EUIPO) is a legal decision (D-001).
