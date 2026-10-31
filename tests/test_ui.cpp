@@ -838,6 +838,74 @@ private slots:
         QCOMPARE(int(w.document().state().sketches.begin()->second->profiles.regions.size()), 2);
     }
 
+    // Move, copy (Ctrl), grid copy and ring copy of selected curves.
+    void moveCopyAndPatterns()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        Viewport* view = w.viewport();
+        QVERIFY(w.createSketchOn("XY"));
+        SketchEditor* sk = w.sketchEditor();
+        auto click = [&](double x, double y, Qt::KeyboardModifiers mods = Qt::NoModifier) {
+            QTest::mouseMove(view, sk->screenOf(x, y));
+            QTest::mouseClick(view, Qt::LeftButton, mods, sk->screenOf(x, y));
+        };
+        auto regions = [&] { return int(w.document().state().sketches.begin()->second->profiles.regions.size()); };
+        sk->setTool(SketchEditor::Tool::Circle);
+        click(20, 0);
+        QTest::mouseMove(view, sk->screenOf(23, 0));
+        sk->typeValues({"6 mm"});
+        sk->setTool(SketchEditor::Tool::Select);
+        click(23, 0);
+        QCOMPARE(int(sk->selection().size()), 1);
+
+        // move it 10 mm up by typing
+        w.runCommand("sketch.move");
+        click(20, 0);
+        sk->typeValues({"0", "10 mm"});
+        QVERIFY2(sk->message().isEmpty(), qPrintable(sk->message()));
+        const jig::SketchEntity* c = nullptr;
+        for (auto& [id, e] : sk->sketch().entities()) {
+            if (e.type == jig::EntityType::Circle) {
+                c = &e;
+            }
+        }
+        QVERIFY(c);
+        QVERIFY(std::abs(sk->sketch().pointXY(c->center).second - 10) < 1e-6);
+
+        // ring copy: 4 around the origin
+        sk->setTool(SketchEditor::Tool::Select);
+        click(23, 10);
+        w.runCommand("sketch.pattern_circ");
+        QCOMPARE(int(sk->tool()), int(SketchEditor::Tool::PatternCirc));
+        click(0, 0);
+        sk->typeValues({"4", "360 deg"});
+        QVERIFY2(sk->message().isEmpty(), qPrintable(sk->message()));
+        QCOMPARE(regions(), 4);
+
+        // grid copy of the first circle: 2 columns 50 apart, 1 row
+        sk->setTool(SketchEditor::Tool::Select);
+        click(23, 10);
+        w.runCommand("sketch.pattern_rect");
+        sk->typeValues({"2", "50 mm"});
+        sk->typeValues({"1", ""});
+        QVERIFY2(sk->message().isEmpty(), qPrintable(sk->message()));
+        QCOMPARE(regions(), 5);
+        w.runCommand("edit.undo");
+        QTRY_COMPARE(regions(), 4);
+
+        // Ctrl-click the destination: a copy, the original stays
+        sk->setTool(SketchEditor::Tool::Select);
+        click(23, 10);
+        w.runCommand("sketch.move");
+        click(20, 10);
+        click(20, 40, Qt::ControlModifier);
+        QVERIFY2(sk->message().isEmpty(), qPrintable(sk->message()));
+        QCOMPARE(regions(), 5);
+    }
+
     // Project: click a face of an earlier body; its outline comes into the sketch, fixed.
     void projectTool()
     {

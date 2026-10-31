@@ -202,6 +202,20 @@ public:
     // Mirror copies of curves and points across a line, held mirrored by symmetric
     // constraints (points on the line are shared). Returns the new ids.
     Result<std::vector<int>> mirror(const std::vector<int>& ids, int axisLine);
+    // Copies curves and points turned by `angle` (radians) around (cx, cy), then shifted by
+    // (dx, dy). Constraints among the copied items come along (horizontal/vertical only
+    // when the turn keeps them); the copy is not linked to the original. Returns new ids.
+    Result<std::vector<int>> copyCurves(const std::vector<int>& ids, double dx, double dy, double angle = 0,
+                                        double cx = 0, double cy = 0);
+    // Moves them instead (their end points move, so joined curves stretch to follow).
+    Result<bool> moveCurves(const std::vector<int>& ids, double dx, double dy, double angle = 0, double cx = 0,
+                            double cy = 0);
+    // Copies in rows and columns: n1 along (dx1, dy1), n2 along (dx2, dy2); counts include
+    // the original. Copies around (cx, cy): n in all, spread over `total` (a full turn
+    // spaces them evenly).
+    Result<std::vector<int>> patternRect(const std::vector<int>& ids, int n1, double dx1, double dy1, int n2,
+                                         double dx2, double dy2);
+    Result<std::vector<int>> patternCircular(const std::vector<int>& ids, double cx, double cy, int n, double total);
     // Rounds the corner where two lines meet nearest (x, y) with a tangent arc of radius r
     // (`radiusExpr` is stored as its dimension). Returns the arc id, or an error message.
     Result<int> filletCorner(double x, double y, double r, const std::string& radiusExpr);

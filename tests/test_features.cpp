@@ -914,3 +914,60 @@ TEST(SketchMirror, CopiesStayMirrored)
     expectAllOk(*d2);
     EXPECT_EQ(d2->state().sketches.at("s1")->profiles.regions.size(), 2u);
 }
+
+TEST(SketchCopy, MoveCopyAndPatterns)
+{
+    // a dimensioned 10 x 6 rectangle; its copy keeps the shape (only its place is free)
+    auto doc = build("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=10 h=6\n"
+                     "copy sketch=s1 at=5,0;-5,0;0,3;0,-3 by=30,0\n");
+    expectAllOk(*doc);
+    const auto& st = *doc->state().sketches.at("s1");
+    ASSERT_EQ(st.profiles.regions.size(), 2u);
+    for (auto& r : st.profiles.regions) {
+        EXPECT_NEAR(r.area, 60, 1e-6);
+    }
+    Sketch s = st.solved;
+    const int dofOne = build("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=10 h=6\n")
+                           ->state().sketches.at("s1")->report.dof;
+    EXPECT_EQ(st.report.dof, dofOne + 2);  // the copy can only slide
+    // turned a quarter: horizontal sides become vertical ones, still 10 x 6
+    auto q = build("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=10 h=6\n"
+                   "copy sketch=s1 at=5,0;-5,0;0,3;0,-3 angle=90 deg about=20,0\n");
+    expectAllOk(*q);
+    double ymin = 1e9, ymax = -1e9;
+    for (auto& [id, e] : q->state().sketches.at("s1")->solved.entities()) {
+        if (e.type == EntityType::Point && !e.construction) {
+            auto [x, y] = q->state().sketches.at("s1")->solved.pointXY(id);
+            if (x > 15) {
+                ymin = std::min(ymin, y);
+                ymax = std::max(ymax, y);
+            }
+        }
+    }
+    EXPECT_NEAR(ymax - ymin, 10, 1e-6);
+    // move: the whole rectangle shifts (its centre dimensions are relative, so it stays)
+    auto m = build("sketch id=s1 plane=XY\ncircle sketch=s1 center=0,0 d=4\nmove sketch=s1 at=2,0 by=0,0\n");
+    expectAllOk(*m);
+    // grid: 3 columns 10 apart, 2 rows 15 apart
+    auto g = build("sketch id=s1 plane=XY\ncircle sketch=s1 center=0,0 d=4\ngrid sketch=s1 at=2,0 count=3,2 spacing=10,15\n");
+    expectAllOk(*g);
+    EXPECT_EQ(g->state().sketches.at("s1")->profiles.regions.size(), 6u);
+    // ring: 6 round a centre, evenly
+    auto r = build("sketch id=s1 plane=XY\ncircle sketch=s1 center=20,0 d=4\nring sketch=s1 at=22,0 center=0,0 count=6\n"
+                   "extrude id=e1 sketch=s1 distance=2\n");
+    expectAllOk(*r);
+    EXPECT_EQ(r->state().sketches.at("s1")->profiles.regions.size(), 6u);
+    EXPECT_NEAR(props(*r).volume, 6 * pi * 4 * 2, 1e-6);
+    EXPECT_NEAR(props(*r).xmin, -22, 1e-6);  // one copy at 180°
+    // limits are explained
+    Sketch one;
+    const int c = one.addCircle(0, 0, 1);
+    EXPECT_FALSE(one.patternRect({c}, 1, 5, 0, 1, 0, 5).ok());
+    EXPECT_FALSE(one.patternCircular({c}, 5, 0, 1, 2 * pi).ok());
+    EXPECT_FALSE(one.copyCurves({}, 1, 0).ok());
+    // move with a turn: an arc's angles turn with it
+    const int arc = one.addArc(10, 0, 2, 0, pi / 2);
+    ASSERT_TRUE(one.moveCurves({arc}, 0, 0, pi / 2, 0, 0).ok());
+    EXPECT_NEAR(one.pointXY(one.entity(arc)->center).second, 10, 1e-9);
+    EXPECT_NEAR(one.entity(arc)->a0, pi / 2, 1e-9);
+}

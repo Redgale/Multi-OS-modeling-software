@@ -714,7 +714,8 @@ void MainWindow::buildToolbar()
     sketchBar_->addAction(centerRect_);
     for (const char* id : {"sketch.circle", "sketch.arc", "sketch.arc3", "sketch.slot", "sketch.polygon", "sketch.text",
                            "sketch.point", "sketch.dimension", "sketch.construction", "sketch.trim", "sketch.offset",
-                           "sketch.extend", "sketch.break", "sketch.fillet", "sketch.mirror", "sketch.project"}) {
+                           "sketch.extend", "sketch.break", "sketch.fillet", "sketch.mirror", "sketch.move",
+                           "sketch.pattern_rect", "sketch.pattern_circ", "sketch.project"}) {
         sketchBar_->addAction(registryAction(id));
     }
     sketchBar_->addSeparator();
@@ -1248,7 +1249,8 @@ void MainWindow::runCommand(const QString& id)
             {"sketch.text", T::Text},       {"sketch.trim", T::Trim},
             {"sketch.offset", T::Offset},   {"sketch.fillet", T::Round},
             {"sketch.project", T::Project}, {"sketch.extend", T::Extend},     {"sketch.break", T::Break},
-            {"sketch.mirror", T::Mirror},
+            {"sketch.mirror", T::Mirror},   {"sketch.move", T::Move},         {"sketch.pattern_rect", T::PatternRect},
+            {"sketch.pattern_circ", T::PatternCirc},
             {"sketch.point", T::Point},     {"sketch.dimension", T::Dimension}};
         static const std::map<QString, CT> cons {
             {"constraint.coincident", CT::Coincident}, {"constraint.horizontal", CT::Horizontal},

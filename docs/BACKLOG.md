@@ -35,7 +35,8 @@ Dimension, typed values, snapping, automatic H/V, constraint commands, drag, DOF
 conflict refusal, gap rings, profiles, construction toggle, delete.
 
 - B-013 Arc (3-point, tangent, centre), Polygon, Ellipse, Slot, Fit-point spline tools.
-- B-014 (Trim, Extend, Break, Offset, sketch Fillet, Mirror done) sketch patterns, Move/Copy.
+- B-014 (Trim, Extend, Break, Offset, sketch Fillet, Mirror, Move/Copy, Grid/Ring copy done) linked sketch
+  patterns, rotate in the Move tool, window selection.
 - B-016 Select and delete individual constraints (click a glyph); window selection; collinear,
   concentric; point-on-curve snapping while drawing; endpoint tangency via angle-via-point.
 

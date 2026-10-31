@@ -64,14 +64,14 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Point | 10 | v0.1 M1 | **app** | |
 | Text (font, height, alignment) | 10 | v0.1 M5 | **app** + scripts: built-in Inter or a font file, size as an expression, angle, centred on a draggable point; edit by double-click (D-014). Installed fonts by name, bold/italic, multi-line not yet (B-020) | Fonts spike (5.4f) |
 | Text on path | 10 | v0.2 | — | |
-| Sketch mirror, circular and rectangular pattern | 10 | v0.1 M1 | **app** + scripts: Mirror (held symmetric); patterns not yet | |
+| Sketch mirror, circular and rectangular pattern | 10 | v0.1 M1 | **app** + scripts: Mirror (held symmetric); Grid and Ring copy (each copy keeps its shape; not linked) | |
 | Project / Include, Intersect | 10 | v0.1 M5 (Project); Intersect v0.2 | **app** + scripts (`project`): an edge, or a face's whole outline, of an earlier body, as fixed lines, circles and arcs; not linked (no update when the body changes), slanted circles refused | Brief lists Project/Include |
 | Include 3D geometry, intersection curve, project to surface | 10 | v0.2 | — | |
 | Fillet (sketch) | 11 | v0.1 M1 | **app** ("Round corner") + scripts (`round`): line-line corners | |
 | Trim, Extend, Break | 11 | v0.1 M1 | **app** + scripts: Trim (lines, circles, arcs); Extend (loose ends of lines and arcs); Break (at crossings) | |
 | Sketch scale | 11 | v0.2 | — | Not in brief's list |
 | Offset (chains) | 11 | v0.1 M1 | **app** + scripts: closed outlines (sharp corners) and single curves; not associative yet | |
-| Move/Copy (sketch) | 11 | v0.1 M1 | — | |
+| Move/Copy (sketch) | 11 | v0.1 M1 | **app** (click or typed shift, Ctrl copies) + scripts (also turn about a point) | |
 | Stretch | 11 | v0.2 | — | |
 | Delete | 11 | v0.1 M1 | **app** | |
 | Change parameters from sketch | 11 | v0.1 M5 | — | |

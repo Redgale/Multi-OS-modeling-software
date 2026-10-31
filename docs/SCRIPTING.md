@@ -53,6 +53,10 @@ nothing is committed.
 | `extend [sketch=s1] at=x,y` | Lengthen the line or arc nearest (x, y), at its loose end nearest (x, y), until it meets the next curve |
 | `break [sketch=s1] at=x,y` | Split the curve nearest (x, y) where other curves cross it, either side of (x, y) |
 | `mirror [sketch=s1] at=x,y;x,y;… axis=x,y` | Mirror the curves nearest each point across the line nearest `axis` (construction lines count); the copies stay mirrored |
+| `move [sketch=s1] at=x,y;… [by=dx,dy] [angle=<angle> about=x,y]` | Move the curves nearest each point (turn first, then shift) |
+| `copy [sketch=s1] at=x,y;… [by=dx,dy] [angle=<angle> about=x,y]` | The same, leaving the originals: the copies keep the constraints among them |
+| `grid [sketch=s1] at=x,y;… count=n1[,n2] spacing=<len>[,<len>]` | Copies in columns to the right and rows upward (counts include the original) |
+| `ring [sketch=s1] at=x,y;… center=x,y count=<n> [angle=360 deg]` | Copies around a centre; a full turn spaces them evenly |
 | `trim [sketch=s1] at=x,y` | Remove the piece of the curve nearest (x, y) between its crossings with other curves |
 | `polygon [sketch=s1] center=x,y d=<len> [sides=6]` | Regular polygon; `d` is the diameter of the circle through the corners. One corner points straight up |
 | `arc [sketch=s1] center=x,y r=<len> from=<angle> to=<angle> [chord=yes]` | Counter-clockwise arc; `chord=yes` closes it with a straight line (a "D" shape) |

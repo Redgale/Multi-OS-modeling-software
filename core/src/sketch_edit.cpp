@@ -442,4 +442,227 @@ Result<std::vector<int>> Sketch::mirror(const std::vector<int>& ids, int axisLin
     return out;
 }
 
+// ---------------------------------------------------------------- move, copy, patterns
+
+namespace
+{
+struct Turn
+{
+    double c = 1, s = 0, dx = 0, dy = 0, cx = 0, cy = 0, angle = 0;
+    std::pair<double, double> operator()(double x, double y) const
+    {
+        const double rx = x - cx, ry = y - cy;
+        return {cx + c * rx - s * ry + dx, cy + s * rx + c * ry + dy};
+    }
+};
+
+Turn makeTurn(double dx, double dy, double angle, double cx, double cy)
+{
+    Turn t;
+    t.c = std::cos(angle);
+    t.s = std::sin(angle);
+    t.dx = dx;
+    t.dy = dy;
+    t.cx = cx;
+    t.cy = cy;
+    t.angle = angle;
+    return t;
+}
+
+// The selected curves plus the points they use, in a stable order.
+std::vector<int> withPoints(const Sketch& s, const std::vector<int>& ids)
+{
+    std::vector<int> out;
+    auto push = [&](int id) {
+        if (id && std::find(out.begin(), out.end(), id) == out.end()) {
+            out.push_back(id);
+        }
+    };
+    for (int id : ids) {
+        if (const SketchEntity* e = s.entity(id)) {
+            push(id);
+            if (e->type != EntityType::Point) {
+                push(e->p1);
+                push(e->p2);
+                push(e->center);
+            }
+        }
+    }
+    return out;
+}
+}  // namespace
+
+Result<std::vector<int>> Sketch::copyCurves(const std::vector<int>& ids, double dx, double dy, double angle,
+                                            double cx, double cy)
+{
+    const Turn T = makeTurn(dx, dy, angle, cx, cy);
+    std::map<int, int> map;  // old id -> new id (points and curves)
+    auto pointFor = [&](int pid) {
+        if (auto it = map.find(pid); it != map.end()) {
+            return it->second;
+        }
+        auto [px, py] = pointXY(pid);
+        auto [nx, ny] = T(px, py);
+        const SketchEntity* p = entity(pid);
+        const int n = addPoint(nx, ny, p && p->internal);
+        map[pid] = n;
+        return n;
+    };
+    std::vector<int> curves;
+    for (int id : ids) {
+        const SketchEntity* e = entity(id);
+        if (e && std::find(curves.begin(), curves.end(), id) == curves.end()) {
+            curves.push_back(id);
+        }
+    }
+    if (curves.empty()) {
+        return editError("sketch.copy", "Select the curves to copy first.");
+    }
+    std::vector<int> out;
+    for (int id : curves) {
+        const SketchEntity e = *entity(id);
+        int n = 0;
+        switch (e.type) {
+            case EntityType::Point:
+                n = pointFor(id);
+                break;
+            case EntityType::Line:
+                n = addLine(pointFor(e.p1), pointFor(e.p2));
+                break;
+            case EntityType::Circle: {
+                auto [px, py] = pointXY(e.center);
+                auto [nx, ny] = T(px, py);
+                n = addCircle(nx, ny, e.r);
+                if (auto it = map.find(e.center); it != map.end()) {  // a centre shared with another copied curve
+                    const int own = entities_.at(n).center;
+                    entities_.at(n).center = it->second;
+                    dropUnusedPoint(own);
+                }
+                else {
+                    map[e.center] = entities_.at(n).center;
+                }
+                break;
+            }
+            case EntityType::Arc:
+                n = addArcOn(pointFor(e.center), pointFor(e.p1), pointFor(e.p2), e.r, e.a0 + angle, e.a1 + angle);
+                break;
+        }
+        entities_.at(n).construction = e.construction;
+        map[id] = n;
+        out.push_back(n);
+    }
+    // constraints wholly among the copied items keep the copy's shape
+    const double quarter = std::fmod(std::abs(angle) / (std::numbers::pi / 2), 2.0);
+    const bool keepsAxes = std::abs(quarter) < 1e-9 || std::abs(quarter - 2) < 1e-9;  // 0° or 180°
+    const bool swapsAxes = std::abs(quarter - 1) < 1e-9;                             // 90° or 270°
+    const bool turned = std::abs(wrap(angle)) > 1e-9 && std::abs(wrap(angle) - kTau) > 1e-9;
+    for (auto [cid, c] : std::map<int, SketchConstraint>(constraints_)) {
+        auto mapped = [&](int id) { return id == 0 || map.count(id); };
+        if (!mapped(c.a) || !mapped(c.b) || !mapped(c.c) || !c.a) {
+            continue;
+        }
+        ConstraintType type = c.type;
+        switch (c.type) {
+            case ConstraintType::Fix:
+                continue;  // a copy is never pinned where the original is
+            case ConstraintType::Horizontal:
+            case ConstraintType::Vertical:
+                if (!keepsAxes && !swapsAxes) {
+                    continue;
+                }
+                if (swapsAxes) {
+                    type = c.type == ConstraintType::Horizontal ? ConstraintType::Vertical : ConstraintType::Horizontal;
+                }
+                break;
+            case ConstraintType::DistanceX:
+            case ConstraintType::DistanceY:
+                if (turned || !c.b) {
+                    continue;  // measured along the sketch axes, or from the origin
+                }
+                break;
+            default:
+                break;
+        }
+        const int k = addConstraint(type, map[c.a], c.b ? map[c.b] : 0, c.c ? map[c.c] : 0, c.expr);
+        constraints_.at(k).driving = c.driving;
+        constraints_.at(k).automatic = c.automatic;
+    }
+    syncCurvePoints();
+    return out;
+}
+
+Result<bool> Sketch::moveCurves(const std::vector<int>& ids, double dx, double dy, double angle, double cx,
+                                double cy)
+{
+    const Turn T = makeTurn(dx, dy, angle, cx, cy);
+    const std::vector<int> items = withPoints(*this, ids);
+    if (items.empty()) {
+        return editError("sketch.move", "Select the curves to move first.");
+    }
+    for (int id : items) {
+        SketchEntity& e = entities_.at(id);
+        if (e.type == EntityType::Point) {
+            std::tie(e.x, e.y) = T(e.x, e.y);
+        }
+        else if (e.type == EntityType::Arc) {
+            e.a0 += angle;
+            e.a1 += angle;
+        }
+    }
+    for (auto& [cid, c] : constraints_) {
+        if (c.type == ConstraintType::Fix && std::find(items.begin(), items.end(), c.a) != items.end()) {
+            std::tie(c.fx, c.fy) = pointXY(c.a);  // pinned at its new place
+        }
+    }
+    syncCurvePoints();
+    return true;
+}
+
+Result<std::vector<int>> Sketch::patternRect(const std::vector<int>& ids, int n1, double dx1, double dy1, int n2,
+                                             double dx2, double dy2)
+{
+    if (n1 < 1 || n2 < 1 || n1 * n2 < 2) {
+        return editError("sketch.pattern", "A grid copy needs at least two in all.");
+    }
+    if (n1 * n2 > 400) {
+        return editError("sketch.pattern", "That is more than 400 copies. Use fewer rows or columns.");
+    }
+    std::vector<int> out;
+    for (int j = 0; j < n2; ++j) {
+        for (int i = 0; i < n1; ++i) {
+            if (i == 0 && j == 0) {
+                continue;
+            }
+            auto r = copyCurves(ids, i * dx1 + j * dx2, i * dy1 + j * dy2);
+            if (!r) {
+                return r.error();
+            }
+            out.insert(out.end(), r->begin(), r->end());
+        }
+    }
+    return out;
+}
+
+Result<std::vector<int>> Sketch::patternCircular(const std::vector<int>& ids, double cx, double cy, int n,
+                                                 double total)
+{
+    if (n < 2 || n > 400) {
+        return editError("sketch.pattern", "A ring copy needs 2 to 400 in all.");
+    }
+    if (std::abs(total) < 1e-9) {
+        return editError("sketch.pattern", "The angle to spread the copies over must not be zero.");
+    }
+    const bool full = std::abs(std::abs(total) - kTau) < 1e-9;
+    const double step = total / (full ? n : n - 1);
+    std::vector<int> out;
+    for (int k = 1; k < n; ++k) {
+        auto r = copyCurves(ids, 0, 0, step * k, cx, cy);
+        if (!r) {
+            return r.error();
+        }
+        out.insert(out.end(), r->begin(), r->end());
+    }
+    return out;
+}
+
 }  // namespace jig

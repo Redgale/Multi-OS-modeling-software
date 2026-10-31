@@ -10,6 +10,7 @@
 #include <TopExp_Explorer.hxx>
 #include <TopoDS.hxx>
 #include <QFrame>
+#include <QGuiApplication>
 #include <QHBoxLayout>
 #include <QKeyEvent>
 #include <QLabel>
@@ -350,6 +351,13 @@ void SketchEditor::setTool(Tool t)
     resetToolState();
     tool_ = t;
     message_.clear();
+    if (t == Tool::PatternRect && !selection_.empty()) {
+        first_ = cursor_;  // nothing to click: the counts and spacings are typed
+        showInput({tr("Columns"), tr("Spacing")}, {"3", QString::fromStdString(doc_.defaultLength(10, 0.5))});
+        inputFields_[0]->selectAll();
+        inputFields_[0]->setFocus();
+        inputBox_->move(QPoint(24, 24));
+    }
     rebuildOverlay();
     emit stateChanged();
 }
@@ -360,6 +368,8 @@ void SketchEditor::resetToolState()
     editArtwork_ = 0;
     roundAt_.reset();
     trimHover_.reset();
+    gridCols_ = 0;
+    gridDx_ = 0;
     offsetHover_.clear();
     offsetChain_.clear();
     first_.reset();
@@ -416,6 +426,25 @@ QString SketchEditor::toolHint() const
             return selection_.empty()
                        ? tr("Select the curves to mirror first (Select tool, Shift-click for more), then choose Mirror.")
                        : tr("Click the line to mirror the %n selected curve(s) across.", "", int(selection_.size()));
+        case Tool::Move:
+            if (selection_.empty()) {
+                return tr("Select the curves to move first (Select tool, Shift-click for more), then choose Move.");
+            }
+            return first_ ? tr("Click where the base point goes, or type how far across (Tab) up and press Enter. "
+                               "Hold Ctrl to copy instead.")
+                          : tr("Click a base point to move the selected curves by.");
+        case Tool::PatternRect:
+            if (selection_.empty()) {
+                return tr("Select the curves to repeat first, then choose Grid copy.");
+            }
+            return second_ ? tr("Type the number of rows (1 for a single row) and their spacing upward, then Enter.")
+                           : tr("Type the number of columns (counting the original) and their spacing to the right, then Enter.");
+        case Tool::PatternCirc:
+            if (selection_.empty()) {
+                return tr("Select the curves to repeat first, then choose Ring copy.");
+            }
+            return first_ ? tr("Type how many in all (counting the original) and the angle to spread them over, then Enter.")
+                          : tr("Click the centre to repeat the selected curves around.");
         case Tool::Project:
             return tr("Click an edge of a body (or a face, for its whole outline) to bring it into the sketch. "
                       "The copy is fixed in place; it does not follow later changes yet.");
@@ -494,7 +523,8 @@ void SketchEditor::placeSecond(const Snap& cur, const QStringList& rawTyped)
     QStringList typed = rawTyped;
     for (int i = 0; i < typed.size(); ++i) {
         const bool notLength = (tool_ == Tool::Line && i == 1) || (tool_ == Tool::Arc && second_) ||
-                               (tool_ == Tool::Polygon && i == 1) || (tool_ == Tool::Text && i == 0);
+                               (tool_ == Tool::Polygon && i == 1) || (tool_ == Tool::Text && i == 0) ||
+                               (tool_ == Tool::PatternRect && i == 0) || tool_ == Tool::PatternCirc;
         if (!notLength && !typed[i].trimmed().isEmpty()) {
             typed[i] = QString::fromStdString(doc_.lengthInput(typed[i].trimmed().toStdString()));
         }
@@ -661,9 +691,10 @@ void SketchEditor::placeSecond(const Snap& cur, const QStringList& rawTyped)
     }
     // the arc's last step takes an angle and the polygon's second field a count;
     // those are checked where they are used
-    const bool notLengths = tool_ == Tool::Arc && second_;
+    const bool notLengths = (tool_ == Tool::Arc && second_) || tool_ == Tool::PatternCirc;
     for (int i = 0; i < typed.size() && !notLengths; ++i) {
-        if ((tool_ == Tool::Polygon && i == 1) || (tool_ == Tool::Text && i == 0)) {
+        if ((tool_ == Tool::Polygon && i == 1) || (tool_ == Tool::Text && i == 0) ||
+            (tool_ == Tool::PatternRect && i == 0)) {
             continue;
         }
         if (badTyped(i)) {
@@ -675,7 +706,103 @@ void SketchEditor::placeSecond(const Snap& cur, const QStringList& rawTyped)
     QPointF b = cur.local;
     const QPointF dir = b - a;
 
+    const std::vector<int> picked(selection_.begin(), selection_.end());
+    auto countOf = [&](int i, int fallback) -> std::optional<int> {
+        if (i >= typed.size() || typed[i].trimmed().isEmpty()) {
+            return fallback;
+        }
+        auto q = jig::evaluate(typed[i].toStdString(), doc_.lookup());
+        if (!q || q->dim != jig::Dim::none() || q->value < 1 || std::abs(q->value - std::round(q->value)) > 1e-9) {
+            message_ = tr("Type a whole number for how many.");
+            emit stateChanged();
+            return std::nullopt;
+        }
+        return int(std::lround(q->value));
+    };
     switch (tool_) {
+        case Tool::Move: {
+            auto across = typedLen(0), up = typedLen(1);
+            double dx = dir.x(), dy = dir.y();
+            if (across || up) {
+                dx = across ? *across : 0;
+                dy = up ? *up : 0;
+            }
+            const bool copy = QGuiApplication::keyboardModifiers() & Qt::ControlModifier;
+            if (copy) {
+                auto r = s.copyCurves(picked, dx, dy);
+                if (!r) {
+                    message_ = QString::fromStdString(r.error().message);
+                    break;
+                }
+                if (commit(tr("Copy"), s)) {
+                    selection_ = std::set<int>(r->begin(), r->end());
+                    resetToolState();
+                }
+                break;
+            }
+            auto r = s.moveCurves(picked, dx, dy);
+            if (!r) {
+                message_ = QString::fromStdString(r.error().message);
+                break;
+            }
+            if (commit(tr("Move"), s)) {
+                resetToolState();
+            }
+            break;
+        }
+        case Tool::PatternRect: {
+            auto n = countOf(0, second_ ? 1 : 3);
+            if (!n) {
+                break;
+            }
+            auto sp = typedLen(1);
+            if (typed.size() > 1 && !typed[1].isEmpty() && !sp) {
+                break;
+            }
+            const double spacing = sp ? *sp : 10;
+            if (!second_) {
+                gridCols_ = *n;
+                gridDx_ = spacing;
+                second_ = cur;
+                showInput({tr("Rows"), tr("Spacing")}, {"1", typed.size() > 1 ? typed[1] : QString()});
+                inputFields_[0]->selectAll();
+                inputFields_[0]->setFocus();
+                break;
+            }
+            auto r = s.patternRect(picked, gridCols_, gridDx_, 0, *n, 0, spacing);
+            if (!r) {
+                message_ = QString::fromStdString(r.error().message);
+                break;
+            }
+            if (commit(tr("Grid copy"), s)) {
+                resetToolState();
+            }
+            break;
+        }
+        case Tool::PatternCirc: {
+            auto n = countOf(0, 6);
+            if (!n) {
+                break;
+            }
+            double total = 2 * kPi;
+            if (typed.size() > 1 && !typed[1].trimmed().isEmpty()) {
+                auto av = doc_.evalAngle(typed[1].toStdString());
+                if (!av) {
+                    message_ = QString::fromStdString(av.error().message);
+                    break;
+                }
+                total = av.value();
+            }
+            auto r = s.patternCircular(picked, a.x(), a.y(), *n, total);
+            if (!r) {
+                message_ = QString::fromStdString(r.error().message);
+                break;
+            }
+            if (commit(tr("Ring copy"), s)) {
+                resetToolState();
+            }
+            break;
+        }
         case Tool::Line: {
             auto len = typedLen(0);
             double ang = std::atan2(dir.y(), dir.x());
@@ -1335,11 +1462,26 @@ bool SketchEditor::mouseRelease(QMouseEvent* e)
             if (!cursorValid_) {
                 break;
             }
+            if ((tool_ == Tool::Move || tool_ == Tool::PatternRect || tool_ == Tool::PatternCirc) && selection_.empty()) {
+                message_ = tr("Select the curves first (Select tool, Shift-click for more).");
+                break;
+            }
+            if (tool_ == Tool::PatternRect) {
+                break;  // typed only
+            }
             if (!first_) {
                 first_ = cursor_;
                 const bool two = tool_ != Tool::Circle;
                 (void)two;
-                if (tool_ == Tool::Polygon) {
+                if (tool_ == Tool::Move) {
+                    showInput({tr("Across"), tr("Up")});
+                }
+                else if (tool_ == Tool::PatternCirc) {
+                    showInput({tr("How many"), tr("Angle")}, {"6", "360 deg"});
+                    inputFields_[0]->selectAll();
+                    inputFields_[0]->setFocus();
+                }
+                else if (tool_ == Tool::Polygon) {
                     showInput({tr("Diameter"), tr("Sides")}, {QString(), "6"});
                 }
                 else if (tool_ == Tool::Arc3) {

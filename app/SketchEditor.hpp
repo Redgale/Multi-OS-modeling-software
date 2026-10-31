@@ -48,6 +48,9 @@ public:
         Extend,   // click near a loose end to lengthen it to the next curve
         Break,    // click a curve to split it where others cross it
         Mirror,   // with curves selected, click the line to mirror them across
+        Move,     // with curves selected: click a base point and where it goes (Ctrl: copy)
+        PatternRect,  // with curves selected: type columns and spacing, then rows and spacing
+        PatternCirc,  // with curves selected: click the centre, type the count and angle
         Offset,   // click a curve (or a closed outline), type the distance
         Round,    // click a corner where two lines meet, type the radius
         Project,  // click a body edge (or a face for its outline) to bring it into the sketch
@@ -179,7 +182,9 @@ private:
     QString arcRadiusExpr_;          // typed at the second step (arc radius, slot length)
     int editText_ = 0;
     int editArtwork_ = 0;
-    std::optional<jig::Sketch::TrimPiece> trimHover_;  // the piece Trim would remove
+    std::optional<jig::Sketch::TrimPiece> trimHover_;
+    int gridCols_ = 0;     // Grid copy: columns typed in the first step
+    double gridDx_ = 0;    // and their spacing  // the piece Trim would remove
     std::vector<int> offsetHover_, offsetChain_;        // Offset: under the cursor / chosen
     std::vector<std::pair<int, QRectF>> glyphBoxes_;     // constraint glyphs as last painted
     std::set<int> selectedConstraints_;
