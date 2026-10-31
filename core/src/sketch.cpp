@@ -302,14 +302,18 @@ std::optional<Sketch::TrimPiece> Sketch::trimPiece(int entityId, double x, doubl
             if (!onArc(T, px, py) || !onArc(C, px, py)) {
                 continue;
             }
-            const double prm = paramOf(px, py);
+            double prm = paramOf(px, py);
             const double end = T.line ? 1.0 : T.span;
-            if (prm > eps && prm < end - eps) {
+            if (!T.line && T.span >= kTau - eps) {  // a full circle: every angle is inside
+                cuts.push_back(prm > end - eps ? 0.0 : prm);
+            }
+            else if (prm > eps && prm < end - eps) {
                 cuts.push_back(prm);
             }
         }
     }
     std::sort(cuts.begin(), cuts.end());
+    cuts.erase(std::unique(cuts.begin(), cuts.end(), [&](double u, double v) { return v - u < eps; }), cuts.end());
     TrimPiece piece;
     piece.entity = entityId;
     const double click = T.line ? std::clamp(paramOf(x, y), 0.0, 1.0) : paramOf(x, y);
@@ -348,11 +352,11 @@ std::optional<Sketch::TrimPiece> Sketch::trimPiece(int entityId, double x, doubl
     return piece;
 }
 
-std::optional<std::pair<int, double>> Sketch::curveNear(double x, double y) const
+std::optional<std::pair<int, double>> Sketch::curveNear(double x, double y, bool construction) const
 {
     std::optional<std::pair<int, double>> best;
     for (auto& [id, e] : entities_) {
-        if (e.type == EntityType::Point || e.construction) {
+        if (e.type == EntityType::Point || (e.construction && !construction)) {
             continue;
         }
         double d = 1e300;
@@ -544,6 +548,69 @@ void Sketch::dropUnusedPoint(int pid)
     });
 }
 
+// A new point at (px, py) attached to whatever other curve passes there: the existing
+// endpoint (coincident) or the curve (point on curve).
+int Sketch::attachedPoint(int entityId, double px, double py)
+{
+    const int pid = addPoint(px, py, true);
+    // the crossing curve(s): every other curve passing through (px, py)
+    for (auto& [id, e] : entities_) {
+        if (id == entityId || e.type == EntityType::Point || e.construction || id == pid) {
+            continue;
+        }
+        // an existing endpoint there: share it
+        for (int q : {e.p1, e.p2}) {
+            if (q && q != pid) {
+                auto [qx, qy] = pointXY(q);
+                if (std::hypot(qx - px, qy - py) < 1e-6) {
+                    addConstraint(ConstraintType::Coincident, pid, q);
+                    // q held on the curve being cut is now held at its new end: once is enough
+                    std::erase_if(constraints_, [&](const auto& kv) {
+                        return kv.second.type == ConstraintType::PointOnCurve && kv.second.a == q &&
+                               kv.second.b == entityId;
+                    });
+                    return pid;
+                }
+            }
+        }
+    }
+    for (auto& [id, e] : entities_) {
+        if (id == entityId || e.type == EntityType::Point || e.construction || id == pid) {
+            continue;
+        }
+        double dist = 1e300;
+        if (e.type == EntityType::Line) {
+            auto [ax, ay] = pointXY(e.p1);
+            auto [bx, by] = pointXY(e.p2);
+            const double dx = bx - ax, dy = by - ay;
+            const double u = std::clamp(((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy), 0.0, 1.0);
+            dist = std::hypot(ax + dx * u - px, ay + dy * u - py);
+        }
+        else {
+            auto [cx, cy] = pointXY(e.center);
+            dist = std::abs(std::hypot(px - cx, py - cy) - e.r);
+        }
+        if (dist < 1e-6) {
+            addConstraint(ConstraintType::PointOnCurve, pid, id);
+            return pid;
+        }
+    }
+    return pid;
+}
+
+// A line's length, midpoint and equal-length constraints no longer apply once it is cut.
+void Sketch::dropSizeConstraints(int entityId)
+{
+    std::erase_if(constraints_, [&](const auto& kv) {
+        const auto& c = kv.second;
+        if (c.type == ConstraintType::Distance && c.a == entityId && !c.b) {
+            return true;
+        }
+        return (c.type == ConstraintType::Midpoint || c.type == ConstraintType::Equal) &&
+               (c.a == entityId || c.b == entityId);
+    });
+}
+
 bool Sketch::trim(int entityId, double x, double y)
 {
     auto piece = trimPiece(entityId, x, y);
@@ -555,66 +622,13 @@ bool Sketch::trim(int entityId, double x, double y)
     }
     SketchEntity& t = entities_.at(entityId);
     const bool line = t.type == EntityType::Line;
-    // the curve's own point where a cut lands: attach it to whatever crosses there
-    auto pointAt = [&](double px, double py) {
-        const int pid = addPoint(px, py, true);
-        // the crossing curve(s): every other curve passing through (px, py)
-        for (auto& [id, e] : entities_) {
-            if (id == entityId || e.type == EntityType::Point || e.construction || id == pid) {
-                continue;
-            }
-            // an existing endpoint there: share it
-            for (int q : {e.p1, e.p2}) {
-                if (q && q != pid) {
-                    auto [qx, qy] = pointXY(q);
-                    if (std::hypot(qx - px, qy - py) < 1e-6) {
-                        addConstraint(ConstraintType::Coincident, pid, q);
-                        return pid;
-                    }
-                }
-            }
-        }
-        for (auto& [id, e] : entities_) {
-            if (id == entityId || e.type == EntityType::Point || e.construction || id == pid) {
-                continue;
-            }
-            double dist = 1e300;
-            if (e.type == EntityType::Line) {
-                auto [ax, ay] = pointXY(e.p1);
-                auto [bx, by] = pointXY(e.p2);
-                const double dx = bx - ax, dy = by - ay;
-                const double u = std::clamp(((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy), 0.0, 1.0);
-                dist = std::hypot(ax + dx * u - px, ay + dy * u - py);
-            }
-            else {
-                auto [cx, cy] = pointXY(e.center);
-                dist = std::abs(std::hypot(px - cx, py - cy) - e.r);
-            }
-            if (dist < 1e-6) {
-                addConstraint(ConstraintType::PointOnCurve, pid, id);
-                return pid;
-            }
-        }
-        return pid;
-    };
-    // dimensions that measured the whole curve no longer apply
-    // a line's length, midpoint and equal-length constraints no longer apply
-    auto dropSizeConstraints = [&] {
-        std::erase_if(constraints_, [&](const auto& kv) {
-            const auto& c = kv.second;
-            if (c.type == ConstraintType::Distance && c.a == entityId && !c.b) {
-                return true;
-            }
-            return (c.type == ConstraintType::Midpoint || c.type == ConstraintType::Equal) &&
-                   (c.a == entityId || c.b == entityId);
-        });
-    };
+    auto pointAt = [&](double px, double py) { return attachedPoint(entityId, px, py); };
     if (line) {
         const auto [ax, ay] = pointXY(t.p1);
         const auto [bx, by] = pointXY(t.p2);
         auto at = [&](double u) { return std::pair {ax + (bx - ax) * u, ay + (by - ay) * u}; };
         const int oldP1 = t.p1, oldP2 = t.p2;
-        dropSizeConstraints();
+        dropSizeConstraints(entityId);
         if (piece->from <= 0) {  // the start goes
             auto [px, py] = at(piece->to);
             const int np = pointAt(px, py);

@@ -765,6 +765,79 @@ private slots:
         QCOMPARE(arcsNow, 1);
     }
 
+    // Extend a loose line to a rectangle, break it, and mirror the rectangle across a line.
+    void extendBreakMirror()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        Viewport* view = w.viewport();
+        QVERIFY(w.createSketchOn("XY"));
+        SketchEditor* sk = w.sketchEditor();
+        auto click = [&](double x, double y, Qt::KeyboardModifiers mods = Qt::NoModifier) {
+            QTest::mouseMove(view, sk->screenOf(x, y));
+            QTest::mouseClick(view, Qt::LeftButton, mods, sk->screenOf(x, y));
+        };
+        auto count = [&](jig::EntityType t) {
+            int n = 0;
+            for (auto& [id, e] : sk->sketch().entities()) {
+                n += e.type == t && !e.construction;
+            }
+            return n;
+        };
+        sk->setTool(SketchEditor::Tool::CenterRectangle);
+        click(40, 0);
+        QTest::mouseMove(view, sk->screenOf(45, 5));
+        sk->typeValues({"40 mm", "40 mm"});  // x from 20 to 60, y from -20 to 20
+        sk->setTool(SketchEditor::Tool::Line);
+        click(5, 5);  // on the snap grid
+        click(10, 5);
+        QTest::keyClick(view, Qt::Key_Escape);
+        QCOMPARE(count(jig::EntityType::Line), 5);
+
+        w.runCommand("sketch.extend");
+        QCOMPARE(int(sk->tool()), int(SketchEditor::Tool::Extend));
+        click(9, 5);  // near the loose right end: it runs on to the rectangle's left side at x = 20
+        QVERIFY2(sk->message().isEmpty(), qPrintable(sk->message()));
+        double maxX = 0;
+        for (auto& [id, e] : sk->sketch().entities()) {
+            if (e.type == jig::EntityType::Line && std::abs(sk->sketch().pointXY(e.p1).second - 5) < 1e-6 &&
+                std::abs(sk->sketch().pointXY(e.p2).second - 5) < 1e-6) {
+                maxX = std::max({maxX, sk->sketch().pointXY(e.p1).first, sk->sketch().pointXY(e.p2).first});
+            }
+        }
+        QVERIFY(std::abs(maxX - 20) < 1e-6);
+
+        w.runCommand("sketch.break");
+        click(20, -7);  // the rectangle's left side, below where the line meets it
+        QVERIFY2(sk->message().isEmpty(), qPrintable(sk->message()));
+        QCOMPARE(count(jig::EntityType::Line), 6);
+
+        // mirror the rectangle's five sides across a construction line at x = 0
+        sk->setTool(SketchEditor::Tool::Line);
+        click(0, -40);
+        click(0, 40);
+        QTest::keyClick(view, Qt::Key_Escape);
+        sk->setTool(SketchEditor::Tool::Select);
+        click(0, 30);
+        w.runCommand("sketch.construction");
+        sk->setTool(SketchEditor::Tool::Select);
+        click(60, 0);
+        click(40, 20, Qt::ShiftModifier);
+        click(40, -20, Qt::ShiftModifier);
+        click(20, -7, Qt::ShiftModifier);  // away from the corners, which a click would pick first
+        click(20, 12.5, Qt::ShiftModifier);
+        QCOMPARE(int(sk->selection().size()), 5);
+        w.runCommand("sketch.mirror");
+        QCOMPARE(int(sk->tool()), int(SketchEditor::Tool::Mirror));
+        click(0, 30);
+        QVERIFY2(sk->message().isEmpty(), qPrintable(sk->message()));
+        QCOMPARE(count(jig::EntityType::Line), 11);
+        QVERIFY(sk->report().redundant.empty());
+        QCOMPARE(int(w.document().state().sketches.begin()->second->profiles.regions.size()), 2);
+    }
+
     // Project: click a face of an earlier body; its outline comes into the sketch, fixed.
     void projectTool()
     {

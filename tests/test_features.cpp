@@ -792,3 +792,125 @@ TEST(SketchProject, FaceOutlinesAndRoundEdges)
     ASSERT_FALSE(res.ok());
     EXPECT_NE(res.error().message.find("point"), std::string::npos) << res.error().message;
 }
+
+TEST(SketchExtend, LinesAndArcsReachTheNextCurve)
+{
+    Sketch s;
+    const int h = s.addLine(0, 0, 10, 0);
+    s.addLine(20, -5, 20, 5);
+    // the loose right end runs on to the vertical line
+    auto r = s.extend(h, 9, 0);
+    ASSERT_TRUE(r.ok()) << r.error().message;
+    auto [x, y] = s.pointXY(s.entity(h)->p2);
+    EXPECT_NEAR(x, 20, 1e-9);
+    EXPECT_NEAR(y, 0, 1e-9);
+    EXPECT_NE(s.solve().state, SolveState::Failed);
+    EXPECT_NEAR(s.pointXY(s.entity(h)->p2).first, 20, 1e-9);  // held on the line
+    // nothing beyond the left end
+    EXPECT_FALSE(s.extend(h, 1, 0).ok());
+    // a joined end is refused
+    const int v = s.addLine(s.entity(h)->p1, s.addPoint(0, 10));
+    (void)v;
+    EXPECT_FALSE(s.extend(h, 1, 0).ok());
+
+    // an arc from 0° to 90° (r 10) grows counter-clockwise until x = -5: at 120°
+    Sketch a;
+    const int arc = a.addArc(0, 0, 10, 0, pi / 2);
+    a.addLine(-5, -20, -5, 20);
+    ASSERT_TRUE(a.extend(arc, 0, 10).ok());
+    EXPECT_NEAR(a.entity(arc)->a1, 2 * pi / 3, 1e-9);
+    // its start runs clockwise to the same line's other crossing, at 240°
+    ASSERT_TRUE(a.extend(arc, 10, 0).ok());
+    EXPECT_NEAR(std::cos(a.entity(arc)->a0), -0.5, 1e-9);
+    EXPECT_NEAR(std::sin(a.entity(arc)->a0), -std::sqrt(3.0) / 2, 1e-9);
+    EXPECT_NE(a.solve().state, SolveState::Failed);
+}
+
+TEST(SketchBreak, CurvesSplitWhereOthersCross)
+{
+    Sketch s;
+    const int l = s.addLine(0, 0, 30, 0);
+    s.addLine(10, -5, 10, 5);
+    s.addLine(20, -5, 20, 5);
+    auto r = s.breakAt(l, 15, 0);
+    ASSERT_TRUE(r.ok()) << r.error().message;
+    ASSERT_EQ(r->size(), 3u);
+    double total = 0;
+    for (int id : *r) {
+        auto [ax, ay] = s.pointXY(s.entity(id)->p1);
+        auto [bx, by] = s.pointXY(s.entity(id)->p2);
+        total += std::hypot(bx - ax, by - ay);
+    }
+    EXPECT_NEAR(total, 30, 1e-9);
+    EXPECT_NE(s.solve().state, SolveState::Failed);
+    // a lone line has nothing to break at
+    Sketch lone;
+    EXPECT_FALSE(lone.breakAt(lone.addLine(0, 0, 5, 0), 2, 0).ok());
+
+    // a circle cut by a line becomes two half arcs
+    Sketch c;
+    const int circ = c.addCircle(0, 0, 10);
+    c.addLine(-20, 0, 20, 0);
+    auto rc = c.breakAt(circ, 0, 10);
+    ASSERT_TRUE(rc.ok()) << rc.error().message;
+    ASSERT_EQ(rc->size(), 2u);
+    double span = 0;
+    for (int id : *rc) {
+        EXPECT_EQ(c.entity(id)->type, EntityType::Arc);
+        span += c.entity(id)->a1 - c.entity(id)->a0;
+    }
+    EXPECT_NEAR(span, 2 * pi, 1e-9);
+    EXPECT_NE(c.solve().state, SolveState::Failed);
+
+    // the arc left over, crossed twice more, becomes three arcs (by script; the four
+    // quarters stay closed areas and nothing is defined twice)
+    auto doc = build("sketch id=s1 plane=XY\ncircle sketch=s1 center=0,0 d=20\nline sketch=s1 p1=-20,0 p2=20,0\n"
+                     "line sketch=s1 p1=0,-20 p2=0,20\nbreak sketch=s1 at=7.07,7.07\nbreak sketch=s1 at=-7.07,-7.07\n");
+    expectAllOk(*doc);
+    int arcs = 0;
+    for (auto& [id, e] : doc->state().sketches.at("s1")->solved.entities()) {
+        arcs += e.type == EntityType::Arc;
+    }
+    EXPECT_EQ(arcs, 4);
+    EXPECT_EQ(doc->state().sketches.at("s1")->profiles.regions.size(), 4u);
+}
+
+TEST(SketchMirror, CopiesStayMirrored)
+{
+    Sketch s;
+    const int axis = s.addLine(0, -50, 0, 50);
+    s.setConstruction(axis, true);
+    s.addConstraint(ConstraintType::Fix, s.entity(axis)->p1);
+    s.addConstraint(ConstraintType::Fix, s.entity(axis)->p2);
+    const int l1 = s.addLine(5, 0, 10, 10);
+    const int l2 = s.addLine(0, 20, 5, 25);  // one end on the mirror line
+    const int c = s.addCircle(8, 3, 2);
+    const int arc = s.addArc(20, 0, 4, 0, pi / 2);
+    const int dofBefore = s.solve().dof;
+    auto r = s.mirror({l1, l2, c, arc, axis}, axis);
+    ASSERT_TRUE(r.ok()) << r.error().message;
+    ASSERT_EQ(r->size(), 4u);
+    auto rep = s.solve();
+    ASSERT_NE(rep.state, SolveState::Failed) << rep.message;
+    EXPECT_TRUE(rep.redundant.empty());
+    EXPECT_EQ(rep.dof, dofBefore);  // the copies add no freedom
+    auto [mx, my] = s.pointXY(s.entity((*r)[0])->p2);
+    EXPECT_NEAR(mx, -10, 1e-9);
+    EXPECT_NEAR(my, 10, 1e-9);
+    EXPECT_EQ(s.entity((*r)[1])->p1, s.entity(l2)->p1);  // the shared point on the line
+    const SketchEntity& ma = *s.entity((*r)[3]);
+    EXPECT_NEAR(s.pointXY(ma.center).first, -20, 1e-9);
+    EXPECT_NEAR(std::cos(ma.a0), std::cos(pi / 2), 1e-9);  // runs from 90° ... to 180°
+    EXPECT_NEAR(std::cos(ma.a1), -1, 1e-9);
+    // drag the original: the copy follows
+    s.drag(s.entity(l1)->p2, 12, 14);
+    auto [nx, ny] = s.pointXY(s.entity((*r)[0])->p2);
+    auto [ox, oy] = s.pointXY(s.entity(l1)->p2);
+    EXPECT_NEAR(nx, -ox, 1e-6);
+    EXPECT_NEAR(ny, oy, 1e-6);
+    // by script
+    auto d2 = build("sketch id=s1 plane=XY\nline sketch=s1 p1=0,-50 p2=0,50 construction=yes\n"
+                    "rect sketch=s1 center=10,0 w=6 h=4\nmirror sketch=s1 at=13,0;7,0;10,2;10,-2 axis=0,30\n");
+    expectAllOk(*d2);
+    EXPECT_EQ(d2->state().sketches.at("s1")->profiles.regions.size(), 2u);
+}

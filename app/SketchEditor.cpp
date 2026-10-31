@@ -408,6 +408,14 @@ QString SketchEditor::toolHint() const
                           : tr("Click where the middle of the text goes.");
         case Tool::Trim:
             return tr("Click the piece of a curve to remove. It is cut where other curves cross it.");
+        case Tool::Extend:
+            return tr("Click a curve near its loose end to lengthen it until it meets the next curve.");
+        case Tool::Break:
+            return tr("Click a curve to split it where other curves cross it (the pieces stay joined).");
+        case Tool::Mirror:
+            return selection_.empty()
+                       ? tr("Select the curves to mirror first (Select tool, Shift-click for more), then choose Mirror.")
+                       : tr("Click the line to mirror the %n selected curve(s) across.", "", int(selection_.size()));
         case Tool::Project:
             return tr("Click an edge of a body (or a face, for its whole outline) to bring it into the sketch. "
                       "The copy is fixed in place; it does not follow later changes yet.");
@@ -1058,7 +1066,7 @@ bool SketchEditor::mouseMove(QMouseEvent* e)
             view_->setEdgeHighlight({}, {});
         }
     }
-    if (tool_ == Tool::Trim) {
+    if (tool_ == Tool::Trim || tool_ == Tool::Break) {
         trimHover_.reset();
         if (auto loc = toLocal(pos)) {
             auto near = work_.curveNear(loc->x(), loc->y());
@@ -1184,6 +1192,63 @@ bool SketchEditor::mouseRelease(QMouseEvent* e)
             inputFields_[0]->selectAll();
             inputFields_[0]->setFocus();
             inputBox_->move(pos.toPoint() + QPoint(18, 18));
+            break;
+        }
+        case Tool::Extend:
+        case Tool::Break: {
+            auto loc = toLocal(pos);
+            if (!loc) {
+                break;
+            }
+            auto near = work_.curveNear(loc->x(), loc->y());
+            if (!near || near->second > 8 * view_->worldPerPixel()) {
+                message_ = tool_ == Tool::Extend ? tr("Click on a line or arc, near the end to lengthen.")
+                                                 : tr("Click on a curve to break it.");
+                break;
+            }
+            jig::Sketch s = work_;
+            bool ok = false;
+            if (tool_ == Tool::Extend) {
+                auto r = s.extend(near->first, loc->x(), loc->y());
+                ok = r.ok();
+                message_ = ok ? QString() : QString::fromStdString(r.error().message);
+            }
+            else {
+                auto r = s.breakAt(near->first, loc->x(), loc->y());
+                ok = r.ok();
+                message_ = ok ? QString() : QString::fromStdString(r.error().message);
+            }
+            if (ok) {
+                commit(tool_ == Tool::Extend ? tr("Extend") : tr("Break"), s);
+            }
+            trimHover_.reset();
+            break;
+        }
+        case Tool::Mirror: {
+            auto loc = toLocal(pos);
+            if (!loc) {
+                break;
+            }
+            if (selection_.empty()) {
+                message_ = tr("Select the curves to mirror first, then choose Mirror.");
+                break;
+            }
+            auto near = work_.curveNear(loc->x(), loc->y(), true);
+            const jig::SketchEntity* axis = near ? work_.entity(near->first) : nullptr;
+            if (!axis || axis->type != jig::EntityType::Line || near->second > 8 * view_->worldPerPixel()) {
+                message_ = tr("Click a straight line (it can be a construction line) to mirror across.");
+                break;
+            }
+            jig::Sketch s = work_;
+            auto r = s.mirror(std::vector<int>(selection_.begin(), selection_.end()), near->first);
+            if (!r) {
+                message_ = QString::fromStdString(r.error().message);
+                break;
+            }
+            if (commit(tr("Mirror"), s)) {
+                selection_ = std::set<int>(r->begin(), r->end());
+                message_.clear();
+            }
             break;
         }
         case Tool::Trim: {
@@ -1753,7 +1818,7 @@ void SketchEditor::rebuildOverlay()
             addPoly(polyline(s, *e), kAccent, offsetChain_.empty());
         }
     }
-    if (tool_ == Tool::Trim && trimHover_) {
+    if ((tool_ == Tool::Trim || tool_ == Tool::Break) && trimHover_) {
         const jig::SketchEntity* e = s.entity(trimHover_->entity);
         if (e) {
             std::vector<QPointF> pts;

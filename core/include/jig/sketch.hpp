@@ -193,6 +193,15 @@ public:
     // point-on-curve constraint, or the existing point when they meet at one). Length
     // and diameter dimensions of the trimmed curve that no longer apply are removed.
     bool trim(int entityId, double x, double y);
+    // Lengthens the loose end of a line or arc nearest (x, y) until it meets another curve.
+    // Returns the moved end's point id, or why it cannot.
+    Result<int> extend(int entityId, double x, double y);
+    // Splits a curve where other curves cross it, either side of (x, y): the pieces share
+    // their new ends. Returns the ids of the curves that make up the old one.
+    Result<std::vector<int>> breakAt(int entityId, double x, double y);
+    // Mirror copies of curves and points across a line, held mirrored by symmetric
+    // constraints (points on the line are shared). Returns the new ids.
+    Result<std::vector<int>> mirror(const std::vector<int>& ids, int axisLine);
     // Rounds the corner where two lines meet nearest (x, y) with a tangent arc of radius r
     // (`radiusExpr` is stored as its dimension). Returns the arc id, or an error message.
     Result<int> filletCorner(double x, double y, double r, const std::string& radiusExpr);
@@ -200,8 +209,8 @@ public:
     std::vector<int> chainOf(int curve) const;
     // Counter-clockwise arc on existing points (used when building offsets).
     int addArcOn(int center, int p1, int p2, double r, double a0, double a1);
-    // The curve nearest to (x, y) (not points or construction), and its distance.
-    std::optional<std::pair<int, double>> curveNear(double x, double y) const;
+    // The curve nearest to (x, y) (not points; construction only when asked), and its distance.
+    std::optional<std::pair<int, double>> curveNear(double x, double y, bool construction = false) const;
 
     // ---- constraints ----------------------------------------------------
     int addConstraint(ConstraintType type, int a, int b = 0, int c = 0, std::string expr = {});
@@ -243,6 +252,9 @@ private:
                           const std::vector<int>& skip = {});
     void syncCurvePoints();
     void dropUnusedPoint(int pointId);
+    int attachedPoint(int skipEntity, double px, double py);
+    int crossingCurveOf(int pointId) const;
+    void dropSizeConstraints(int entityId);
 
     std::map<int, SketchEntity> entities_;
     std::map<int, SketchConstraint> constraints_;

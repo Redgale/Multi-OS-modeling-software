@@ -90,14 +90,14 @@ CommandRegistry::CommandRegistry()
     add({"sketch.spline", "Smooth curve", "Fit Point Spline", "SKETCH CREATE", "Draw a smooth curve through the points you click.", "", {"spline", "freeform", "organic"}, false, false, false, m1});
     add({"sketch.point", "Point", "Point", "SKETCH CREATE", "Place a reference point, e.g. for a hole center.", "", {"marker"}, false, false, false, m1});
     add({"sketch.text", "Text", "Text", "SKETCH CREATE", "Add lettering you can extrude or cut, e.g. a name plate.", "", {"label", "letters", "engrave", "name"}, false, false, false, m5});
-    add({"sketch.mirror", "Mirror (sketch)", "Sketch Mirror", "SKETCH CREATE", "Copy sketch shapes across a line to make them symmetric.", "", {"symmetric copy", "flip"}, false, false, false, m1});
+    add({"sketch.mirror", "Mirror (sketch)", "Sketch Mirror", "SKETCH CREATE", "Copy the selected sketch curves across a line; the copies stay mirrored.", "", {"symmetric copy", "flip"}, false, false, true, m1});
     add({"sketch.pattern_rect", "Grid copy (sketch)", "Sketch Rectangular Pattern", "SKETCH CREATE", "Repeat sketch shapes in rows and columns.", "", {"array", "grid", "repeat"}, false, false, false, m1});
     add({"sketch.pattern_circ", "Ring copy (sketch)", "Sketch Circular Pattern", "SKETCH CREATE", "Repeat sketch shapes around a center, e.g. a bolt circle.", "", {"array", "bolt circle", "repeat around"}, false, false, false, m1});
     add({"sketch.project", "Project / include", "Project", "SKETCH CREATE", "Bring edges of a body into this sketch as fixed references.", "P", {"reference", "copy edges", "include"}, false, false, false, m5});
     add({"sketch.dimension", "Dimension", "Sketch Dimension", "SKETCH CREATE", "Set an exact size: click a line, circle or two items, then type.", "D", {"measure", "size", "length", "distance"}, true, false, true, m1});
     add({"sketch.trim", "Trim", "Trim", "SKETCH MODIFY", "Delete the piece of a curve between its nearest crossings.", "T", {"cut line", "delete part", "clean up"}, true, false, false, m1});
-    add({"sketch.extend", "Extend", "Extend", "SKETCH MODIFY", "Lengthen a curve until it meets the next one.", "", {"lengthen", "stretch"}, false, false, false, m1});
-    add({"sketch.break", "Break", "Break", "SKETCH MODIFY", "Split a curve where other curves cross it.", "", {"split curve"}, false, false, false, m1});
+    add({"sketch.extend", "Extend", "Extend", "SKETCH MODIFY", "Lengthen a line or arc until it meets the next curve.", "", {"lengthen", "stretch"}, false, false, true, m1});
+    add({"sketch.break", "Break", "Break", "SKETCH MODIFY", "Split a curve where other curves cross it.", "", {"split curve"}, false, false, true, m1});
     add({"sketch.offset", "Offset", "Offset", "SKETCH MODIFY", "Make a parallel copy at a set distance, e.g. a wall or clearance.", "O", {"parallel copy", "wall thickness", "clearance"}, true, false, false, m1});
     add({"sketch.fillet", "Round corner (sketch)", "Sketch Fillet", "SKETCH MODIFY", "Round a sharp corner between two sketch curves.", "", {"round corner", "radius"}, false, false, false, m1});
     add({"sketch.move", "Move / copy (sketch)", "Sketch Move/Copy", "SKETCH MODIFY", "Move or copy sketch shapes by a distance or angle.", "M", {"translate", "rotate", "duplicate"}, false, false, false, m1});
@@ -147,7 +147,7 @@ CommandRegistry::CommandRegistry()
     // shell, revolve, hole, patterns, mirror, parameters). Everything else above keeps its "coming in" note.
     static const std::set<std::string> inApp {
         "sketch.create", "sketch.finish", "sketch.line", "sketch.rectangle", "sketch.circle", "sketch.point",
-        "sketch.arc", "sketch.arc3", "sketch.slot", "sketch.polygon", "sketch.text", "sketch.trim", "sketch.offset", "sketch.fillet", "sketch.project",
+        "sketch.arc", "sketch.arc3", "sketch.slot", "sketch.polygon", "sketch.text", "sketch.trim", "sketch.offset", "sketch.fillet", "sketch.project", "sketch.extend", "sketch.break", "sketch.mirror",
         "sketch.dimension", "sketch.construction", "constraint.coincident", "constraint.collinear", "constraint.concentric",
         "constraint.midpoint", "constraint.fix",
         "constraint.parallel", "constraint.perpendicular", "constraint.horizontal", "constraint.tangent",
@@ -975,6 +975,70 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
                 return makeError("script.args", "There is no curve near that point to trim.");
             }
             s.trim(near->first, px.value(), py.value());
+            return true;
+        });
+    }
+    // (a sketch mirror names a line with axis=; a body mirror names a plane)
+    if (a.verb == "extend" || a.verb == "break" || (a.verb == "mirror" && a.has("axis"))) {
+        // extend|break [sketch=s1] at=x,y : the curve nearest (x, y)
+        // mirror [sketch=s1] at=x,y;x,y;… axis=x,y : the curves nearest each point, across the line nearest axis
+        const std::string sid = a.get("sketch", last_);
+        const std::string title = a.verb == "extend" ? "Extend" : a.verb == "break" ? "Break" : "Mirror";
+        return editSketch(title, sid, [&](Sketch& s, const Document&) -> Result<bool> {
+            auto curveAt = [&](const std::string& text, bool construction = false)
+                -> Result<std::pair<int, std::pair<double, double>>> {
+                auto pe = parsePairExpr(text);
+                if (!pe) {
+                    return pe.error();
+                }
+                auto px = len(pe->first), py = len(pe->second);
+                if (!px || !py) {
+                    return !px ? px.error() : py.error();
+                }
+                auto near = s.curveNear(px.value(), py.value(), construction);
+                if (!near || near->second > 1.0) {
+                    return makeError("script.args", "There is no curve near " + text + ".");
+                }
+                return std::pair {near->first, std::pair {px.value(), py.value()}};
+            };
+            if (a.verb == "mirror") {
+                auto axis = curveAt(a.get("axis", ""), true);
+                if (!axis) {
+                    return axis.error();
+                }
+                std::vector<int> ids;
+                std::string list = a.get("at", "");
+                for (size_t from = 0; from <= list.size();) {
+                    const size_t semi = std::min(list.find(';', from), list.size());
+                    auto c = curveAt(list.substr(from, semi - from));
+                    if (!c) {
+                        return c.error();
+                    }
+                    ids.push_back(c->first);
+                    from = semi + 1;
+                }
+                auto r = s.mirror(ids, axis->first);
+                if (!r) {
+                    return r.error();
+                }
+                return true;
+            }
+            auto c = curveAt(a.get("at", "0,0"));
+            if (!c) {
+                return c.error();
+            }
+            const auto [x, y] = c->second;
+            if (a.verb == "extend") {
+                auto r = s.extend(c->first, x, y);
+                if (!r) {
+                    return r.error();
+                }
+                return true;
+            }
+            auto r = s.breakAt(c->first, x, y);
+            if (!r) {
+                return r.error();
+            }
             return true;
         });
     }

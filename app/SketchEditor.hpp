@@ -45,6 +45,9 @@ public:
         Polygon,  // centre, corner; sides typed (default 6)
         Text,     // click the centre, type the words and the size
         Trim,     // click the piece of a curve to remove (between its crossings)
+        Extend,   // click near a loose end to lengthen it to the next curve
+        Break,    // click a curve to split it where others cross it
+        Mirror,   // with curves selected, click the line to mirror them across
         Offset,   // click a curve (or a closed outline), type the distance
         Round,    // click a corner where two lines meet, type the radius
         Project,  // click a body edge (or a face for its outline) to bring it into the sketch

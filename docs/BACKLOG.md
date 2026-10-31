@@ -35,7 +35,7 @@ Dimension, typed values, snapping, automatic H/V, constraint commands, drag, DOF
 conflict refusal, gap rings, profiles, construction toggle, delete.
 
 - B-013 Arc (3-point, tangent, centre), Polygon, Ellipse, Slot, Fit-point spline tools.
-- B-014 Trim, Extend, Break, Offset, sketch Fillet, Mirror, patterns, Move/Copy.
+- B-014 (Trim, Extend, Break, Offset, sketch Fillet, Mirror done) sketch patterns, Move/Copy.
 - B-016 Select and delete individual constraints (click a glyph); window selection; collinear,
   concentric; point-on-curve snapping while drawing; endpoint tangency via angle-via-point.
 
@@ -59,8 +59,7 @@ timeline edit/rename/suppress/roll back/delete with dependents warning, Paramete
   mirror of features, Press Pull.
 - M4 (Revolve and the knob, A2, done in session 2): revolve to object, construction planes
   (offset/angle/midplane), axis, point, Combine, Split, Move/Copy.
-- M5 (Parameters dialog and Text done in session 2, D-014): Project/Include, SVG and DXF
-  import with unit detection.
+- M5 (Parameters, Text, Project, SVG and DXF import done): linked (associative) Project.
 - M6: Measure, Section, Properties with density; 3MF export; local versions; autosave
   preferences; STEP import UI with unit correction; parser fuzzing (SVG, DXF, STEP).
 - M7: tutorial, tooltips audit, error-explanation actions, marking menu, navigation

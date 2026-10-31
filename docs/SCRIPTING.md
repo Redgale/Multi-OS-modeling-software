@@ -50,6 +50,9 @@ nothing is committed.
 | `offset [sketch=s1] at=x,y distance=<len>` | Copy the curve nearest (x, y), or its whole closed outline, at a distance (positive: outward, or to the left of a single line) |
 | `round [sketch=s1] at=x,y r=<len>` | Round the corner where two lines meet nearest (x, y) with a tangent arc |
 | `project edge:<name>\|face:<name> [sketch=s1]` | Bring a body edge, or every edge of a face, into the sketch as fixed curves (a copy: it does not follow later changes) |
+| `extend [sketch=s1] at=x,y` | Lengthen the line or arc nearest (x, y), at its loose end nearest (x, y), until it meets the next curve |
+| `break [sketch=s1] at=x,y` | Split the curve nearest (x, y) where other curves cross it, either side of (x, y) |
+| `mirror [sketch=s1] at=x,y;x,y;… axis=x,y` | Mirror the curves nearest each point across the line nearest `axis` (construction lines count); the copies stay mirrored |
 | `trim [sketch=s1] at=x,y` | Remove the piece of the curve nearest (x, y) between its crossings with other curves |
 | `polygon [sketch=s1] center=x,y d=<len> [sides=6]` | Regular polygon; `d` is the diameter of the circle through the corners. One corner points straight up |
 | `arc [sketch=s1] center=x,y r=<len> from=<angle> to=<angle> [chord=yes]` | Counter-clockwise arc; `chord=yes` closes it with a straight line (a "D" shape) |
