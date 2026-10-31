@@ -6721,22 +6721,17 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
     </message>
     <message>
         <location line="+0"/>
-        <location line="+630"/>
+        <location line="+677"/>
         <source>Spacing</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-596"/>
+        <location line="-613"/>
         <source>Click to select, drag to move what is still free. Delete removes the selection.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+2"/>
-        <source>Click the end, or type a length (Tab: angle) and press Enter. Click the first point to close. Esc ends.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+1"/>
+        <location line="+4"/>
         <source>Click where the line starts.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7057,12 +7052,12 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
     </message>
     <message>
         <location line="+11"/>
-        <location line="+557"/>
+        <location line="+573"/>
         <source>Type the words for the text.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-545"/>
+        <location line="-561"/>
         <source>Edit text</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7077,12 +7072,12 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+11"/>
+        <location line="+12"/>
         <source>Tangent arc</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+24"/>
+        <location line="+39"/>
         <source>2-point circle</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7108,12 +7103,12 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
     </message>
     <message>
         <location line="+16"/>
-        <location line="+811"/>
+        <location line="+827"/>
         <source>Minor radius</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-790"/>
+        <location line="-806"/>
         <source>Ellipse</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7148,25 +7143,34 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+11"/>
-        <location line="+635"/>
+        <location line="-260"/>
+        <location line="+271"/>
+        <location line="+651"/>
         <location line="+101"/>
         <location line="+27"/>
         <location line="+3"/>
+        <location line="+15"/>
         <source>Length</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-766"/>
+        <location line="-1491"/>
+        <source>Click the end, or type a length (Tab: angle) and press Enter. Drag from the last point for a tangent arc. Click the first point to close. Esc ends.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+423"/>
+        <location line="+271"/>
         <location line="+77"/>
-        <location line="+668"/>
+        <location line="+684"/>
         <location line="+18"/>
-        <location line="+112"/>
+        <location line="+18"/>
+        <location line="+100"/>
         <source>Angle</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-835"/>
+        <location line="-857"/>
         <source>Center rectangle</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7202,13 +7206,13 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
     </message>
     <message>
         <location line="+16"/>
-        <location line="+590"/>
-        <location line="+124"/>
+        <location line="+606"/>
+        <location line="+130"/>
         <source>Width</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-682"/>
+        <location line="-704"/>
         <source>Slot</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7219,13 +7223,13 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
     </message>
     <message>
         <location line="+7"/>
-        <location line="+526"/>
-        <location line="+154"/>
+        <location line="+542"/>
+        <location line="+160"/>
         <source>Text</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-667"/>
+        <location line="-689"/>
         <source>A polygon needs 3 to 64 sides.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7235,7 +7239,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+136"/>
+        <location line="+152"/>
         <source>Drag</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7372,17 +7376,17 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
     </message>
     <message>
         <location line="+6"/>
-        <location line="+154"/>
+        <location line="+160"/>
         <source>Size</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-143"/>
+        <location line="-149"/>
         <source>Height</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+93"/>
+        <location line="+99"/>
         <source>Constraint selected: press Delete to remove it. Double-click a dimension to change it.</source>
         <translation type="unfinished"></translation>
     </message>

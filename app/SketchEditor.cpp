@@ -439,6 +439,36 @@ void SketchEditor::setTool(Tool t)
     emit stateChanged();
 }
 
+int SketchEditor::looseEndOwner(int point, QPointF* dir) const
+{
+    int owners = 0, owner = 0;
+    for (auto& [id, en] : work_.entities()) {
+        if ((en.type == jig::EntityType::Line || en.type == jig::EntityType::Arc) && !en.construction &&
+            (en.p1 == point || en.p2 == point)) {
+            ++owners;
+            owner = id;
+        }
+    }
+    if (owners != 1) {
+        return 0;
+    }
+    const jig::SketchEntity* from = work_.entity(owner);
+    if (dir) {
+        if (from->type == jig::EntityType::Line) {
+            auto [x1, y1] = work_.pointXY(from->p1);
+            auto [x2, y2] = work_.pointXY(from->p2);
+            QPointF t = from->p2 == point ? QPointF(x2 - x1, y2 - y1) : QPointF(x1 - x2, y1 - y2);
+            *dir = t / std::max(1e-12, QLineF(QPointF(), t).length());
+        }
+        else {
+            const bool atEnd = from->p2 == point;
+            const double ang = atEnd ? from->a1 : from->a0;
+            *dir = atEnd ? QPointF(-std::sin(ang), std::cos(ang)) : QPointF(std::sin(ang), -std::cos(ang));
+        }
+    }
+    return owner;
+}
+
 void SketchEditor::resetToolState()
 {
     editConstraint_ = 0;
@@ -466,7 +496,8 @@ QString SketchEditor::toolHint() const
         case Tool::Select:
             return tr("Click to select, drag to move what is still free. Delete removes the selection.");
         case Tool::Line:
-            return first_ ? tr("Click the end, or type a length (Tab: angle) and press Enter. Click the first point to close. Esc ends.")
+            return first_ ? tr("Click the end, or type a length (Tab: angle) and press Enter. Drag from the last point for a "
+                               "tangent arc. Click the first point to close. Esc ends.")
                           : tr("Click where the line starts.");
         case Tool::Rectangle:
             return first_ ? tr("Click the opposite corner, or type width (Tab) height and press Enter.")
@@ -873,8 +904,24 @@ void SketchEditor::placeSecond(const Snap& cur, const QStringList& rawTyped)
             if (cur.point && cur.point != first_->point) {
                 s.addConstraint(jig::ConstraintType::Coincident, ePt, cur.point);
             }
+            const int chain = chainStart_, startPt = first_->point;
             if (commit(tr("Tangent arc"), s)) {
                 resetToolState();
+                if (arcFromLine_) {
+                    // back to the line chain, going on from the arc's end
+                    arcFromLine_ = false;
+                    tool_ = Tool::Line;
+                    const int end = cur.point && cur.point != startPt ? cur.point : ePt;
+                    arcEnd_ = end;
+                    if (end == chain) {
+                        break;  // the arc closed the outline
+                    }
+                    chainStart_ = chain;
+                    auto [x, y] = work_.pointXY(end);
+                    first_ = Snap {QPointF(x, y), end};
+                    showInput({tr("Length"), tr("Angle")});
+                    emit stateChanged();
+                }
             }
             break;
         }
@@ -1425,6 +1472,12 @@ bool SketchEditor::mousePress(QMouseEvent* e)
     dragging_ = false;
     boxing_ = false;
     dragPoint_ = dragPoint2_ = 0;
+    arcArmed_ = false;
+    if (tool_ == Tool::Line && first_ && first_->point && chainStart_) {
+        // pressing on the end of the chain: a drag from here draws a tangent arc
+        auto [x, y] = work_.pointXY(first_->point);
+        arcArmed_ = QLineF(QPointF(screenOf(x, y)), pressScreen_).length() < 8 && looseEndOwner(first_->point, nullptr);
+    }
     if (tool_ != Tool::Select) {
         return true;
     }
@@ -1465,6 +1518,16 @@ bool SketchEditor::mousePress(QMouseEvent* e)
 bool SketchEditor::mouseMove(QMouseEvent* e)
 {
     const QPointF pos = e->position();
+    if (pressed_ && arcArmed_ && tool_ == Tool::Line && QLineF(pos, pressScreen_).length() > 6) {
+        arcArmed_ = false;
+        tangentFrom_ = looseEndOwner(first_->point, &tangentDir_);
+        if (tangentFrom_) {
+            tool_ = Tool::TangentArc;  // until the button comes up
+            arcFromLine_ = true;
+            hideInput();
+            emit stateChanged();
+        }
+    }
     if (pressed_ && tool_ == Tool::Select && dragPoint_) {
         if (!dragging_ && QLineF(pos, pressScreen_).length() < 3) {
             return true;
@@ -1919,6 +1982,12 @@ bool SketchEditor::mouseRelease(QMouseEvent* e)
             }
             break;
         }
+    }
+    if (arcFromLine_ && tool_ == Tool::TangentArc) {
+        // the arc could not be placed (straight ahead): back to the line, still at the chain's end
+        arcFromLine_ = false;
+        tool_ = Tool::Line;
+        showInput({tr("Length"), tr("Angle")});
     }
     rebuildOverlay();
     emit stateChanged();

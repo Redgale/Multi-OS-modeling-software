@@ -201,6 +201,12 @@ private:
     std::optional<Snap> forcedCursor_;  // a typed point standing in for the cursor
     void startAtTyped(double x, double y);
     int tangentFrom_ = 0;   // Tangent arc: the curve it continues
+    // Line: a press on the chain's end that drags draws a tangent arc, then lines go on
+    bool arcArmed_ = false, arcFromLine_ = false;
+    int arcEnd_ = 0;        // the end point of the arc just placed
+    // The one line or arc whose loose end is `point` (0 if none or several), and the
+    // direction leaving it there.
+    int looseEndOwner(int point, QPointF* dir) const;
     QPointF tangentDir_;    // and the direction it leaves in
     void finishSpline(bool closed);
     int gridCols_ = 0;     // Grid copy: columns typed in the first step

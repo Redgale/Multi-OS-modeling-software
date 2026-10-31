@@ -1740,6 +1740,54 @@ private slots:
         QTRY_VERIFY(w.featurePanel() == nullptr);
     }
 
+    // Line tool: press on the chain's end and drag to draw a tangent arc, then lines go on.
+    void lineDragToTangentArc()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        Viewport* view = w.viewport();
+        QVERIFY(w.createSketchOn("XY"));
+        SketchEditor* sk = w.sketchEditor();
+        sk->setTool(SketchEditor::Tool::Line);
+        auto click = [&](double x, double y) {
+            QTest::mouseMove(view, sk->screenOf(x, y));
+            QTest::mouseClick(view, Qt::LeftButton, Qt::NoModifier, sk->screenOf(x, y));
+        };
+        click(0, 0);
+        click(20, 0);  // a line along X; the chain now ends at (20, 0)
+        // press on the end, drag up and round, let go at (20, 20): a half circle bulging to +X
+        QTest::mousePress(view, Qt::LeftButton, Qt::NoModifier, sk->screenOf(20, 0));
+        QTest::mouseMove(view, sk->screenOf(26, 4));
+        QCOMPARE(int(sk->tool()), int(SketchEditor::Tool::TangentArc));
+        QTest::mouseMove(view, sk->screenOf(20, 20));
+        QTest::mouseRelease(view, Qt::LeftButton, Qt::NoModifier, sk->screenOf(20, 20));
+        QVERIFY2(sk->message().isEmpty(), qPrintable(sk->message()));
+        QCOMPARE(int(sk->tool()), int(SketchEditor::Tool::Line));  // back to lines
+        int arcs = 0;
+        for (auto& [id, e] : sk->sketch().entities()) {
+            if (e.type == jig::EntityType::Arc) {
+                ++arcs;
+                QVERIFY(std::abs(e.r - 10) < 1e-6);
+            }
+        }
+        QCOMPARE(arcs, 1);
+        // the next click goes on from the arc's end with a line
+        click(0, 20);
+        int lines = 0;
+        for (auto& [id, e] : sk->sketch().entities()) {
+            lines += e.type == jig::EntityType::Line;
+        }
+        QCOMPARE(lines, 2);
+        click(0, 0);  // closing the outline: a D shape, 20 x 20 plus a half circle of radius 10
+        double a = 0;
+        for (auto& rg : w.document().state().sketches.begin()->second->profiles.regions) {
+            a += rg.area;
+        }
+        QVERIFY2(std::abs(a - (400 + M_PI * 50)) < 1e-3, qPrintable(QString::number(a)));
+    }
+
     // Slice while sketching: the view is cut at the sketch plane, and only while sketching.
     void sketchSlice()
     {

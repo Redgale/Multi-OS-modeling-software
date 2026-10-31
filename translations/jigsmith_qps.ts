@@ -6713,22 +6713,17 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
     </message>
     <message>
         <location line="+0" />
-        <location line="+630" />
+        <location line="+677" />
         <source>Spacing</source>
         <translation>[Spáçîñg~~]</translation>
     </message>
     <message>
-        <location line="-596" />
+        <location line="-613" />
         <source>Click to select, drag to move what is still free. Delete removes the selection.</source>
         <translation>[Çlîçk tö séléçt, drág tö mövé whát îs stîll fréé. Délété rémövés thé séléçtîöñ.~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+2" />
-        <source>Click the end, or type a length (Tab: angle) and press Enter. Click the first point to close. Esc ends.</source>
-        <translation>[Çlîçk thé éñd, ör týpé á léñgth (Táb: áñglé) áñd préss Éñtér. Çlîçk thé fîrst pöîñt tö çlösé. Ésç éñds.~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
-    </message>
-    <message>
-        <location line="+1" />
+        <location line="+4" />
         <source>Click where the line starts.</source>
         <translation>[Çlîçk whéré thé lîñé stárts.~~~~~~~]</translation>
     </message>
@@ -7047,12 +7042,12 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
     </message>
     <message>
         <location line="+11" />
-        <location line="+557" />
+        <location line="+573" />
         <source>Type the words for the text.</source>
         <translation>[Týpé thé wörds för thé téxt.~~~~~~~]</translation>
     </message>
     <message>
-        <location line="-545" />
+        <location line="-561" />
         <source>Edit text</source>
         <translation>[Édît téxt~~]</translation>
     </message>
@@ -7067,12 +7062,12 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
         <translation>[Thát îs stráîght áhéád öf thé çürvé: üsé á lîñé, ör çlîçk öff tö öñé sîdé.~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+11" />
+        <location line="+12" />
         <source>Tangent arc</source>
         <translation>[Táñgéñt árç~~~]</translation>
     </message>
     <message>
-        <location line="+24" />
+        <location line="+39" />
         <source>2-point circle</source>
         <translation>[2-pöîñt çîrçlé~~~]</translation>
     </message>
@@ -7098,12 +7093,12 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
     </message>
     <message>
         <location line="+16" />
-        <location line="+811" />
+        <location line="+827" />
         <source>Minor radius</source>
         <translation>[Mîñör rádîüs~~~]</translation>
     </message>
     <message>
-        <location line="-790" />
+        <location line="-806" />
         <source>Ellipse</source>
         <translation>[Éllîpsé~~]</translation>
     </message>
@@ -7138,25 +7133,34 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
         <translation>[Lîñé~]</translation>
     </message>
     <message>
-        <location line="+11" />
-        <location line="+635" />
+        <location line="-260" />
+        <location line="+271" />
+        <location line="+651" />
         <location line="+101" />
         <location line="+27" />
         <location line="+3" />
+        <location line="+15" />
         <source>Length</source>
         <translation>[Léñgth~~]</translation>
     </message>
     <message>
-        <location line="-766" />
+        <location line="-1491" />
+        <source>Click the end, or type a length (Tab: angle) and press Enter. Drag from the last point for a tangent arc. Click the first point to close. Esc ends.</source>
+        <translation>[Çlîçk thé éñd, ör týpé á léñgth (Táb: áñglé) áñd préss Éñtér. Drág fröm thé lást pöîñt för á táñgéñt árç. Çlîçk thé fîrst pöîñt tö çlösé. Ésç éñds.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+423" />
+        <location line="+271" />
         <location line="+77" />
-        <location line="+668" />
+        <location line="+684" />
         <location line="+18" />
-        <location line="+112" />
+        <location line="+18" />
+        <location line="+100" />
         <source>Angle</source>
         <translation>[Áñglé~]</translation>
     </message>
     <message>
-        <location line="-835" />
+        <location line="-857" />
         <source>Center rectangle</source>
         <translation>[Çéñtér réçtáñglé~~~~~]</translation>
     </message>
@@ -7192,13 +7196,13 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
     </message>
     <message>
         <location line="+16" />
-        <location line="+590" />
-        <location line="+124" />
+        <location line="+606" />
+        <location line="+130" />
         <source>Width</source>
         <translation>[Wîdth~]</translation>
     </message>
     <message>
-        <location line="-682" />
+        <location line="-704" />
         <source>Slot</source>
         <translation>[Slöt~]</translation>
     </message>
@@ -7209,13 +7213,13 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
     </message>
     <message>
         <location line="+7" />
-        <location line="+526" />
-        <location line="+154" />
+        <location line="+542" />
+        <location line="+160" />
         <source>Text</source>
         <translation>[Téxt~]</translation>
     </message>
     <message>
-        <location line="-667" />
+        <location line="-689" />
         <source>A polygon needs 3 to 64 sides.</source>
         <translation>[Á pölýgöñ ñééds 3 tö 64 sîdés.~~~~~~]</translation>
     </message>
@@ -7225,7 +7229,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
         <translation>[Pölýgöñ~~]</translation>
     </message>
     <message>
-        <location line="+136" />
+        <location line="+152" />
         <source>Drag</source>
         <translation>[Drág~]</translation>
     </message>
@@ -7362,17 +7366,17 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
     </message>
     <message>
         <location line="+6" />
-        <location line="+154" />
+        <location line="+160" />
         <source>Size</source>
         <translation>[Sîzé~]</translation>
     </message>
     <message>
-        <location line="-143" />
+        <location line="-149" />
         <source>Height</source>
         <translation>[Héîght~~]</translation>
     </message>
     <message>
-        <location line="+93" />
+        <location line="+99" />
         <source>Constraint selected: press Delete to remove it. Double-click a dimension to change it.</source>
         <translation>[Çöñstráîñt séléçtéd: préss Délété tö rémövé ît. Döüblé-çlîçk á dîméñsîöñ tö çháñgé ît.~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
