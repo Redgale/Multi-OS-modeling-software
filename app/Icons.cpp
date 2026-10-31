@@ -33,6 +33,8 @@ const std::map<QString, QString>& icons()
         {"file.save_as", "M4 4 L15 4 L18 7 L18 12 M4 4 L4 20 L11 20 M8 4 L8 9 L14 9 L14 4 a M13 21 L14 17 L20 11 L22 13 L16 19 Z"},
         {"file.export_stl", "M3 19 L12 4 L21 19 Z M7.5 11.5 L16.5 11.5 M12 19 L7.5 11.5 M12 19 L16.5 11.5 a M17 3 L21 3 L21 7 M21 3 L15 9"},
         {"file.export_step", "M4 8 L12 4 L20 8 L20 17 L12 21 L4 17 Z M4 8 L12 12 L20 8 M12 12 L12 21 a M16 2 L22 2 L22 8 M22 2 L17 7"},
+        {"file.save_version", "M4 4 L15 4 L18 7 L18 20 L4 20 Z M8 4 L8 9 L14 9 L14 4 a O15 16 4 M15 14 L15 16 L16.5 17"},
+        {"file.versions", "O12 12 9 a M12 7 L12 12 L15 14 M3 12 L1 10 M3 12 L5 10"},
         {"file.export_3mf", "M4 4 L20 4 L20 15 L4 15 Z M8 15 L8 20 L16 20 L16 15 f R9 9 6 3 a M12 4 L12 9"},
         {"edit.undo", "M9 6 L4 11 L9 16 M4 11 L14 11 Q20 11 20 16 Q20 20 15 20"},
         {"edit.redo", "M15 6 L20 11 L15 16 M20 11 L10 11 Q4 11 4 16 Q4 20 9 20"},

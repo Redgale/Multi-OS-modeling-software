@@ -10,6 +10,7 @@
 #include <sstream>
 #include <locale>
 #include <cmath>
+#include <ctime>
 #include <miniz.h>
 #include <TopoDS_Face.hxx>
 #include <TopoDS.hxx>
@@ -28,6 +29,34 @@ namespace
 
 constexpr size_t kMaxJsonBytes = 64u * 1024u * 1024u;
 constexpr const char* kFormatName = "jigsmith-design";
+
+// Every "versions/…" entry of an existing design file (empty when there is none).
+std::map<std::string, std::string> readVersionEntries(const std::string& path)
+{
+    std::map<std::string, std::string> out;
+    mz_zip_archive zip;
+    std::memset(&zip, 0, sizeof zip);
+    if (!mz_zip_reader_init_file(&zip, path.c_str(), 0)) {
+        return out;
+    }
+    const mz_uint n = mz_zip_reader_get_num_files(&zip);
+    for (mz_uint i = 0; i < n; ++i) {
+        mz_zip_archive_file_stat st;
+        if (!mz_zip_reader_file_stat(&zip, i, &st) || st.m_uncomp_size > kMaxJsonBytes) {
+            continue;
+        }
+        const std::string name = st.m_filename;
+        if (name.rfind("versions/", 0) != 0) {
+            continue;
+        }
+        std::string data(size_t(st.m_uncomp_size), '\0');
+        if (mz_zip_reader_extract_to_mem(&zip, i, data.data(), data.size(), 0)) {
+            out[name] = std::move(data);
+        }
+    }
+    mz_zip_reader_end(&zip);
+    return out;
+}
 
 Result<std::unique_ptr<Document>> readArchive(mz_zip_archive& zip)
 {
@@ -68,7 +97,95 @@ std::string appVersion()
     return JIG_VERSION_STRING;
 }
 
+Result<bool> writeDesign(const Document& doc, const std::string& path, const std::string& thumbnailPng,
+                         const std::map<std::string, std::string>& versions);
+
 Result<bool> saveDocument(const Document& doc, const std::string& path, const std::string& thumbnailPng)
+{
+    // versions saved earlier in this file are kept
+    return writeDesign(doc, path, thumbnailPng, readVersionEntries(path));
+}
+
+namespace
+{
+std::string nowUtc()
+{
+    const std::time_t t = std::time(nullptr);
+    std::tm tm {};
+#ifdef _WIN32
+    gmtime_s(&tm, &t);
+#else
+    gmtime_r(&t, &tm);
+#endif
+    char buf[32];
+    std::strftime(buf, sizeof buf, "%Y-%m-%dT%H:%M:%SZ", &tm);
+    return buf;
+}
+}  // namespace
+
+Result<int> saveVersion(const Document& doc, const std::string& path, const std::string& label)
+{
+    auto versions = readVersionEntries(path);
+    nlohmann::json index = nlohmann::json::array();
+    if (auto it = versions.find("versions/index.json"); it != versions.end()) {
+        index = nlohmann::json::parse(it->second, nullptr, false);
+        if (!index.is_array()) {
+            index = nlohmann::json::array();
+        }
+    }
+    int next = 1;
+    for (auto& v : index) {
+        next = std::max(next, v.value("number", 0) + 1);
+    }
+    const std::string body = doc.toJson().dump(2) + "\n";
+    versions["versions/" + std::to_string(next) + ".json"] = body;
+    index.push_back({{"number", next}, {"label", label}, {"saved", nowUtc()}, {"steps", doc.model().features.size()}});
+    versions["versions/index.json"] = index.dump(2) + "\n";
+    auto r = writeDesign(doc, path, {}, versions);  // saving a version also saves the design
+    if (!r) {
+        return r.error();
+    }
+    return next;
+}
+
+Result<std::vector<VersionInfo>> listVersions(const std::string& path)
+{
+    std::vector<VersionInfo> out;
+    auto versions = readVersionEntries(path);
+    auto it = versions.find("versions/index.json");
+    if (it == versions.end()) {
+        return out;
+    }
+    auto index = nlohmann::json::parse(it->second, nullptr, false);
+    if (!index.is_array()) {
+        return makeError("file.damaged", "The list of versions in this file is damaged.");
+    }
+    for (auto& v : index) {
+        if (!v.is_object()) {
+            continue;
+        }
+        out.push_back({v.value("number", 0), v.value("label", std::string {}), v.value("saved", std::string {}),
+                       v.value("steps", 0)});
+    }
+    return out;
+}
+
+Result<std::unique_ptr<Document>> loadVersion(const std::string& path, int number)
+{
+    auto versions = readVersionEntries(path);
+    auto it = versions.find("versions/" + std::to_string(number) + ".json");
+    if (it == versions.end()) {
+        return makeError("file.version_missing", "That version is not in this file.");
+    }
+    auto j = nlohmann::json::parse(it->second, nullptr, false);
+    if (j.is_discarded()) {
+        return makeError("file.damaged", "That version is damaged.");
+    }
+    return Document::fromJson(j);
+}
+
+Result<bool> writeDesign(const Document& doc, const std::string& path, const std::string& thumbnailPng,
+                         const std::map<std::string, std::string>& versions)
 {
     namespace fs = std::filesystem;
     nlohmann::json manifest {{"format", kFormatName},
@@ -92,6 +209,9 @@ Result<bool> saveDocument(const Document& doc, const std::string& path, const st
     if (ok && !thumbnailPng.empty()) {
         ok = mz_zip_writer_add_mem(&zip, "thumbnail.png", thumbnailPng.data(), thumbnailPng.size(),
                                    MZ_NO_COMPRESSION);
+    }
+    for (auto& [name, data] : versions) {
+        ok = ok && mz_zip_writer_add_mem(&zip, name.c_str(), data.data(), data.size(), MZ_BEST_COMPRESSION);
     }
     ok = ok && mz_zip_writer_finalize_archive(&zip);
     mz_zip_writer_end(&zip);

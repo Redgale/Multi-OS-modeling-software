@@ -261,3 +261,37 @@ TEST(Document, ReorderStepsSafely)
     ScriptRunner r(*doc);
     ASSERT_TRUE(r.runLine("reorder s2 after=e1").ok());
 }
+
+TEST(Document, VersionsTravelInsideTheFile)
+{
+    auto doc = build("param w = 40 mm\nsketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=w h=20\n"
+                     "extrude id=e1 sketch=s1 distance=10\n");
+    const auto path = (tempDir() / "versions.jig").string();
+    std::filesystem::remove(path);
+    auto v1 = saveVersion(*doc, path, "first try");
+    ASSERT_TRUE(v1.ok()) << v1.error().message;
+    EXPECT_EQ(v1.value(), 1);
+    run(*doc, "param w = 60 mm");
+    ASSERT_TRUE(saveDocument(*doc, path).ok());  // an ordinary save keeps the versions
+    auto v2 = saveVersion(*doc, path, "wider");
+    ASSERT_TRUE(v2.ok());
+    EXPECT_EQ(v2.value(), 2);
+    auto list = listVersions(path);
+    ASSERT_TRUE(list.ok());
+    ASSERT_EQ(list->size(), 2u);
+    EXPECT_EQ((*list)[0].label, "first try");
+    EXPECT_EQ((*list)[1].label, "wider");
+    EXPECT_EQ((*list)[0].saved.size(), 20u);  // 2026-10-31T04:00:00Z
+    auto first = loadVersion(path, 1);
+    ASSERT_TRUE(first.ok());
+    EXPECT_NEAR(props(**first).volume, 40 * 20 * 10, 1e-6);
+    auto latest = loadDocument(path);
+    ASSERT_TRUE(latest.ok());
+    EXPECT_NEAR(props(**latest).volume, 60 * 20 * 10, 1e-6);
+    EXPECT_FALSE(loadVersion(path, 7).ok());
+    // a file without versions simply has none
+    const auto plain = (tempDir() / "plain.jig").string();
+    ASSERT_TRUE(saveDocument(*doc, plain).ok());
+    ASSERT_TRUE(listVersions(plain).ok());
+    EXPECT_TRUE(listVersions(plain)->empty());
+}

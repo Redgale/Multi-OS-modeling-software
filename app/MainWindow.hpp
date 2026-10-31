@@ -89,6 +89,11 @@ public:
     // what the file says; returns false and explains when it cannot.
     bool importDxfFile(const QString& path, std::optional<jig::LengthUnit> units = std::nullopt);
     void importSvg();  // Insert > SVG
+    void saveVersionInteractive();
+    bool saveNamedVersion(const QString& label);  // saves first when the design has no file yet
+    void showVersions();
+    bool restoreVersion(int number);              // undoable
+    bool saveTo(const QString& path);             // save without asking (also used by tests)
     bool importSvgFile(const QString& path);
     void openBodyTool(const std::string& tool, const std::string& editId = {});  // combine, split, move
     void openPlane(const std::string& editId = {}, const std::string& kind = "offset");

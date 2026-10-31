@@ -19,6 +19,7 @@
 #include "SketchEditor.hpp"
 #include "Viewport.hpp"
 #include "jig/commands.hpp"
+#include "jig/io.hpp"
 
 using namespace jigapp;
 
@@ -957,6 +958,36 @@ private slots:
         // the menu's "Move later" path, back again
         QVERIFY(w.moveStep("f2", 4));
         QCOMPARE(order(), QString("s1 e1 sh1 f1 f2 s2 e2"));
+    }
+
+    // Versions: save two, restore the first (undoable).
+    void saveAndRestoreVersions()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        QVERIFY(w.openSample("pen_cup"));
+        const QString path = QDir::temp().filePath("jigsmith-ui-versions.jig");
+        QFile::remove(path);
+        QVERIFY(w.saveTo(path));
+        QVERIFY(w.saveNamedVersion("tall"));
+        const double tall = volume(w);
+        {
+            jig::ScriptRunner r(w.document());
+            QVERIFY(r.runLine("param height = 60 mm").ok());
+        }
+        QVERIFY(w.saveNamedVersion("short"));
+        const double shortCup = volume(w);
+        QVERIFY(shortCup < tall);
+        auto list = jig::listVersions(path.toStdString());
+        QVERIFY(list.ok());
+        QCOMPARE(int(list->size()), 2);
+        QVERIFY(w.restoreVersion(1));
+        QVERIFY(std::abs(volume(w) - tall) < 1e-6);
+        w.runCommand("edit.undo");  // the restore is one change
+        QTRY_VERIFY(std::abs(volume(w) - shortCup) < 1e-6);
+        QFile::remove(path);
     }
 
     // Revolve a ring, drill it from its top face, repeat the hole around the axis,

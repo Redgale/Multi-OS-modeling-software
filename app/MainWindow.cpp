@@ -4,6 +4,7 @@
 #include <array>
 
 #include <QAction>
+#include <QLocale>
 #include <QDialogButtonBox>
 #include <QComboBox>
 #include <QFormLayout>
@@ -550,7 +551,7 @@ void MainWindow::buildActions()
 void MainWindow::buildMenus()
 {
     auto* file = menuBar()->addMenu(tr("&File"));
-    for (const char* id : {"file.new", "file.open", "file.save", "file.save_as"}) {
+    for (const char* id : {"file.new", "file.open", "file.save", "file.save_as", "file.save_version", "file.versions"}) {
         file->addAction(registryAction(id));
     }
     file->addSeparator();
@@ -1125,6 +1126,12 @@ void MainWindow::runCommand(const QString& id)
     else if (id == "file.save") {
         save(false);
     }
+    else if (id == "file.save_version") {
+        saveVersionInteractive();
+    }
+    else if (id == "file.versions") {
+        showVersions();
+    }
     else if (id == "file.save_as") {
         save(true);
     }
@@ -1299,6 +1306,110 @@ bool MainWindow::openSample(const QString& name)
     return true;
 }
 
+bool MainWindow::saveNamedVersion(const QString& label)
+{
+    if (path_.isEmpty() && !save(true)) {
+        return false;  // a version lives in the design's file, so it needs one
+    }
+    auto r = jig::saveVersion(*doc_, path_.toStdString(), label.toStdString());
+    if (!r) {
+        QMessageBox::warning(this, tr("Could not save a version"), q(r.error().message));
+        return false;
+    }
+    savedRevision_ = doc_->revision();
+    refreshAll();
+    statusBar()->showMessage(tr("Saved version %1: %2").arg(r.value()).arg(label), 5000);
+    return true;
+}
+
+void MainWindow::saveVersionInteractive()
+{
+    bool ok = false;
+    const QString label = QInputDialog::getText(this, tr("Save version"),
+                                                tr("A short note, e.g. “before rounding the edges”:"),
+                                                QLineEdit::Normal, {}, &ok)
+                              .trimmed();
+    if (ok) {
+        saveNamedVersion(label.isEmpty() ? tr("Version") : label);
+    }
+}
+
+bool MainWindow::restoreVersion(int number)
+{
+    if (path_.isEmpty()) {
+        return false;
+    }
+    auto v = jig::loadVersion(path_.toStdString(), number);
+    if (!v) {
+        QMessageBox::warning(this, tr("Could not restore"), q(v.error().message));
+        return false;
+    }
+    if (sketch_) {
+        exitSketch();
+    }
+    const jig::Model old = v.value()->model();
+    // one undoable change: the whole design becomes the version
+    doc_->transact(tr("Restore version %1").arg(number).toStdString(), [&](jig::Model& m) -> jig::Result<bool> {
+        m = old;
+        return true;
+    });
+    refreshAll();
+    statusBar()->showMessage(tr("Restored version %1. Undo brings back what you had.").arg(number), 6000);
+    return true;
+}
+
+void MainWindow::showVersions()
+{
+    if (path_.isEmpty()) {
+        QMessageBox::information(this, tr("Versions"), tr("This design has not been saved yet, so it has no versions. "
+                                                          "Use File ▸ Save version… to keep a snapshot."));
+        return;
+    }
+    auto list = jig::listVersions(path_.toStdString());
+    if (!list) {
+        QMessageBox::warning(this, tr("Versions"), q(list.error().message));
+        return;
+    }
+    QDialog d(this);
+    d.setWindowTitle(tr("Versions of %1").arg(QFileInfo(path_).fileName()));
+    d.resize(520, 320);
+    auto* lay = new QVBoxLayout(&d);
+    auto* items = new QListWidget(&d);
+    for (auto it = list->rbegin(); it != list->rend(); ++it) {  // newest first
+        QString when = q(it->saved);
+        const QDateTime t = QDateTime::fromString(when, Qt::ISODate);
+        if (t.isValid()) {
+            when = QLocale().toString(t.toLocalTime(), QLocale::ShortFormat);
+        }
+        auto* row = new QListWidgetItem(tr("%1 · %2 · %3 · %n step(s)", "", it->steps)
+                                            .arg(it->number)
+                                            .arg(q(it->label), when),
+                                        items);
+        row->setData(Qt::UserRole, it->number);
+    }
+    if (list->empty()) {
+        new QListWidgetItem(tr("No versions yet. Use File ▸ Save version… to keep one."), items);
+    }
+    auto* note = new QLabel(tr("Restoring replaces the design with the version. It is one change: Undo brings back "
+                               "what you had."),
+                            &d);
+    note->setWordWrap(true);
+    auto* box = new QDialogButtonBox(QDialogButtonBox::Close, &d);
+    auto* restore = box->addButton(tr("Restore into this design"), QDialogButtonBox::ActionRole);
+    restore->setEnabled(false);
+    connect(items, &QListWidget::currentRowChanged, &d,
+            [&] { restore->setEnabled(items->currentItem() && items->currentItem()->data(Qt::UserRole).isValid()); });
+    connect(restore, &QPushButton::clicked, &d, [&] {
+        restoreVersion(items->currentItem()->data(Qt::UserRole).toInt());
+        d.accept();
+    });
+    connect(box, &QDialogButtonBox::rejected, &d, &QDialog::reject);
+    lay->addWidget(items);
+    lay->addWidget(note);
+    lay->addWidget(box);
+    d.exec();
+}
+
 bool MainWindow::save(bool askPath)
 {
     QString p = path_;
@@ -1312,6 +1423,11 @@ bool MainWindow::save(bool askPath)
             p += ".jig";
         }
     }
+    return saveTo(p);
+}
+
+bool MainWindow::saveTo(const QString& p)
+{
     auto r = jig::saveDocument(*doc_, p.toStdString());
     if (!r) {
         QMessageBox::warning(this, tr("Could not save"), q(r.error().message));

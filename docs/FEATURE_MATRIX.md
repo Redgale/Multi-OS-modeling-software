@@ -25,7 +25,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Marking menu | 4 | v0.1 SHOULD (M7), v0.2 MUST | — | Brief |
 | Quick-access search (S) | 4 | v0.1 | yes: Ctrl/Cmd+K and S, alias search | Principle 9 |
 | Data panel, hubs, projects (cloud) | 3 | never | — | Local-first; replaced by files + local versions |
-| Version history and restore | 3 | v0.1 M6 | — | Local snapshots (PREFLIGHT A-6) |
+| Version history and restore | 3 | v0.1 M6 | **app**: named versions inside the .jig, list, restore (undoable) | Local snapshots (PREFLIGHT A-6) |
 | Home start page | 3 | v0.1 | welcome dialog | First-run requirement |
 | Navigation: pan, orbit, zoom to cursor, fit | 5 | v0.1 | yes, four presets | Principle 12 |
 | ViewCube (faces, edges, corners, home, drag) | 5 | v0.1 | axis gizmo: 6 views + Home + Fit | Original design, not a cube clone |

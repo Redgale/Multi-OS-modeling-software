@@ -64,6 +64,8 @@ CommandRegistry::CommandRegistry()
     add({"file.open", "Open…", "Open", "FILE", "Open a Jigsmith design (.jig) from your computer.", "Ctrl+O", {"load"}, true, true, false, ""});
     add({"file.save", "Save", "Save", "FILE", "Save your design to a .jig file on your computer.", "Ctrl+S", {"store", "keep"}, true, true, true, ""});
     add({"file.save_as", "Save as…", "Save As", "FILE", "Save a copy under a new name, e.g. for a size variant.", "Ctrl+Shift+S", {"copy", "variant"}, false, true, false, ""});
+    add({"file.save_version", "Save version…", "Save Version", "FILE", "Keep a named snapshot of this design inside its file.", "", {"snapshot", "milestone", "history", "backup"}, true, true, false, ""});
+    add({"file.versions", "Versions…", "Versions", "FILE", "See the snapshots saved in this file and restore one.", "", {"history", "go back", "restore", "snapshot"}, true, true, false, ""});
     add({"file.export_stl", "Export STL…", "Export STL", "FILE", "Save a triangle mesh for your 3D-printer slicer.", "", {"3d print", "slicer", "mesh", "print"}, true, true, true, ""});
     add({"file.export_step", "Export STEP…", "Export STEP", "FILE", "Save an exact solid that other CAD programs can open.", "", {"cad exchange", "stp", "share"}, false, true, true, ""});
     add({"file.export_3mf", "Export 3MF…", "Export 3MF", "FILE", "Save a modern print file that remembers units.", "", {"3d print", "slicer", "print"}, false, false, false, m6});
