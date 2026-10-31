@@ -53,6 +53,7 @@ ounces) is shown in inches. The owner's standing instruction is in `CLAUDE.md`.
 | Offset (M1 part) | Click a curve or any curve of a closed outline, type a distance: a closed outline of lines and arcs is offset outward (positive) or inward with sharp corners (OCCT planar offset turned back into sketch lines and arcs); a single line moves to its left (kept parallel); a circle or arc grows (kept concentric); an inward offset that cannot fit is explained. The copy is not linked to the original's later changes (no offset dimension yet) | `SketchOffset.OutlinesAndSingleCurves` (rectangle out and in, slot with arcs, circle, line, too-far inward); UI test offsets a rectangle 3 mm inward by clicking a side |
 | Constraint selection and editing (M1 part) | Click a constraint glyph or dimension label to select it (outlined, not only coloured; Shift adds), Delete removes it; double-click a dimension to change its value (a plain number uses the design's unit); dimension labels show values in the design's unit | UI test changes a typed 60 mm width to 50 mm by double-clicking its label, then selects the 40 mm dimension by clicking it and deletes it (one more degree of freedom) |
 | Extrude options (M2 part) | Two sides (a second distance), taper (each side narrows away from the sketch plane; negative widens; height is the true vertical distance), thin wall (centred, inside or outside the outline) on closed areas; panel shows the extra fields only when used | `ExtrudeOptions.TwoSidesTaperAndThin` (frustum volumes by formula, all three wall positions, too steep refused); UI test makes a 2 mm thin-walled box, then edits it to two sides with a 5° taper |
+| Round corner (sketch fillet, M1 part) | Click where two lines meet, type a radius: a tangent arc replaces the corner (tangency held by constraints), the radius is a dimension (expressions and parameters work), the sharp corner stays as a hidden point so the part's overall sizes still hold; a radius that does not fit is explained. Script command `round` | `SketchRound.CornersBecomeTangentArcs` (all four corners of a rectangle: area by formula, 10 faces after extrude, sizes kept; radius changed by a parameter; too big refused); UI test rounds a corner by clicking |
 | Units and themes | Per-design length unit saved in the file; Settings dialog (theme with live preview, this design's unit, unit for new designs); plain numbers typed into size fields, sketch value boxes, parameters and scripts are stored with the unit written out, so changing units never resizes anything; display of lengths, areas (in², cm²), volumes (in³, cm³), weight (oz and g), filament length (ft and m), sketch measurements, Measure, Properties, browser, hover text and status bar in the design's unit; inch-friendly snap grid (1/64 in to 10 ft) and a quarter-inch 3D floor grid with inch lines; new units `yd`, `thou`, `mil`; Dark is the default theme | `Units.FormattingAndTypedInput`, `Document.InchDesignsReadPlainNumbersAsInches` (inch script with a parameter-driven shell, volume by hand, save/load, unit switch does not resize); UI test `darkDefaultAndInchDesign` (dark palette with no saved setting, typed 2 × 1 rectangle and 0.25 extrude in an inch design, Measure "0.25 in" and "2 in²", Properties in³/oz/inches, undo of the unit change) |
 | Parameters (M5 part) | Table dialog: name, value with units/expressions, kind, live result, comment; refuses invalid names, duplicates, cycles | exercised manually under Xvfb only (no automated UI test yet: B-015) |
 | Performance | All headless budgets met | `jigsmith-bench`, numbers in PHASE1_REPORT.md |
@@ -86,7 +87,7 @@ and packaged but its window is not exercised in CI (B-003). Builds are unsigned.
 ## What is stubbed or not started
 
 - M1 still missing: 3-point and tangent arcs, Ellipse and Spline tools,
-  Extend/Break/sketch Fillet/Mirror/patterns, associative offset, window selection, collinear/concentric, Project/Include.
+  Extend/Break/sketch Mirror/patterns, associative offset, window selection, collinear/concentric, Project/Include.
 - M2 still missing: extrude drag handle on the canvas, extrude to object, thin walls from
   open curves,
   Browser visibility/isolate/rename, selection filters, Select Other, timeline reorder and
@@ -117,7 +118,7 @@ and packaged but its window is not exercised in CI (B-003). Builds are unsigned.
 
 ## Next three tasks
 
-1. Finish M1's remaining sketch tools (3-point arc, sketch fillet, Ellipse, Spline, Extend,
+1. Finish M1's remaining sketch tools (3-point arc, Ellipse, Spline, Extend,
    Break, sketch Mirror and patterns).
 2. **B-001 libslvs spike** in an environment where building SolveSpace is allowed.
 3. Windows/macOS GUI screenshots in CI (B-003); Windows DLL audit (B-011).

@@ -68,7 +68,7 @@ SketchEditor::SketchEditor(Viewport* view, jig::Document& doc, std::string featu
         inputLabels_.push_back(l);
         inputFields_.push_back(f);
         connect(f, &QLineEdit::returnPressed, this, [this] {
-            if (dimTarget_ || editText_ || editConstraint_ || !offsetChain_.empty()) {
+            if (dimTarget_ || editText_ || editConstraint_ || roundAt_ || !offsetChain_.empty()) {
                 placeSecond(cursor_, inputValues());
                 return;
             }
@@ -357,6 +357,7 @@ void SketchEditor::setTool(Tool t)
 void SketchEditor::resetToolState()
 {
     editConstraint_ = 0;
+    roundAt_.reset();
     trimHover_.reset();
     offsetHover_.clear();
     offsetChain_.clear();
@@ -402,6 +403,9 @@ QString SketchEditor::toolHint() const
                           : tr("Click where the middle of the text goes.");
         case Tool::Trim:
             return tr("Click the piece of a curve to remove. It is cut where other curves cross it.");
+        case Tool::Round:
+            return roundAt_ ? tr("Type the radius and press Enter.")
+                            : tr("Click the corner where two lines meet to round it.");
         case Tool::Offset:
             return offsetChain_.empty()
                        ? tr("Click a curve, or any curve of a closed outline, to copy it at a distance.")
@@ -538,6 +542,30 @@ void SketchEditor::placeSecond(const Snap& cur, const QStringList& rawTyped)
         s.removeConstraint(editConstraint_);
         s.addConstraint(k.type, k.a, k.b, k.c, expr);
         if (commit(tr("Change dimension"), s)) {
+            resetToolState();
+        }
+        rebuildOverlay();
+        emit stateChanged();
+        return;
+    }
+    if (roundAt_) {
+        if (typed.isEmpty() || typed[0].isEmpty()) {
+            return;
+        }
+        auto r = doc_.evalLength(typed[0].toStdString());
+        if (!r) {
+            message_ = QString::fromStdString(r.error().message);
+            emit stateChanged();
+            return;
+        }
+        jig::Sketch s = work_;
+        auto arc = s.filletCorner(roundAt_->x(), roundAt_->y(), r.value(), typed[0].toStdString());
+        if (!arc) {
+            message_ = QString::fromStdString(arc.error().message);
+            emit stateChanged();
+            return;
+        }
+        if (commit(tr("Round corner"), s)) {
             resetToolState();
         }
         rebuildOverlay();
@@ -1009,6 +1037,18 @@ bool SketchEditor::mouseRelease(QMouseEvent* e)
             }
             break;
         }
+        case Tool::Round: {
+            auto loc = toLocal(pos);
+            if (!loc) {
+                break;
+            }
+            roundAt_ = *loc;
+            showInput({tr("Radius")}, {QString::fromStdString(doc_.defaultLength(3, 0.125))});
+            inputFields_[0]->selectAll();
+            inputFields_[0]->setFocus();
+            inputBox_->move(pos.toPoint() + QPoint(18, 18));
+            break;
+        }
         case Tool::Offset: {
             if (!offsetChain_.empty() || offsetHover_.empty()) {
                 if (offsetHover_.empty()) {
@@ -1242,7 +1282,7 @@ bool SketchEditor::mouseDoubleClick(QMouseEvent* e)
 bool SketchEditor::key(QKeyEvent* e)
 {
     if (e->key() == Qt::Key_Escape) {
-        if (first_ || dimFirst_ || dimTarget_ || editConstraint_ || editText_ || !offsetChain_.empty()) {
+        if (first_ || dimFirst_ || dimTarget_ || editConstraint_ || editText_ || roundAt_ || !offsetChain_.empty()) {
             resetToolState();
         }
         else if (tool_ != Tool::Select) {

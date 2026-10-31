@@ -601,3 +601,32 @@ TEST(ExtrudeOptions, TwoSidesTaperAndThin)
     ASSERT_TRUE(r.runText(sq + "extrude id=e1 sketch=s1 distance=200 taper=10deg\n").ok());
     EXPECT_EQ(int(bad->status(1).level), int(StatusLevel::Error));
 }
+
+TEST(SketchRound, CornersBecomeTangentArcs)
+{
+    // round all four corners of a 40 x 20 rectangle with r = 5: area 800 - 4 (r^2 - pi r^2 / 4)
+    auto doc = build("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=40 h=20\n"
+                     "round sketch=s1 at=20,10 r=5\nround sketch=s1 at=-20,10 r=5\n"
+                     "round sketch=s1 at=-20,-10 r=5\nround sketch=s1 at=20,-10 r=5\n"
+                     "extrude id=e1 sketch=s1 distance=10\n");
+    expectAllOk(*doc);
+    const auto& regions = doc->state().sketches.at("s1")->profiles.regions;
+    ASSERT_EQ(regions.size(), 1u);
+    EXPECT_NEAR(regions[0].area, 800 - 4 * (25 - pi * 25 / 4), 1e-6);
+    // the rounded block has 4 quarter-cylinder faces, and the size dimensions still hold
+    auto p = props(*doc);
+    EXPECT_EQ(p.faces, 10);
+    EXPECT_NEAR(p.xmax - p.xmin, 40, 1e-9);
+    EXPECT_NEAR(p.ymax - p.ymin, 20, 1e-9);
+    // the radius follows a parameter
+    auto prm = build("param rr = 3 mm\nsketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=40 h=20\nround sketch=s1 at=20,10 r=rr\n");
+    run(*prm, "param rr = 6 mm");
+    expectAllOk(*prm);
+    EXPECT_NEAR(prm->state().sketches.at("s1")->profiles.regions[0].area, 800 - (36 - pi * 36 / 4), 1e-6);
+    // too big for the corner is explained
+    auto bad = std::make_unique<Document>();
+    ScriptRunner r(*bad);
+    auto res = r.runText("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=40 h=20\nround sketch=s1 at=20,10 r=25\n");
+    ASSERT_FALSE(res.ok());
+    EXPECT_NE(res.error().message.find("does not fit"), std::string::npos) << res.error().message;
+}

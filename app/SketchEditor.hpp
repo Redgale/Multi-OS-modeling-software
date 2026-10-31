@@ -45,6 +45,7 @@ public:
         Text,     // click the centre, type the words and the size
         Trim,     // click the piece of a curve to remove (between its crossings)
         Offset,   // click a curve (or a closed outline), type the distance
+        Round,    // click a corner where two lines meet, type the radius
         Point,
         Dimension
     };
@@ -171,7 +172,8 @@ private:
     std::vector<int> offsetHover_, offsetChain_;        // Offset: under the cursor / chosen
     std::vector<std::pair<int, QRectF>> glyphBoxes_;     // constraint glyphs as last painted
     std::set<int> selectedConstraints_;
-    int editConstraint_ = 0;                             // dimension being changed (double-click)
+    int editConstraint_ = 0;
+    std::optional<QPointF> roundAt_;                     // Round: the corner clicked                             // dimension being changed (double-click)
     int glyphAt(const QPointF& screen) const;
     QString lastTextHeight_;  // empty: the design's default size               // text being changed (double-click on its anchor)
     std::vector<std::vector<QVector3D>> textEdges_;  // glyph outlines, for drawing

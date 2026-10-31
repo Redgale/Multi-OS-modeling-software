@@ -382,6 +382,103 @@ std::optional<std::pair<int, double>> Sketch::curveNear(double x, double y) cons
     return best;
 }
 
+Result<int> Sketch::filletCorner(double x, double y, double r, const std::string& radiusExpr)
+{
+    if (!(r > 1e-9)) {
+        return makeError("sketch.fillet", "The corner radius must be larger than zero.");
+    }
+    // the corner: the line end nearest (x, y) that is shared with another line's end
+    struct End
+    {
+        int line, point;  // point id of this end
+        double px, py, ox, oy;  // the corner and the line's other end
+    };
+    std::vector<End> ends;
+    for (auto& [id, e] : entities_) {
+        if (e.type != EntityType::Line || e.construction) {
+            continue;
+        }
+        auto [ax, ay] = pointXY(e.p1);
+        auto [bx, by] = pointXY(e.p2);
+        ends.push_back({id, e.p1, ax, ay, bx, by});
+        ends.push_back({id, e.p2, bx, by, ax, ay});
+    }
+    std::optional<std::pair<End, End>> best;
+    double bestD = 1e300;
+    for (size_t i = 0; i < ends.size(); ++i) {
+        for (size_t j = i + 1; j < ends.size(); ++j) {
+            const End &a = ends[i], &b = ends[j];
+            if (a.line == b.line || std::hypot(a.px - b.px, a.py - b.py) > 1e-6) {
+                continue;
+            }
+            const double d = std::hypot(a.px - x, a.py - y);
+            if (d < bestD) {
+                bestD = d;
+                best = std::pair {a, b};
+            }
+        }
+    }
+    if (!best) {
+        return makeError("sketch.fillet", "There is no corner where two lines meet here.",
+                         {"Click near the point where two lines join."});
+    }
+    const End a = best->first, b = best->second;
+    const double px = a.px, py = a.py;
+    double u1x = a.ox - px, u1y = a.oy - py, u2x = b.ox - px, u2y = b.oy - py;
+    const double L1 = std::hypot(u1x, u1y), L2 = std::hypot(u2x, u2y);
+    u1x /= L1, u1y /= L1, u2x /= L2, u2y /= L2;
+    const double angle = std::acos(std::clamp(u1x * u2x + u1y * u2y, -1.0, 1.0));
+    if (angle < 1e-6 || angle > std::numbers::pi - 1e-6) {
+        return makeError("sketch.fillet", "These lines are in a straight line: there is no corner to round.");
+    }
+    const double d = r / std::tan(angle / 2);  // corner to tangent points
+    if (d >= L1 - 1e-9 || d >= L2 - 1e-9) {
+        return makeError("sketch.fillet", "A " + std::to_string(r) + " mm round does not fit this corner.",
+                         {"Use a smaller radius: the round must fit on both lines."});
+    }
+    const double t1x = px + u1x * d, t1y = py + u1y * d, t2x = px + u2x * d, t2y = py + u2y * d;
+    double bx = u1x + u2x, by = u1y + u2y;
+    const double bl = std::hypot(bx, by);
+    bx /= bl, by /= bl;
+    const double cx = px + bx * r / std::sin(angle / 2), cy = py + by * r / std::sin(angle / 2);
+    const int T1 = addPoint(t1x, t1y, true), T2 = addPoint(t2x, t2y, true), C = addPoint(cx, cy, true);
+    // re-end the lines at the tangent points
+    for (auto [e, tp] : {std::pair {a, T1}, std::pair {b, T2}}) {
+        SketchEntity& l = entities_.at(e.line);
+        (l.p1 == e.point ? l.p1 : l.p2) = tp;
+    }
+    // counter-clockwise from one tangent point to the other, the short way round
+    double a1 = std::atan2(t1y - cy, t1x - cx), a2 = std::atan2(t2y - cy, t2x - cx);
+    const double sweep = std::fmod(a2 - a1 + 4 * std::numbers::pi, 2 * std::numbers::pi);
+    const bool fromT1 = sweep < std::numbers::pi;
+    const int arc = fromT1 ? addArcOn(C, T1, T2, r, a1, a1 + sweep)
+                           : addArcOn(C, T2, T1, r, a2, a2 + (2 * std::numbers::pi - sweep));
+    // tangency: each line perpendicular to the radius through its tangent point
+    for (auto [line, tp] : {std::pair {a.line, T1}, std::pair {b.line, T2}}) {
+        const int radial = addLine(C, tp);
+        setConstruction(radial, true);
+        addConstraint(ConstraintType::Perpendicular, line, radial);
+    }
+    addConstraint(ConstraintType::Radius, arc, 0, 0, radiusExpr);
+    // The sharp corner stays as a hidden "virtual" point on both lines, so the part's
+    // overall sizes still hold: a line's length dimension now runs from its far end to
+    // that corner.
+    if (b.point != a.point) {
+        addConstraint(ConstraintType::Coincident, a.point, b.point);
+    }
+    addConstraint(ConstraintType::PointOnCurve, a.point, a.line);
+    addConstraint(ConstraintType::PointOnCurve, a.point, b.line);
+    for (auto& [cid, c] : constraints_) {
+        if (c.type == ConstraintType::Distance && !c.b && (c.a == a.line || c.a == b.line)) {
+            const SketchEntity& l = entities_.at(c.a);
+            const int far = (c.a == a.line) ? (l.p1 == T1 ? l.p2 : l.p1) : (l.p1 == T2 ? l.p2 : l.p1);
+            c.a = far;
+            c.b = a.point;
+        }
+    }
+    return arc;
+}
+
 std::vector<int> Sketch::chainOf(int curve) const
 {
     const SketchEntity* start = entity(curve);

@@ -728,6 +728,18 @@ private slots:
             }
         }
         QCOMPARE(at7, 4);
+
+        // Round corner: click the rectangle's bottom-left corner, type 4 mm
+        w.runCommand("sketch.fillet");
+        QCOMPARE(int(sk->tool()), int(SketchEditor::Tool::Round));
+        click(-10, -10);
+        sk->typeValues({"4 mm"});
+        QVERIFY2(sk->message().isEmpty(), qPrintable(sk->message()));
+        int arcsNow = 0;
+        for (auto& [id, e] : sk->sketch().entities()) {
+            arcsNow += e.type == jig::EntityType::Arc && std::abs(e.r - 4) < 1e-9;
+        }
+        QCOMPARE(arcsNow, 1);
     }
 
     // Constraints and dimensions: click a glyph to select it, Delete removes it;

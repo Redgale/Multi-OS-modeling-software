@@ -143,7 +143,7 @@ CommandRegistry::CommandRegistry()
     // shell, revolve, hole, patterns, mirror, parameters). Everything else above keeps its "coming in" note.
     static const std::set<std::string> inApp {
         "sketch.create", "sketch.finish", "sketch.line", "sketch.rectangle", "sketch.circle", "sketch.point",
-        "sketch.arc", "sketch.slot", "sketch.polygon", "sketch.text", "sketch.trim", "sketch.offset",
+        "sketch.arc", "sketch.slot", "sketch.polygon", "sketch.text", "sketch.trim", "sketch.offset", "sketch.fillet",
         "sketch.dimension", "sketch.construction", "constraint.coincident", "constraint.midpoint", "constraint.fix",
         "constraint.parallel", "constraint.perpendicular", "constraint.horizontal", "constraint.tangent",
         "constraint.symmetric", "constraint.equal", "solid.extrude", "solid.fillet", "solid.chamfer", "solid.shell",
@@ -455,7 +455,7 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
     if (doc.units() != LengthUnit::Millimetre) {
         static const std::set<std::string> lengthKeys {
             "w", "h", "d", "r", "width", "height", "distance", "depth", "diameter", "thickness", "radius",
-            "offset", "dx", "dy", "dz", "distance2", "thin", "spacing1", "spacing2", "cbore_diameter", "cbore_depth", "csink_diameter",
+            "offset", "dx", "dy", "dz", "distance2", "thin", "r", "spacing1", "spacing2", "cbore_diameter", "cbore_depth", "csink_diameter",
             "center", "corner", "points", "c1", "c2", "p1", "p2", "at"};
         for (auto& [k, v] : a.kv) {
             if (!lengthKeys.count(k)) {
@@ -887,6 +887,27 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
             auto r = offsetCurves(s, s.chainOf(near->first), d.value());
             if (!r) {
                 return r.error();
+            }
+            return true;
+        });
+    }
+    if (a.verb == "round") {
+        // round [sketch=s1] at=x,y r=<len> : a tangent arc in the corner where two lines meet
+        const std::string sid = a.get("sketch", last_);
+        return editSketch("Round corner", sid, [&](Sketch& s, const Document&) -> Result<bool> {
+            auto pe = parsePairExpr(a.get("at", "0,0"));
+            if (!pe) {
+                return pe.error();
+            }
+            auto px = len(pe->first), py = len(pe->second);
+            const std::string re = a.get("r", "2 mm");
+            auto r = len(re);
+            if (!px || !py || !r) {
+                return makeError("script.args", "Round needs at=x,y r=<len>.");
+            }
+            auto arc = s.filletCorner(px.value(), py.value(), r.value(), re);
+            if (!arc) {
+                return arc.error();
             }
             return true;
         });

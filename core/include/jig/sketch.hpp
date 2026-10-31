@@ -160,6 +160,9 @@ public:
     // point-on-curve constraint, or the existing point when they meet at one). Length
     // and diameter dimensions of the trimmed curve that no longer apply are removed.
     bool trim(int entityId, double x, double y);
+    // Rounds the corner where two lines meet nearest (x, y) with a tangent arc of radius r
+    // (`radiusExpr` is stored as its dimension). Returns the arc id, or an error message.
+    Result<int> filletCorner(double x, double y, double r, const std::string& radiusExpr);
     // Curves connected end to end with `curve` (sharing an end point), including itself.
     std::vector<int> chainOf(int curve) const;
     // Counter-clockwise arc on existing points (used when building offsets).
