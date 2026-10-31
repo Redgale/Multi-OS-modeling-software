@@ -11,7 +11,10 @@
 #include <set>
 #include <sstream>
 
+#include <BRepAdaptor_Curve.hxx>
 #include <BRepBndLib.hxx>
+#include <BRepGProp.hxx>
+#include <GProp_GProps.hxx>
 #include <BRepGProp_Face.hxx>
 #include <BRepPrimAPI_MakeBox.hxx>
 #include <Bnd_Box.hxx>
@@ -133,6 +136,18 @@ std::optional<gp_Ax1> namedAxis(const std::string& name, const std::shared_ptr<c
     return std::nullopt;
 }
 
+// The origin (O) or a construction point by its feature id.
+std::optional<gp_Pnt> namedPoint(const std::string& name, const std::shared_ptr<const ModelState>& in)
+{
+    if (name == "O") {
+        return gp_Pnt(0, 0, 0);
+    }
+    if (auto it = in->points.find(name); it != in->points.end()) {
+        return it->second;
+    }
+    return std::nullopt;
+}
+
 FeatureOutcome missingAxis(const std::string& name)
 {
     return failed("The axis '" + name + "' does not exist (or comes later in the timeline).",
@@ -144,7 +159,21 @@ FeatureOutcome applyAxis(const Document&, const Feature& f, const std::shared_pt
     const auto& p = f.params;
     FeatureStatus status;
     gp_Ax1 axis;
-    if (p.contains("through")) {
+    if (p.contains("from")) {
+        // through two construction points (or the origin)
+        const std::string n1 = p.value("from", std::string {}), n2 = p.value("to", std::string {});
+        auto a = namedPoint(n1, in), b = namedPoint(n2, in);
+        if (!a || !b) {
+            return failed("The point '" + (!a ? n1 : n2) + "' does not exist (or comes later in the timeline).",
+                          {"Pick the origin (O) or a construction point made earlier."});
+        }
+        if (a->Distance(*b) < 1e-7) {
+            return failed("The two points are in the same place, so no axis runs through them.",
+                          {"Pick two different points."});
+        }
+        axis = gp_Ax1(*a, gp_Dir(gp_Vec(*a, *b)));
+    }
+    else if (p.contains("through")) {
         // along a straight edge, or through the centre of a round edge or face
         const auto& t = p["through"];
         const bool face = t.contains("face");
@@ -185,6 +214,73 @@ FeatureOutcome applyAxis(const Document&, const Feature& f, const std::shared_pt
     auto out = copyState(in);
     out->axes[f.id] = axis;
     return {out, status};
+}
+
+FeatureOutcome applyPoint(const Document& doc, const Feature& f, const std::shared_ptr<const ModelState>& in)
+{
+    const auto& p = f.params;
+    gp_Pnt at;
+    if (p.contains("through")) {
+        // at an end, the middle or the centre of an edge, or the centre of a face
+        const auto& t = p["through"];
+        const bool face = t.contains("face");
+        ShapeRef ref = ShapeRef::fromJson(face ? t["face"] : t.value("edge", nlohmann::json::object()));
+        auto bit = in->bodies.find(ref.body);
+        if (bit == in->bodies.end()) {
+            return failed("The body this point sits on no longer exists.", {"Edit the point and pick again."});
+        }
+        Resolution r = resolve(*bit->second, ref);
+        if (r.status == ResolveStatus::Missing || r.status == ResolveStatus::Ambiguous) {
+            return failed("The edge or face this point sits on no longer exists.", {"Edit the point and pick again."});
+        }
+        if (face) {
+            GProp_GProps props;
+            BRepGProp::SurfaceProperties(bit->second->face(r.index), props);
+            at = props.CentreOfMass();
+        }
+        else {
+            const TopoDS_Edge e = TopoDS::Edge(bit->second->edge(r.index));
+            const std::string where = p.value("end", std::string("start"));
+            BRepAdaptor_Curve c(e);
+            if (where == "center") {
+                const MeasureItem m = measureItem(e);
+                if (!m.radius || !m.axis) {
+                    return failed("Only a circle or an arc has a centre; this is a " + m.kind + ".",
+                                  {"Choose its start, end or middle instead."});
+                }
+                at = m.axis->Location();
+            }
+            else if (where == "start" || where == "end" || where == "mid") {
+                double u0 = c.FirstParameter(), u1 = c.LastParameter();
+                if (e.Orientation() == TopAbs_REVERSED) {
+                    std::swap(u0, u1);
+                }
+                at = c.Value(where == "start" ? u0 : where == "end" ? u1 : 0.5 * (u0 + u1));
+            }
+            else {
+                return failed("A point on an edge sits at its start, end, middle or centre, not at '" + where + "'.");
+            }
+        }
+    }
+    else {
+        // typed coordinates, each an expression (parameters allowed)
+        const auto xyz = p.value("at", nlohmann::json::array({"0 mm", "0 mm", "0 mm"}));
+        if (!xyz.is_array() || xyz.size() != 3) {
+            return failed("A point needs three coordinates: X, Y and Z.");
+        }
+        double v[3];
+        for (int i = 0; i < 3; ++i) {
+            auto q = doc.evalLength(xyz[i].is_string() ? xyz[i].get<std::string>() : xyz[i].dump());
+            if (!q) {
+                return failed(q.error());
+            }
+            v[i] = q.value();
+        }
+        at = gp_Pnt(v[0], v[1], v[2]);
+    }
+    auto out = copyState(in);
+    out->points[f.id] = at;
+    return {out, {}};
 }
 
 FeatureOutcome applyPlane(const Document& doc, const Feature& f, const std::shared_ptr<const ModelState>& in)
@@ -1446,6 +1542,8 @@ FeatureOutcome applyFeature(const Document& doc, const Feature& f, const std::sh
                 return applyAxis(doc, f, in);
             case FeatureKind::PressPull:
                 return applyPressPull(doc, f, in);
+            case FeatureKind::Point:
+                return applyPoint(doc, f, in);
         }
     }
     catch (const std::exception& ex) {

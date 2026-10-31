@@ -6,7 +6,7 @@ Jigsmith's interface uses Qt Linguist. Everything a person reads in the app goes
 
 ## What exists today
 
-- `translations/jigsmith.ts`: the template with every interface string (about 980).
+- `translations/jigsmith.ts`: the template with every interface string (about 1,180).
 - `translations/jigsmith_qps.ts`: a **pseudo-translation** for testing, made by
   `tools/pseudo_translate.py`. Every string is accented, about a third longer and wrapped in
   `[ ]`, so plain text in the app is text that cannot be translated yet, and cramped layouts

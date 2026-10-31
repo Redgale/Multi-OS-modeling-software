@@ -664,8 +664,8 @@
     </message>
     <message>
         <location line="+1" />
-        <source>A reference point in 3D.</source>
-        <translation>[Á référéñçé pöîñt îñ 3D.~~~~~~]</translation>
+        <source>A reference point: typed coordinates, the end or centre of an edge, or the centre of a face.</source>
+        <translation>[Á référéñçé pöîñt: týpéd çöördîñátés, thé éñd ör çéñtré öf áñ édgé, ör thé çéñtré öf á fáçé.~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <location line="+1" />
@@ -1067,6 +1067,21 @@
     </message>
     <message>
         <location line="+1" />
+        <source>Pick the origin (O) or a construction point made earlier.</source>
+        <translation>[Pîçk thé örîgîñ (Ö) ör á çöñstrüçtîöñ pöîñt mádé éárlîér.~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The two points are in the same place, so no axis runs through them.</source>
+        <translation>[Thé twö pöîñts áré îñ thé sámé pláçé, sö ñö áxîs rüñs thröügh thém.~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Pick two different points.</source>
+        <translation>[Pîçk twö dîfféréñt pöîñts.~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
         <source>The body this axis runs through no longer exists.</source>
         <translation>[Thé bödý thîs áxîs rüñs thröügh ñö löñgér éxîsts.~~~~~~~~~~~~~]</translation>
     </message>
@@ -1089,6 +1104,31 @@
         <location line="+1" />
         <source>Pick two planes that cross.</source>
         <translation>[Pîçk twö pláñés thát çröss.~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The body this point sits on no longer exists.</source>
+        <translation>[Thé bödý thîs pöîñt sîts öñ ñö löñgér éxîsts.~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Edit the point and pick again.</source>
+        <translation>[Édît thé pöîñt áñd pîçk ágáîñ.~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The edge or face this point sits on no longer exists.</source>
+        <translation>[Thé édgé ör fáçé thîs pöîñt sîts öñ ñö löñgér éxîsts.~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Choose its start, end or middle instead.</source>
+        <translation>[Çhöösé îts stárt, éñd ör mîddlé îñstéád.~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>A point needs three coordinates: X, Y and Z.</source>
+        <translation>[Á pöîñt ñééds thréé çöördîñátés: X, Ý áñd Z.~~~~~~~~~~~]</translation>
     </message>
     <message>
         <location line="+1" />
@@ -1709,7 +1749,7 @@
         <translation>[çürvéd édgé~~~]</translation>
     </message>
     <message>
-        <location filename="../app/MainWindow.cpp" line="+337" />
+        <location filename="../app/MainWindow.cpp" line="+339" />
         <source>Click a plane, a construction plane or a flat face to sketch on, or press 1 (floor), 2 (front) or 3 (side).  Esc cancels.</source>
         <translation>[Çlîçk á pláñé, á çöñstrüçtîöñ pláñé ör á flát fáçé tö skétçh öñ, ör préss 1 (flöör), 2 (fröñt) ör 3 (sîdé).  Ésç çáñçéls.~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -1740,7 +1780,7 @@
 <context>
     <name>jigapp::AxisPanel</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="+2126" />
+        <location filename="../app/FeaturePanels.cpp" line="+2155" />
         <source>Construction axis</source>
         <translation>[Çöñstrüçtîöñ áxîs~~~~~]</translation>
     </message>
@@ -1760,7 +1800,12 @@
         <translation>[Whéré twö pláñés méét~~~~~~]</translation>
     </message>
     <message>
-        <location line="+4" />
+        <location line="+1" />
+        <source>Through two points</source>
+        <translation>[Thröügh twö pöîñts~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+6" />
         <source>Kind</source>
         <translation>[Kîñd~]</translation>
     </message>
@@ -1780,7 +1825,22 @@
         <translation>[Áñd pláñé~~]</translation>
     </message>
     <message>
+        <location line="+1" />
+        <source>From point</source>
+        <translation>[Fröm pöîñt~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>To point</source>
+        <translation>[Tö pöîñt~~]</translation>
+    </message>
+    <message>
         <location line="+2" />
+        <source>Origin</source>
+        <translation>[Örîgîñ~~]</translation>
+    </message>
+    <message>
+        <location line="+3" />
         <source>Floor (XY)</source>
         <translation>[Flöör (XÝ)~~]</translation>
     </message>
@@ -1795,14 +1855,14 @@
         <translation>[Sîdé (ÝZ)~~]</translation>
     </message>
     <message>
-        <location line="+20" />
-        <location line="+81" />
+        <location line="+28" />
+        <location line="+86" />
         <source>Face %1</source>
         <translation>[Fáçé %1~]</translation>
     </message>
     <message>
-        <location line="-78" />
-        <location line="+106" />
+        <location line="-83" />
+        <location line="+111" />
         <source>Edge %1</source>
         <translation>[Édgé %1~]</translation>
     </message>
@@ -1822,12 +1882,12 @@
         <translation>[Çlîçk á stráîght édgé, ör á çîrçlé ör árç.~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+35" />
+        <location line="+38" />
         <source>Axis</source>
         <translation>[Áxîs~]</translation>
     </message>
     <message>
-        <location line="+39" />
+        <location line="+42" />
         <source>construction axis</source>
         <translation>[çöñstrüçtîöñ áxîs~~~~~]</translation>
     </message>
@@ -1835,7 +1895,7 @@
 <context>
     <name>jigapp::CombinePanel</name>
     <message>
-        <location line="+58" />
+        <location line="+233" />
         <location line="+56" />
         <source>Combine</source>
         <translation>[Çömbîñé~~]</translation>
@@ -1937,7 +1997,7 @@
 <context>
     <name>jigapp::ExprField</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="-2431" />
+        <location filename="../app/FeaturePanels.cpp" line="-2662" />
         <source>e.g. 45 deg</source>
         <translation>[é.g. 45 dég~]</translation>
     </message>
@@ -2324,7 +2384,8 @@
         <translation>[Áñglé fröm thé fîrst fáçé~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+103" />
+        <location line="+106" />
+        <location line="+26" />
         <source>Pick edges of one body at a time.</source>
         <translation>[Pîçk édgés öf öñé bödý át á tîmé.~~~~~~~~]</translation>
     </message>
@@ -2532,7 +2593,7 @@
 <context>
     <name>jigapp::MainWindow</name>
     <message>
-        <location filename="../app/MainWindow.cpp" line="-138" />
+        <location filename="../app/MainWindow.cpp" line="-140" />
         <source>OK</source>
         <translation>[ÖK~]</translation>
     </message>
@@ -2558,15 +2619,15 @@
     </message>
     <message>
         <location line="+9" />
-        <location line="+647" />
-        <location line="+572" />
-        <location line="+815" />
+        <location line="+649" />
+        <location line="+587" />
+        <location line="+818" />
         <location line="+26" />
         <source>Sketch</source>
         <translation>[Skétçh~~]</translation>
     </message>
     <message>
-        <location line="-2058" />
+        <location line="-2078" />
         <source>Extrude</source>
         <translation>[Éxtrüdé~~]</translation>
     </message>
@@ -2614,6 +2675,11 @@
         <location line="+2" />
         <source>Axis</source>
         <translation>[Áxîs~]</translation>
+    </message>
+    <message>
+        <location line="+2" />
+        <source>Point</source>
+        <translation>[Pöîñt~]</translation>
     </message>
     <message>
         <location line="+2" />
@@ -2697,12 +2763,12 @@
     </message>
     <message>
         <location line="+4" />
-        <location line="+672" />
+        <location line="+686" />
         <source>&lt;p&gt;Nothing selected.&lt;/p&gt;</source>
         <translation>[&lt;p&gt;Ñöthîñg séléçtéd.&lt;/p&gt;~~~~~]</translation>
     </message>
     <message>
-        <location line="-661" />
+        <location line="-675" />
         <source>&lt;h3&gt;Body&lt;/h3&gt;&lt;p&gt;&lt;b&gt;Name:&lt;/b&gt; %1&lt;br&gt;&lt;b&gt;Volume:&lt;/b&gt; %2&lt;br&gt;&lt;b&gt;Size:&lt;/b&gt; %3 × %4 × %5&lt;br&gt;&lt;b&gt;Faces:&lt;/b&gt; %6&lt;/p&gt;&lt;p&gt;Right-click it in the Browser to hide, isolate or rename it.&lt;/p&gt;</source>
         <translation>[&lt;h3&gt;Bödý&lt;/h3&gt;&lt;p&gt;&lt;b&gt;Ñámé:&lt;/b&gt; %1&lt;br&gt;&lt;b&gt;Völümé:&lt;/b&gt; %2&lt;br&gt;&lt;b&gt;Sîzé:&lt;/b&gt; %3 × %4 × %5&lt;br&gt;&lt;b&gt;Fáçés:&lt;/b&gt; %6&lt;/p&gt;&lt;p&gt;Rîght-çlîçk ît îñ thé Bröwsér tö hîdé, îsöláté ör réñámé ît.&lt;/p&gt;~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -2788,12 +2854,12 @@
     </message>
     <message>
         <location line="+2" />
-        <location line="+1326" />
+        <location line="+1344" />
         <source>Mouse and trackpad</source>
         <translation>[Möüsé áñd tráçkpád~~~~~]</translation>
     </message>
     <message>
-        <location line="-1324" />
+        <location line="-1342" />
         <source>Default (middle-drag pans, Shift+middle orbits)</source>
         <translation>[Défáült (mîddlé-drág páñs, Shîft+mîddlé örbîts)~~~~~~~~~~~~]</translation>
     </message>
@@ -2814,30 +2880,30 @@
     </message>
     <message>
         <location line="+11" />
-        <location line="+1299" />
+        <location line="+1317" />
         <source>Theme</source>
         <translation>[Thémé~]</translation>
     </message>
     <message>
-        <location line="-1297" />
-        <location line="+1252" />
+        <location line="-1315" />
+        <location line="+1270" />
         <source>Light</source>
         <translation>[Lîght~]</translation>
     </message>
     <message>
-        <location line="-1252" />
-        <location line="+1251" />
+        <location line="-1270" />
+        <location line="+1269" />
         <source>Dark</source>
         <translation>[Dárk~]</translation>
     </message>
     <message>
-        <location line="-1250" />
-        <location line="+1252" />
+        <location line="-1268" />
+        <location line="+1270" />
         <source>High contrast</source>
         <translation>[Hîgh çöñtrást~~~~]</translation>
     </message>
     <message>
-        <location line="-1244" />
+        <location line="-1262" />
         <source>&amp;Help</source>
         <translation>[&amp;Hélp~]</translation>
     </message>
@@ -2939,12 +3005,12 @@
     </message>
     <message>
         <location line="+2" />
-        <location line="+1819" />
+        <location line="+1849" />
         <source>Rename…</source>
         <translation>[Réñámé…~~]</translation>
     </message>
     <message>
-        <location line="-1815" />
+        <location line="-1845" />
         <source>Design browser</source>
         <translation>[Désîgñ bröwsér~~~~]</translation>
     </message>
@@ -2955,13 +3021,13 @@
     </message>
     <message>
         <location line="+5" />
-        <location line="+1326" />
+        <location line="+1344" />
         <location line="+58" />
         <source>Properties</source>
         <translation>[Pröpértîés~~~]</translation>
     </message>
     <message>
-        <location line="-1378" />
+        <location line="-1396" />
         <source>Properties and help</source>
         <translation>[Pröpértîés áñd hélp~~~~~]</translation>
     </message>
@@ -3037,12 +3103,12 @@
     </message>
     <message>
         <location line="+18" />
-        <location line="+1711" />
+        <location line="+1741" />
         <source>Move rollback marker</source>
         <translation>[Mövé röllbáçk márkér~~~~~~]</translation>
     </message>
     <message>
-        <location line="-1619" />
+        <location line="-1637" />
         <source>Start here: every part begins as a flat sketch.
 Click Sketch on the toolbar, then click a plane.
 Or open the phone stand sample (File ▸ Open a sample).</source>
@@ -3146,7 +3212,7 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
         <translation>[pröblém~~]</translation>
     </message>
     <message>
-        <location line="+62" />
+        <location line="+64" />
         <source>Select other</source>
         <translation>[Séléçt öthér~~~]</translation>
     </message>
@@ -3166,7 +3232,7 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
         <translation>[%1. %2 (%3)~]</translation>
     </message>
     <message>
-        <location line="+18" />
+        <location line="+19" />
         <source>Only this body is shown. Right-click a body and choose Show all to bring the rest back.</source>
         <translation>[Öñlý thîs bödý îs shöwñ. Rîght-çlîçk á bödý áñd çhöösé Shöw áll tö brîñg thé rést báçk.~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -3222,7 +3288,7 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+0" />
-        <location line="+318" />
+        <location line="+321" />
         <source>Jigsmith designs (*.jig)</source>
         <translation>[Jîgsmîth désîgñs (*.jîg)~~~~~~]</translation>
     </message>
@@ -3354,12 +3420,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+0" />
-        <location line="+842" />
+        <location line="+851" />
         <source>There is no 3D body yet.</source>
         <translation>[Théré îs ñö 3D bödý ýét.~~~~~]</translation>
     </message>
     <message>
-        <location line="-839" />
+        <location line="-848" />
         <source>STL mesh for slicers (*.stl)</source>
         <translation>[STL mésh för slîçérs (*.stl)~~~~~~]</translation>
     </message>
@@ -3630,7 +3696,7 @@ An empty design with the origin ready</source>
         <translation>[Théré îs ñö 3D bödý ýét: skétçh áñd éxtrüdé fîrst.~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+74" />
+        <location line="+83" />
         <source>That face was made by %1: change its size here.</source>
         <translation>[Thát fáçé wás mádé bý %1: çháñgé îts sîzé héré.~~~~~~~~~~~]</translation>
     </message>
@@ -3726,7 +3792,7 @@ An empty design with the origin ready</source>
         <translation>[Théré îs ñöthîñg tö méásüré ýét: máké á 3D bödý fîrst.~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+107" />
+        <location line="+110" />
         <source>Edit…</source>
         <translation>[Édît…~]</translation>
     </message>
@@ -3808,7 +3874,7 @@ An empty design with the origin ready</source>
         <translation>[Üñgröüp~~]</translation>
     </message>
     <message>
-        <location line="+25" />
+        <location line="+27" />
         <source>Cannot move this step there</source>
         <translation>[Çáññöt mövé thîs stép théré~~~~~~~]</translation>
     </message>
@@ -4026,7 +4092,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
 <context>
     <name>jigapp::MovePanel</name>
     <message>
-        <location line="+751" />
+        <location line="+953" />
         <source>Move / copy</source>
         <translation>[Mövé / çöpý~~]</translation>
     </message>
@@ -4192,7 +4258,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
 <context>
     <name>jigapp::PatternPanel</name>
     <message>
-        <location line="-1242" />
+        <location line="-1444" />
         <location line="+120" />
         <source>Pattern</source>
         <translation>[Páttérñ~~]</translation>
@@ -4433,9 +4499,94 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
     </message>
 </context>
 <context>
-    <name>jigapp::PressPullPanel</name>
+    <name>jigapp::PointPanel</name>
+    <message>
+        <location line="+328" />
+        <source>Construction point</source>
+        <translation>[Çöñstrüçtîöñ pöîñt~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>A reference point to measure from or to run an axis through. Type where it goes, or click an edge (its end, middle or centre) or a face (its centre).</source>
+        <translation>[Á référéñçé pöîñt tö méásüré fröm ör tö rüñ áñ áxîs thröügh. Týpé whéré ît göés, ör çlîçk áñ édgé (îts éñd, mîddlé ör çéñtré) ör á fáçé (îts çéñtré).~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+2" />
+        <source>At typed coordinates</source>
+        <translation>[Át týpéd çöördîñátés~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+0" />
+        <source>On an edge or face</source>
+        <translation>[Öñ áñ édgé ör fáçé~~~~]</translation>
+    </message>
+    <message>
+        <location line="+2" />
+        <source>Start</source>
+        <translation>[Stárt~]</translation>
+    </message>
+    <message>
+        <location line="+0" />
+        <source>End</source>
+        <translation>[Éñd~]</translation>
+    </message>
+    <message>
+        <location line="+0" />
+        <source>Middle</source>
+        <translation>[Mîddlé~~]</translation>
+    </message>
+    <message>
+        <location line="+0" />
+        <source>Centre (circles, arcs)</source>
+        <translation>[Çéñtré (çîrçlés, árçs)~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Kind</source>
+        <translation>[Kîñd~]</translation>
+    </message>
+    <message>
+        <location line="+7" />
+        <source>On</source>
+        <translation>[Öñ~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Where</source>
+        <translation>[Whéré~]</translation>
+    </message>
     <message>
         <location line="+8" />
+        <location line="+51" />
+        <source>Face %1</source>
+        <translation>[Fáçé %1~]</translation>
+    </message>
+    <message>
+        <location line="-51" />
+        <location line="+70" />
+        <source>Edge %1</source>
+        <translation>[Édgé %1~]</translation>
+    </message>
+    <message>
+        <location line="+31" />
+        <source>Click an edge or a face in the view.</source>
+        <translation>[Çlîçk áñ édgé ör á fáçé îñ thé vîéw.~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+7" />
+        <source>Point</source>
+        <translation>[Pöîñt~]</translation>
+    </message>
+    <message>
+        <location line="+37" />
+        <source>construction point</source>
+        <translation>[çöñstrüçtîöñ pöîñt~~~~~]</translation>
+    </message>
+</context>
+<context>
+    <name>jigapp::PressPullPanel</name>
+    <message>
+        <location line="-487" />
         <location line="+59" />
         <source>Press pull</source>
         <translation>[Préss püll~~~]</translation>
@@ -5703,7 +5854,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
 <context>
     <name>jigapp::SplitPanel</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="+1284" />
+        <location filename="../app/FeaturePanels.cpp" line="+1486" />
         <source>Split body</source>
         <translation>[Splît bödý~~~]</translation>
     </message>
@@ -5889,7 +6040,17 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
         <translation>[Thé 3D vîéw ñééds ÖpéñGL 3.3, áñd thîs çömpütér's gráphîçs drîvér öfférs %1. Üpdátîñg thé gráphîçs drîvér üsüállý fîxés thîs. Désîgñs stîll öpéñ, sávé áñd éxpört; öñlý thé vîéw stáýs émptý.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+505" />
+        <location line="+544" />
+        <source>touching</source>
+        <translation>[töüçhîñg~~]</translation>
+    </message>
+    <message>
+        <location line="+0" />
+        <source>inside</source>
+        <translation>[îñsîdé~~]</translation>
+    </message>
+    <message>
+        <location line="+19" />
         <source>Updating the view…</source>
         <translation>[Üpdátîñg thé vîéw…~~~~~]</translation>
     </message>
@@ -5909,7 +6070,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
         <translation>[Fît~]</translation>
     </message>
     <message>
-        <location line="+133" />
+        <location line="+147" />
         <source>Edge “%1”</source>
         <translation>[Édgé “%1”~]</translation>
     </message>

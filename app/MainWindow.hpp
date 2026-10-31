@@ -118,6 +118,7 @@ public:
     void openBodyTool(const std::string& tool, const std::string& editId = {});  // combine, split, move
     void openPlane(const std::string& editId = {}, const std::string& kind = "offset");
     void openAxis(const std::string& editId = {});
+    void openPoint(const std::string& editId = {});
     // Browser: which bodies are drawn (a view setting, not part of the design or its undo)
     void setBodyVisible(const std::string& body, bool on);
     // Timeline groups: put a step in a group ("" takes it out); fold a group to one item.

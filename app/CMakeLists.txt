@@ -15,6 +15,7 @@ add_library(jigsmith_ui STATIC
     Tutorial.cpp Tutorial.hpp
     MarkingMenu.cpp MarkingMenu.hpp
     Translations.cpp Translations.hpp
+    registry_strings.h core_strings.h  # not compiled: read by lupdate (translations)
     resources.qrc
 )
 target_include_directories(jigsmith_ui PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

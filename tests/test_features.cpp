@@ -1330,3 +1330,58 @@ TEST(Text, SeveralLinesStackAndCentre)
     EXPECT_NEAR((b.ymax + b.ymin) / 2, 0, 1e-6);            // centred on the anchor
     EXPECT_NEAR((b.xmax + b.xmin) / 2, 0, 1e-6);
 }
+
+TEST(Point, TypedEdgeEndsAndFaceCentres)
+{
+    // typed coordinates may use parameters; following a parameter change
+    auto doc = build("param h = 7 mm\npoint id=p1 at=1,2,h\n");
+    expectAllOk(*doc);
+    EXPECT_NEAR(doc->state().points.at("p1").Distance(gp_Pnt(1, 2, 7)), 0, 1e-9);
+    // the centre of a block's top face, and the ends and middle of one of its edges
+    auto blk = build("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=40 h=20\nextrude id=e1 sketch=s1 distance=10\n"
+                     "point id=p2 through=face:e1/end\n"
+                     "point id=p3 through=edge:E[e1/side:5|e1/side:6] end=start\n"
+                     "point id=p4 through=edge:E[e1/side:5|e1/side:6] end=end\n"
+                     "point id=p5 through=edge:E[e1/side:5|e1/side:6] end=mid\n");
+    expectAllOk(*blk);
+    const auto& pts = blk->state().points;
+    EXPECT_NEAR(pts.at("p2").Distance(gp_Pnt(0, 0, 10)), 0, 1e-9);
+    EXPECT_NEAR(pts.at("p3").Distance(pts.at("p4")), 10, 1e-9);  // a vertical edge, 10 long
+    EXPECT_NEAR(pts.at("p5").Z(), 5, 1e-9);
+    EXPECT_NEAR(std::abs(pts.at("p5").X()), 20, 1e-9);
+    // an axis through two points; revolving around it
+    auto ring = build("point id=p1 at=0,0,10\naxis id=a1 from=O to=p1\nsketch id=s1 plane=XZ\n"
+                      "rect sketch=s1 corner=10,0 w=10 h=5\nrevolve id=r1 sketch=s1 axis=a1\n");
+    expectAllOk(*ring);
+    EXPECT_TRUE(ring->state().axes.at("a1").Direction().IsParallel(gp_Dir(0, 0, 1), 1e-9));
+    EXPECT_NEAR(props(*ring).volume, pi * (400 - 100) * 5, 1e-3);
+    // the centre of a hole's rim
+    auto hole = build(std::string(kBlock) + "hole id=h1 sketch=s2 diameter=4mm extent=all\n");
+    std::string rim;
+    for (auto& [bid, b] : hole->state().bodies) {
+        for (int i = 0; i < b->edgeCount() && rim.empty(); ++i) {
+            if (measureItem(b->edge(i)).radius && b->edgeName(i).find("h1/wall") != std::string::npos) {
+                rim = b->edgeName(i);
+            }
+        }
+    }
+    ASSERT_FALSE(rim.empty());
+    run(*hole, "point id=p9 through=edge:" + rim + " end=center");
+    expectAllOk(*hole);
+    EXPECT_NEAR(std::abs(hole->state().points.at("p9").X()), 10, 1e-6);
+    EXPECT_NEAR(hole->state().points.at("p9").Y(), 0, 1e-6);
+    // a sketch point still works the old way (two coordinates)
+    auto sk = build("sketch id=s1 plane=XY\npoint at=3,4\n");
+    expectAllOk(*sk);
+    EXPECT_TRUE(sk->state().points.empty());
+    // failures are explained: a straight edge has no centre, two equal points make no axis
+    auto bad = std::make_unique<Document>();
+    ScriptRunner rb(*bad);
+    rb.runText("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=40 h=20\nextrude id=e1 sketch=s1 distance=10\n"
+               "point id=p3 through=edge:E[e1/side:5|e1/side:6] end=center\n");
+    EXPECT_NE(bad->status(2).message.find("centre"), std::string::npos);
+    auto same = std::make_unique<Document>();
+    ScriptRunner r(*same);
+    r.runText("point id=p1 at=0,0,0\naxis id=a1 from=O to=p1\n");
+    EXPECT_NE(same->status(1).message.find("same place"), std::string::npos);
+}

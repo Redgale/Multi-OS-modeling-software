@@ -62,7 +62,8 @@ enum class FeatureKind
     Split,
     Move,
     Axis,  // construction axis (along an edge, through a round face, where two planes meet)
-    PressPull  // push or pull a flat face of a body
+    PressPull,  // push or pull a flat face of a body
+    Point       // construction point (typed position, end or centre of an edge, centre of a face)
 };
 
 const char* toString(FeatureKind k);
@@ -132,6 +133,7 @@ struct ModelState
     std::map<std::string, ToolRecord> tools;
     std::map<std::string, gp_Ax3> planes;  // construction planes by feature id
     std::map<std::string, gp_Ax1> axes;    // construction axes by feature id
+    std::map<std::string, gp_Pnt> points;  // construction points by feature id
 };
 
 class Document

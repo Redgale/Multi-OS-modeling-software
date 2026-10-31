@@ -142,6 +142,8 @@ QString kindWord(jig::FeatureKind k)
             return MainWindow::tr("Plane");
         case jig::FeatureKind::Axis:
             return MainWindow::tr("Axis");
+        case jig::FeatureKind::Point:
+            return MainWindow::tr("Point");
         case jig::FeatureKind::PressPull:
             return MainWindow::tr("Press pull");
         case jig::FeatureKind::Combine:
@@ -1065,6 +1067,19 @@ void MainWindow::refreshDatums()
         const jig::Feature* feat = doc_->feature(id);
         labels.emplace_back(feat ? q(feat->name) : q(id), QVector3D(float(end.X()), float(end.Y()), float(end.Z())));
     }
+    // construction points: a small cross of three short lines, with the name beside it
+    for (auto& [id, pt] : doc_->state().points) {
+        QColor edge = kDatum;
+        edge.setAlpha(240);
+        const float r = float(s) * 0.03f;
+        const QVector3D c(float(pt.X()), float(pt.Y()), float(pt.Z()));
+        for (const QVector3D d : {QVector3D(r, 0, 0), QVector3D(0, r, 0), QVector3D(0, 0, r)}) {
+            ov.lines.push_back({c - d, edge});
+            ov.lines.push_back({c + d, edge});
+        }
+        const jig::Feature* feat = doc_->feature(id);
+        labels.emplace_back(feat ? q(feat->name) : q(id), c);
+    }
     view_->setDatums(std::move(ov), std::move(labels));
 }
 
@@ -1493,6 +1508,9 @@ void MainWindow::runCommand(const QString& id)
     }
     else if (id == "construct.axis") {
         openAxis();
+    }
+    else if (id == "construct.point") {
+        openPoint();
     }
     else if (id == "solid.presspull") {
         openPressPull();
@@ -2389,6 +2407,15 @@ void MainWindow::openPlane(const std::string& editId, const std::string& kind)
     showPanel(new PlanePanel(*doc_, view_, editId, panelHost_, kind));
 }
 
+void MainWindow::openPoint(const std::string& editId)
+{
+    if (sketch_) {
+        exitSketch();
+    }
+    cancelPicker();
+    showPanel(new PointPanel(*doc_, view_, editId, panelHost_));
+}
+
 void MainWindow::openAxis(const std::string& editId)
 {
     if (sketch_) {
@@ -2662,6 +2689,9 @@ void MainWindow::editFeature(int index)
             break;
         case jig::FeatureKind::Axis:
             openAxis(f.id);
+            break;
+        case jig::FeatureKind::Point:
+            openPoint(f.id);
             break;
         case jig::FeatureKind::PressPull:
             openPressPull(f.id);

@@ -401,8 +401,42 @@ protected:
 
 private:
     void updateVisibility();
-    QComboBox *kind_, *through_, *base_, *base2_;
+    QComboBox *kind_, *through_, *base_, *base2_, *from_, *to_;
     bool nextIsSecond_ = false;
+};
+
+// Construction point: typed coordinates, an end, the middle or the centre of an edge, or
+// the centre of a face.
+class PointPanel : public FeaturePanel
+{
+    Q_OBJECT
+public:
+    PointPanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent = nullptr);
+    ~PointPanel() override;
+    void useFace(const std::string& body, const std::string& name);  // a click in the view
+    void useEdge(const std::string& body, const std::string& name);
+    QComboBox* kind() const
+    {
+        return kind_;
+    }
+    QComboBox* end() const
+    {
+        return end_;
+    }
+    ExprField* coord(int i) const
+    {
+        return xyz_[i];
+    }
+
+protected:
+    jig::Feature draft() const override;
+    QString title() const override;
+    void previewed(const jig::FeatureOutcome& o) override;
+
+private:
+    void updateVisibility();
+    QComboBox *kind_, *through_, *end_;
+    ExprField* xyz_[3];
 };
 
 // Pattern: repeat an Extrude, Revolve or Hole around an axis or in a grid.

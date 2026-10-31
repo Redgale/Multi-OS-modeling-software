@@ -136,7 +136,7 @@ CommandRegistry::CommandRegistry()
     add({"construct.angle_plane", "Plane at angle", "Plane at Angle", "CONSTRUCT", "A plane tilted around an edge or axis.", "", {"tilted plane", "slanted"}, false, false, false, m4});
     add({"construct.midplane", "Midplane", "Midplane", "CONSTRUCT", "A plane halfway between two faces or planes.", "", {"middle plane", "center plane"}, false, false, false, m4});
     add({"construct.axis", "Axis", "Axis", "CONSTRUCT", "A reference axis for revolves, patterns and turning bodies: along an edge, through a hole or where two planes meet.", "", {"center line", "rotation axis"}, false, false, true, m4});
-    add({"construct.point", "Reference point", "Construction Point", "CONSTRUCT", "A reference point in 3D.", "", {"work point"}, false, false, false, m4});
+    add({"construct.point", "Reference point", "Construction Point", "CONSTRUCT", "A reference point: typed coordinates, the end or centre of an edge, or the centre of a face.", "", {"work point", "reference point"}, false, false, true, m4});
     add({"inspect.measure", "Measure", "Measure", "INSPECT", "Read distances, angles, lengths and areas.", "I", {"distance", "how big", "ruler", "size"}, true, false, false, m6});
     add({"inspect.section", "Section view", "Section Analysis", "INSPECT", "Slice the view to look inside walls and holes.", "", {"cut view", "cross section", "inside"}, false, false, false, m6});
     add({"inspect.properties", "Properties", "Properties", "INSPECT", "Volume, area, weight and center of mass of a body.", "", {"volume", "weight", "mass", "filament"}, true, false, true, m6});
@@ -785,7 +785,11 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
             return true;
         });
     }
-    if (a.verb == "line" || a.verb == "point" || a.verb == "arc") {
+    // "point" with three coordinates or through= is a construction point in 3D (below)
+    const std::string atText = a.get("at", "");
+    const bool point3d = a.verb == "point" && !a.has("sketch")
+                         && (a.has("through") || std::count(atText.begin(), atText.end(), ',') == 2);
+    if (a.verb == "line" || (a.verb == "point" && !point3d) || a.verb == "arc") {
         // line p1=x,y p2=x,y [construction=yes] [name=axis]
         // point at=x,y [name=..]                       (hole centres)
         // arc center=x,y r=<len> from=<angle> to=<angle> [chord=yes] [name=..]   (counter-clockwise)
@@ -1544,12 +1548,14 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
         }
         return checkFeature(id);
     }
-    if (a.verb == "plane" || a.verb == "axis") {
+    if (a.verb == "plane" || a.verb == "axis" || a.verb == "point") {
         // plane id=pl1 [kind=offset|angle|midplane] base=XY|<plane id>|face:<name>
         //       [distance=<len>] [axis=X|Y|Z|<axis id>|edge:<name> angle=<angle>] [base2=…]
         // axis id=a1 through=edge:<name>|face:<name>   (along a straight edge, through a round one)
         // axis id=a1 base=<plane> base2=<plane>       (where two planes or flat faces meet)
-        const bool isAxis = a.verb == "axis";
+        // axis id=a1 from=<point id>|O to=<point id>|O (through two points)
+        // point id=pt1 at=x,y,z | through=edge:<name> [end=start|end|mid|center] | through=face:<name>
+        const bool isAxis = a.verb == "axis", isPoint = a.verb == "point";
         const ModelState& st = doc.state();
         auto ref = [&](const std::string& v) -> Result<nlohmann::json> {
             for (const char* pre : {"face:", "edge:"}) {
@@ -1569,7 +1575,23 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
             }
             return nlohmann::json(v);
         };
-        nlohmann::json params = isAxis ? nlohmann::json::object() : nlohmann::json {{"kind", a.get("kind", "offset")}};
+        nlohmann::json params = isAxis || isPoint ? nlohmann::json::object() : nlohmann::json {{"kind", a.get("kind", "offset")}};
+        if (isPoint && a.has("at")) {
+            auto parts = nlohmann::json::array();
+            std::stringstream ss(a.get("at"));
+            for (std::string c; std::getline(ss, c, ',');) {
+                parts.push_back(c);
+            }
+            if (parts.size() != 3) {
+                return makeError("script.args", "A point's at= needs three coordinates, like at=10,0,5.");
+            }
+            params["at"] = parts;
+        }
+        for (const char* key : {"end", "from", "to"}) {
+            if (a.has(key)) {
+                params[key] = a.get(key);
+            }
+        }
         for (const char* key : {"base", "base2", "axis", "through"}) {
             if (a.has(key)) {
                 auto r = ref(a.get(key));
@@ -1585,14 +1607,15 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
             }
         }
         std::string id;
-        auto r = doc.transact(isAxis ? "Construction axis" : "Construction plane", [&](Model& m) -> Result<bool> {
+        const char* label = isPoint ? "Construction point" : isAxis ? "Construction axis" : "Construction plane";
+        auto r = doc.transact(label, [&](Model& m) -> Result<bool> {
             Feature f;
-            f.id = a.get("id", Document::newId(m, isAxis ? "ax" : "pl"));
+            f.id = a.get("id", Document::newId(m, isPoint ? "pt" : isAxis ? "ax" : "pl"));
             if (findFeature(m, f.id)) {
                 return makeError("script.args", "The id '" + f.id + "' is already used.");
             }
-            f.name = a.get("name", (isAxis ? "Axis " : "Plane ") + f.id.substr(2));
-            f.kind = isAxis ? FeatureKind::Axis : FeatureKind::Plane;
+            f.name = a.get("name", (isPoint ? "Point " : isAxis ? "Axis " : "Plane ") + f.id.substr(2));
+            f.kind = isPoint ? FeatureKind::Point : isAxis ? FeatureKind::Axis : FeatureKind::Plane;
             f.params = params;
             id = f.id;
             insertFeature(m, std::move(f));

@@ -1651,6 +1651,68 @@ private slots:
         QTRY_VERIFY(w.featurePanel() == nullptr);
     }
 
+    // Construction points: typed, then at the middle of a clicked edge; an axis through them.
+    void constructionPoint()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        {
+            jig::ScriptRunner r(w.document());
+            QVERIFY(r.runText("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=40 h=20\n"
+                              "extrude id=e1 sketch=s1 distance=10\n").ok());
+        }
+        w.runCommand("construct.point");
+        auto* pp = qobject_cast<PointPanel*>(w.featurePanel());
+        QVERIFY(pp);
+        pp->coord(2)->setText("25 mm");
+        QTest::qWait(300);
+        QTRY_VERIFY(pp->previewOk());
+        QVERIFY(pp->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        w.runCommand("construct.point");
+        pp = qobject_cast<PointPanel*>(w.featurePanel());
+        QVERIFY(pp);
+        pp->useEdge("e1", "E[e1/side:5|e1/side:6]");
+        QCOMPARE(pp->kind()->currentData().toString(), QString("through"));
+        QVERIFY(pp->end()->isVisible());  // an edge: which part of it
+        pp->end()->setCurrentIndex(pp->end()->findData("mid"));
+        QTest::qWait(300);
+        QTRY_VERIFY(pp->previewOk());
+        QVERIFY(pp->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        const auto& pts = w.document().state().points;
+        QCOMPARE(int(pts.size()), 2);
+        QCOMPARE(pts.begin()->second.Z(), 25.0);
+        QCOMPARE(std::next(pts.begin())->second.Z(), 5.0);
+        // an axis through the two points
+        w.runCommand("construct.axis");
+        auto* ap = qobject_cast<AxisPanel*>(w.featurePanel());
+        QVERIFY(ap);
+        ap->kind()->setCurrentIndex(ap->kind()->findData("points"));
+        std::vector<QComboBox*> ends;  // From point, To point
+        for (auto* c : ap->findChildren<QComboBox*>()) {
+            if (c->isVisible() && c->findData("O") >= 0) {
+                ends.push_back(c);
+            }
+        }
+        QCOMPARE(int(ends.size()), 2);
+        ends[0]->setCurrentIndex(ends[0]->findData(QString::fromStdString(pts.begin()->first)));
+        ends[1]->setCurrentIndex(ends[1]->findData(QString::fromStdString(std::next(pts.begin())->first)));
+        QTest::qWait(300);
+        QTRY_VERIFY(ap->previewOk());
+        QVERIFY(ap->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        QCOMPARE(int(w.document().state().axes.size()), 1);
+        // editing a point from the timeline opens its panel with its values
+        w.editFeature(2);
+        pp = qobject_cast<PointPanel*>(w.featurePanel());
+        QVERIFY(pp);
+        QCOMPARE(pp->coord(2)->text(), QString("25 mm"));
+        pp->cancel();
+    }
+
     // Tangent arc from a line's end, 2- and 3-point circles, a rectangle at an angle.
     void moreShapes()
     {
