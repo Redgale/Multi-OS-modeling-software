@@ -13,6 +13,7 @@
 #include "jig/document.hpp"
 
 class QAction;
+class QCheckBox;
 class QDockWidget;
 class QStackedWidget;
 class QToolBar;
@@ -123,6 +124,8 @@ public:
     void openPoint(const std::string& editId = {});
     // Named views: the camera kept with the design under a name
     void saveNamedView(const QString& name);
+    // Slice: while sketching, hide the part of the model in front of the sketch plane
+    void setSketchSlice(bool on);
     bool restoreNamedView(const QString& name);
     // Browser: which bodies are drawn (a view setting, not part of the design or its undo)
     void setBodyVisible(const std::string& body, bool on);
@@ -223,6 +226,7 @@ private:
     QStackedWidget* sideStack_ = nullptr;
     QWidget* panelHost_ = nullptr;
     QWidget* sketchPanel_ = nullptr;
+    QCheckBox* sliceBox_ = nullptr;
     QLabel* sketchInfo_ = nullptr;
     QAction* centerRect_ = nullptr;
     Theme theme_ = Theme::Dark;

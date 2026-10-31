@@ -938,6 +938,10 @@ void MainWindow::buildDocks()
         opt(tr("Show constraints and dimensions"), &SketchEditor::Options::showConstraints);
         opt(tr("Shade closed areas (profiles)"), &SketchEditor::Options::showProfiles);
         opt(tr("Show gaps (open line ends)"), &SketchEditor::Options::showGaps);
+        sliceBox_ = new QCheckBox(tr("Slice: hide the model in front of the sketch"), sketchPanel_);
+        sliceBox_->setToolTip(tr("Cuts the view (not the model) at the sketch plane, to draw inside a body."));
+        connect(sliceBox_, &QCheckBox::toggled, this, [this](bool on) { setSketchSlice(on); });
+        lay->addWidget(sliceBox_);
         auto* look = new QPushButton(tr("Look at the sketch"), sketchPanel_);
         connect(look, &QPushButton::clicked, this, [this] {
             if (sketch_) {
@@ -1206,6 +1210,24 @@ void MainWindow::refreshBrowser()
     browser_->expandAll();
     settings->setExpanded(false);
     origin->setExpanded(false);
+}
+
+void MainWindow::setSketchSlice(bool on)
+{
+    if (sliceBox_ && sliceBox_->isChecked() != on) {
+        sliceBox_->setChecked(on);  // comes back here through toggled
+        return;
+    }
+    if (!on || !sketch_) {
+        view_->setSection(std::nullopt);
+        return;
+    }
+    // keep what is behind the plane (the viewer looks along -normal); a hair in front of the
+    // plane so faces the sketch lies on stay visible
+    const gp_Ax3& f = sketch_->frame();
+    const QVector3D n(float(f.Direction().X()), float(f.Direction().Y()), float(f.Direction().Z()));
+    const QVector3D o(float(f.Location().X()), float(f.Location().Y()), float(f.Location().Z()));
+    view_->setSection(QVector4D(n, QVector3D::dotProduct(n, o) + 1e-3f));
 }
 
 void MainWindow::saveNamedView(const QString& name)
@@ -2280,6 +2302,9 @@ void MainWindow::exitSketch()
     view_->setInteractor(nullptr);
     view_->setOverlay({});
     view_->setPickMode(PickMode::Faces);
+    if (sliceBox_ && sliceBox_->isChecked()) {
+        sliceBox_->setChecked(false);  // takes the slice away
+    }
     sketch_->deleteLater();
     sketch_ = nullptr;
     sketchBar_->hide();

@@ -1740,6 +1740,37 @@ private slots:
         QTRY_VERIFY(w.featurePanel() == nullptr);
     }
 
+    // Slice while sketching: the view is cut at the sketch plane, and only while sketching.
+    void sketchSlice()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        {
+            jig::ScriptRunner r(w.document());
+            QVERIFY(r.runText("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=40 h=30\nextrude id=e1 sketch=s1 distance=20\n"
+                              "plane id=pl1 base=XY distance=10mm\n").ok());
+        }
+        QVERIFY(w.createSketchOn("pl1"));
+        QTRY_VERIFY(w.sketchEditor() != nullptr);
+        Viewport* view = w.viewport();
+        QVERIFY(!view->section());
+        w.setSketchSlice(true);
+        QVERIFY(view->section());
+        const QVector4D s = *view->section();
+        QVERIFY(std::abs(s.z() - 1) < 1e-6 && std::abs(s.w() - 10) < 1e-2);  // hides z > 10: the half in front
+        // the checkbox in the sketch palette says so too (not only the picture)
+        bool ticked = false;
+        for (auto* cb : w.findChildren<QCheckBox*>()) {
+            ticked |= cb->text().startsWith("Slice") && cb->isChecked();
+        }
+        QVERIFY(ticked);
+        w.runCommand("sketch.finish");
+        QTRY_VERIFY(w.sketchEditor() == nullptr);
+        QVERIFY(!view->section());  // finishing the sketch takes the slice away
+    }
+
     // Parameters from inside a sketch: the toolbar has them, and the sketch follows the change.
     void parametersFromSketch()
     {

@@ -4128,14 +4128,14 @@
     <message>
         <location line="+9"/>
         <location line="+652"/>
-        <location line="+631"/>
+        <location line="+654"/>
         <location line="+833"/>
         <location line="+26"/>
         <source>Sketch</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2140"/>
+        <location line="-2163"/>
         <source>Extrude</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4276,12 +4276,12 @@
     </message>
     <message>
         <location line="+4"/>
-        <location line="+731"/>
+        <location line="+754"/>
         <source>&lt;p&gt;Nothing selected.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-720"/>
+        <location line="-743"/>
         <source>&lt;h3&gt;Body&lt;/h3&gt;&lt;p&gt;&lt;b&gt;Name:&lt;/b&gt; %1&lt;br&gt;&lt;b&gt;Volume:&lt;/b&gt; %2&lt;br&gt;&lt;b&gt;Size:&lt;/b&gt; %3 × %4 × %5&lt;br&gt;&lt;b&gt;Faces:&lt;/b&gt; %6&lt;/p&gt;&lt;p&gt;Right-click it in the Browser to hide, isolate or rename it.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4367,12 +4367,12 @@
     </message>
     <message>
         <location line="+2"/>
-        <location line="+1403"/>
+        <location line="+1426"/>
         <source>Mouse and trackpad</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1401"/>
+        <location line="-1424"/>
         <source>Default (middle-drag pans, Shift+middle orbits)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4393,30 +4393,30 @@
     </message>
     <message>
         <location line="+11"/>
-        <location line="+1376"/>
+        <location line="+1399"/>
         <source>Theme</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1374"/>
-        <location line="+1329"/>
+        <location line="-1397"/>
+        <location line="+1352"/>
         <source>Light</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1329"/>
-        <location line="+1328"/>
+        <location line="-1352"/>
+        <location line="+1351"/>
         <source>Dark</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1327"/>
-        <location line="+1329"/>
+        <location line="-1350"/>
+        <location line="+1352"/>
         <source>High contrast</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1321"/>
+        <location line="-1344"/>
         <source>&amp;Help</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4492,7 +4492,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+14"/>
+        <location line="+15"/>
         <source>Browser</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4533,12 +4533,12 @@
     </message>
     <message>
         <location line="+2"/>
-        <location line="+1921"/>
+        <location line="+1946"/>
         <source>Rename…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1917"/>
+        <location line="-1942"/>
         <source>Design browser</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4549,13 +4549,13 @@
     </message>
     <message>
         <location line="+5"/>
-        <location line="+1386"/>
+        <location line="+1411"/>
         <location line="+58"/>
         <source>Properties</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1438"/>
+        <location line="-1463"/>
         <source>Properties and help</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4586,6 +4586,16 @@
     </message>
     <message>
         <location line="+1"/>
+        <source>Slice: hide the model in front of the sketch</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Cuts the view (not the model) at the sketch plane, to draw inside a body.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
         <source>Look at the sketch</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4631,12 +4641,12 @@
     </message>
     <message>
         <location line="+18"/>
-        <location line="+1813"/>
+        <location line="+1834"/>
         <source>Move rollback marker</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1709"/>
+        <location line="-1730"/>
         <source>Start here: every part begins as a flat sketch.
 Click Sketch on the toolbar, then click a plane.
 Or open the phone stand sample (File ▸ Open a sample).</source>
@@ -4748,7 +4758,7 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+11"/>
+        <location line="+29"/>
         <source>View “%1” saved with the design. Double-click it in the Browser to come back.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4988,12 +4998,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+0"/>
-        <location line="+876"/>
+        <location line="+879"/>
         <source>There is no 3D body yet.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-873"/>
+        <location line="-876"/>
         <source>STL mesh for slicers (*.stl)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5216,7 +5226,7 @@ An empty design with the origin ready</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+79"/>
+        <location line="+82"/>
         <source>■ &lt;b&gt;Fully defined&lt;/b&gt;: nothing can move.</source>
         <translation type="unfinished"></translation>
     </message>

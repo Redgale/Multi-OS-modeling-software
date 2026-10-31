@@ -48,7 +48,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Sketch on planar face (parametrically attached) | 9 | v0.1 M1 | **app** (click a flat face) + scripts; stays attached in tests | Naming spike |
 | Finish sketch | 9 | v0.1 M1 | **app** | |
 | Look At | 9 | v0.1 M1 | **app** (automatic on entering a sketch, and a button) | |
-| Slice | 9 | v0.1 M1 | — | |
+| Slice | 9 | v0.1 M1 | **app**: a tick box in the sketch palette cuts the view at the sketch plane (the model is unchanged); finishing the sketch takes it away | |
 | Show profile, points, dimensions, constraints | 9 | v0.1 M1 | **app** (toggles in the sketch panel) | |
 | 3D sketch | 9 | v0.3+ | — | Sweep paths are v0.2 |
 | Typed values with Tab while drawing | 9 | v0.1 M1 | **app** | Principle 3 |

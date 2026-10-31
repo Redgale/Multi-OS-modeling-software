@@ -89,6 +89,10 @@ public:
     // Re-read the sketch after undo/redo or a parameter change. Returns false when the
     // sketch feature no longer exists.
     bool refreshFromDocument();
+    const gp_Ax3& frame() const
+    {
+        return frame_;
+    }
 
     struct Options
     {
