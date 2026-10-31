@@ -69,6 +69,7 @@ ounces) is shown in inches. The owner's standing instruction is in `CLAUDE.md`.
 | Thin walls along open curves (M2 part) | A sketch of lines, arcs or smooth curves that do not close: Extrude lists "Open curves, as a wall" (picked when there is no closed area), and builds a wall of the given thickness centred on them, with square ends and sharp (mitred) outer corners; the sketch is then no longer flagged for its gap | `Extrude.ThinWallsAlongOpenCurves` (an L of 30 + 20 mm with a 2 mm wall is exactly 100 mm² × 10; square ends; a quarter-arc wall's volume; a closed outline refused); UI test extrudes two open lines as a wall and checks the sketch shows no warning |
 | Selection filter (M2 part) | A filter in the status bar decides what a plain click picks when no tool is open: faces (name, surface, area), edges (kind, length, diameter of round edges) or bodies (name, volume, size, face count; its Browser row is selected). Tools still pick what they need and hand picking back to the filter when they close | UI test `selectionFilter` (a click on the top face describes the face, then the body; the edge filter survives opening and cancelling Fillet) |
 | Section capping (M6 part) | The Section view fills the cut: the cross-section of each body (holes stay open) is drawn solid on the cut plane, and the panel gives the cut area. Core `sectionFaces` (plane ∩ solid) | `Section.CapsKeepHoles` (a block with a hole cut at half height: 1200 − 25π mm²; a plane that misses gives nothing); UI test `sectionView` checks the knob's cut is filled (capped area > 0, pixel changes to the cap colour) |
+| Marking menu (M7 part) | A right click without dragging in the view opens eight commands in a ring around the cursor (modelling: Sketch, Extrude, Fillet, Press pull, Hole, Measure, Undo, Find a tool; in a sketch: Line, Rectangle, Circle, Dimension, Trim, Construction, Undo, Finish). Each shows its number; keys 1–8 pick, Esc closes. A right drag still orbits, so people without a middle button keep their navigation | UI test `markingMenu` (right click opens 8, clicking one fires its command and closes the menu; the sketch ring offers Line and key 3 picks Circle; a right drag opens nothing) |
 | SVG import (M5 part) | Insert ▸ SVG (or `import svg`): filled `path` (all commands incl. arcs and relative forms), `rect`, `circle`, `ellipse`, `polygon`, with group and element transforms and viewBox scaling, become closed outlines (lines and exact Béziers) in a scalable artwork block centred on a draggable point; holes by nesting; size from the file's physical width (96 px/in assumed otherwise, and said); double-click the centre to set a width (expressions work); outlines become closed areas for extrude/cut; unfilled shapes, text, images and `use` are counted and reported. Our own small XML reader (no new dependency) | `SvgImport.ShapesHolesTransformsAndUnits` (a hand-written SVG with defs, a hole, an arc, a transform, a cubic: areas by formula, half width = quarter area; 1500 mutated files never crash or hang, also under ASan/UBSan, which found a real infinite loop on a stray `/`, fixed); UI test imports and resizes |
 | DXF import (M5 part) | Insert ▸ DXF (or `import dxf`): LINE, CIRCLE, ARC, LWPOLYLINE and POLYLINE with bulge arcs become editable sketch curves; ends that meet share a point so outlines close into areas; units from `$INSUNITS`, asked for when the file does not say (the design's unit offered first); unsupported entities (text, hatches, splines, blocks) are counted and reported; one undo removes the import | `DxfImport.*` (a hand-written inch DXF: four areas match formulas in in², unit override, junk refused; 3000 mutated files never crash, also under ASan/UBSan); UI test imports into a new floor sketch and undoes |
 | Chamfer types and variable fillet (M3 part) | Chamfer: equal distance, two distances, or distance and angle, with "swap the two sides"; Fillet: constant or variable (one radius at each end of the edge, swappable). Panel shows the extra fields only for the types that use them | `EdgeOptions.ChamferTwoDistancesAngleAndVariableFillet` (removed volumes by triangle formula, swap gives the same area, 30° angle, variable fillet between the 1 mm and 3 mm bounds); UI test switches chamfer types |
@@ -124,7 +125,7 @@ and packaged but its window is not exercised in CI (B-003). Builds are unsigned.
   (v0.2 list).
 - Text: installed fonts by name, bold/italic, multi-line, complex-script shaping (B-020).
 - Not built yet:
-  DXF splines/blocks/text, SVG strokes and text, marking menu.
+  DXF splines/blocks/text, SVG strokes and text.
 - libslvs comparison (B-001).
 
 ## What is broken or unverified
@@ -143,7 +144,7 @@ and packaged but its window is not exercised in CI (B-003). Builds are unsigned.
 ## Next three tasks
 
 1. M2 leftovers: extrude drag handle, Select Other.
-2. M6/M7 leftovers: marking menu, navigation settings page.
+2. M7/M8 leftovers: navigation settings page, accessibility pass, localisation.
 3. Windows/macOS GUI screenshots in CI (B-003); Windows DLL audit (B-011); B-001 libslvs
    spike where building SolveSpace is allowed.
 

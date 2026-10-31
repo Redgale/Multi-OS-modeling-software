@@ -199,6 +199,8 @@ signals:
     // guess which version of a body (preview or not) an index belongs to.
     void edgeClicked(const QString& bodyId, const QString& edgeName, Qt::KeyboardModifiers mods);
     void faceClicked(const QString& bodyId, const QString& faceName, Qt::KeyboardModifiers mods);
+    // a right click without dragging (a right drag orbits): open the marking menu here
+    void menuRequested(const QPoint& pos);
     void meshesUpdated();
 
 protected:
@@ -282,6 +284,8 @@ private:
     std::atomic<int> generation_ {0};
     int pending_ = 0;
     int shownBodies_ = 0;
+    QPoint rightPress_;      // where the right button went down
+    bool rightMoved_ = false;  // it dragged (orbit) rather than clicked
 
     Interactor* interactor_ = nullptr;
     PickMode pickMode_ = PickMode::Faces;

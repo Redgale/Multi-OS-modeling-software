@@ -26,6 +26,7 @@ class QComboBox;
 
 namespace jigapp
 {
+class MarkingMenu;
 
 class Viewport;
 class SketchEditor;
@@ -120,6 +121,8 @@ public:
     void setSelectFilter(const QString& what);
     QString selectFilter() const;
     QString detailsText() const;
+    // The marking menu for the view's current context, opened at a view position.
+    MarkingMenu* openMarkingMenu(const QPoint& viewPos);
     void isolateBody(const std::string& body);
     void showAllBodies();
     bool bodyVisible(const std::string& body) const

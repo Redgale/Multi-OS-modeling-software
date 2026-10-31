@@ -10,6 +10,7 @@
 #include <QLineEdit>
 #include <QSettings>
 #include <QTableWidget>
+#include <QToolButton>
 #include <QTreeWidget>
 #include <QtTest>
 
@@ -17,6 +18,7 @@
 #include "InspectPanels.hpp"
 #include "Icons.hpp"
 #include "MainWindow.hpp"
+#include "MarkingMenu.hpp"
 #include "SketchEditor.hpp"
 #include "Tutorial.hpp"
 #include "Viewport.hpp"
@@ -935,6 +937,57 @@ private slots:
         for (auto& [id, b] : st.bodies) {
             QVERIFY(std::abs(jig::massProperties(b->shape()).zmax - 12) < 1e-9);
         }
+    }
+
+    // Marking menu: a right click (no drag) opens eight commands around the cursor.
+    void markingMenu()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        Viewport* view = w.viewport();
+        const QPoint at(400, 300);
+        QTest::mousePress(view, Qt::RightButton, Qt::NoModifier, at);
+        QTest::mouseRelease(view, Qt::RightButton, Qt::NoModifier, at);
+        MarkingMenu* m = nullptr;
+        QTRY_VERIFY((m = w.findChild<MarkingMenu*>()) != nullptr && m->isVisible());
+        QCOMPARE(m->buttonCount(), 8);
+        QToolButton* measure = nullptr;
+        for (int i = 0; i < m->buttonCount(); ++i) {
+            if (m->button(i)->defaultAction()->objectName() == "inspect.measure") {
+                measure = m->button(i);
+            }
+        }
+        QVERIFY(measure);
+        QSignalSpy fired(measure->defaultAction(), &QAction::triggered);
+        measure->click();
+        QCOMPARE(fired.count(), 1);
+        QTRY_VERIFY(w.findChild<MarkingMenu*>() == nullptr);  // closed after the pick
+        if (w.featurePanel()) {
+            qobject_cast<ToolPanel*>(w.featurePanel())->cancel();
+        }
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        // in a sketch it offers drawing tools; number keys pick, Esc closes
+        QVERIFY(w.createSketchOn("XY"));
+        auto* sm = w.openMarkingMenu(at);
+        bool hasLine = false;
+        for (int i = 0; i < sm->buttonCount(); ++i) {
+            hasLine |= sm->button(i)->defaultAction()->objectName() == "sketch.line";
+        }
+        QVERIFY(hasLine);
+        sm->grab().save(shotPath("marking-menu"));
+        QTest::keyClick(sm, Qt::Key_3);  // the third: Circle
+        QTRY_COMPARE(int(w.sketchEditor()->tool()), int(SketchEditor::Tool::Circle));
+        // a right drag still orbits and opens nothing
+        QTRY_VERIFY(w.findChild<MarkingMenu*>() == nullptr);
+        QTest::mousePress(view, Qt::RightButton, Qt::NoModifier, at);
+        QMouseEvent mv(QEvent::MouseMove, QPointF(at + QPoint(40, 10)), view->mapToGlobal(QPointF(at + QPoint(40, 10))),
+                       Qt::NoButton, Qt::RightButton, Qt::NoModifier);
+        QApplication::sendEvent(view, &mv);
+        QTest::mouseRelease(view, Qt::RightButton, Qt::NoModifier, at + QPoint(40, 10));
+        QTest::qWait(50);
+        QVERIFY(w.findChild<MarkingMenu*>() == nullptr);
     }
 
     // Selection filter: click a body's face with "Pick bodies" and the details describe the body.

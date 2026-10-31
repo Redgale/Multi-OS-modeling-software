@@ -1044,6 +1044,8 @@ void Viewport::mousePressEvent(QMouseEvent* e)
     // Universal fallback for people without a middle button: right-drag orbits.
     if (e->button() == Qt::RightButton) {
         drag_ = shift ? Drag::Pan : Drag::Orbit;
+        rightPress_ = lastPos_;
+        rightMoved_ = false;
     }
     if (drag_ == Drag::None && e->button() == Qt::LeftButton && gizmoHit(lastPos_) < 0 && interactor_) {
         interactor_->mousePress(e);
@@ -1055,6 +1057,9 @@ void Viewport::mouseMoveEvent(QMouseEvent* e)
     const QPoint pos = e->position().toPoint();
     const QPoint d = pos - lastPos_;
     lastPos_ = pos;
+    if ((e->buttons() & Qt::RightButton) && (pos - rightPress_).manhattanLength() > 4) {
+        rightMoved_ = true;
+    }
     if (drag_ == Drag::Orbit) {
         orbit(d);
         return;
@@ -1116,6 +1121,13 @@ void Viewport::mouseMoveEvent(QMouseEvent* e)
 
 void Viewport::mouseReleaseEvent(QMouseEvent* e)
 {
+    if (e->button() == Qt::RightButton) {
+        drag_ = Drag::None;
+        if (!rightMoved_) {
+            emit menuRequested(e->position().toPoint());
+        }
+        return;
+    }
     if (e->button() == Qt::LeftButton && drag_ == Drag::None) {
         const QPoint pos = e->position().toPoint();
         switch (gizmoHit(pos)) {

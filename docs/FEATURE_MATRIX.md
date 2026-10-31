@@ -22,7 +22,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Browser tree (settings, named views, origin, bodies, sketches) | 4, 7 | v0.1 | settings, origin, sketches, bodies, parameters | Named views in M8 |
 | Browser visibility, isolate, rename, find in timeline | 7 | v0.1 M2 | **app**: body visibility (tick box + word), isolate, show all, rename; find in timeline not yet | Visibility is per session, not saved |
 | Timeline with icons, edit, rollback, reorder, group, playback | 4 | v0.1 (playback v0.2) | **app**: icons, edit, rename, suppress, roll back, delete; reorder/group not yet | Principle 6 |
-| Marking menu | 4 | v0.1 SHOULD (M7), v0.2 MUST | — | Brief |
+| Marking menu | 4 | v0.1 SHOULD (M7), v0.2 MUST | **app**: right click (no drag) in the view: eight commands in a ring, for modelling or sketching; click or number key 1–8; right drag still orbits | Brief |
 | Quick-access search (S) | 4 | v0.1 | yes: Ctrl/Cmd+K and S, alias search | Principle 9 |
 | Data panel, hubs, projects (cloud) | 3 | never | — | Local-first; replaced by files + local versions |
 | Version history and restore | 3 | v0.1 M6 | **app**: named versions inside the .jig, list, restore (undoable) | Local snapshots (PREFLIGHT A-6) |

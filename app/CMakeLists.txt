@@ -13,6 +13,7 @@ add_library(jigsmith_ui STATIC
     FeaturePanels.cpp FeaturePanels.hpp
     InspectPanels.cpp InspectPanels.hpp
     Tutorial.cpp Tutorial.hpp
+    MarkingMenu.cpp MarkingMenu.hpp
     resources.qrc
 )
 target_include_directories(jigsmith_ui PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

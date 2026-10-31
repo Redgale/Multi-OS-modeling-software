@@ -64,7 +64,7 @@ timeline edit/rename/suppress/roll back/delete with dependents warning, Paramete
 - M5 (Parameters, Text, Project, SVG and DXF import done): linked (associative) Project.
 - M6: Measure, Section, Properties with density; 3MF export; local versions; autosave
   preferences; STEP import UI with unit correction; parser fuzzing (SVG, DXF, STEP).
-- M7: tutorial, tooltips audit, error-explanation actions, marking menu, navigation
+- M7 (tutorial, marking menu done): tooltips audit, error-explanation actions, navigation
   settings page.
 - M8: accessibility pass (keyboard, screen-reader labels, scaling, reduced motion),
   localisation (Qt Linguist), performance, installers, v0.1.

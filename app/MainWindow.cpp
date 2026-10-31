@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "MainWindow.hpp"
 
+#include "MarkingMenu.hpp"
+
 #include <array>
 
 #include <QAction>
@@ -460,6 +462,7 @@ MainWindow::MainWindow()
     statusBar()->addWidget(statusSel_, 1);
     statusBar()->addPermanentWidget(statusInfo_);
     connect(view_, &Viewport::hovered, this, [this](const QString& d) { statusSel_->setText(d); });
+    connect(view_, &Viewport::menuRequested, this, [this](const QPoint& p) { openMarkingMenu(p); });
     selectFilter_ = new QComboBox(this);
     selectFilter_->addItem(tr("Pick faces"), "faces");
     selectFilter_->addItem(tr("Pick edges"), "edges");
@@ -1154,6 +1157,22 @@ QString MainWindow::selectFilter() const
 QString MainWindow::detailsText() const
 {
     return details_->toPlainText();
+}
+
+MarkingMenu* MainWindow::openMarkingMenu(const QPoint& viewPos)
+{
+    // the commands people reach for most, for where they are: drawing or modelling
+    static const char* model[] = {"sketch.create", "solid.extrude", "solid.fillet", "solid.presspull",
+                                  "solid.hole",    "inspect.measure", "edit.undo", "edit.palette"};
+    static const char* drawing[] = {"sketch.line",  "sketch.rectangle", "sketch.circle",       "sketch.dimension",
+                                    "sketch.trim", "sketch.construction", "edit.undo", "sketch.finish"};
+    std::vector<QAction*> acts;
+    for (const char* id : sketch_ ? drawing : model) {
+        acts.push_back(registryAction(id));
+    }
+    auto* m = new MarkingMenu(acts, this);
+    m->popupAt(view_->mapToGlobal(viewPos));
+    return m;
 }
 
 void MainWindow::isolateBody(const std::string& body)
