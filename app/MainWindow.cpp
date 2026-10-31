@@ -828,6 +828,7 @@ void MainWindow::buildToolbar()
         sketchBar_->addAction(registryAction(id));
     }
     sketchBar_->addSeparator();
+    sketchBar_->addAction(registryAction("modify.parameters"));  // change sizes without leaving the sketch
     sketchBar_->addAction(registryAction("sketch.finish"));
     sketchBar_->hide();
 }

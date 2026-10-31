@@ -75,7 +75,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Move/Copy (sketch) | 11 | v0.1 M1 | **app** (click or typed shift and turn about the base point, Ctrl copies) + scripts (`angle= about=`) | |
 | Stretch | 11 | v0.2 | — | |
 | Delete | 11 | v0.1 M1 | **app** | |
-| Change parameters from sketch | 11 | v0.1 M5 | — | |
+| Change parameters from sketch | 11 | v0.1 M5 | **app**: Parameters on the sketch toolbar; the open sketch follows the change | |
 | Constraints: coincident, collinear, concentric, midpoint, fix, parallel, perpendicular, horizontal/vertical, tangent, symmetry, equal | 12 | v0.1 M1 | **app**: all (collinear and concentric built from point-on-curve and coincident) | |
 | Smooth (G2) | 12 | v0.2 | — | Needs splines |
 | Auto-constraints with glyphs, override with modifier | 12 | v0.1 M1 | **app**: coincident (snap) and H/V, Ctrl overrides | Principle 5 |

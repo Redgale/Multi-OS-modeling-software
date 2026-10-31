@@ -17,6 +17,7 @@
 #include <QPushButton>
 #include <QSettings>
 #include <QTableWidget>
+#include <QToolBar>
 #include <QToolButton>
 #include <QTimer>
 #include <QTreeWidget>
@@ -1737,6 +1738,56 @@ private slots:
         QVERIFY(turn);  // the new axis is offered
         qobject_cast<FeaturePanel*>(w.featurePanel())->cancel();
         QTRY_VERIFY(w.featurePanel() == nullptr);
+    }
+
+    // Parameters from inside a sketch: the toolbar has them, and the sketch follows the change.
+    void parametersFromSketch()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        {
+            jig::ScriptRunner r(w.document());
+            QVERIFY(r.runText("param side = 20 mm\nsketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=side h=side\n").ok());
+        }
+        w.editFeature(0);
+        QTRY_VERIFY(w.sketchEditor() != nullptr);
+        auto* bar = w.findChild<QToolBar*>("SketchBar");
+        QVERIFY(bar && bar->isVisible());
+        bool offered = false;
+        for (auto* a : bar->actions()) {
+            offered |= a->objectName() == "modify.parameters" || a->data().toString() == "modify.parameters";
+        }
+        QVERIFY(offered);
+        QTimer::singleShot(300, [] {
+            for (auto* d : QApplication::topLevelWidgets()) {
+                if (auto* pd = qobject_cast<ParametersDialog*>(d); pd && pd->isVisible()) {
+                    pd->findChild<QTableWidget*>()->item(0, 1)->setText("30 mm");
+                    if (pd->apply()) {
+                        pd->accept();
+                    }
+                }
+            }
+        });
+        w.runCommand("modify.parameters");
+        QVERIFY(w.sketchEditor() != nullptr);  // still sketching
+        auto area = [&] {
+            double a = 0;
+            for (auto& rg : w.document().state().sketches.at("s1")->profiles.regions) {
+                a += rg.area;
+            }
+            return a;
+        };
+        QTRY_VERIFY(std::abs(area() - 900) < 1e-6);
+        // the editor shows the new size too
+        double maxX = -1e9;
+        for (auto& [id, e] : w.sketchEditor()->sketch().entities()) {
+            if (e.type == jig::EntityType::Point) {
+                maxX = std::max(maxX, w.sketchEditor()->sketch().pointXY(id).first);
+            }
+        }
+        QVERIFY(std::abs(maxX - 15) < 1e-6);
     }
 
     // Shell outside: the block becomes the hollow, walls around it.
