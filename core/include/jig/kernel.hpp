@@ -468,5 +468,11 @@ struct ImportedShape
     std::string fileUnit;  // unit declared by the file, normalised: "mm", "cm", "m", "in", "ft"
 };
 Result<ImportedShape> importStep(const std::string& path);
+// A shape as OCCT's BRep text and back (an imported solid is kept inside the design this way).
+std::string shapeToText(const TopoDS_Shape& s);
+Result<TopoDS_Shape> shapeFromText(const std::string& text);
+// The solids of an imported shape, each with its faces named "<id>/face:<n>" (n from 1, in
+// the file's order, so later steps find the same faces every time).
+Result<std::vector<NamedShape>> importedBodies(const std::string& id, const TopoDS_Shape& s);
 
 }  // namespace jig

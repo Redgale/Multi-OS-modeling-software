@@ -403,4 +403,37 @@ Result<bool> export3mf(const std::vector<std::pair<std::string, TopoDS_Shape>>& 
     return true;
 }
 
+// ---------------------------------------------------------------- STEP import step
+
+Result<std::string> insertStep(Document& doc, const std::string& path, std::string id)
+{
+    auto imp = importStep(path);
+    if (!imp) {
+        return imp.error();
+    }
+    auto bodies = importedBodies("check", imp->shape);  // refuse surfaces-only files now, not later
+    if (!bodies) {
+        return bodies.error();
+    }
+    const std::string file = std::filesystem::path(path).filename().string();
+    const std::string brep = shapeToText(imp->shape);
+    auto r = doc.transact("Import " + file, [&](Model& m) -> Result<bool> {
+        Feature f;
+        f.id = id.empty() ? Document::newId(m, "im") : id;
+        if (Document::findFeature(m, f.id)) {
+            return makeError("script.args", fmt("The id '%1' is already used.", {f.id}));
+        }
+        f.name = file;
+        f.kind = FeatureKind::Import;
+        f.params = {{"file", file}, {"unit", imp->fileUnit}, {"brep", brep}};
+        id = f.id;
+        Document::insertAtMarker(m, std::move(f));
+        return true;
+    });
+    if (!r) {
+        return r.error();
+    }
+    return id;
+}
+
 }  // namespace jig

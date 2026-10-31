@@ -283,6 +283,24 @@ FeatureOutcome applyPoint(const Document& doc, const Feature& f, const std::shar
     return {out, {}};
 }
 
+FeatureOutcome applyImport(const Feature& f, const std::shared_ptr<const ModelState>& in)
+{
+    auto shape = shapeFromText(f.params.value("brep", std::string {}));
+    if (!shape) {
+        return failed(shape.error());
+    }
+    auto bodies = importedBodies(f.id, shape.value());
+    if (!bodies) {
+        return failed(bodies.error());
+    }
+    auto out = copyState(in);
+    for (size_t k = 0; k < bodies->size(); ++k) {
+        const std::string id = bodies->size() == 1 ? f.id : f.id + "." + std::to_string(k + 1);
+        out->bodies[id] = std::make_shared<NamedShape>(std::move((*bodies)[k]));
+    }
+    return {out, {}};
+}
+
 FeatureOutcome applyPlane(const Document& doc, const Feature& f, const std::shared_ptr<const ModelState>& in)
 {
     const auto& p = f.params;
@@ -1589,6 +1607,8 @@ FeatureOutcome applyFeature(const Document& doc, const Feature& f, const std::sh
                 return applyPressPull(doc, f, in);
             case FeatureKind::Point:
                 return applyPoint(doc, f, in);
+            case FeatureKind::Import:
+                return applyImport(f, in);
         }
     }
     catch (const std::exception& ex) {

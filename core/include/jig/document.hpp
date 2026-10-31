@@ -63,7 +63,8 @@ enum class FeatureKind
     Move,
     Axis,  // construction axis (along an edge, through a round face, where two planes meet)
     PressPull,  // push or pull a flat face of a body
-    Point       // construction point (typed position, end or centre of an edge, centre of a face)
+    Point,      // construction point (typed position, end or centre of an edge, centre of a face)
+    Import      // a solid brought in from a STEP file, kept inside the design
 };
 
 const char* toString(FeatureKind k);

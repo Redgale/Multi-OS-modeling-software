@@ -360,3 +360,56 @@ TEST(Section, CapsKeepHoles)
     BRepGProp::SurfaceProperties(miss.value(), g2);
     EXPECT_NEAR(g2.Mass(), 0, 1e-9);
 }
+
+TEST(Interchange, StepImportIsATimelineStep)
+{
+    // two separate blocks written to STEP, brought back as an Import step
+    auto src = build("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=40 h=30\nextrude id=e1 sketch=s1 distance=10\n"
+                     "sketch id=s2 plane=XY\nrect sketch=s2 center=60,0 w=10 h=10\nextrude id=e2 sketch=s2 distance=5 op=new\n");
+    const auto step = (tempDir() / "two-blocks.step").string();
+    ASSERT_TRUE(exportStep(src->combinedShape(), step).ok());
+    auto doc = std::make_unique<Document>();
+    ScriptRunner r(*doc);
+    auto ok = r.runText("import step " + step + " id=im1\n");
+    ASSERT_TRUE(ok.ok()) << ok.error().message;
+    expectAllOk(*doc);
+    const auto& st = doc->state();
+    ASSERT_EQ(st.bodies.size(), 2u);  // one body per solid
+    double v = 0;
+    for (auto& [id, b] : st.bodies) {
+        v += massProperties(b->shape()).volume;
+        EXPECT_EQ(id.rfind("im1.", 0), 0u);
+        EXPECT_EQ(b->faceName(0).rfind("im1/face:", 0), 0u);  // faces named for later steps
+    }
+    EXPECT_NEAR(v, 40 * 30 * 10 + 10 * 10 * 5, 1e-3);
+    // the solid lives in the design: it reopens without the STEP file
+    std::filesystem::remove(step);
+    const auto path = (tempDir() / "imported.jig").string();
+    ASSERT_TRUE(saveDocument(*doc, path).ok());
+    auto back = loadDocument(path);
+    ASSERT_TRUE(back.ok()) << back.error().message;
+    EXPECT_EQ((*back)->state().bodies.size(), 2u);
+    EXPECT_EQ((*back)->model().features[0].name, "two-blocks.step");
+    // later steps work on it by face name: fillet the big block's top edges
+    std::string top;
+    for (auto& [id, b] : (*back)->state().bodies) {
+        for (int i = 0; i < b->faceCount(); ++i) {
+            if (std::abs(massProperties(b->shape()).volume - 12000) < 1e-3) {
+                GProp_GProps g;
+                BRepGProp::SurfaceProperties(b->face(i), g);
+                if (std::abs(g.CentreOfMass().Z() - 10) < 1e-6) {
+                    top = id + " " + b->faceName(i);
+                }
+            }
+        }
+    }
+    ASSERT_FALSE(top.empty());
+    const std::string body = top.substr(0, top.find(' ')), face = top.substr(top.find(' ') + 1);
+    run(**back, "fillet id=f1 edges=face:" + face + " radius=2mm body=" + body);
+    expectAllOk(**back);
+    // a file that is not STEP is explained
+    auto bad = std::make_unique<Document>();
+    ScriptRunner rb(*bad);
+    auto no = rb.runText("import step " + path + "\n");
+    EXPECT_FALSE(no.ok());
+}

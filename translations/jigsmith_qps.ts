@@ -2161,7 +2161,27 @@
         <translation>[Thîs fîlé çöüld ñöt bé öpéñéd. Ît máý bé dámágéd ör ñöt á Jîgsmîth désîgñ.~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+122" />
+        <location line="+60" />
+        <source>The imported solid stored in this design is damaged.</source>
+        <translation>[Thé împörtéd sölîd störéd îñ thîs désîgñ îs dámágéd.~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Delete the import step and import the file again.</source>
+        <translation>[Délété thé împört stép áñd împört thé fîlé ágáîñ.~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>This file has surfaces but no closed solid, so there is nothing to build on.</source>
+        <translation>[Thîs fîlé hás sürfáçés büt ñö çlöséd sölîd, sö théré îs ñöthîñg tö büîld öñ.~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Export a solid (not just surfaces) from the other program.</source>
+        <translation>[Éxpört á sölîd (ñöt jüst sürfáçés) fröm thé öthér prögrám.~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+63" />
         <source>Pick an edge to project.</source>
         <translation>[Pîçk áñ édgé tö pröjéçt.~~~~~~]</translation>
     </message>
@@ -2422,6 +2442,11 @@
     </message>
     <message>
         <location line="+1" />
+        <source>The id '%1' is already used.</source>
+        <translation>[Thé îd '%1' îs álréádý üséd.~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
         <source>A wall of %1 does not fit this outline.</source>
         <translation>[Á wáll öf %1 döés ñöt fît thîs öütlîñé.~~~~~~~~~]</translation>
     </message>
@@ -2496,7 +2521,7 @@
         <translation>[Thé föñt '%1' îs ñöt áváîláblé héré; üsîñg thé büîlt-îñ föñt (Îñtér).~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="-191" />
+        <location line="-196" />
         <source>There is nothing to export yet.</source>
         <translation>[Théré îs ñöthîñg tö éxpört ýét.~~~~~~~~]</translation>
     </message>
@@ -2791,7 +2816,7 @@
         <translation>[Thîs STÉP fîlé hás ñö shápés Jîgsmîth çáñ üsé.~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+1" />
+        <location line="+5" />
         <source>The cut could not be worked out for this shape.</source>
         <translation>[Thé çüt çöüld ñöt bé wörkéd öüt för thîs shápé.~~~~~~~~~~~~]</translation>
     </message>
@@ -3179,7 +3204,7 @@
         <translation>[çürvéd édgé~~~]</translation>
     </message>
     <message>
-        <location filename="../app/MainWindow.cpp" line="+339" />
+        <location filename="../app/MainWindow.cpp" line="+341" />
         <source>Click a plane, a construction plane or a flat face to sketch on, or press 1 (floor), 2 (front) or 3 (side).  Esc cancels.</source>
         <translation>[Çlîçk á pláñé, á çöñstrüçtîöñ pláñé ör á flát fáçé tö skétçh öñ, ör préss 1 (flöör), 2 (fröñt) ör 3 (sîdé).  Ésç çáñçéls.~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -4028,7 +4053,7 @@
 <context>
     <name>jigapp::MainWindow</name>
     <message>
-        <location filename="../app/MainWindow.cpp" line="-140" />
+        <location filename="../app/MainWindow.cpp" line="-142" />
         <source>OK</source>
         <translation>[ÖK~]</translation>
     </message>
@@ -4054,15 +4079,15 @@
     </message>
     <message>
         <location line="+9" />
-        <location line="+649" />
+        <location line="+651" />
         <location line="+587" />
-        <location line="+818" />
+        <location line="+824" />
         <location line="+26" />
         <source>Sketch</source>
         <translation>[Skétçh~~]</translation>
     </message>
     <message>
-        <location line="-2078" />
+        <location line="-2086" />
         <source>Extrude</source>
         <translation>[Éxtrüdé~~]</translation>
     </message>
@@ -4115,6 +4140,11 @@
         <location line="+2" />
         <source>Point</source>
         <translation>[Pöîñt~]</translation>
+    </message>
+    <message>
+        <location line="+2" />
+        <source>Import</source>
+        <translation>[Împört~~]</translation>
     </message>
     <message>
         <location line="+2" />
@@ -4289,12 +4319,12 @@
     </message>
     <message>
         <location line="+2" />
-        <location line="+1344" />
+        <location line="+1350" />
         <source>Mouse and trackpad</source>
         <translation>[Möüsé áñd tráçkpád~~~~~]</translation>
     </message>
     <message>
-        <location line="-1342" />
+        <location line="-1348" />
         <source>Default (middle-drag pans, Shift+middle orbits)</source>
         <translation>[Défáült (mîddlé-drág páñs, Shîft+mîddlé örbîts)~~~~~~~~~~~~]</translation>
     </message>
@@ -4315,30 +4345,30 @@
     </message>
     <message>
         <location line="+11" />
-        <location line="+1317" />
+        <location line="+1323" />
         <source>Theme</source>
         <translation>[Thémé~]</translation>
     </message>
     <message>
-        <location line="-1315" />
-        <location line="+1270" />
+        <location line="-1321" />
+        <location line="+1276" />
         <source>Light</source>
         <translation>[Lîght~]</translation>
     </message>
     <message>
-        <location line="-1270" />
-        <location line="+1269" />
+        <location line="-1276" />
+        <location line="+1275" />
         <source>Dark</source>
         <translation>[Dárk~]</translation>
     </message>
     <message>
-        <location line="-1268" />
-        <location line="+1270" />
+        <location line="-1274" />
+        <location line="+1276" />
         <source>High contrast</source>
         <translation>[Hîgh çöñtrást~~~~]</translation>
     </message>
     <message>
-        <location line="-1262" />
+        <location line="-1268" />
         <source>&amp;Help</source>
         <translation>[&amp;Hélp~]</translation>
     </message>
@@ -4440,12 +4470,12 @@
     </message>
     <message>
         <location line="+2" />
-        <location line="+1849" />
+        <location line="+1885" />
         <source>Rename…</source>
         <translation>[Réñámé…~~]</translation>
     </message>
     <message>
-        <location line="-1845" />
+        <location line="-1881" />
         <source>Design browser</source>
         <translation>[Désîgñ bröwsér~~~~]</translation>
     </message>
@@ -4456,13 +4486,13 @@
     </message>
     <message>
         <location line="+5" />
-        <location line="+1344" />
+        <location line="+1350" />
         <location line="+58" />
         <source>Properties</source>
         <translation>[Pröpértîés~~~]</translation>
     </message>
     <message>
-        <location line="-1396" />
+        <location line="-1402" />
         <source>Properties and help</source>
         <translation>[Pröpértîés áñd hélp~~~~~]</translation>
     </message>
@@ -4538,12 +4568,12 @@
     </message>
     <message>
         <location line="+18" />
-        <location line="+1741" />
+        <location line="+1777" />
         <source>Move rollback marker</source>
         <translation>[Mövé röllbáçk márkér~~~~~~]</translation>
     </message>
     <message>
-        <location line="-1637" />
+        <location line="-1673" />
         <source>Start here: every part begins as a flat sketch.
 Click Sketch on the toolbar, then click a plane.
 Or open the phone stand sample (File ▸ Open a sample).</source>
@@ -4723,12 +4753,22 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+0" />
-        <location line="+321" />
+        <location line="+327" />
         <source>Jigsmith designs (*.jig)</source>
         <translation>[Jîgsmîth désîgñs (*.jîg)~~~~~~]</translation>
     </message>
     <message>
-        <location line="-210" />
+        <location line="-217" />
+        <source>Import STEP</source>
+        <translation>[Împört STÉP~~~]</translation>
+    </message>
+    <message>
+        <location line="+0" />
+        <source>STEP files (*.step *.stp)</source>
+        <translation>[STÉP fîlés (*.stép *.stp)~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+7" />
         <source>There is nothing to slice yet: make a 3D body first.</source>
         <translation>[Théré îs ñöthîñg tö slîçé ýét: máké á 3D bödý fîrst.~~~~~~~~~~~~~]</translation>
     </message>
@@ -4855,12 +4895,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+0" />
-        <location line="+851" />
+        <location line="+876" />
         <source>There is no 3D body yet.</source>
         <translation>[Théré îs ñö 3D bödý ýét.~~~~~]</translation>
     </message>
     <message>
-        <location line="-848" />
+        <location line="-873" />
         <source>STL mesh for slicers (*.stl)</source>
         <translation>[STL mésh för slîçérs (*.stl)~~~~~~]</translation>
     </message>
@@ -5135,8 +5175,13 @@ An empty design with the origin ready</source>
         <source>That face was made by %1: change its size here.</source>
         <translation>[Thát fáçé wás mádé bý %1: çháñgé îts sîzé héré.~~~~~~~~~~~]</translation>
     </message>
+    <message numerus="yes">
+        <location line="+22" />
+        <source>Imported %n solid(s) from %1. It is kept inside this design.</source>
+        <translation><numerusform>[Împörtéd %n sölîd(s) fröm %1. Ît îs képt îñsîdé thîs désîgñ.~~~~~~~~~~~~~~]</numerusform><numerusform>[Împörtéd %n sölîd(s) fröm %1. Ît îs képt îñsîdé thîs désîgñ.~~~~~~~~~~~~~~]</numerusform></translation>
+    </message>
     <message>
-        <location line="+5" />
+        <location line="+8" />
         <location line="+47" />
         <source>Import DXF</source>
         <translation>[Împört DXF~~~]</translation>
@@ -5147,7 +5192,8 @@ An empty design with the origin ready</source>
         <translation>[DXF dráwîñgs (*.dxf)~~~~]</translation>
     </message>
     <message>
-        <location line="+6" />
+        <location line="-17" />
+        <location line="+23" />
         <location line="+30" />
         <location line="+25" />
         <location line="+30" />
@@ -5227,7 +5273,12 @@ An empty design with the origin ready</source>
         <translation>[Théré îs ñöthîñg tö méásüré ýét: máké á 3D bödý fîrst.~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+110" />
+        <location line="+88" />
+        <source>An imported solid has no settings to change. To use a newer copy of the file, delete this step and import it again.</source>
+        <translation>[Áñ împörtéd sölîd hás ñö séttîñgs tö çháñgé. Tö üsé á ñéwér çöpý öf thé fîlé, délété thîs stép áñd împört ît ágáîñ.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+27" />
         <source>Edit…</source>
         <translation>[Édît…~]</translation>
     </message>

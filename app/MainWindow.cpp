@@ -144,6 +144,8 @@ QString kindWord(jig::FeatureKind k)
             return MainWindow::tr("Axis");
         case jig::FeatureKind::Point:
             return MainWindow::tr("Point");
+        case jig::FeatureKind::Import:
+            return MainWindow::tr("Import");
         case jig::FeatureKind::PressPull:
             return MainWindow::tr("Press pull");
         case jig::FeatureKind::Combine:
@@ -1524,6 +1526,12 @@ void MainWindow::runCommand(const QString& id)
     else if (id == "insert.svg") {
         importSvg();
     }
+    else if (id == "insert.step") {
+        const QString path = QFileDialog::getOpenFileName(this, tr("Import STEP"), {}, tr("STEP files (*.step *.stp)"));
+        if (!path.isEmpty()) {
+            importStepFile(path);
+        }
+    }
     else if (id == "inspect.section") {
         if (doc_->state().bodies.empty()) {
             statusBar()->showMessage(tr("There is nothing to slice yet: make a 3D body first."), 5000);
@@ -2470,6 +2478,31 @@ QString MainWindow::pressPullFace(const std::string& body, const std::string& fa
     return tr("That face was made by %1: change its size here.").arg(q(doc_->model().features[size_t(idx)].name));
 }
 
+bool MainWindow::importStepFile(const QString& path)
+{
+    if (sketch_) {
+        exitSketch();
+    }
+    cancelPicker();
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+    auto id = jig::insertStep(*doc_, path.toStdString());
+    QApplication::restoreOverrideCursor();
+    if (!id) {
+        QMessageBox::warning(this, tr("Could not import"), coreText(id.error().message));
+        return false;
+    }
+    refreshAll();
+    view_->fitAll();
+    int n = 0;
+    for (auto& [bid, b] : doc_->state().bodies) {
+        n += bid == id.value() || bid.rfind(id.value() + ".", 0) == 0;
+    }
+    statusBar()->showMessage(tr("Imported %n solid(s) from %1. It is kept inside this design.", "", n)
+                                 .arg(QFileInfo(path).fileName()),
+                             8000);
+    return true;
+}
+
 void MainWindow::importDxf()
 {
     const QString path = QFileDialog::getOpenFileName(this, tr("Import DXF"), {}, tr("DXF drawings (*.dxf)"));
@@ -2692,6 +2725,11 @@ void MainWindow::editFeature(int index)
             break;
         case jig::FeatureKind::Point:
             openPoint(f.id);
+            break;
+        case jig::FeatureKind::Import:
+            statusBar()->showMessage(tr("An imported solid has no settings to change. To use a newer copy of the "
+                                        "file, delete this step and import it again."),
+                                     8000);
             break;
         case jig::FeatureKind::PressPull:
             openPressPull(f.id);

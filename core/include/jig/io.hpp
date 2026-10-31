@@ -47,6 +47,10 @@ Result<std::unique_ptr<Document>> loadVersion(const std::string& path, int numbe
 // For tests and fuzzing: parse a container already in memory.
 Result<std::unique_ptr<Document>> loadDocumentFromMemory(const void* data, size_t size);
 
+// Adds an Import step with the solids of a STEP file (kept inside the design, so the design
+// does not depend on the file afterwards). Returns the step's id.
+Result<std::string> insertStep(Document& doc, const std::string& path, std::string id = {});
+
 // ---------------------------------------------------------------- 3MF
 
 // A triangle mesh with shared (welded) vertices, oriented outward.

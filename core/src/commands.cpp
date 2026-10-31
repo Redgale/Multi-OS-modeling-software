@@ -140,7 +140,7 @@ CommandRegistry::CommandRegistry()
     add({"inspect.measure", "Measure", "Measure", "INSPECT", "Read distances, angles, lengths and areas.", "I", {"distance", "how big", "ruler", "size"}, true, false, false, m6});
     add({"inspect.section", "Section view", "Section Analysis", "INSPECT", "Slice the view to look inside walls and holes.", "", {"cut view", "cross section", "inside"}, false, false, false, m6});
     add({"inspect.properties", "Properties", "Properties", "INSPECT", "Volume, area, weight and center of mass of a body.", "", {"volume", "weight", "mass", "filament"}, true, false, true, m6});
-    add({"insert.step", "Import STEP…", "Insert STEP", "INSERT", "Bring in a solid from another CAD program.", "", {"stp", "import solid"}, false, false, true, m6});
+    add({"insert.step", "Import STEP…", "Insert STEP", "INSERT", "Bring in a solid from another CAD program.", "", {"stp", "import solid"}, false, true, true, m6});
     add({"insert.svg", "Import SVG…", "Insert SVG", "INSERT", "Bring vector artwork into a sketch, e.g. a logo.", "", {"logo", "vector", "artwork"}, false, false, false, m5});
     add({"insert.dxf", "Import DXF…", "Insert DXF", "INSERT", "Bring a 2D drawing or laser-cut file into a sketch.", "", {"laser", "2d drawing"}, false, false, false, m5});
     add({"modify.parameters", "Parameters", "Change Parameters", "MODIFY", "Name sizes like width or wall and use them in any field.", "", {"variables", "named values", "change size"}, true, false, true, m5});
@@ -158,7 +158,7 @@ CommandRegistry::CommandRegistry()
         "constraint.symmetric", "constraint.equal", "solid.extrude", "solid.fillet", "solid.chamfer", "solid.shell",
         "solid.revolve", "solid.hole", "solid.mirror", "solid.pattern_rect", "solid.pattern_circ", "modify.parameters",
         "inspect.measure", "inspect.properties", "file.export_3mf", "construct.offset_plane", "construct.angle_plane",
-        "construct.midplane", "construct.axis", "solid.presspull", "solid.combine", "solid.split", "solid.move",
+        "construct.midplane", "construct.axis", "construct.point", "solid.presspull", "solid.combine", "solid.split", "solid.move",
         "inspect.section", "insert.dxf", "insert.svg", "help.tutorial"};
     for (auto& c : commands_) {
         if (inApp.count(c.id)) {
@@ -1884,6 +1884,14 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
     if (a.verb == "import") {
         // import dxf <path> [sketch=s1] [units=mm|in|…] [at=x,y]
         // import svg <path> [sketch=s1] [width=<len>] [at=x,y]
+        // import step <path> [id=im1]                 (solids, kept inside the design)
+        if (a.positional.size() >= 2 && (lower(a.positional[0]) == "step" || lower(a.positional[0]) == "stp")) {
+            auto id = insertStep(doc, a.positional[1], a.get("id"));
+            if (!id) {
+                return id.error();
+            }
+            return checkFeature(id.value());
+        }
         if (a.positional.size() >= 2 && lower(a.positional[0]) == "svg") {
             auto art = readSvg(a.positional[1]);
             if (!art) {
@@ -1922,7 +1930,7 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
             });
         }
         if (a.positional.size() < 2 || lower(a.positional[0]) != "dxf") {
-            return makeError("script.args", "Use: import dxf|svg <path> [sketch=s1] …");
+            return makeError("script.args", "Use: import dxf|svg|step <path> [sketch=s1] …");
         }
         auto dwg = readDxf(a.positional[1]);
         if (!dwg) {

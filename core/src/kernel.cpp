@@ -55,6 +55,7 @@
 #include <ShapeUpgrade_UnifySameDomain.hxx>
 #include <Standard_Failure.hxx>
 #include <STEPControl_Reader.hxx>
+#include <BRepTools.hxx>
 #include <STEPControl_Writer.hxx>
 #include <StlAPI_Writer.hxx>
 #include <TColgp_Array1OfPnt.hxx>
@@ -2280,6 +2281,50 @@ Result<ImportedShape> importStep(const std::string& path)
         return makeError("import.step", "This STEP file could not be read. It may be damaged.", {},
                          kernelText(f));
     }
+}
+
+std::string shapeToText(const TopoDS_Shape& s)
+{
+    std::ostringstream os;
+    BRepTools::Write(s, os);
+    return os.str();
+}
+
+Result<TopoDS_Shape> shapeFromText(const std::string& text)
+{
+    try {
+        std::istringstream is(text);
+        TopoDS_Shape s;
+        BRep_Builder b;
+        BRepTools::Read(s, is, b);
+        if (s.IsNull()) {
+            return makeError("import.damaged", "The imported solid stored in this design is damaged.",
+                             {"Delete the import step and import the file again."});
+        }
+        return s;
+    }
+    catch (const Standard_Failure& f) {
+        return makeError("import.damaged", "The imported solid stored in this design is damaged.",
+                         {"Delete the import step and import the file again."}, kernelText(f));
+    }
+}
+
+Result<std::vector<NamedShape>> importedBodies(const std::string& id, const TopoDS_Shape& s)
+{
+    std::vector<NamedShape> out;
+    for (TopExp_Explorer ex(s, TopAbs_SOLID); ex.More(); ex.Next()) {
+        NamedShape b(ex.Current());
+        for (int i = 0; i < b.faceCount(); ++i) {
+            b.setFaceName(i, id + "/face:" + std::to_string(i + 1));
+        }
+        b.deriveEdgeNames();
+        out.push_back(std::move(b));
+    }
+    if (out.empty()) {
+        return makeError("import.no_solid", "This file has surfaces but no closed solid, so there is nothing to build on.",
+                         {"Export a solid (not just surfaces) from the other program."});
+    }
+    return out;
 }
 
 // ---------------------------------------------------------------- section caps

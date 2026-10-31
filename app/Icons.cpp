@@ -244,14 +244,29 @@ private:
 
 }  // namespace
 
+namespace
+{
+// timeline steps without a drawing of their own use the tool that makes them
+QString iconKey(const QString& id)
+{
+    static const std::map<QString, QString> sameAs {{"feature.axis", "construct.axis"},
+                                                    {"feature.point", "construct.point"},
+                                                    {"feature.presspull", "solid.presspull"},
+                                                    {"feature.import", "insert.step"},
+                                                    {"feature.move", "solid.move"}};
+    auto alias = sameAs.find(id);
+    return alias != sameAs.end() && !icons().count(id) ? alias->second : id;
+}
+}  // namespace
+
 bool hasToolIcon(const QString& id)
 {
-    return icons().count(id) > 0;
+    return icons().count(iconKey(id)) > 0;
 }
 
 QIcon toolIcon(const QString& id, const QColor& ink, const QColor& accent)
 {
-    auto it = icons().find(id);
+    auto it = icons().find(iconKey(id));
     const QString spec = it != icons().end() ? it->second : QStringLiteral("f O12 12 3");
     return QIcon(new VectorIconEngine(spec, ink, accent));
 }

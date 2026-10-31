@@ -47,6 +47,8 @@ const char* toString(FeatureKind k)
             return "presspull";
         case FeatureKind::Point:
             return "point";
+        case FeatureKind::Import:
+            return "import";
     }
     return "sketch";
 }
@@ -69,7 +71,7 @@ std::optional<FeatureKind> featureKindFromString(std::string_view s)
         return FeatureKind::Shell;
     }
     for (auto k : {FeatureKind::Revolve, FeatureKind::Hole, FeatureKind::Pattern, FeatureKind::Mirror, FeatureKind::Plane,
-                   FeatureKind::Combine, FeatureKind::Split, FeatureKind::Move, FeatureKind::Axis, FeatureKind::PressPull, FeatureKind::Point}) {
+                   FeatureKind::Combine, FeatureKind::Split, FeatureKind::Move, FeatureKind::Axis, FeatureKind::PressPull, FeatureKind::Point, FeatureKind::Import}) {
         if (s == toString(k)) {
             return k;
         }

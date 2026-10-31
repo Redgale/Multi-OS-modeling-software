@@ -2162,7 +2162,27 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+122"/>
+        <location line="+60"/>
+        <source>The imported solid stored in this design is damaged.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Delete the import step and import the file again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>This file has surfaces but no closed solid, so there is nothing to build on.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Export a solid (not just surfaces) from the other program.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+63"/>
         <source>Pick an edge to project.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2423,6 +2443,11 @@
     </message>
     <message>
         <location line="+1"/>
+        <source>The id &apos;%1&apos; is already used.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>A wall of %1 does not fit this outline.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2497,7 +2522,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-191"/>
+        <location line="-196"/>
         <source>There is nothing to export yet.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2792,7 +2817,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
+        <location line="+5"/>
         <source>The cut could not be worked out for this shape.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3180,7 +3205,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../app/MainWindow.cpp" line="+339"/>
+        <location filename="../app/MainWindow.cpp" line="+341"/>
         <source>Click a plane, a construction plane or a flat face to sketch on, or press 1 (floor), 2 (front) or 3 (side).  Esc cancels.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4031,7 +4056,7 @@
 <context>
     <name>jigapp::MainWindow</name>
     <message>
-        <location filename="../app/MainWindow.cpp" line="-140"/>
+        <location filename="../app/MainWindow.cpp" line="-142"/>
         <source>OK</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4057,15 +4082,15 @@
     </message>
     <message>
         <location line="+9"/>
-        <location line="+649"/>
+        <location line="+651"/>
         <location line="+587"/>
-        <location line="+818"/>
+        <location line="+824"/>
         <location line="+26"/>
         <source>Sketch</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2078"/>
+        <location line="-2086"/>
         <source>Extrude</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4117,6 +4142,11 @@
     <message>
         <location line="+2"/>
         <source>Point</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Import</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -4292,12 +4322,12 @@
     </message>
     <message>
         <location line="+2"/>
-        <location line="+1344"/>
+        <location line="+1350"/>
         <source>Mouse and trackpad</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1342"/>
+        <location line="-1348"/>
         <source>Default (middle-drag pans, Shift+middle orbits)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4318,30 +4348,30 @@
     </message>
     <message>
         <location line="+11"/>
-        <location line="+1317"/>
+        <location line="+1323"/>
         <source>Theme</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1315"/>
-        <location line="+1270"/>
+        <location line="-1321"/>
+        <location line="+1276"/>
         <source>Light</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1270"/>
-        <location line="+1269"/>
+        <location line="-1276"/>
+        <location line="+1275"/>
         <source>Dark</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1268"/>
-        <location line="+1270"/>
+        <location line="-1274"/>
+        <location line="+1276"/>
         <source>High contrast</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1262"/>
+        <location line="-1268"/>
         <source>&amp;Help</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4443,12 +4473,12 @@
     </message>
     <message>
         <location line="+2"/>
-        <location line="+1849"/>
+        <location line="+1885"/>
         <source>Rename…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1845"/>
+        <location line="-1881"/>
         <source>Design browser</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4459,13 +4489,13 @@
     </message>
     <message>
         <location line="+5"/>
-        <location line="+1344"/>
+        <location line="+1350"/>
         <location line="+58"/>
         <source>Properties</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1396"/>
+        <location line="-1402"/>
         <source>Properties and help</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4541,12 +4571,12 @@
     </message>
     <message>
         <location line="+18"/>
-        <location line="+1741"/>
+        <location line="+1777"/>
         <source>Move rollback marker</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1637"/>
+        <location line="-1673"/>
         <source>Start here: every part begins as a flat sketch.
 Click Sketch on the toolbar, then click a plane.
 Or open the phone stand sample (File ▸ Open a sample).</source>
@@ -4724,12 +4754,22 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+0"/>
-        <location line="+321"/>
+        <location line="+327"/>
         <source>Jigsmith designs (*.jig)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-210"/>
+        <location line="-217"/>
+        <source>Import STEP</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>STEP files (*.step *.stp)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+7"/>
         <source>There is nothing to slice yet: make a 3D body first.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4858,12 +4898,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+0"/>
-        <location line="+851"/>
+        <location line="+876"/>
         <source>There is no 3D body yet.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-848"/>
+        <location line="-873"/>
         <source>STL mesh for slicers (*.stl)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5137,8 +5177,15 @@ An empty design with the origin ready</source>
         <source>That face was made by %1: change its size here.</source>
         <translation type="unfinished"></translation>
     </message>
+    <message numerus="yes">
+        <location line="+22"/>
+        <source>Imported %n solid(s) from %1. It is kept inside this design.</source>
+        <translation type="unfinished">
+            <numerusform></numerusform>
+        </translation>
+    </message>
     <message>
-        <location line="+5"/>
+        <location line="+8"/>
         <location line="+47"/>
         <source>Import DXF</source>
         <translation type="unfinished"></translation>
@@ -5149,7 +5196,8 @@ An empty design with the origin ready</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+6"/>
+        <location line="-17"/>
+        <location line="+23"/>
         <location line="+30"/>
         <location line="+25"/>
         <location line="+30"/>
@@ -5231,7 +5279,12 @@ An empty design with the origin ready</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+110"/>
+        <location line="+88"/>
+        <source>An imported solid has no settings to change. To use a newer copy of the file, delete this step and import it again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+27"/>
         <source>Edit…</source>
         <translation type="unfinished"></translation>
     </message>

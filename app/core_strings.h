@@ -319,6 +319,10 @@ QT_TRANSLATE_NOOP("Core", "The STL file could not be created.")
 QT_TRANSLATE_NOOP("Core", "The STEP file could not be created.")
 QT_TRANSLATE_NOOP("Core", "This STEP file could not be read. It may be damaged.")
 QT_TRANSLATE_NOOP("Core", "This STEP file has no shapes Jigsmith can use.")
+QT_TRANSLATE_NOOP("Core", "The imported solid stored in this design is damaged.")
+QT_TRANSLATE_NOOP("Core", "Delete the import step and import the file again.")
+QT_TRANSLATE_NOOP("Core", "This file has surfaces but no closed solid, so there is nothing to build on.")
+QT_TRANSLATE_NOOP("Core", "Export a solid (not just surfaces) from the other program.")
 QT_TRANSLATE_NOOP("Core", "The cut could not be worked out for this shape.")
 QT_TRANSLATE_NOOP("Core", "Use M2 to M12, or #4, #6, #8, #10, 1/4\", 5/16\", 3/8\", 1/2\".")
 QT_TRANSLATE_NOOP("Core", "Or type the diameter.")
@@ -437,6 +441,7 @@ inline const char* const kCorePatterns[] = {
     QT_TRANSLATE_NOOP("Core", "%1 of the edges this fillet rounded no longer exist."),
     QT_TRANSLATE_NOOP("Core", "%1 edges were split, and Jigsmith can't tell which piece you meant."),
     QT_TRANSLATE_NOOP("Core", "%1 edges were re-attached by shape similarity after an earlier change. Check the result."),
+    QT_TRANSLATE_NOOP("Core", "The id '%1' is already used."),
     QT_TRANSLATE_NOOP("Core", "A wall of %1 does not fit this outline."),
     QT_TRANSLATE_NOOP("Core", "Try %1 or less."),
     QT_TRANSLATE_NOOP("Core", "A %1 chamfer is too big here: the neighbouring face is only %2 across."),

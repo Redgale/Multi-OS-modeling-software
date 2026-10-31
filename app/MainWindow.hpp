@@ -99,6 +99,8 @@ public:
     // what the file says; returns false and explains when it cannot.
     bool importDxfFile(const QString& path, std::optional<jig::LengthUnit> units = std::nullopt);
     void importSvg();  // Insert > SVG
+    // Insert > STEP: an Import step with the file's solids (false, with a message, if not)
+    bool importStepFile(const QString& path);
     void saveVersionInteractive();
     bool saveNamedVersion(const QString& label);  // saves first when the design has no file yet
     void showVersions();

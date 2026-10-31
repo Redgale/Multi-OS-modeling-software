@@ -18,10 +18,10 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Workspace selector (Design, Render, Animation, Simulation, Manufacture, Drawing) | 4 | Design only in v0.1 | — | Other workspaces are later releases |
 | Toolbar tabs (Solid, Surface, Mesh, Sheet Metal, Plastic, Utilities) | 4 | Solid v0.1; Mesh v0.2; Surface, Sheet v0.3+; Plastic never | Solid panels | Scope by release |
 | Panels: Create, Modify, Construct, Inspect, Insert, Select | 4, 13 | v0.1 | yes, from registry, unbuilt tools disabled | Principle 8 |
-| Contextual sketch tab | 4, 9 | v0.1 M1 | — | Behaviour "implement exactly" |
+| Contextual sketch tab | 4, 9 | v0.1 M1 | **app**: a sketch toolbar replaces the 3D tools while a sketch is open | Behaviour "implement exactly" |
 | Browser tree (settings, named views, origin, bodies, sketches) | 4, 7 | v0.1 | settings, origin, sketches, bodies, parameters | Named views in M8 |
 | Browser visibility, isolate, rename, find in timeline | 7 | v0.1 M2 | **app**: body visibility (tick box + word), isolate, show all, rename; choosing a sketch or body finds its step in the timeline | Visibility and folded groups are saved with the design (not undo steps) |
-| Timeline with icons, edit, rollback, reorder, group, playback | 4 | v0.1 (playback v0.2) | **app**: icons, edit, rename, suppress, roll back, delete; reorder/group not yet | Principle 6 |
+| Timeline with icons, edit, rollback, reorder, group, playback | 4 | v0.1 (playback v0.2) | **app**: icons, edit, rename, suppress, roll back, delete, reorder (refused with a reason when it would break a step), named groups that fold | Principle 6 |
 | Marking menu | 4 | v0.1 SHOULD (M7), v0.2 MUST | **app**: right click (no drag) in the view: eight commands in a ring, for modelling or sketching; click or number key 1–8; right drag still orbits | Brief |
 | Quick-access search (S) | 4 | v0.1 | yes: Ctrl/Cmd+K and S, alias search | Principle 9 |
 | Data panel, hubs, projects (cloud) | 3 | never | — | Local-first; replaced by files + local versions |
@@ -34,7 +34,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Environment effects (shadows, AO) | 5 | v0.2 | — | Rendering is v0.2 |
 | Orthographic/perspective | 5 | v0.1 | yes | |
 | Grid and snaps display | 5 | v0.1 | grid | Snaps with sketching M1 |
-| Objects visibility toggles | 5 | v0.1 M2 | — | |
+| Objects visibility toggles | 5 | v0.1 M2 | **app**: per body in the Browser (saved with the design); construction geometry always shown | |
 | Named views | 5 | v0.1 M8 | — | |
 | Document settings: units, up axis | 8 | v0.1 (mm, Z fixed) | shown in browser | Safe defaults |
 | Capture design history on/off | 8, 24 | v0.3+ | — | Direct modelling is later |
@@ -110,7 +110,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Create PCB | 13 | never | — | Electronics out of scope |
 | Hole: simple, counterbore, countersink; distance/all; drill point | 16 | v0.1 M3 | **app** + scripts: all three types, depth or through; flat bottom or 118° drill point; screw-size clearance table (ISO 273, US drill chart) with close/normal/loose fit | |
 | Hole from sketch points | 16 | v0.1 M3 | **app** + scripts | |
-| Clearance hole sizes | 16 | v0.1 M3 | — | Hobby tip table |
+| Clearance hole sizes | 16 | v0.1 M3 | **app** + scripts (`hole size= fit=`): metric (ISO 273) and US screw sizes, close/normal/loose fit, counterbore and countersink for the head | Hobby tip table |
 | Tapped holes, Thread (modelled/cosmetic) | 16 | v0.2 | — | |
 | Fillet constant | 18 | v0.1 M3 | **app** (edge picking, preview, one-click fix) + scripts | |
 | Fillet variable | 18 | v0.1 M3 | **app** + scripts: one radius at each end of an edge | |
@@ -143,6 +143,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Curvature comb, zebra, draft, curvature map, isocurve, accessibility, min radius | 21 | v0.3+ | — | Surface-quality tools |
 | Component colours | 21 | v0.2 | — | |
 | Insert SVG, DXF | 22 | v0.1 M5 | **app** + scripts: DXF (lines, arcs, circles, polylines with bulges; unit detection); SVG (filled paths and shapes, transforms, viewBox; as scalable artwork) | |
+| Insert STEP | 22 | v0.1 M6 | **app** + scripts (`import step`): an Import step with one body per solid, kept inside the design; faces named `<step>/face:<n>` for later steps | |
 | Insert mesh (STL/OBJ/3MF) | 22, 27 | v0.2 | — | Brief v0.2 |
 | Attached canvas (image tracing) | 22 | v0.2 | — | Hobby-valuable; small |
 | Decal | 22, 34 | v0.3+ | — | Rendering |
@@ -151,7 +152,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Select, selection priority, filters | 23 | v0.1 M2 | **app**: filter in the status bar (faces, edges, bodies) with details for each; Select Other (long press: every face under the cursor, nearest first) | |
 | Window and crossing selection | 23 | v0.1 M2 | **app** in sketches (window left to right, crossing right to left); in 3D for edges while picking them (Fillet, Chamfer); faces and bodies not yet | |
 | Freeform, paint selection, selection sets | 23 | v0.2 | — | |
-| Select Other (overlapping) | 23 | v0.1 M2 | — | 5.4d |
+| Select Other (overlapping) | 23 | v0.1 M2 | **app**: long press lists every face under the cursor, nearest first | 5.4d |
 
 ## Beyond solids, assemblies, presentation, making (PDF ch. 24 to 41)
 

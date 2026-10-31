@@ -10,7 +10,10 @@
 #include <QListWidget>
 #include <QLabel>
 #include <QLineEdit>
+#include <QDir>
+#include <QFile>
 #include <QMenu>
+#include <QMessageBox>
 #include <QPushButton>
 #include <QSettings>
 #include <QTableWidget>
@@ -73,6 +76,11 @@ private slots:
                 }
             }
             QVERIFY2(inked > 20, qPrintable(id + " draws almost nothing"));
+        }
+        // and every kind of timeline step
+        for (int k = 0; k <= int(jig::FeatureKind::Import); ++k) {
+            const QString id = QString("feature.") + jig::toString(jig::FeatureKind(k));
+            QVERIFY2(hasToolIcon(id), qPrintable(id));
         }
     }
 
@@ -1718,6 +1726,44 @@ private slots:
         QVERIFY(turn);  // the new axis is offered
         qobject_cast<FeaturePanel*>(w.featurePanel())->cancel();
         QTRY_VERIFY(w.featurePanel() == nullptr);
+    }
+
+    // Import STEP: the solid arrives as a timeline step and can be built on.
+    void importStep()
+    {
+        const QString step = QDir::temp().filePath("jigsmith-ui-import.step");
+        {
+            jig::Document src;
+            jig::ScriptRunner r(src);
+            QVERIFY(r.runText("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=40 h=30\nextrude id=e1 sketch=s1 distance=10\n").ok());
+            QVERIFY(jig::exportStep(src.combinedShape(), step.toStdString()).ok());
+        }
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        QVERIFY(w.importStepFile(step));
+        QCOMPARE(int(w.document().model().features.size()), 1);
+        QCOMPARE(int(w.document().model().features[0].kind), int(jig::FeatureKind::Import));
+        QCOMPARE(int(w.document().state().bodies.size()), 1);
+        QVERIFY(std::abs(jig::massProperties(w.document().state().bodies.begin()->second->shape()).volume - 12000) < 1e-3);
+        QTRY_VERIFY(w.viewport()->meshesReady());
+        // undo takes it away again; a file that is not STEP is refused with a message
+        w.runCommand("edit.undo");
+        QTRY_COMPARE(int(w.document().state().bodies.size()), 0);
+        QTimer::singleShot(200, [] {
+            if (auto* box = qobject_cast<QMessageBox*>(QApplication::activeModalWidget())) {
+                box->accept();
+            }
+        });
+        const QString notStep = QDir::temp().filePath("jigsmith-ui-not-a.step");
+        {
+            QFile f(notStep);
+            QVERIFY(f.open(QIODevice::WriteOnly));
+            f.write("hello");
+        }
+        QVERIFY(!w.importStepFile(notStep));
+        QCOMPARE(int(w.document().model().features.size()), 0);
     }
 
     // Move a body from one construction point to another.
