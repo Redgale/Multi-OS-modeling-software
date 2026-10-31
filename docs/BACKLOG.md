@@ -8,8 +8,8 @@ decision or finding). Move items to STATUS.md when started.
 - **B-001 libslvs spike** (D-004): build SolveSpace's libslvs and run the same
   `tests/test_solver.cpp` contract plus the drag bench against it. Blocked this session by
   the environment's policy on building external code.
-- **B-002 Reorder regression tests** (5.4a): move a feature earlier/later (validated: a
-  feature can't move before what it references), assert names still resolve.
+- ~~B-002 Reorder regression tests~~ done in session 2 (`Document.ReorderStepsSafely`, UI
+  `reorderTimeline`). Remaining: name-resolution checks for reorders inside the phone stand.
 - **B-003 Windows and macOS GUI evidence**: the CI GUI smoke test runs only on Linux
   (xvfb). Add a Windows screenshot run (the runner has a desktop session) and a macOS
   offscreen run; manual check of trackpad pinch on a real Mac.
