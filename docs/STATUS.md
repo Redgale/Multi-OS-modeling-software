@@ -88,7 +88,11 @@ ounces) is shown in inches. The owner's standing instruction is in `CLAUDE.md`.
 
 ### CI results (GitHub Actions, branch `claude/pensive-mayer-l4r19c`)
 
-Latest full run: [run 41175802640](https://github.com/Redgale/Multi-OS-modeling-software/actions/runs/41175802640)
+Latest full run: [run 41205262154](https://github.com/Redgale/Multi-OS-modeling-software/actions/runs/41205262154)
+on commit 7e55fed (2026-10-31, dispatched): all 12 build and test jobs green, with the
+Linguist translation build in the Ubuntu job (the publish job runs only for `[full ci]` pushes).
+
+Previous full run: [run 41175802640](https://github.com/Redgale/Multi-OS-modeling-software/actions/runs/41175802640)
 on commit aec55b3 (2026-10-31): **all 13 jobs green**, including the sketch tools, Press Pull,
 construction axes, hole table and body patterns added since the previous full run. The run
 before it (41174366403, commit 52b3536) was green on every platform except the
