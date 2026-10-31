@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "MainWindow.hpp"
 
+#include <array>
+
 #include <QAction>
 #include <QCheckBox>
 #include <QPainter>
@@ -127,6 +129,8 @@ QString kindWord(jig::FeatureKind k)
             return MainWindow::tr("Pattern");
         case jig::FeatureKind::Mirror:
             return MainWindow::tr("Mirror");
+        case jig::FeatureKind::Plane:
+            return MainWindow::tr("Plane");
     }
     return {};
 }
@@ -249,6 +253,18 @@ private:
 // ---------------------------------------------------------------- plane picker
 
 // "Create sketch": shows the three origin planes; click one, or a flat face of a body.
+// Corners of the square that shows a construction plane, half-size s.
+std::array<QVector3D, 4> planeCorners(const gp_Ax3& f, float s)
+{
+    auto at = [&](double u, double v) {
+        const gp_XYZ p = f.Location().XYZ() + f.XDirection().XYZ() * u + f.YDirection().XYZ() * v;
+        return QVector3D(float(p.X()), float(p.Y()), float(p.Z()));
+    };
+    return {at(-s, -s), at(s, -s), at(s, s), at(-s, s)};
+}
+
+const QColor kDatum(222, 150, 40);  // construction planes: amber, with a name label
+
 class PlanePicker : public Interactor
 {
 public:
@@ -287,7 +303,7 @@ public:
         QFont f = p.font();
         f.setBold(true);
         p.setFont(f);
-        const QString msg = QObject::tr("Click a plane or a flat face to sketch on.  Esc cancels.");
+        const QString msg = QObject::tr("Click a plane, a construction plane or a flat face to sketch on.  Esc cancels.");
         const QRectF box(10, 10, p.fontMetrics().horizontalAdvance(msg) + 20, 26);
         QColor bg = v_->colors().background;
         bg.setAlpha(230);
@@ -352,6 +368,24 @@ private:
         test("XY", 0);
         test("XZ", 1);
         test("YZ", 2);
+        for (auto& [id, f] : w_->document().state().planes) {
+            const gp_Dir n = f.Direction();
+            const QVector3D N(float(n.X()), float(n.Y()), float(n.Z()));
+            const float denom = QVector3D::dotProduct(N, d);
+            if (std::abs(denom) < 1e-6f) {
+                continue;
+            }
+            const QVector3D L(float(f.Location().X()), float(f.Location().Y()), float(f.Location().Z()));
+            const float t = QVector3D::dotProduct(L - o, N) / denom;
+            const QVector3D q = o + d * t - L;
+            const gp_Dir X = f.XDirection(), Y = f.YDirection();
+            const float u = QVector3D::dotProduct(q, QVector3D(float(X.X()), float(X.Y()), float(X.Z())));
+            const float v = QVector3D::dotProduct(q, QVector3D(float(Y.X()), float(Y.Y()), float(Y.Z())));
+            if (t > 0 && std::abs(u) <= s && std::abs(v) <= s && t < best) {
+                best = t;
+                h.plane = QString::fromStdString(id);
+            }
+        }
         return h;
     }
     void rebuild()
@@ -373,6 +407,12 @@ private:
         quad("XY", {-s, -s, 0}, {s, -s, 0}, {s, s, 0}, {-s, s, 0}, QColor(60, 110, 230));
         quad("XZ", {-s, 0, -s}, {s, 0, -s}, {s, 0, s}, {-s, 0, s}, QColor(64, 170, 90));
         quad("YZ", {0, -s, -s}, {0, s, -s}, {0, s, s}, {0, -s, s}, QColor(214, 64, 69));
+        for (auto& [id, f] : w_->document().state().planes) {
+            if (hover_.plane == QString::fromStdString(id)) {
+                auto c = planeCorners(f, s);
+                quad(hover_.plane, c[0], c[1], c[2], c[3], kDatum);
+            }
+        }
         v_->setOverlay(std::move(ov));
         if (hover_.face >= 0) {
             v_->selectFaceForScreenshot(-1);
@@ -818,6 +858,33 @@ void MainWindow::setDocument(std::unique_ptr<jig::Document> doc, const QString& 
     view_->homeView();
 }
 
+void MainWindow::refreshDatums()
+{
+    SceneOverlay ov;
+    std::vector<std::pair<QString, QVector3D>> labels;
+    float s = 30;
+    for (auto& [id, b] : doc_->state().bodies) {
+        auto mp = jig::massProperties(b->shape());
+        s = std::max({s, float(mp.xmax - mp.xmin) * 0.6f, float(mp.ymax - mp.ymin) * 0.6f, float(mp.zmax - mp.zmin) * 0.6f});
+    }
+    for (auto& [id, f] : doc_->state().planes) {
+        const auto c = planeCorners(f, s);
+        QColor fill = kDatum, edge = kDatum;
+        fill.setAlpha(34);
+        edge.setAlpha(210);
+        for (int k : {0, 1, 2, 0, 2, 3}) {
+            ov.tris.push_back({c[size_t(k)], fill});
+        }
+        for (int k = 0; k < 4; ++k) {
+            ov.lines.push_back({c[size_t(k)], edge});
+            ov.lines.push_back({c[size_t((k + 1) % 4)], edge});
+        }
+        const jig::Feature* feat = doc_->feature(id);
+        labels.emplace_back(feat ? q(feat->name) : q(id), c[3]);
+    }
+    view_->setDatums(std::move(ov), std::move(labels));
+}
+
 void MainWindow::refreshAll()
 {
     if (!doc_) {
@@ -828,6 +895,7 @@ void MainWindow::refreshAll()
         bodies.push_back({id, b});
     }
     view_->setBodies(std::move(bodies));
+    refreshDatums();
     view_->setEmptyHint(doc_->model().features.empty() && !sketch_ && !picker_
                             ? tr("Start here: every part begins as a flat sketch.\n"
                                  "Click Sketch on the toolbar, then click a plane.\n"
@@ -1091,6 +1159,9 @@ void MainWindow::runCommand(const QString& id)
     }
     else if (id == "inspect.measure") {
         openMeasure();
+    }
+    else if (id == "construct.offset_plane" || id == "construct.angle_plane" || id == "construct.midplane") {
+        openPlane({}, id == "construct.angle_plane" ? "angle" : id == "construct.midplane" ? "midplane" : "offset");
     }
     else if (id == "inspect.properties") {
         openProperties();
@@ -1644,6 +1715,15 @@ void MainWindow::openMirror(const std::string& editId)
     showPanel(new MirrorPanel(*doc_, view_, editId, panelHost_));
 }
 
+void MainWindow::openPlane(const std::string& editId, const std::string& kind)
+{
+    if (sketch_) {
+        exitSketch();
+    }
+    cancelPicker();
+    showPanel(new PlanePanel(*doc_, view_, editId, panelHost_, kind));
+}
+
 void MainWindow::openMeasure()
 {
     if (sketch_) {
@@ -1728,6 +1808,9 @@ void MainWindow::editFeature(int index)
             break;
         case jig::FeatureKind::Mirror:
             openMirror(f.id);
+            break;
+        case jig::FeatureKind::Plane:
+            openPlane(f.id);
             break;
     }
 }

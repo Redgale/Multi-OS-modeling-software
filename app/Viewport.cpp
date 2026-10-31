@@ -461,6 +461,14 @@ void Viewport::setOverlay(SceneOverlay o)
     update();
 }
 
+void Viewport::setDatums(SceneOverlay geometry, std::vector<std::pair<QString, QVector3D>> labels)
+{
+    datums_ = std::move(geometry);
+    datumLabels_ = std::move(labels);
+    overlayDirty_ = true;
+    update();
+}
+
 void Viewport::setEdgeHighlight(const std::string& body, std::vector<int> edges)
 {
     hlBody_ = body;
@@ -530,10 +538,16 @@ void Viewport::uploadOverlay()
     if (hoverEdge_) {
         edgeSegs(hoverEdge_->body, hoverEdge_->edge, colors_.hover);
     }
+    for (auto& ov : datums_.lines) {
+        push(ov.p, ov.c);
+    }
     for (auto& ov : overlayData_.lines) {
         push(ov.p, ov.c);
     }
     ovLineCount_ = int(v.size() / 7);
+    for (auto& ov : datums_.tris) {
+        push(ov.p, ov.c);
+    }
     for (auto& ov : overlayData_.tris) {
         push(ov.p, ov.c);
     }
@@ -746,6 +760,14 @@ void Viewport::paintOverlay(QPainter& p)
     if (interactor_) {
         p.save();
         interactor_->paint(p);
+        p.restore();
+    }
+    if (!datumLabels_.empty()) {
+        p.save();
+        p.setPen(colors_.text);
+        for (auto& [text, at] : datumLabels_) {
+            p.drawText(project(at) + QPointF(4, -4), text);
+        }
         p.restore();
     }
     drawGizmo(p);

@@ -28,6 +28,7 @@ nothing is committed.
 | Command | Meaning |
 |---|---|
 | `sketch id=s1 plane=XY\|XZ\|YZ [offset=<len>] [name="…"]` | New sketch on an origin plane (XY = floor, XZ = front, YZ = side), optionally offset |
+| `sketch id=s4 plane=<plane id>` | New sketch on a construction plane |
 | `sketch id=s3 on=<face name>` | New sketch on a named flat face, e.g. `on=e1/end` (top of extrude e1). Stays attached when earlier steps change |
 | `rect [sketch=s1] center=x,y w=<len> h=<len>` | Centre rectangle, fully dimensioned |
 | `rect [sketch=s1] corner=x,y w=<len> h=<len>` | Corner rectangle |
@@ -55,6 +56,9 @@ nothing is committed.
 | `hole id=h1 sketch=s2 diameter=<len> (depth=<len> \| extent=all) [type=simple\|counterbore\|countersink]` | A hole at every free point of the sketch, drilled into the face the sketch sits on. Counterbore: `cbore_diameter= cbore_depth=`; countersink: `csink_diameter= csink_angle=` |
 | `pattern id=p1 feature=<id> kind=circular axis=X\|Y\|Z count=<n> [angle=<angle>]` | Repeat an Extrude, Revolve or Hole around an origin axis. A full turn spaces the copies evenly |
 | `pattern id=p1 feature=<id> kind=rectangular dir1=X count1=<n> spacing1=<len> [dir2=Y count2=<n> spacing2=<len>]` | Repeat it in rows and columns |
+| `plane id=pl1 base=XY\|<plane id>\|face:<name> distance=<len>` | Construction plane parallel to a plane or flat face |
+| `plane id=pl2 kind=angle base=… axis=X\|Y\|Z\|edge:<name> angle=<angle>` | Plane turned around an axis or straight edge lying in the base plane |
+| `plane id=pl3 kind=midplane base=… base2=…` | Plane halfway between two parallel planes or faces |
 | `mirror id=m1 [body=<id>] plane=YZ\|XZ\|XY [op=join\|new]` | Mirror a body across an origin plane, joined to the original or as a new body |
 
 Profile keys are the sorted ids of the sketch curves around a closed area, e.g. `3,4,5,6`.

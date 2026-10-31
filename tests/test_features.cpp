@@ -359,3 +359,46 @@ TEST(Measure, SizesDistancesAnglesAndHoleSpacing)
     auto j = nlohmann::json::parse(r.output().back());
     EXPECT_NEAR(j["centre_distance"].get<double>(), 20, 1e-9);
 }
+
+TEST(Plane, OffsetAngleAndMidplane)
+{
+    auto doc = build("param lift = 15 mm\n"
+                     "sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=40 h=30\nextrude id=e1 sketch=s1 distance=10\n"
+                     "plane id=pl1 base=face:e1/end distance=lift\n"
+                     "sketch id=s2 plane=pl1\ncircle sketch=s2 center=0,0 d=10\n"
+                     "extrude id=e2 sketch=s2 distance=-lift op=join\n"
+                     "plane id=pl2 kind=angle base=XZ axis=X angle=30deg\n"
+                     "plane id=pl3 kind=midplane base=face:e1/start base2=face:e1/end\n"
+                     "sketch id=s3 plane=pl3\nrect sketch=s3 center=0,0 w=60 h=4\n"
+                     "extrude id=e3 sketch=s3 distance=4 direction=symmetric op=join\n");
+    expectAllOk(*doc);
+    const auto& planes = doc->state().planes;
+    EXPECT_NEAR(planes.at("pl1").Location().Z(), 25, 1e-9);
+    EXPECT_NEAR(planes.at("pl3").Location().Z(), 5, 1e-9);
+    // XZ (normal -Y) turned 30 degrees about X
+    const gp_Dir n = planes.at("pl2").Direction();
+    EXPECT_NEAR(n.Y(), -std::cos(pi / 6), 1e-9);
+    EXPECT_NEAR(n.Z(), -std::sin(pi / 6), 1e-9);
+    // block + post down to the top face + the part of the rib outside the block
+    EXPECT_NEAR(props(*doc).volume, 12000 + pi * 25 * 15 + 20 * 4 * 4, 1e-6);
+    // the post follows the plane's parameter
+    run(*doc, "param lift = 20 mm");
+    expectAllOk(*doc);
+    EXPECT_NEAR(props(*doc).zmax, 30, 1e-9);
+    EXPECT_NEAR(props(*doc).volume, 12000 + pi * 25 * 20 + 20 * 4 * 4, 1e-6);
+}
+
+TEST(Plane, ImpossiblePlanesAreExplained)
+{
+    auto doc = std::make_unique<Document>();
+    ScriptRunner r(*doc);
+    r.strict = false;
+    ASSERT_TRUE(r.runText("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=40 h=30\nextrude id=e1 sketch=s1 distance=10\n"
+                          "plane id=pl1 kind=midplane base=face:e1/end base2=YZ\n"
+                          "plane id=pl2 kind=angle base=XY axis=Z angle=30deg\n")
+                    .ok());
+    EXPECT_EQ(int(doc->status(2).level), int(StatusLevel::Error));
+    EXPECT_NE(doc->status(2).message.find("parallel"), std::string::npos) << doc->status(2).message;
+    EXPECT_EQ(int(doc->status(3).level), int(StatusLevel::Error));
+    EXPECT_NE(doc->status(3).message.find("axis"), std::string::npos) << doc->status(3).message;
+}

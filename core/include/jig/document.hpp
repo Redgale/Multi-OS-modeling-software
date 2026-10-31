@@ -19,6 +19,8 @@
 #include <nlohmann/json.hpp>
 
 #include "jig/expr.hpp"
+#include <gp_Ax3.hxx>
+
 #include "jig/kernel.hpp"
 #include "jig/result.hpp"
 #include "jig/sketch.hpp"
@@ -53,7 +55,8 @@ enum class FeatureKind
     Revolve,
     Hole,
     Pattern,
-    Mirror
+    Mirror,
+    Plane  // construction plane (offset, at an angle, midplane)
 };
 
 const char* toString(FeatureKind k);
@@ -118,6 +121,7 @@ struct ModelState
     std::map<std::string, std::shared_ptr<const NamedShape>> bodies;
     std::map<std::string, std::shared_ptr<const SketchState>> sketches;
     std::map<std::string, ToolRecord> tools;
+    std::map<std::string, gp_Ax3> planes;  // construction planes by feature id
 };
 
 class Document

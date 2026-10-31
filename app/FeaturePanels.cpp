@@ -237,6 +237,7 @@ void FeaturePanel::runPreview()
         }
     }
     ok_->setEnabled(previewOk_);
+    previewed(o);
 }
 
 bool FeaturePanel::accept()
@@ -1338,6 +1339,246 @@ jig::Feature MirrorPanel::draft() const
 QString MirrorPanel::title() const
 {
     return tr("mirror");
+}
+
+// ---------------------------------------------------------------- Plane
+
+PlanePanel::PlanePanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent, const std::string& kind)
+    : FeaturePanel(doc, view, std::move(editId), parent)
+{
+    form_->addWidget(heading(this, tr("Construction plane"),
+                             tr("A flat reference to sketch on. Pick a plane from the list or click a flat face "
+                                "in the view; for a tilted plane, click a straight edge to turn around.")));
+    kind_ = combo(this, {{tr("Offset: parallel, at a distance"), "offset"},
+                         {tr("At an angle: turned around an axis or edge"), "angle"},
+                         {tr("Midplane: halfway between two faces"), "midplane"}});
+    base_ = new QComboBox(this);
+    base2_ = new QComboBox(this);
+    axis_ = combo(this, {{tr("X axis"), "\"X\""}, {tr("Y axis"), "\"Y\""}, {tr("Z axis"), "\"Z\""}});
+    distance_ = new ExprField(doc, jig::Dim::len(), this);
+    angle_ = new ExprField(doc, jig::Dim::ang(), this);
+    addRow(tr("Kind"), kind_);
+    addRow(tr("From"), base_);
+    addRow(tr("And"), base2_);
+    addRow(tr("Distance"), distance_);
+    addRow(tr("Turn around"), axis_);
+    addRow(tr("Angle"), angle_);
+    for (auto* c : {base_, base2_}) {
+        c->addItem(tr("Floor (XY)"), "\"XY\"");
+        c->addItem(tr("Front (XZ)"), "\"XZ\"");
+        c->addItem(tr("Side (YZ)"), "\"YZ\"");
+    }
+    const auto before = stateBefore();
+    const int limit = insertIndex();
+    for (int i = 0; i < limit; ++i) {
+        const auto& f = doc_.model().features[size_t(i)];
+        if (f.kind == jig::FeatureKind::Plane && before->planes.count(f.id)) {
+            for (auto* c : {base_, base2_}) {
+                c->addItem(q(f.name), q(nlohmann::json(f.id).dump()));
+            }
+        }
+    }
+    base2_->setCurrentIndex(0);
+    const jig::Feature* edit = editId_.empty() ? nullptr : doc_.feature(editId_);
+    auto selectJson = [&](QComboBox* c, const nlohmann::json& v, const QString& label) {
+        const QString key = q(v.dump());
+        int i = c->findData(key);
+        if (i < 0) {
+            c->addItem(label, key);
+            i = c->count() - 1;
+        }
+        c->setCurrentIndex(i);
+    };
+    auto labelOf = [&](const nlohmann::json& v) {
+        if (v.is_object() && v.contains("face")) {
+            return tr("Face %1").arg(q(v["face"].value("name", std::string("(picked)"))));
+        }
+        if (v.is_object() && v.contains("edge")) {
+            return tr("Edge %1").arg(q(v["edge"].value("name", std::string("(picked)"))));
+        }
+        return q(v.is_string() ? v.get<std::string>() : v.dump());
+    };
+    if (edit) {
+        const auto& p = edit->params;
+        select(kind_, p.value("kind", std::string("offset")));
+        if (p.contains("base")) {
+            selectJson(base_, p["base"], labelOf(p["base"]));
+        }
+        if (p.contains("base2")) {
+            selectJson(base2_, p["base2"], labelOf(p["base2"]));
+        }
+        if (p.contains("axis")) {
+            selectJson(axis_, p["axis"], labelOf(p["axis"]));
+        }
+        distance_->setText(q(p.value("distance", std::string("10 mm"))));
+        angle_->setText(q(p.value("angle", std::string("45 deg"))));
+    }
+    else {
+        select(kind_, kind);
+        distance_->setText("10 mm");
+        angle_->setText("45 deg");
+        if (kind == "midplane") {
+            base2_->setCurrentIndex(base2_->findData("\"XY\""));
+        }
+    }
+    for (auto* c : {kind_, base_, base2_, axis_}) {
+        connect(c, &QComboBox::currentIndexChanged, this, [this] {
+            updateVisibility();
+            schedulePreview();
+        });
+    }
+    for (auto* e : {distance_, angle_}) {
+        connect(e, &ExprField::changed, this, [this] { schedulePreview(); });
+    }
+    if (view_) {
+        view_->setPickMode(PickMode::Any);
+        connect(view_.data(), &Viewport::faceClicked, this,
+                [this](const QString& b, const QString& n, Qt::KeyboardModifiers) { useFace(b.toStdString(), n.toStdString()); });
+        connect(view_.data(), &Viewport::edgeClicked, this,
+                [this](const QString& b, const QString& n, Qt::KeyboardModifiers) { useEdge(b.toStdString(), n.toStdString()); });
+    }
+    updateVisibility();
+    schedulePreview();
+}
+
+PlanePanel::~PlanePanel()
+{
+    if (view_) {
+        view_->setPickMode(PickMode::Faces);
+        view_->setOverlay({});
+    }
+}
+
+void PlanePanel::useFace(const std::string& body, const std::string& name)
+{
+    const auto before = stateBefore();
+    auto it = before->bodies.find(body);
+    if (it == before->bodies.end()) {
+        return;  // a face of the preview itself, not of the model before this step
+    }
+    auto hits = it->second->findFaces(name);
+    if (hits.empty()) {
+        return;
+    }
+    if (jig::measureItem(it->second->face(hits[0])).kind != "flat face") {
+        status_->setText("<b>✕ " + tr("That face is curved. Click a flat face.") + "</b>");
+        return;
+    }
+    nlohmann::json ref {{"face", it->second->faceRef(body, hits[0]).toJson()}};
+    QComboBox* target = current(kind_) == "midplane" && nextIsSecond_ ? base2_ : base_;
+    if (current(kind_) == "midplane") {
+        nextIsSecond_ = !nextIsSecond_;
+    }
+    const QString key = q(ref.dump());
+    int i = target->findData(key);
+    if (i < 0) {
+        target->addItem(tr("Face %1").arg(q(name)), key);
+        i = target->count() - 1;
+    }
+    target->setCurrentIndex(i);
+}
+
+void PlanePanel::useEdge(const std::string& body, const std::string& name)
+{
+    const auto before = stateBefore();
+    auto it = before->bodies.find(body);
+    if (it == before->bodies.end()) {
+        return;
+    }
+    auto hits = it->second->findEdges(name);
+    if (hits.empty()) {
+        return;
+    }
+    if (jig::measureItem(it->second->edge(hits[0])).kind != "straight edge") {
+        status_->setText("<b>✕ " + tr("A plane can only turn around a straight edge.") + "</b>");
+        return;
+    }
+    select(kind_, "angle");
+    nlohmann::json ref {{"edge", it->second->edgeRef(body, hits[0]).toJson()}};
+    const QString key = q(ref.dump());
+    int i = axis_->findData(key);
+    if (i < 0) {
+        axis_->addItem(tr("Edge %1").arg(q(name)), key);
+        i = axis_->count() - 1;
+    }
+    axis_->setCurrentIndex(i);
+}
+
+void PlanePanel::updateVisibility()
+{
+    const std::string k = current(kind_);
+    auto show = [this](QWidget* w, bool on) {
+        w->setVisible(on);
+        const int i = form_->indexOf(w);
+        if (i > 0) {
+            if (auto* item = form_->itemAt(i - 1); item && item->widget()) {
+                item->widget()->setVisible(on);
+            }
+        }
+    };
+    show(base2_, k == "midplane");
+    show(distance_, k == "offset");
+    show(axis_, k == "angle");
+    show(angle_, k == "angle");
+}
+
+jig::Feature PlanePanel::draft() const
+{
+    jig::Feature f = startDraft(doc_, editId_, "pl", tr("Plane"));
+    f.kind = jig::FeatureKind::Plane;
+    auto json = [](const QComboBox* c) {
+        const std::string d = c->currentData().toString().toStdString();
+        return d.empty() ? nlohmann::json("XY") : nlohmann::json::parse(d, nullptr, false);
+    };
+    const std::string k = current(kind_);
+    f.params = {{"kind", k}, {"base", json(base_)}};
+    if (k == "offset") {
+        f.params["distance"] = text(distance_, "10 mm");
+    }
+    else if (k == "angle") {
+        f.params["axis"] = json(axis_);
+        f.params["angle"] = text(angle_, "45 deg");
+    }
+    else {
+        f.params["base2"] = json(base2_);
+    }
+    return f;
+}
+
+void PlanePanel::previewed(const jig::FeatureOutcome& o)
+{
+    if (!view_) {
+        return;
+    }
+    SceneOverlay ov;
+    const jig::Feature f = draft();
+    if (o.after && o.after->planes.count(f.id)) {
+        const gp_Ax3& fr = o.after->planes.at(f.id);
+        float s = 30;
+        for (auto& [id, b] : o.after->bodies) {
+            auto mp = jig::massProperties(b->shape());
+            s = std::max({s, float(mp.xmax - mp.xmin) * 0.6f, float(mp.ymax - mp.ymin) * 0.6f, float(mp.zmax - mp.zmin) * 0.6f});
+        }
+        auto at = [&](double u, double v) {
+            const gp_XYZ p = fr.Location().XYZ() + fr.XDirection().XYZ() * u + fr.YDirection().XYZ() * v;
+            return QVector3D(float(p.X()), float(p.Y()), float(p.Z()));
+        };
+        const QVector3D c[4] = {at(-s, -s), at(s, -s), at(s, s), at(-s, s)};
+        QColor fill(222, 150, 40, 80), edge(222, 150, 40, 255);
+        for (int k : {0, 1, 2, 0, 2, 3}) {
+            ov.tris.push_back({c[k], fill});
+        }
+        for (int k = 0; k < 4; ++k) {
+            ov.lines.push_back({c[k], edge});
+            ov.lines.push_back({c[(k + 1) % 4], edge});
+        }
+    }
+    view_->setOverlay(std::move(ov));
+}
+
+QString PlanePanel::title() const
+{
+    return tr("construction plane");
 }
 
 // ---------------------------------------------------------------- Parameters

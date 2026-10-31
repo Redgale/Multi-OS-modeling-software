@@ -93,6 +93,8 @@ protected:
     virtual jig::Feature draft() const = 0;
     virtual QString title() const = 0;
     virtual void rememberValues() {}
+    // Called after each preview, e.g. to draw a construction plane that has no body.
+    virtual void previewed(const jig::FeatureOutcome&) {}
     void schedulePreview();
     void addRow(const QString& label, QWidget* w);
     int insertIndex() const;
@@ -304,6 +306,50 @@ protected:
 
 private:
     QComboBox *body_, *plane_, *op_;
+};
+
+// Construction plane: offset from a plane or flat face, turned around an axis or straight
+// edge, or halfway between two parallel faces. Click faces and edges in the view.
+class PlanePanel : public FeaturePanel
+{
+    Q_OBJECT
+public:
+    PlanePanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent = nullptr,
+               const std::string& kind = "offset");
+    ~PlanePanel() override;
+    void useFace(const std::string& body, const std::string& name);  // a click in the view
+    void useEdge(const std::string& body, const std::string& name);
+    QComboBox* kind() const
+    {
+        return kind_;
+    }
+    QComboBox* base() const
+    {
+        return base_;
+    }
+    QComboBox* base2() const
+    {
+        return base2_;
+    }
+    ExprField* distance() const
+    {
+        return distance_;
+    }
+    ExprField* angle() const
+    {
+        return angle_;
+    }
+
+protected:
+    jig::Feature draft() const override;
+    QString title() const override;
+    void previewed(const jig::FeatureOutcome& o) override;
+
+private:
+    void updateVisibility();
+    QComboBox *kind_, *base_, *base2_, *axis_;
+    ExprField *distance_, *angle_;
+    bool nextIsSecond_ = false;  // midplane: the next clicked face fills the second plane
 };
 
 // Modify ▸ Parameters: the named values (width, wall, clearance) that drive the design.

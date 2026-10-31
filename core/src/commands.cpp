@@ -148,7 +148,8 @@ CommandRegistry::CommandRegistry()
         "constraint.parallel", "constraint.perpendicular", "constraint.horizontal", "constraint.tangent",
         "constraint.symmetric", "constraint.equal", "solid.extrude", "solid.fillet", "solid.chamfer", "solid.shell",
         "solid.revolve", "solid.hole", "solid.mirror", "solid.pattern_rect", "solid.pattern_circ", "modify.parameters",
-        "inspect.measure", "inspect.properties", "file.export_3mf"};
+        "inspect.measure", "inspect.properties", "file.export_3mf", "construct.offset_plane", "construct.angle_plane",
+        "construct.midplane"};
     for (auto& c : commands_) {
         if (inApp.count(c.id)) {
             c.available = true;
@@ -1032,6 +1033,62 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
             f.name = a.get("name", "Shell " + f.id.substr(2));
             f.kind = FeatureKind::Shell;
             f.params = {{"faces", refs}, {"thickness", a.get("thickness", "2 mm")}, {"body", bodyId}};
+            id = f.id;
+            insertFeature(m, std::move(f));
+            return true;
+        });
+        if (!r) {
+            return r;
+        }
+        return checkFeature(id);
+    }
+    if (a.verb == "plane") {
+        // plane id=pl1 [kind=offset|angle|midplane] base=XY|<plane id>|face:<name>
+        //       [distance=<len>] [axis=X|Y|Z|edge:<name> angle=<angle>] [base2=…]
+        const ModelState& st = doc.state();
+        auto ref = [&](const std::string& v) -> Result<nlohmann::json> {
+            for (const char* pre : {"face:", "edge:"}) {
+                if (v.rfind(pre, 0) != 0) {
+                    continue;
+                }
+                const bool face = pre[0] == 'f';
+                const std::string name = v.substr(5);
+                for (auto& [bid, body] : st.bodies) {
+                    auto hits = face ? body->findFaces(name) : body->findEdges(name);
+                    if (hits.size() == 1) {
+                        return nlohmann::json {{face ? "face" : "edge",
+                                                (face ? body->faceRef(bid, hits[0]) : body->edgeRef(bid, hits[0])).toJson()}};
+                    }
+                }
+                return makeError("script.args", "There is no single " + std::string(face ? "face" : "edge") + " called '" + name + "'.");
+            }
+            return nlohmann::json(v);
+        };
+        nlohmann::json params {{"kind", a.get("kind", "offset")}};
+        for (const char* key : {"base", "base2", "axis"}) {
+            if (a.has(key)) {
+                auto r = ref(a.get(key));
+                if (!r) {
+                    return r.error();
+                }
+                params[key] = r.value();
+            }
+        }
+        for (const char* key : {"distance", "angle"}) {
+            if (a.has(key)) {
+                params[key] = a.get(key);
+            }
+        }
+        std::string id;
+        auto r = doc.transact("Construction plane", [&](Model& m) -> Result<bool> {
+            Feature f;
+            f.id = a.get("id", Document::newId(m, "pl"));
+            if (findFeature(m, f.id)) {
+                return makeError("script.args", "The id '" + f.id + "' is already used.");
+            }
+            f.name = a.get("name", "Plane " + f.id.substr(2));
+            f.kind = FeatureKind::Plane;
+            f.params = params;
             id = f.id;
             insertFeature(m, std::move(f));
             return true;

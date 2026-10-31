@@ -130,7 +130,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Pattern on path | 19 | v0.2 | — | |
 | Pattern compute options (optimised/identical/adjust) | 19 | v0.2 | — | Adjust only in v0.1 |
 | Mirror (features, bodies) | 19 | v0.1 M3 | **app** + scripts: bodies across origin planes; features not yet | |
-| Construct: offset plane, plane at angle, midplane | 20 | v0.1 M4 | offset plane via `sketch offset=` | |
+| Construct: offset plane, plane at angle, midplane | 20 | v0.1 M4 | **app** + scripts (`plane`): from origin planes, construction planes or flat faces; angle around an origin axis or straight edge | |
 | Tangent plane, plane through edges/points, along path | 20 | v0.2 | — | Needed for sweep and pen cup emboss |
 | Axis (through cylinder, two points, perpendicular) | 20 | v0.1 M4 | — | |
 | Point (vertex, edges, planes, center) | 20 | v0.1 M4 | — | |

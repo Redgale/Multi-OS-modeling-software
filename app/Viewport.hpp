@@ -148,6 +148,8 @@ public:
     {
         return pickMode_;
     }
+    // Construction planes and their names: drawn under any tool overlay.
+    void setDatums(SceneOverlay geometry, std::vector<std::pair<QString, QVector3D>> labels);
     void setEdgeHighlight(const std::string& body, std::vector<int> edges);
     void setFaceHighlight(const std::string& body, std::vector<int> faces);
     // Model colour override for previews; nullopt restores the theme colour.
@@ -269,6 +271,8 @@ private:
     Interactor* interactor_ = nullptr;
     PickMode pickMode_ = PickMode::Faces;
     SceneOverlay overlayData_;
+    SceneOverlay datums_;                                     // construction planes, always shown
+    std::vector<std::pair<QString, QVector3D>> datumLabels_;
     bool overlayDirty_ = false;
     std::unique_ptr<QOpenGLShaderProgram> colorProg_;
     QOpenGLVertexArrayObject ovVao_;

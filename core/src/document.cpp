@@ -33,6 +33,8 @@ const char* toString(FeatureKind k)
             return "pattern";
         case FeatureKind::Mirror:
             return "mirror";
+        case FeatureKind::Plane:
+            return "plane";
     }
     return "sketch";
 }
@@ -54,7 +56,7 @@ std::optional<FeatureKind> featureKindFromString(std::string_view s)
     if (s == "shell") {
         return FeatureKind::Shell;
     }
-    for (auto k : {FeatureKind::Revolve, FeatureKind::Hole, FeatureKind::Pattern, FeatureKind::Mirror}) {
+    for (auto k : {FeatureKind::Revolve, FeatureKind::Hole, FeatureKind::Pattern, FeatureKind::Mirror, FeatureKind::Plane}) {
         if (s == toString(k)) {
             return k;
         }

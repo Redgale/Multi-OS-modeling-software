@@ -12,7 +12,8 @@ for downloadable builds, then Chamfer and Shell (part of M3) with the pen cup sa
 then Revolve, Hole, rectangular and circular Patterns and Mirror with panels, Arc/Slot/
 Polygon sketch tools, and **Text** (FreeType outlines, built-in Inter font, D-014), which
 completes the knob (A2) and pen cup (A3) samples including their lettering, and the
-Inspect tools **Measure** and **Properties**, and **3MF** export. 76 tests, including UI workflow tests that
+Inspect tools **Measure** and **Properties**, **3MF** export, and **construction planes**
+(offset, at an angle, midplane). 78 tests, including UI workflow tests that
 drive the real window.
 
 ## What works, and how it was verified
@@ -38,6 +39,7 @@ drive the real window.
 | Chamfer and Shell (M3 part) | Chamfer panel (edge picking, distance), Shell panel (click faces to leave open; none = closed hollow), failure explanations with a working value; inner walls get stable names (`sh1/inner:<outer face>`) | `Golden.PenCupWithParameters` (A3 without text), `Chamfer.*`, `Shell.*` (closed hollow found and fixed an OCCT behaviour: no open face returns only the offset solid); UI test builds a pen cup by clicking the top face |
 | Revolve, Hole, Pattern, Mirror (M3/M4 part) | Revolve around an origin axis or a sketch line, full or partial (outlines crossing the axis refused with an explanation); Hole (simple, counterbore, countersink; depth or through) at every free point of a sketch; Ring copy and Grid copy of an Extrude, Revolve or Hole; Mirror a body across an origin plane (join or new body). Panels with live preview; edit from the timeline. Faces named by role (`h1/wall:p5`, `p1/3:e2/side:2`) | `tests/test_features.cpp` (11 tests, volumes against hand calculations: revolve, D-bore, lens-shaped scallops, counterbore and countersink cones, grid of holes); `Golden.Knob` and `Golden.KnobFollowsItsParameters` (A2 without text); UI test `ringRevolveHolePatternMirror` revolves a ring, drills it from its top face, rings the hole six times and mirrors it |
 | Text (M5 part) | Sketch text centred on a draggable, dimensionable point; size as an expression; built-in Inter (embedded) or a font file; each letter outline is a closed area for extrude/cut; double-click to edit; missing fonts fall back with a warning | `Text.*` (4 tests: outline areas and solids, cut volume = area × depth, scaling with a parameter, save/load, fallback); cross-checked against OCCT's own text builder (identical area); UI test places and edits text, then undoes |
+| Construction planes (M4 part) | Offset from an origin plane, construction plane or clicked flat face (distance can be a parameter); turned around an origin axis or a clicked straight edge; midplane between two parallel faces/planes. Drawn in amber with their names; the sketch picker offers them; panel with live preview; impossible planes explained | `Plane.*` (2 tests: positions and normals, a post that follows the plane's parameter, non-parallel midplane and out-of-plane axis refused); UI test clicks the top face for an offset plane, sketches on it by clicking it, and makes a midplane |
 | Measure and Properties (M6 part) | Measure: click a face or edge for its kind and size (area, length, diameter), a second for the shortest distance, angle, centre-to-centre spacing of holes and round edges, and the X/Y/Z offsets; picks edges when the cursor is on one, faces otherwise; nothing in the design changes. Properties: volume, weight for a chosen material (PLA, PETG, ABS, … or a typed density), filament length, area, size, centre of mass, validity. Script command `measure` | `Measure.SizesDistancesAnglesAndHoleSpacing`; UI test clicks a face and an edge in the real view and checks the panel text, then the weight for PLA and aluminium |
 | Parameters (M5 part) | Table dialog: name, value with units/expressions, kind, live result, comment; refuses invalid names, duplicates, cycles | exercised manually under Xvfb only (no automated UI test yet: B-015) |
 | Performance | All headless budgets met | `jigsmith-bench`, numbers in PHASE1_REPORT.md |
@@ -73,8 +75,8 @@ Clang 18 as well as GCC 13.
   groups, one-click "fix this" beyond the fillet radius.
 - M3 still missing: Press Pull, variable fillet, clearance-size table for holes, patterns
   of bodies, mirror of features or across a face, pattern along a path.
-- M4 still missing: construction planes/axes/points, Combine, Split, Move/Copy; revolve
-  "to object".
+- M4 still missing: construction axes and points, Combine, Split, Move/Copy; revolve
+  "to object"; tangent plane and plane through three points (v0.2 list).
 - Text: installed fonts by name, bold/italic, multi-line, complex-script shaping (B-020).
 - Not built yet:
   Section view, SVG/DXF import, local versions, tutorial, marking menu.
@@ -101,7 +103,7 @@ Clang 18 as well as GCC 13.
 ## Next three tasks
 
 1. Finish M1's remaining sketch tools (Trim, Offset, 3-point arc) and constraint
-   selection/deletion; construction planes and axes (M4).
+   selection/deletion; Combine, Split and Move/Copy (M4).
 2. **B-001 libslvs spike** in an environment where building SolveSpace is allowed.
 3. Windows/macOS GUI screenshots in CI (B-003); Windows DLL audit (B-011).
 

@@ -414,6 +414,84 @@ private slots:
         QCOMPARE(props.table()->item(1, 0)->text(), QString("129.6 g"));
     }
 
+    // Construction planes: offset from a clicked face, sketch on it; a midplane.
+    void constructionPlanes()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        Viewport* view = w.viewport();
+        QVERIFY(w.createSketchOn("XY"));
+        SketchEditor* sk = w.sketchEditor();
+        sk->setTool(SketchEditor::Tool::CenterRectangle);
+        QTest::mouseMove(view, sk->screenOf(0, 0));
+        QTest::mouseClick(view, Qt::LeftButton, Qt::NoModifier, sk->screenOf(0, 0));
+        QTest::mouseMove(view, sk->screenOf(10, 8));
+        sk->typeValues({"60", "40"});
+        w.runCommand("sketch.finish");
+        w.runCommand("solid.extrude");
+        auto* ex = qobject_cast<ExtrudePanel*>(w.featurePanel());
+        QVERIFY(ex);
+        ex->distance()->setText("20 mm");
+        QTRY_VERIFY(ex->previewOk());
+        QVERIFY(ex->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+
+        // Offset plane 15 mm above the top face, picked by clicking the face.
+        w.runCommand("construct.offset_plane");
+        auto* pp = qobject_cast<PlanePanel*>(w.featurePanel());
+        QVERIFY(pp);
+        QTRY_VERIFY(view->meshesReady());
+        view->homeView();
+        QTest::qWait(200);
+        const QPoint top = view->project(QVector3D(5, 5, 20)).toPoint();
+        QTest::mouseMove(view, top);
+        QTest::mouseClick(view, Qt::LeftButton, Qt::NoModifier, top);
+        QVERIFY2(pp->base()->currentText().contains("e1/end"), qPrintable(pp->base()->currentText()));
+        pp->distance()->setText("15 mm");
+        QTest::qWait(300);
+        QTRY_VERIFY2(pp->previewOk(), qPrintable(pp->statusText()));
+        QVERIFY(pp->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        QCOMPARE(int(w.document().state().planes.size()), 1);
+        const gp_Ax3 pl = w.document().state().planes.begin()->second;
+        QVERIFY(std::abs(pl.Location().Z() - 35) < 1e-9);
+        QTest::qWait(200);
+        w.grab().save(shotPath("construction-plane"));
+
+        // The sketch picker offers the construction plane: click it above the body.
+        w.runCommand("sketch.create");
+        QTest::qWait(50);
+        const QPoint onPlane = view->project(QVector3D(-30, 30, 35)).toPoint();
+        QTest::mouseMove(view, onPlane);
+        QTest::mouseClick(view, Qt::LeftButton, Qt::NoModifier, onPlane);
+        QTRY_VERIFY(w.sketchEditor() != nullptr);
+        const auto& feats = w.document().model().features;
+        QCOMPARE(QString::fromStdString(feats.back().params.value("plane", std::string {})),
+                 QString::fromStdString(w.document().state().planes.begin()->first));
+        w.runCommand("sketch.finish");
+
+        // Midplane between the top and bottom faces (chosen by name, as a click would).
+        w.runCommand("construct.midplane");
+        auto* mp = qobject_cast<PlanePanel*>(w.featurePanel());
+        QVERIFY(mp);
+        const std::string body = w.document().state().bodies.begin()->first;
+        mp->useFace(body, "e1/end");
+        mp->useFace(body, "e1/start");
+        QTest::qWait(300);
+        QTRY_VERIFY2(mp->previewOk(), qPrintable(mp->statusText()));
+        QVERIFY(mp->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        double z = -1;
+        for (auto& [id, f] : w.document().state().planes) {
+            if (id != w.document().state().planes.begin()->first) {
+                z = f.Location().Z();
+            }
+        }
+        QVERIFY2(std::abs(z - 10) < 1e-9, qPrintable(QString::number(z)));
+    }
+
     // Revolve a ring, drill it from its top face, repeat the hole around the axis,
     // and mirror the result: the M3 panels driven like a person would.
     void ringRevolveHolePatternMirror()

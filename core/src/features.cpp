@@ -63,6 +63,114 @@ std::string mm(double v)
     return os.str();
 }
 
+// ---------------------------------------------------------------- planes
+
+// A plane reference: "XY"/"XZ"/"YZ", the id of a construction plane, or {"face": ref}
+// (a flat face). Used by sketches and construction planes.
+Result<gp_Ax3> planeFrame(const nlohmann::json& ref, const std::shared_ptr<const ModelState>& in, FeatureStatus& status)
+{
+    if (ref.is_string()) {
+        const std::string name = ref.get<std::string>();
+        if (auto o = planeFromString(name)) {
+            return originPlaneFrame(*o, 0);
+        }
+        auto it = in->planes.find(name);
+        if (it == in->planes.end()) {
+            return makeError("plane.missing", "The plane '" + name + "' is missing or comes later in the timeline.",
+                             {"Pick another plane."});
+        }
+        return it->second;
+    }
+    if (ref.is_object() && ref.contains("face")) {
+        ShapeRef fr = ShapeRef::fromJson(ref["face"]);
+        auto bit = in->bodies.find(fr.body);
+        if (bit == in->bodies.end()) {
+            return makeError("plane.face", "The body of the face this step uses no longer exists.");
+        }
+        Resolution r = resolve(*bit->second, fr);
+        if (r.status == ResolveStatus::Missing || r.status == ResolveStatus::Ambiguous) {
+            return makeError("plane.face", "The face this step uses no longer exists or was split.",
+                             {"Edit the step and pick the face again."});
+        }
+        if (r.status == ResolveStatus::Rebound && status.level == StatusLevel::Ok) {
+            status.level = StatusLevel::Warning;
+            status.message = "The original face changed; the most similar face is used. Check it.";
+        }
+        return faceFrame(bit->second->face(r.index));
+    }
+    return makeError("plane.ref", "This step refers to a plane in a way Jigsmith does not understand.");
+}
+
+FeatureOutcome applyPlane(const Document& doc, const Feature& f, const std::shared_ptr<const ModelState>& in)
+{
+    const auto& p = f.params;
+    FeatureStatus status;
+    const std::string kind = p.value("kind", std::string("offset"));
+    auto base = planeFrame(p.value("base", nlohmann::json("XY")), in, status);
+    if (!base) {
+        return failed(base.error());
+    }
+    gp_Ax3 frame = base.value();
+    if (kind == "offset") {
+        auto d = doc.evalLength(p.value("distance", std::string("10 mm")));
+        if (!d) {
+            return failed(d.error());
+        }
+        frame.Translate(gp_Vec(frame.Direction()) * d.value());
+    }
+    else if (kind == "angle") {
+        auto a = doc.evalAngle(p.value("angle", std::string("45 deg")));
+        if (!a) {
+            return failed(a.error());
+        }
+        gp_Ax1 axis;
+        const auto ax = p.value("axis", nlohmann::json("X"));
+        if (ax.is_object() && ax.contains("edge")) {
+            ShapeRef er = ShapeRef::fromJson(ax["edge"]);
+            auto bit = in->bodies.find(er.body);
+            if (bit == in->bodies.end()) {
+                return failed("The body of the edge this plane turns around no longer exists.");
+            }
+            Resolution r = resolve(*bit->second, er);
+            if (r.status == ResolveStatus::Missing || r.status == ResolveStatus::Ambiguous) {
+                return failed("The edge this plane turns around no longer exists.", {"Edit the plane and pick an edge."});
+            }
+            const MeasureItem m = measureItem(bit->second->edge(r.index));
+            if (m.kind != "straight edge" || !m.axis) {
+                return failed("A plane can only turn around a straight edge.");
+            }
+            axis = *m.axis;
+        }
+        else {
+            const std::string n = ax.is_string() ? ax.get<std::string>() : "X";
+            axis = gp_Ax1(gp_Pnt(0, 0, 0), n == "Y" ? gp_Dir(0, 1, 0) : n == "Z" ? gp_Dir(0, 0, 1) : gp_Dir(1, 0, 0));
+        }
+        if (std::abs(axis.Direction().Dot(frame.Direction())) > 1e-6) {
+            return failed("The turning axis must lie in the base plane (it is not parallel to it).",
+                          {"Pick an axis or edge that lies in the base plane."});
+        }
+        frame.Rotate(axis, a.value());
+    }
+    else if (kind == "midplane") {
+        auto other = planeFrame(p.value("base2", nlohmann::json("XY")), in, status);
+        if (!other) {
+            return failed(other.error());
+        }
+        const gp_Dir n1 = frame.Direction(), n2 = other->Direction();
+        if (!n1.IsParallel(n2, 1e-6)) {
+            return failed("A midplane needs two parallel faces or planes.", {"Pick two faces that face each other."});
+        }
+        const double gap = gp_Vec(frame.Location(), other->Location()).Dot(gp_Vec(n1));
+        frame.Translate(gp_Vec(n1) * (gap / 2));
+    }
+    else {
+        return failed("This construction plane has an unknown kind.");
+    }
+    auto out = copyState(in);
+    out->planes[f.id] = frame;
+    return {out, status};
+}
+
 // ---------------------------------------------------------------- sketch
 
 FeatureOutcome applySketch(const Document& doc, const Feature& f, const std::shared_ptr<const ModelState>& in)
@@ -94,6 +202,14 @@ FeatureOutcome applySketch(const Document& doc, const Feature& f, const std::sha
                              "similar face. Check it is the right one.";
         }
         auto fr = faceFrame(bit->second->face(r.index));
+        if (!fr) {
+            return failed(fr.error());
+        }
+        st->frame = fr.value();
+    }
+    else if (const std::string pl = p.value("plane", std::string("XY")); !planeFromString(pl)) {
+        // a construction plane, by id
+        auto fr = planeFrame(nlohmann::json(pl), in, status);
         if (!fr) {
             return failed(fr.error());
         }
@@ -800,6 +916,8 @@ FeatureOutcome applyFeature(const Document& doc, const Feature& f, const std::sh
                 return applyPattern(doc, f, in);
             case FeatureKind::Mirror:
                 return applyMirror(doc, f, in);
+            case FeatureKind::Plane:
+                return applyPlane(doc, f, in);
         }
     }
     catch (const std::exception& ex) {

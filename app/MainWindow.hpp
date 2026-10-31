@@ -81,6 +81,7 @@ public:
     void openPattern(const std::string& editId = {}, bool circular = true);
     void openMirror(const std::string& editId = {});
     void openMeasure();
+    void openPlane(const std::string& editId = {}, const std::string& kind = "offset");
     void openProperties();
     void openParameters();
     void editFeature(int index);
@@ -95,6 +96,7 @@ private:
     void buildToolbar();
     void buildDocks();
     void refreshAll();  // after any model change
+    void refreshDatums();
     void refreshBrowser();
     void refreshTimeline();
     void refreshWorkflow();
