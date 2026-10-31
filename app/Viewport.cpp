@@ -30,6 +30,7 @@ layout(location = 1) in vec3 aNormal;
 layout(location = 2) in float aPick;
 uniform mat4 uMvp;
 uniform mat4 uView;
+uniform vec4 uClip;  // section view: keep dot(uClip.xyz, p) <= uClip.w
 out vec3 vN;
 out vec3 vPosV;
 flat out int vPick;
@@ -37,6 +38,7 @@ void main() {
     vN = mat3(uView) * aNormal;
     vPosV = (uView * vec4(aPos, 1.0)).xyz;
     vPick = int(aPick + 0.5);
+    gl_ClipDistance[0] = uClip.w - dot(uClip.xyz, aPos);
     gl_Position = uMvp * vec4(aPos, 1.0);
 })";
 
@@ -49,6 +51,8 @@ uniform vec3 uHover;
 uniform vec3 uSel;
 uniform int uHoverId;
 uniform int uSelId;
+uniform int uSection;   // 1 while a section view is on
+uniform vec3 uInside;   // colour of surfaces seen from inside the material
 out vec4 frag;
 void main() {
     vec3 n = normalize(vN);
@@ -58,6 +62,10 @@ void main() {
     float d = max(dot(n, L), 0.0);
     float s = pow(max(dot(reflect(-L, n), V), 0.0), 40.0) * 0.18;
     vec3 base = vPick == uSelId ? uSel : (vPick == uHoverId ? uHover : uColor);
+    if (uSection == 1 && !gl_FrontFacing) {  // looking into the cut: flat, unlit
+        frag = vec4(uInside, 1.0);
+        return;
+    }
     frag = vec4(base * (0.38 + 0.62 * d) + vec3(s), 1.0);
 })";
 
@@ -75,7 +83,11 @@ void main() {
 const char* kLineVs = R"(#version 330 core
 layout(location = 0) in vec3 aPos;
 uniform mat4 uMvp;
-void main() { gl_Position = uMvp * vec4(aPos, 1.0); })";
+uniform vec4 uClip;
+void main() {
+    gl_ClipDistance[0] = uClip.w - dot(uClip.xyz, aPos);
+    gl_Position = uMvp * vec4(aPos, 1.0);
+})";
 
 const char* kLineFs = R"(#version 330 core
 uniform vec4 uColor;
@@ -392,10 +404,14 @@ void Viewport::drawScene(bool pickPass)
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_POLYGON_OFFSET_FILL);
     glPolygonOffset(1.0f, 1.0f);
+    // section view: everything on the far side of the plane is clipped away
+    const QVector4D clip = section_ ? *section_ : QVector4D(0, 0, 0, 1);  // 1 - 0 > 0 keeps all
+    glEnable(GL_CLIP_DISTANCE0);
     auto* prog = pickPass ? pickProg_.get() : meshProg_.get();
     prog->bind();
     prog->setUniformValue("uMvp", mvp);
     prog->setUniformValue("uView", view);
+    prog->setUniformValue("uClip", clip);
     if (!pickPass) {
         auto pickId = [&](const std::optional<PickResult>& r) {
             if (!r) {
@@ -413,6 +429,8 @@ void Viewport::drawScene(bool pickPass)
         prog->setUniformValue("uSel", col(colors_.selected));
         prog->setUniformValue("uHoverId", pickId(hover_));
         prog->setUniformValue("uSelId", pickId(selected_));
+        prog->setUniformValue("uSection", section_ ? 1 : 0);
+        prog->setUniformValue("uInside", col(QColor(205, 92, 72)));  // brick red, also lighter than the model
     }
     for (auto& m : meshes_) {
         m->vaoTri.bind();
@@ -426,12 +444,15 @@ void Viewport::drawScene(bool pickPass)
     }
     lineProg_->bind();
     lineProg_->setUniformValue("uMvp", mvp);
+    lineProg_->setUniformValue("uClip", clip);
     lineProg_->setUniformValue("uColor", colors_.edge);
     for (auto& m : meshes_) {
         m->vaoEdge.bind();
         glDrawArrays(GL_LINES, 0, m->edgeVertexCount);
         m->vaoEdge.release();
     }
+    lineProg_->setUniformValue("uClip", QVector4D(0, 0, 0, 1));  // the grid is never cut
+    glDisable(GL_CLIP_DISTANCE0);
     // grid last, depth-tested, so the model hides it
     glEnable(GL_BLEND);
     // blend colour only: the widget composites its framebuffer, so its alpha must stay 1
@@ -458,6 +479,12 @@ void Viewport::setOverlay(SceneOverlay o)
 {
     overlayData_ = std::move(o);
     overlayDirty_ = true;
+    update();
+}
+
+void Viewport::setSection(std::optional<QVector4D> plane)
+{
+    section_ = plane;
     update();
 }
 
@@ -672,8 +699,10 @@ std::optional<EdgePick> Viewport::pickEdgeAt(const QPoint& pos)
             double t = len2 > 0 ? std::clamp((ap.x() * ab.x() + ap.y() * ab.y()) / len2, 0.0, 1.0) : 0.0;
             QPointF c = pa + ab * t;
             double d = QLineF(c, QPointF(pos)).length();
-            if (d < 8) {
-                cands.push_back({d, m->body, int(m->segEdge[s]), a + (b - a) * float(t)});
+            const QVector3D w = a + (b - a) * float(t);
+            const bool cutAway = section_ && QVector3D::dotProduct(section_->toVector3D(), w) > section_->w();
+            if (d < 8 && !cutAway) {
+                cands.push_back({d, m->body, int(m->segEdge[s]), w});
             }
         }
     }

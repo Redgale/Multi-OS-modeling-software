@@ -4,6 +4,7 @@
 #include <cmath>
 #include <numbers>
 
+#include <QCheckBox>
 #include <QComboBox>
 #include <QDialogButtonBox>
 #include <QDoubleSpinBox>
@@ -193,6 +194,92 @@ void MeasurePanel::update()
     else {
         result_->clear();
     }
+}
+
+// ---------------------------------------------------------------- Section
+
+SectionPanel::SectionPanel(jig::Document& doc, Viewport* view, QWidget* parent)
+    : ToolPanel(parent)
+    , doc_(doc)
+    , view_(view)
+{
+    auto* lay = new QVBoxLayout(this);
+    auto* head = new QLabel("<h3>" + tr("Section view") + "</h3><p>" +
+                                tr("Slice the view to look inside walls and holes. Only the view changes, not the "
+                                   "design. Surfaces seen from inside the material are shown in red-brown.") + "</p>",
+                            this);
+    head->setWordWrap(true);
+    plane_ = new QComboBox(this);
+    plane_->addItem(tr("Front (XZ): remove the front half"), "XZ");
+    plane_->addItem(tr("Side (YZ)"), "YZ");
+    plane_->addItem(tr("Floor (XY): remove the top"), "XY");
+    for (auto& f : doc_.model().features) {
+        if (f.kind == jig::FeatureKind::Plane && doc_.state().planes.count(f.id)) {
+            plane_->addItem(QString::fromStdString(f.name), QString::fromStdString(f.id));
+        }
+    }
+    position_ = new ExprField(doc, jig::Dim::len(), this);
+    position_->setText("0 mm");
+    flip_ = new QCheckBox(tr("Remove the other side"), this);
+    note_ = new QLabel(this);
+    note_->setWordWrap(true);
+    auto* close = new QPushButton(tr("Close"), this);
+    close->setToolTip(tr("Show the whole part again (Esc)."));
+    auto bold = [this](const QString& t) { return new QLabel("<b>" + t + "</b>", this); };
+    lay->addWidget(head);
+    lay->addWidget(bold(tr("Cut along")));
+    lay->addWidget(plane_);
+    lay->addWidget(bold(tr("Move the cut")));
+    lay->addWidget(position_);
+    lay->addWidget(flip_);
+    lay->addWidget(note_);
+    lay->addStretch();
+    auto* row = new QHBoxLayout();
+    row->addStretch();
+    row->addWidget(close);
+    lay->addLayout(row);
+    connect(plane_, &QComboBox::currentIndexChanged, this, [this] { apply(); });
+    connect(position_, &ExprField::changed, this, [this] { apply(); });
+    connect(flip_, &QCheckBox::toggled, this, [this] { apply(); });
+    connect(close, &QPushButton::clicked, this, [this] { cancel(); });
+    apply();
+}
+
+SectionPanel::~SectionPanel()
+{
+    if (view_) {
+        view_->setSection(std::nullopt);
+    }
+}
+
+void SectionPanel::cancel()
+{
+    emit finished(false);
+}
+
+void SectionPanel::apply()
+{
+    if (!view_) {
+        return;
+    }
+    const std::string key = plane_->currentData().toString().toStdString();
+    gp_Ax3 frame;
+    if (key == "XY" || key == "XZ" || key == "YZ") {
+        frame = jig::originPlaneFrame(key == "XY" ? jig::OriginPlane::XY : key == "XZ" ? jig::OriginPlane::XZ : jig::OriginPlane::YZ, 0);
+    }
+    else if (auto it = doc_.state().planes.find(key); it != doc_.state().planes.end()) {
+        frame = it->second;
+    }
+    gp_Dir n = frame.Direction();
+    if (flip_->isChecked()) {
+        n.Reverse();
+    }
+    // the cut sits at the plane, moved along the plane's own normal
+    const double shift = position_->valid() ? position_->value() : 0;
+    const gp_Pnt p0 = frame.Location().Translated(gp_Vec(frame.Direction()) * shift);
+    const QVector3D N(float(n.X()), float(n.Y()), float(n.Z()));
+    view_->setSection(QVector4D(N, float(N.x() * p0.X() + N.y() * p0.Y() + N.z() * p0.Z())));
+    note_->setText(tr("Cut faces are shown open (not filled) in this version."));
 }
 
 // ---------------------------------------------------------------- Properties

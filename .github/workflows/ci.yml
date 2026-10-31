@@ -91,8 +91,10 @@ jobs:
       - run: cmake --build build
       - run: ctest --test-dir build --output-on-failure -j4
         env:
-          ASAN_OPTIONS: detect_leaks=0  # OCCT keeps global caches alive at exit
-          UBSAN_OPTIONS: print_stacktrace=1
+          # leak checking on; only OCCT's STEP registries (kept for the whole process) are suppressed
+          ASAN_OPTIONS: detect_leaks=1
+          LSAN_OPTIONS: suppressions=${{ github.workspace }}/tools/lsan.supp
+          UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
 
   macos:
     name: macOS (${{ matrix.arch }})

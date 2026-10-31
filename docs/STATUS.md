@@ -13,8 +13,9 @@ then Revolve, Hole, rectangular and circular Patterns and Mirror with panels, Ar
 Polygon sketch tools, and **Text** (FreeType outlines, built-in Inter font, D-014), which
 completes the knob (A2) and pen cup (A3) samples including their lettering, and the
 Inspect tools **Measure** and **Properties**, **3MF** export, **construction planes**
-(offset, at an angle, midplane), and **Combine, Split body and Move/Copy**. 79 tests, including UI workflow tests that
-drive the real window.
+(offset, at an angle, midplane), **Combine, Split body and Move/Copy**, and **Section view**.
+80 tests, including UI workflow tests that drive the real window; the whole suite, UI tests
+included, also passes under AddressSanitizer + UBSan (leak checking on for the core).
 
 ## What works, and how it was verified
 
@@ -41,6 +42,7 @@ drive the real window.
 | Text (M5 part) | Sketch text centred on a draggable, dimensionable point; size as an expression; built-in Inter (embedded) or a font file; each letter outline is a closed area for extrude/cut; double-click to edit; missing fonts fall back with a warning | `Text.*` (4 tests: outline areas and solids, cut volume = area × depth, scaling with a parameter, save/load, fallback); cross-checked against OCCT's own text builder (identical area); UI test places and edits text, then undoes |
 | Construction planes (M4 part) | Offset from an origin plane, construction plane or clicked flat face (distance can be a parameter); turned around an origin axis or a clicked straight edge; midplane between two parallel faces/planes. Drawn in amber with their names; the sketch picker offers them; panel with live preview; impossible planes explained | `Plane.*` (2 tests: positions and normals, a post that follows the plane's parameter, non-parallel midplane and out-of-plane axis refused); UI test clicks the top face for an offset plane, sketches on it by clicking it, and makes a midplane |
 | Combine, Split, Move/Copy (M4 part) | Combine: join, cut or intersect bodies into one (tools used up or kept). Split body with an origin plane, construction plane or clicked flat face; the cut faces are named `<split>/split`; a plane that misses the body is explained. Move/Copy: shift along X/Y/Z and turn about an origin axis; moved bodies keep their face names so later steps still find them | `Bodies.CombineSplitMoveAndCopy` (volumes and bounding boxes by hand); UI test copies a block 30 mm along X, joins the two and splits the result, checking each volume, then edits the move from the timeline |
+| Section view (M6 part) | Slice the view along an origin or construction plane, move the cut, flip the side; surfaces seen from inside the material are flat brick red; picking ignores what is cut away; the design does not change. Cut faces are open, not filled (capping is not built) | UI test opens the knob sample, turns the section on and checks the rendered pixel in the middle of the knob changes from the model colour to the inside colour, and that closing restores the full view |
 | Measure and Properties (M6 part) | Measure: click a face or edge for its kind and size (area, length, diameter), a second for the shortest distance, angle, centre-to-centre spacing of holes and round edges, and the X/Y/Z offsets; picks edges when the cursor is on one, faces otherwise; nothing in the design changes. Properties: volume, weight for a chosen material (PLA, PETG, ABS, … or a typed density), filament length, area, size, centre of mass, validity. Script command `measure` | `Measure.SizesDistancesAnglesAndHoleSpacing`; UI test clicks a face and an edge in the real view and checks the panel text, then the weight for PLA and aluminium |
 | Parameters (M5 part) | Table dialog: name, value with units/expressions, kind, live result, comment; refuses invalid names, duplicates, cycles | exercised manually under Xvfb only (no automated UI test yet: B-015) |
 | Performance | All headless budgets met | `jigsmith-bench`, numbers in PHASE1_REPORT.md |
@@ -81,7 +83,7 @@ Clang 18 as well as GCC 13.
   (v0.2 list).
 - Text: installed fonts by name, bold/italic, multi-line, complex-script shaping (B-020).
 - Not built yet:
-  Section view, SVG/DXF import, local versions, tutorial, marking menu.
+  section capping, SVG/DXF import, local versions, tutorial, marking menu.
 - Reorder of timeline steps (model supports it; no command or tests yet, B-002).
 - libslvs comparison (B-001).
 

@@ -577,6 +577,38 @@ private slots:
         QTRY_VERIFY(w.featurePanel() == nullptr);
     }
 
+    // Section view: the cut side disappears and the inside shows in the inside colour.
+    void sectionView()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        Viewport* view = w.viewport();
+        QVERIFY(w.openSample("knob"));
+        QTRY_VERIFY(view->meshesReady());
+        view->viewFront();
+        QTest::qWait(300);
+        const QPoint mid = view->project(QVector3D(5, 0, 14)).toPoint();
+        auto pixel = [&] { return view->grabFramebuffer().pixelColor(mid * view->devicePixelRatioF()); };
+        const QColor before = pixel();
+        w.runCommand("inspect.section");
+        auto* sp = qobject_cast<SectionPanel*>(w.featurePanel());
+        QVERIFY(sp);
+        QVERIFY(view->section().has_value());
+        QTest::qWait(200);
+        const QColor after = pixel();
+        // the front half is gone; we look at the inside of the back half (brick red)
+        QVERIFY2(after.red() > after.green() + 40, qPrintable(after.name()));
+        QVERIFY2(!(before.red() > before.green() + 40), qPrintable(before.name()));
+        w.grab().save(shotPath("section"));
+        // the design itself is untouched, and closing restores the full view
+        QCOMPARE(int(w.document().model().features.size()), 10);
+        sp->cancel();
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        QTRY_VERIFY(!view->section().has_value());
+    }
+
     // Revolve a ring, drill it from its top face, repeat the hole around the axis,
     // and mirror the result: the M3 panels driven like a person would.
     void ringRevolveHolePatternMirror()

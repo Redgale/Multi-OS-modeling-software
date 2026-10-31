@@ -551,6 +551,8 @@ void MainWindow::buildMenus()
     file->addSeparator();
     auto* samples = file->addMenu(tr("Open a sample"));
     samples->addAction(tr("Phone stand"), this, [this] { openSample("phone_stand"); });
+    samples->addAction(tr("Knob (revolve, pattern, text)"), this, [this] { openSample("knob"); });
+    samples->addAction(tr("Pen cup (parameters, shell)"), this, [this] { openSample("pen_cup"); });
     file->addSeparator();
     for (const char* id : {"file.export_stl", "file.export_step", "file.export_3mf"}) {
         file->addAction(registryAction(id));
@@ -1174,6 +1176,18 @@ void MainWindow::runCommand(const QString& id)
     }
     else if (id == "inspect.properties") {
         openProperties();
+    }
+    else if (id == "inspect.section") {
+        if (doc_->state().bodies.empty()) {
+            statusBar()->showMessage(tr("There is nothing to slice yet: make a 3D body first."), 5000);
+        }
+        else {
+            if (sketch_) {
+                exitSketch();
+            }
+            cancelPicker();
+            showPanel(new SectionPanel(*doc_, view_, panelHost_));
+        }
     }
     else if (id == "modify.parameters") {
         openParameters();

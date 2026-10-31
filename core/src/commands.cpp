@@ -149,7 +149,8 @@ CommandRegistry::CommandRegistry()
         "constraint.symmetric", "constraint.equal", "solid.extrude", "solid.fillet", "solid.chamfer", "solid.shell",
         "solid.revolve", "solid.hole", "solid.mirror", "solid.pattern_rect", "solid.pattern_circ", "modify.parameters",
         "inspect.measure", "inspect.properties", "file.export_3mf", "construct.offset_plane", "construct.angle_plane",
-        "construct.midplane", "solid.combine", "solid.split", "solid.move"};
+        "construct.midplane", "solid.combine", "solid.split", "solid.move",
+        "inspect.section"};
     for (auto& c : commands_) {
         if (inApp.count(c.id)) {
             c.available = true;

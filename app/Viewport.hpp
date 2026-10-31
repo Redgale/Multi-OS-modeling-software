@@ -18,6 +18,7 @@
 #include <QOpenGLWidget>
 #include <QPoint>
 #include <QVector3D>
+#include <QVector4D>
 
 #include "jig/kernel.hpp"
 
@@ -148,6 +149,13 @@ public:
     {
         return pickMode_;
     }
+    // Section view: hide everything where dot(normal, p) > offset (x, y, z = normal,
+    // w = offset). Surfaces seen from inside the material are drawn in a distinct colour.
+    void setSection(std::optional<QVector4D> plane);
+    std::optional<QVector4D> section() const
+    {
+        return section_;
+    }
     // Construction planes and their names: drawn under any tool overlay.
     void setDatums(SceneOverlay geometry, std::vector<std::pair<QString, QVector3D>> labels);
     void setEdgeHighlight(const std::string& body, std::vector<int> edges);
@@ -271,7 +279,8 @@ private:
     Interactor* interactor_ = nullptr;
     PickMode pickMode_ = PickMode::Faces;
     SceneOverlay overlayData_;
-    SceneOverlay datums_;                                     // construction planes, always shown
+    SceneOverlay datums_;
+    std::optional<QVector4D> section_;                                     // construction planes, always shown
     std::vector<std::pair<QString, QVector3D>> datumLabels_;
     bool overlayDirty_ = false;
     std::unique_ptr<QOpenGLShaderProgram> colorProg_;
