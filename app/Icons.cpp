@@ -126,6 +126,7 @@ const std::map<QString, QString>& icons()
         {"feature.split", "M4 7 L12 3 L20 7 L20 17 L12 21 L4 17 Z a M2 15 L22 9"},
         {"feature.move", "R8 8 8 8 a M12 2 L12 6 M10 4 L12 2 L14 4 M22 12 L18 12 M20 10 L22 12 L20 14"},
         {"feature.revolve", "M8 4 L8 20 d M12 3 L12 21 a M17 9 A12 12 5 0 -270 M12 7 L15 6"},
+        {"feature.remove", "M5 7 L19 7 M9 7 L9 4 L15 4 L15 7 M7 7 L8 20 L16 20 L17 7 a M10 10 L10 17 M14 10 L14 17"},
         {"feature.hole", "M3 9 L9 5 L21 5 L15 9 Z M3 9 L3 19 L15 19 L15 9 M15 19 L21 15 L21 5 f E12 7 3 1.2 a M9 9 L9 16 M15 9 L15 16"},
         {"feature.pattern", "t O12 12 7.5 f R10 3 4 4 R17 10 4 4 R10 17 4 4 R3 10 4 4"},
         {"feature.mirror", "M3 7 L9 4 L9 18 L3 19 Z d M12 2 L12 22 a M21 7 L15 4 L15 18 L21 19 Z"},

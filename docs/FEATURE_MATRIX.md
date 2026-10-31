@@ -125,7 +125,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Split body (plane) | 17, 18 | v0.1 M4 | **app** + scripts (`split`): origin plane, construction plane or flat face | |
 | Move/Copy bodies (free, translate, rotate, point-to-point) | 17 | v0.1 M4 | **app** + scripts (`move`): typed X/Y/Z shift and turn about an origin or construction axis, point to point (construction points), copy; free drag not yet | |
 | Align | 17 | v0.2 | — | |
-| Delete body/feature | 17 | v0.1 M2 | — | |
+| Delete body/feature | 17 | v0.1 M2 | **app** + scripts (`remove`): a step is deleted from the timeline (warning when later steps use it); a body is deleted from the Browser as a Remove step, so undo and rolling back bring it back | |
 | Compute all | 17 | v0.1 | automatic (incremental recompute) | |
 | Patterns: rectangular, circular (features, bodies) | 19 | v0.1 M3 | **app** + scripts: features (Extrude, Revolve, Hole) and whole bodies (separate or joined); axes and directions may be construction axes | |
 | Pattern on path | 19 | v0.2 | — | |

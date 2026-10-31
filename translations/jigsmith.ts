@@ -1653,6 +1653,16 @@
     </message>
     <message>
         <location line="+1"/>
+        <source>Pick at least one body to remove.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Delete this step, or edit an earlier step so the body is made again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>The body of the edge this plane turns around no longer exists.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2343,6 +2353,11 @@
     </message>
     <message>
         <location line="+5"/>
+        <source>There is no body called &apos;%1&apos;.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
         <source>There is no parameter called &apos;%1&apos;.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2414,6 +2429,11 @@
     <message>
         <location line="+1"/>
         <source>A point on an edge sits at its start, end, middle or centre, not at &apos;%1&apos;.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The body this step removes (%1) no longer exists.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -2492,12 +2512,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
+        <location line="-31"/>
         <source>The id &apos;%1&apos; is already used.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
+        <location line="+32"/>
         <source>A wall of %1 does not fit this outline.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2572,7 +2592,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-196"/>
+        <location line="-198"/>
         <source>There is nothing to export yet.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3255,7 +3275,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../app/MainWindow.cpp" line="+341"/>
+        <location filename="../app/MainWindow.cpp" line="+343"/>
         <source>Click a plane, a construction plane or a flat face to sketch on, or press 1 (floor), 2 (front) or 3 (side).  Esc cancels.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4116,7 +4136,7 @@
 <context>
     <name>jigapp::MainWindow</name>
     <message>
-        <location filename="../app/MainWindow.cpp" line="-142"/>
+        <location filename="../app/MainWindow.cpp" line="-144"/>
         <source>OK</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4142,15 +4162,15 @@
     </message>
     <message>
         <location line="+9"/>
-        <location line="+652"/>
         <location line="+654"/>
+        <location line="+656"/>
         <location line="+834"/>
         <location line="+26"/>
         <source>Sketch</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2164"/>
+        <location line="-2168"/>
         <source>Extrude</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4207,6 +4227,11 @@
     <message>
         <location line="+2"/>
         <source>Import</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Remove</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -4291,12 +4316,12 @@
     </message>
     <message>
         <location line="+4"/>
-        <location line="+754"/>
+        <location line="+756"/>
         <source>&lt;p&gt;Nothing selected.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-743"/>
+        <location line="-745"/>
         <source>&lt;h3&gt;Body&lt;/h3&gt;&lt;p&gt;&lt;b&gt;Name:&lt;/b&gt; %1&lt;br&gt;&lt;b&gt;Volume:&lt;/b&gt; %2&lt;br&gt;&lt;b&gt;Size:&lt;/b&gt; %3 × %4 × %5&lt;br&gt;&lt;b&gt;Faces:&lt;/b&gt; %6&lt;/p&gt;&lt;p&gt;Right-click it in the Browser to hide, isolate or rename it.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4382,12 +4407,12 @@
     </message>
     <message>
         <location line="+2"/>
-        <location line="+1427"/>
+        <location line="+1429"/>
         <source>Mouse and trackpad</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1425"/>
+        <location line="-1427"/>
         <source>Default (middle-drag pans, Shift+middle orbits)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4408,30 +4433,30 @@
     </message>
     <message>
         <location line="+11"/>
-        <location line="+1400"/>
+        <location line="+1402"/>
         <source>Theme</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1398"/>
-        <location line="+1353"/>
+        <location line="-1400"/>
+        <location line="+1355"/>
         <source>Light</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1353"/>
-        <location line="+1352"/>
+        <location line="-1355"/>
+        <location line="+1354"/>
         <source>Dark</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1351"/>
-        <location line="+1353"/>
+        <location line="-1353"/>
+        <location line="+1355"/>
         <source>High contrast</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1345"/>
+        <location line="-1347"/>
         <source>&amp;Help</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4548,12 +4573,17 @@
     </message>
     <message>
         <location line="+2"/>
-        <location line="+1947"/>
+        <location line="+1954"/>
         <source>Rename…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1943"/>
+        <location line="-1951"/>
+        <source>Delete body</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
         <source>Design browser</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4656,12 +4686,12 @@
     </message>
     <message>
         <location line="+18"/>
-        <location line="+1835"/>
+        <location line="+1840"/>
         <source>Move rollback marker</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1731"/>
+        <location line="-1736"/>
         <source>Start here: every part begins as a flat sketch.
 Click Sketch on the toolbar, then click a plane.
 Or open the phone stand sample (File ▸ Open a sample).</source>
@@ -5395,6 +5425,11 @@ An empty design with the origin ready</source>
     </message>
     <message>
         <location line="+88"/>
+        <source>This step takes bodies out of the design. To bring them back, delete the step (or suppress it from its menu).</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
         <source>An imported solid has no settings to change. To use a newer copy of the file, delete this step and import it again.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5501,7 +5536,22 @@ An empty design with the origin ready</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+23"/>
+        <location line="+20"/>
+        <source>Delete body %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Remove %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+12"/>
+        <source>Body removed as a step in the timeline. Undo, or delete that step, to bring it back.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+19"/>
         <source>Delete step</source>
         <translation type="unfinished"></translation>
     </message>

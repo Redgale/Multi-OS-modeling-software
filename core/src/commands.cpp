@@ -1447,6 +1447,33 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
         }
         return checkFeature(id);
     }
+    if (a.verb == "remove") {
+        // remove bodies="<body>;…"   (delete bodies from here on in the timeline)
+        const auto bodies = split(a.get("bodies"), ';');
+        for (const auto& b : bodies) {
+            if (!doc.state().bodies.count(b)) {
+                return makeError("script.args", fmt("There is no body called '%1'.", {b}));
+            }
+        }
+        std::string id;
+        auto r = doc.transact("Remove", [&](Model& m) -> Result<bool> {
+            Feature f;
+            f.id = a.get("id", Document::newId(m, "rm"));
+            if (findFeature(m, f.id)) {
+                return makeError("script.args", fmt("The id '%1' is already used.", {f.id}));
+            }
+            f.name = a.get("name", "Remove " + f.id.substr(2));
+            f.kind = FeatureKind::Remove;
+            f.params = {{"bodies", bodies}};
+            id = f.id;
+            insertFeature(m, std::move(f));
+            return true;
+        });
+        if (!r) {
+            return r;
+        }
+        return checkFeature(id);
+    }
     if (a.verb == "combine" || a.verb == "split" || a.verb == "move") {
         // combine target=<body> tools="<body>;<body>" [op=join|cut|intersect] [keep=yes]
         // split body=<body> plane=XY|XZ|YZ|<plane id>|face:<name>

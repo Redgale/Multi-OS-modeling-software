@@ -1740,6 +1740,27 @@ private slots:
         QTRY_VERIFY(w.featurePanel() == nullptr);
     }
 
+    // Delete a body from the Browser: a Remove step, undoable.
+    void deleteBody()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        {
+            jig::ScriptRunner r(w.document());
+            QVERIFY(r.runText("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=10 h=10\nextrude id=e1 sketch=s1 distance=10\n"
+                              "sketch id=s2 plane=XY\nrect sketch=s2 center=40,0 w=10 h=10\nextrude id=e2 sketch=s2 distance=5 op=new\n").ok());
+        }
+        QCOMPARE(int(w.document().state().bodies.size()), 2);
+        QVERIFY(w.removeBody("e2"));
+        QCOMPARE(int(w.document().state().bodies.size()), 1);
+        QCOMPARE(int(w.document().model().features.back().kind), int(jig::FeatureKind::Remove));
+        w.runCommand("edit.undo");
+        QTRY_COMPARE(int(w.document().state().bodies.size()), 2);
+        QVERIFY(!w.removeBody("no-such-body"));
+    }
+
     // Tangent circle: two lines, a click on the side, a typed radius.
     void tangentCircle()
     {

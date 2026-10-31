@@ -146,6 +146,8 @@ QString kindWord(jig::FeatureKind k)
             return MainWindow::tr("Point");
         case jig::FeatureKind::Import:
             return MainWindow::tr("Import");
+        case jig::FeatureKind::Remove:
+            return MainWindow::tr("Remove");
         case jig::FeatureKind::PressPull:
             return MainWindow::tr("Press pull");
         case jig::FeatureKind::Combine:
@@ -891,6 +893,8 @@ void MainWindow::buildDocks()
         if (doc_->feature(body)) {
             m.addAction(tr("Rename…"), this, [this, body] { renameFeature(body); });
         }
+        m.addSeparator();
+        m.addAction(tr("Delete body"), this, [this, body] { removeBody(body); });
         m.exec(browser_->viewport()->mapToGlobal(pos));
     });
     browser_->setAccessibleName(tr("Design browser"));
@@ -2807,6 +2811,11 @@ void MainWindow::editFeature(int index)
         case jig::FeatureKind::Point:
             openPoint(f.id);
             break;
+        case jig::FeatureKind::Remove:
+            statusBar()->showMessage(tr("This step takes bodies out of the design. To bring them back, delete the step "
+                                        "(or suppress it from its menu)."),
+                                     8000);
+            break;
         case jig::FeatureKind::Import:
             statusBar()->showMessage(tr("An imported solid has no settings to change. To use a newer copy of the "
                                         "file, delete this step and import it again."),
@@ -2939,6 +2948,37 @@ void MainWindow::renameFeature(const std::string& id)
         return true;
     });
     refreshAll();
+}
+
+bool MainWindow::removeBody(const std::string& body)
+{
+    if (!doc_->state().bodies.count(body)) {
+        return false;
+    }
+    if (sketch_) {
+        exitSketch();
+    }
+    const jig::Feature* maker = doc_->feature(body);
+    const std::string label = maker ? maker->name : body;
+    std::string id;
+    auto r = doc_->transact(tr("Delete body %1").arg(q(label)).toStdString(), [&](jig::Model& m) -> jig::Result<bool> {
+        jig::Feature f;
+        f.id = jig::Document::newId(m, "rm");
+        f.name = tr("Remove %1").arg(q(label)).toStdString();
+        f.kind = jig::FeatureKind::Remove;
+        f.params = {{"bodies", nlohmann::json::array({body})}};
+        id = f.id;
+        jig::Document::insertAtMarker(m, std::move(f));
+        return true;
+    });
+    if (!r) {
+        statusBar()->showMessage(coreText(r.error().message), 6000);
+        return false;
+    }
+    refreshAll();
+    statusBar()->showMessage(tr("Body removed as a step in the timeline. Undo, or delete that step, to bring it back."),
+                             6000);
+    return true;
 }
 
 void MainWindow::deleteFeature(const std::string& id)

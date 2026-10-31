@@ -358,6 +358,24 @@ FeatureOutcome applyPoint(const Document& doc, const Feature& f, const std::shar
     return {out, {}};
 }
 
+std::vector<std::string> bodyList(const nlohmann::json& j);
+
+FeatureOutcome applyRemove(const Feature& f, const std::shared_ptr<const ModelState>& in)
+{
+    std::vector<std::string> bodies = bodyList(f.params.value("bodies", nlohmann::json::array()));
+    if (bodies.empty()) {
+        return failed("Pick at least one body to remove.");
+    }
+    auto out = copyState(in);
+    for (const std::string& b : bodies) {
+        if (!out->bodies.erase(b)) {
+            return failed(fmt("The body this step removes (%1) no longer exists.", {b}),
+                          {"Delete this step, or edit an earlier step so the body is made again."});
+        }
+    }
+    return {out, {}};
+}
+
 FeatureOutcome applyImport(const Feature& f, const std::shared_ptr<const ModelState>& in)
 {
     auto shape = shapeFromText(f.params.value("brep", std::string {}));
@@ -1684,6 +1702,8 @@ FeatureOutcome applyFeature(const Document& doc, const Feature& f, const std::sh
                 return applyPoint(doc, f, in);
             case FeatureKind::Import:
                 return applyImport(f, in);
+            case FeatureKind::Remove:
+                return applyRemove(f, in);
         }
     }
     catch (const std::exception& ex) {

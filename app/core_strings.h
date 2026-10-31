@@ -154,6 +154,8 @@ QT_TRANSLATE_NOOP("Core", "This curved edge does not reach the plane.")
 QT_TRANSLATE_NOOP("Core", "Pick another edge or plane.")
 QT_TRANSLATE_NOOP("Core", "Choose its start, end or middle instead.")
 QT_TRANSLATE_NOOP("Core", "A point needs three coordinates: X, Y and Z.")
+QT_TRANSLATE_NOOP("Core", "Pick at least one body to remove.")
+QT_TRANSLATE_NOOP("Core", "Delete this step, or edit an earlier step so the body is made again.")
 QT_TRANSLATE_NOOP("Core", "The body of the edge this plane turns around no longer exists.")
 QT_TRANSLATE_NOOP("Core", "The edge this plane turns around no longer exists.")
 QT_TRANSLATE_NOOP("Core", "Edit the plane and pick an edge.")
@@ -417,6 +419,8 @@ QT_TRANSLATE_NOOP("Core", "Try another font.")
 
 // Messages built from values: their patterns, with %1, %2… where the values go.
 inline const char* const kCorePatterns[] = {
+    QT_TRANSLATE_NOOP("Core", "There is no body called '%1'."),
+    QT_TRANSLATE_NOOP("Core", "The id '%1' is already used."),
     QT_TRANSLATE_NOOP("Core", "There is no parameter called '%1'."),
     QT_TRANSLATE_NOOP("Core", "Parameter '%1' depends on itself."),
     QT_TRANSLATE_NOOP("Core", "“%1” uses “%2”, so it must stay after it."),
@@ -432,6 +436,7 @@ inline const char* const kCorePatterns[] = {
     QT_TRANSLATE_NOOP("Core", "An axis can run along a straight edge or through a round edge or face (a hole, a cylinder); this %1 has no axis."),
     QT_TRANSLATE_NOOP("Core", "Only a circle or an arc has a centre; this is a %1."),
     QT_TRANSLATE_NOOP("Core", "A point on an edge sits at its start, end, middle or centre, not at '%1'."),
+    QT_TRANSLATE_NOOP("Core", "The body this step removes (%1) no longer exists."),
     QT_TRANSLATE_NOOP("Core", "%1 line ends are not connected."),
     QT_TRANSLATE_NOOP("Core", "The smallest gap is %1: drag those ends together to close it."),
     QT_TRANSLATE_NOOP("Core", "The sketch's closed area changed shape; the %1 now uses its only closed area. Check the result."),
@@ -447,7 +452,6 @@ inline const char* const kCorePatterns[] = {
     QT_TRANSLATE_NOOP("Core", "%1 of the edges this fillet rounded no longer exist."),
     QT_TRANSLATE_NOOP("Core", "%1 edges were split, and Jigsmith can't tell which piece you meant."),
     QT_TRANSLATE_NOOP("Core", "%1 edges were re-attached by shape similarity after an earlier change. Check the result."),
-    QT_TRANSLATE_NOOP("Core", "The id '%1' is already used."),
     QT_TRANSLATE_NOOP("Core", "A wall of %1 does not fit this outline."),
     QT_TRANSLATE_NOOP("Core", "Try %1 or less."),
     QT_TRANSLATE_NOOP("Core", "A %1 chamfer is too big here: the neighbouring face is only %2 across."),

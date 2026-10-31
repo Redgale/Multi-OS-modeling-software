@@ -86,6 +86,7 @@ nothing is committed.
 | `combine id=cb1 target=<body> tools="<body>;…" [op=join\|cut\|intersect] [keep=yes]` | Combine bodies into the target; the tools are used up unless `keep=yes` |
 | `split id=sp1 body=<body> plane=XY\|XZ\|YZ\|<plane id>\|face:<name>` | Cut a body in two; the part on the plane's back side becomes body `sp1` |
 | `move id=mv1 bodies="<body>;…" [dx= dy= dz=] [axis=X\|Y\|Z\|<axis id> angle=<angle>] [from=<point> to=<point>] [copy=yes]` | Turn about an axis, then shift. With `from`/`to` (construction point ids or `O`), the turned `from` point lands on `to`, plus any typed shift. `copy=yes` keeps the original |
+| `remove id=rm1 bodies="<body>;…"` | Take bodies out of the design from this step on (deleting a body). Rolling back before it, or deleting the step, brings them back |
 | `mirror id=m1 [body=<id> \| feature=<id>] plane=YZ\|XZ\|XY\|<plane id>\|face:<name> [op=join\|new]` | Mirror a body (joined to the original or as a new body), or one step (its copy adds or removes material the same way), across a plane or flat face |
 | `presspull [id=pp1] face=<name> distance=<len>` | Pull a flat face straight out (positive, adds material) or push it in (negative, removes it) |
 | `group name="Base" steps=s1;e1` | Put steps in a timeline group (an empty name takes them out); grouping never changes the part |

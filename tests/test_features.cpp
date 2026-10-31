@@ -1533,3 +1533,21 @@ TEST(Point, WhereAnEdgeCrossesAPlaneAndSquareAxes)
               "point id=p1 through=edge:E[e1/side:5|e1/side:6] plane=XZ\n");
     EXPECT_NE(bad->status(2).message.find("parallel"), std::string::npos) << bad->status(2).message;
 }
+
+TEST(Bodies, RemoveTakesBodiesOutFromThatStep)
+{
+    auto doc = build("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=10 h=10\nextrude id=e1 sketch=s1 distance=10\n"
+                     "sketch id=s2 plane=XY\nrect sketch=s2 center=40,0 w=10 h=10\nextrude id=e2 sketch=s2 distance=5 op=new\n"
+                     "remove id=rm1 bodies=e2\n");
+    expectAllOk(*doc);
+    ASSERT_EQ(doc->state().bodies.size(), 1u);
+    EXPECT_TRUE(doc->state().bodies.count("e1"));
+    // rolled back before the step, the body is there again
+    EXPECT_EQ(doc->stateBefore(doc->featureIndex("rm1")).bodies.size(), 2u);
+    // a later step that uses the removed body is explained
+    auto later = std::make_unique<Document>();
+    ScriptRunner r(*later);
+    r.runText("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=10 h=10\nextrude id=e1 sketch=s1 distance=10\n"
+              "remove id=rm1 bodies=e1\n");
+    EXPECT_FALSE(r.runText("remove id=rm2 bodies=e1\n").ok());  // nothing called e1 any more
+}
