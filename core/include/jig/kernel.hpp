@@ -17,6 +17,7 @@
 #include <cstdint>
 #include <map>
 #include <memory>
+#include <functional>
 #include <optional>
 #include <string>
 #include <vector>
@@ -26,6 +27,9 @@
 #include <TopoDS_Face.hxx>
 #include <TopoDS_Shape.hxx>
 #include <gp_Ax1.hxx>
+#include <gp_Pnt.hxx>
+#include <gp_Pln.hxx>
+#include <gp_XY.hxx>
 #include <gp_Ax3.hxx>
 #include <gp_Trsf.hxx>
 #include <nlohmann/json.hpp>
@@ -181,6 +185,21 @@ struct ProfileSet
     std::vector<std::string> notes;  // e.g. a missing font was replaced
 };
 
+// ---------------------------------------------------------------- SVG import
+
+// Filled shapes of an SVG file as closed outlines, in millimetres, y up, centred on (0, 0).
+struct SvgArtwork
+{
+    std::vector<ArtContour> contours;
+    double width = 0, height = 0;  // mm
+    bool unitsKnown = false;       // the file gives a physical size (mm, in, …)
+    std::map<std::string, int> skipped;
+};
+Result<SvgArtwork> parseSvg(const std::string& text);
+Result<SvgArtwork> readSvg(const std::string& path);
+// The artwork's outlines as faces in the sketch plane, centred on (x, y).
+Result<std::vector<TopoDS_Face>> artworkFaces(const SketchArtwork& a, double x, double y, const gp_Ax3& frame);
+
 // ---------------------------------------------------------------- DXF import
 
 // Curves read from a DXF file, in the file's own units (see unitScale).
@@ -215,6 +234,13 @@ int addDxfToSketch(Sketch& s, const DxfDrawing& d, double scale, double dx = 0, 
 // single circle or arc (bigger radius for positive), or one closed outline (outward for
 // positive, sharp corners). Adds the new curves to the sketch and returns their ids.
 Result<std::vector<int>> offsetCurves(Sketch& sketch, const std::vector<int>& curves, double distance);
+
+// Closed outlines made of straight segments (2 points) and quadratic / cubic Béziers
+// (3 / 4 points) turned into flat faces; holes are found by nesting, whatever the winding.
+using OutlineSegment = std::vector<gp_XY>;
+using OutlineContour = std::vector<OutlineSegment>;
+std::vector<TopoDS_Face> facesFromOutlines(const std::vector<OutlineContour>& contours,
+                                           const std::function<gp_Pnt(const gp_XY&)>& to3d, const gp_Pln& plane);
 
 // Glyph outlines of a sketch text as flat faces in the sketch plane, centred on (x, y).
 struct TextOutline

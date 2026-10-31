@@ -890,6 +890,31 @@ private slots:
         QTRY_COMPARE(int(w.document().state().sketches.begin()->second->profiles.regions.size()), 0);
     }
 
+    // Insert > SVG: artwork at its natural size; double-click its centre to set the width.
+    void importSvgArtwork()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        QVERIFY(w.importSvgFile(QString(JIG_SOURCE_DIR) + "/tests/data/badge.svg"));
+        SketchEditor* sk = w.sketchEditor();
+        QVERIFY(sk);
+        auto total = [&] {
+            double t = 0;
+            for (auto& r : w.document().state().sketches.begin()->second->profiles.regions) {
+                t += r.area;
+            }
+            return t;
+        };
+        const double natural = total();
+        QCOMPARE(int(w.document().state().sketches.begin()->second->profiles.regions.size()), 3);
+        const int anchor = sk->sketch().artworks().begin()->second.anchor;
+        QVERIFY(sk->editArtworkAt(anchor));
+        sk->typeValues({"36 mm"});  // half the natural 72 mm
+        QVERIFY2(std::abs(total() - natural / 4) < 1e-6, qPrintable(QString::number(total())));
+    }
+
     // Revolve a ring, drill it from its top face, repeat the hole around the axis,
     // and mirror the result: the M3 panels driven like a person would.
     void ringRevolveHolePatternMirror()

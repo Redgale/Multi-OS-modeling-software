@@ -68,7 +68,7 @@ SketchEditor::SketchEditor(Viewport* view, jig::Document& doc, std::string featu
         inputLabels_.push_back(l);
         inputFields_.push_back(f);
         connect(f, &QLineEdit::returnPressed, this, [this] {
-            if (dimTarget_ || editText_ || editConstraint_ || roundAt_ || !offsetChain_.empty()) {
+            if (dimTarget_ || editText_ || editArtwork_ || editConstraint_ || roundAt_ || !offsetChain_.empty()) {
                 placeSecond(cursor_, inputValues());
                 return;
             }
@@ -128,7 +128,7 @@ bool SketchEditor::refreshFromDocument()
     textEdges_.clear();
     if (it != doc_.state().sketches.end()) {
         for (auto& r : it->second->profiles.regions) {
-            if (!r.key.empty() && r.key[0] == 'T') {
+            if (!r.key.empty() && (r.key[0] == 'T' || r.key[0] == 'G')) {
                 for (TopExp_Explorer ee(r.face, TopAbs_EDGE); ee.More(); ee.Next()) {
                     BRepAdaptor_Curve c(TopoDS::Edge(ee.Current()));
                     std::vector<QVector3D> pts;
@@ -357,6 +357,7 @@ void SketchEditor::setTool(Tool t)
 void SketchEditor::resetToolState()
 {
     editConstraint_ = 0;
+    editArtwork_ = 0;
     roundAt_.reset();
     trimHover_.reset();
     offsetHover_.clear();
@@ -546,6 +547,28 @@ void SketchEditor::placeSecond(const Snap& cur, const QStringList& rawTyped)
         s.removeConstraint(editConstraint_);
         s.addConstraint(k.type, k.a, k.b, k.c, expr);
         if (commit(tr("Change dimension"), s)) {
+            resetToolState();
+        }
+        rebuildOverlay();
+        emit stateChanged();
+        return;
+    }
+    if (editArtwork_) {
+        if (typed.isEmpty() || typed[0].isEmpty()) {
+            return;
+        }
+        auto w = doc_.evalLength(typed[0].toStdString());
+        if (!w || !(w.value() > 0)) {
+            message_ = w ? tr("The width must be larger than zero.") : QString::fromStdString(w.error().message);
+            emit stateChanged();
+            return;
+        }
+        jig::Sketch s = work_;
+        if (jig::SketchArtwork* art = s.artwork(editArtwork_)) {
+            art->width = typed[0].toStdString();
+            art->widthValue = w.value();
+        }
+        if (commit(tr("Artwork size"), s)) {
             resetToolState();
         }
         rebuildOverlay();
@@ -1287,6 +1310,25 @@ bool SketchEditor::editDimension(int constraintId)
     return true;
 }
 
+bool SketchEditor::editArtworkAt(int anchorPoint)
+{
+    for (auto& [id, a] : work_.artworks()) {
+        if (a.anchor == anchorPoint) {
+            resetToolState();
+            editArtwork_ = id;
+            showInput({tr("Width")}, {a.width.empty() ? QString::fromStdString(doc_.fmtLength(a.naturalWidth))
+                                                      : QString::fromStdString(a.width)});
+            auto [x, y] = work_.pointXY(a.anchor);
+            inputBox_->move(screenOf(x, y) + QPoint(18, 18));
+            inputFields_[0]->selectAll();
+            inputFields_[0]->setFocus();
+            emit stateChanged();
+            return true;
+        }
+    }
+    return false;
+}
+
 bool SketchEditor::editTextAt(int anchorPoint)
 {
     for (auto& [id, t] : work_.texts()) {
@@ -1316,6 +1358,10 @@ bool SketchEditor::mouseDoubleClick(QMouseEvent* e)
             return true;
         }
     }
+    if (tool_ == Tool::Select && editArtworkAt(entityNear(e->position()))) {
+        pressed_ = false;
+        return true;
+    }
     if (tool_ == Tool::Select && editTextAt(entityNear(e->position()))) {
         pressed_ = false;  // ignore the release that follows
         return true;
@@ -1332,7 +1378,8 @@ bool SketchEditor::mouseDoubleClick(QMouseEvent* e)
 bool SketchEditor::key(QKeyEvent* e)
 {
     if (e->key() == Qt::Key_Escape) {
-        if (first_ || dimFirst_ || dimTarget_ || editConstraint_ || editText_ || roundAt_ || !offsetChain_.empty()) {
+        if (first_ || dimFirst_ || dimTarget_ || editConstraint_ || editText_ || editArtwork_ || roundAt_ ||
+            !offsetChain_.empty()) {
             resetToolState();
         }
         else if (tool_ != Tool::Select) {

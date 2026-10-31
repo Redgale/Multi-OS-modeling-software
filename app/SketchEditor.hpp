@@ -103,6 +103,7 @@ public:
     QPoint screenOf(double x, double y) const;
     void typeValues(const QStringList& values);  // as if typed into the value box + Enter
     bool editTextAt(int anchorPoint);            // opens the value box on an existing text
+    bool editArtworkAt(int anchorPoint);         // … or on imported artwork (its width)
     // Constraint glyphs and dimension labels: where they are drawn (after a paint), and
     // selecting / editing them as a click or double-click would.
     std::optional<QPointF> glyphCenter(int constraintId) const;
@@ -169,6 +170,7 @@ private:
     std::optional<Snap> second_;     // second click of a three-click tool (arc, slot)
     QString arcRadiusExpr_;          // typed at the second step (arc radius, slot length)
     int editText_ = 0;
+    int editArtwork_ = 0;
     std::optional<jig::Sketch::TrimPiece> trimHover_;  // the piece Trim would remove
     std::vector<int> offsetHover_, offsetChain_;        // Offset: under the cursor / chosen
     std::vector<std::pair<int, QRectF>> glyphBoxes_;     // constraint glyphs as last painted

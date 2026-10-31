@@ -712,6 +712,9 @@ FeatureOutcome applyHole(const Document& doc, const Feature& f, const std::share
     for (auto& [id, t] : sk.solved.texts()) {
         used.insert(t.anchor);  // a text's anchor is not a hole centre
     }
+    for (auto& [id, a] : sk.solved.artworks()) {
+        used.insert(a.anchor);
+    }
     std::set<int> wanted;
     if (p.contains("points") && p["points"].is_array()) {
         for (auto& v : p["points"]) {

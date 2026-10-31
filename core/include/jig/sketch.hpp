@@ -6,6 +6,7 @@
 // root of persistent naming (D-005).
 #pragma once
 
+#include <array>
 #include <map>
 #include <optional>
 #include <string>
@@ -93,6 +94,26 @@ struct SketchText
     double angle = 0;        // radians, counter-clockwise
 };
 
+// Imported artwork (an SVG logo): closed outlines of straight segments and Béziers,
+// centred on an anchor point and scaled to a width. Like text, its outlines become
+// closed areas; the curves themselves are not editable in the sketch.
+using ArtSegment = std::vector<std::array<double, 2>>;  // 2 points: line; 3: quadratic; 4: cubic
+using ArtContour = std::vector<ArtSegment>;
+struct SketchArtwork
+{
+    int id = 0;
+    int anchor = 0;                    // point entity id (the artwork's centre)
+    std::vector<ArtContour> contours;  // at natural size in mm, centred on (0, 0)
+    double naturalWidth = 1;           // mm
+    std::string width;                 // expression; empty = natural size
+    double widthValue = 0;             // evaluated on solve
+    std::string name;
+    double scale() const
+    {
+        return width.empty() || naturalWidth <= 0 ? 1.0 : widthValue / naturalWidth;
+    }
+};
+
 struct SolveReport
 {
     SolveState state = SolveState::Failed;
@@ -140,6 +161,18 @@ public:
     // Text centred at (x, y); returns the text id (its anchor is a new point).
     int addText(double x, double y, std::string text, std::string heightExpr, double heightValue,
                 std::string font = {}, double angle = 0);
+    // Artwork centred at (x, y); returns its id (its anchor is a new point).
+    int addArtwork(double x, double y, std::vector<ArtContour> contours, double naturalWidth, std::string widthExpr,
+                   double widthValue, std::string name);
+    const std::map<int, SketchArtwork>& artworks() const
+    {
+        return artworks_;
+    }
+    SketchArtwork* artwork(int id)
+    {
+        auto it = artworks_.find(id);
+        return it == artworks_.end() ? nullptr : &it->second;
+    }
     // Removes a curve, point or text. Also removes dependent constraints, internal
     // points, and text anchored to a removed point.
     bool remove(int entityId);
@@ -214,6 +247,7 @@ private:
     std::map<int, SketchEntity> entities_;
     std::map<int, SketchConstraint> constraints_;
     std::map<int, SketchText> texts_;
+    std::map<int, SketchArtwork> artworks_;
     int nextId_ = 1;
 };
 

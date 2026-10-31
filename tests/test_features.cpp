@@ -690,3 +690,57 @@ TEST(DxfImport, DamagedFilesNeverCrash)
     }
     EXPECT_GT(parsed, 0);  // many mutations still read; the rest are refused cleanly
 }
+
+TEST(SvgImport, ShapesHolesTransformsAndUnits)
+{
+    const std::string path = std::string(JIG_SOURCE_DIR) + "/tests/data/badge.svg";
+    auto art = readSvg(path);
+    ASSERT_TRUE(art.ok()) << art.error().message;
+    EXPECT_TRUE(art->unitsKnown);
+    EXPECT_NEAR(art->width, 72, 1e-9);  // from the plate's left edge to the square's right edge
+    EXPECT_EQ(art->skipped.at("unfilled path"), 1);
+    auto doc = build("sketch id=s1 plane=XY\nimport svg \"" + path + "\" sketch=s1\n"
+                     "extrude id=e1 sketch=s1 distance=2\n");
+    expectAllOk(*doc);
+    std::vector<double> a;
+    for (auto& r : doc->state().sketches.at("s1")->profiles.regions) {
+        a.push_back(r.area);
+    }
+    std::sort(a.begin(), a.end());
+    ASSERT_EQ(a.size(), 3u);  // triangle, square, the plate with two holes
+    EXPECT_NEAR(a[0], 50, 1e-6);
+    EXPECT_NEAR(a[1], 100, 1e-6);
+    // the circle is four cubic arcs (exact to about 0.03 %), the half circle an SVG arc
+    EXPECT_NEAR(a[2], 800 - pi * 25 - pi * 25 / 2, 0.05);
+    // scaled to half its 72 mm width: every area a quarter
+    auto half = build("sketch id=s1 plane=XY\nimport svg \"" + path + "\" sketch=s1 width=36mm\n");
+    double total = 0;
+    for (auto& r : half->state().sketches.at("s1")->profiles.regions) {
+        total += r.area;
+    }
+    EXPECT_NEAR(total, (a[0] + a[1] + a[2]) / 4, 1e-6);
+    // junk is refused, and mutated files never crash
+    EXPECT_FALSE(parseSvg("not svg").ok());
+    EXPECT_FALSE(parseSvg("<svg></svg>").ok());
+    const std::string good = readFile(path);
+    std::mt19937 rng(11);
+    for (int i = 0; i < 1500; ++i) {
+        std::string bad = good;
+        for (int k = 0; k < 1 + int(rng() % 5); ++k) {
+            const size_t at = rng() % bad.size();
+            switch (rng() % 4) {
+                case 0: bad[at] = char(rng() % 256); break;
+                case 1: bad.erase(at, rng() % 15); break;
+                case 2: bad.insert(at, "1e999 -.5.5,"); break;
+                default: bad.insert(at, "<g transform=\"rotate(90 5 5) scale(0)\"><path d=\"M0 0 A0 0 0 1 1 5 5\"/>"); break;
+            }
+        }
+        auto r = parseSvg(bad);
+        if (r.ok()) {
+            SketchArtwork sa;
+            sa.contours = r->contours;
+            sa.naturalWidth = r->width;
+            (void)artworkFaces(sa, 0, 0, gp_Ax3());
+        }
+    }
+}

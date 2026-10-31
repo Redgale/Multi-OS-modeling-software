@@ -91,6 +91,7 @@ Profile keys are the sorted ids of the sketch curves around a closed area, e.g. 
 
 | Command | Meaning |
 |---|---|
+| `import svg <path> [sketch=s1] [width=<len>] [at=x,y]` | Bring an SVG's filled shapes into a sketch as artwork centred at (x, y); its outlines become closed areas (keys `G<id>.<n>`). Natural size unless `width` is given |
 | `import dxf <path> [sketch=s1] [units=mm\|in\|…] [at=x,y]` | Bring a DXF drawing's lines, circles, arcs and polylines into a sketch as editable curves. Units come from the file (`$INSUNITS`) unless given |
 
 ## Output

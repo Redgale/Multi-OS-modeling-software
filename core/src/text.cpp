@@ -160,6 +160,113 @@ FT_Library library()
 
 }  // namespace
 
+std::vector<TopoDS_Face> facesFromOutlines(const std::vector<OutlineContour>& contours,
+                                           const std::function<gp_Pnt(const gp_XY&)>& to3d, const gp_Pln& plane)
+{
+    // a dense polyline and signed area per contour, for the nesting test
+    struct Info
+    {
+        std::vector<gp_XY> poly;
+        double area = 0;
+    };
+    std::vector<Info> info;
+    for (auto& c : contours) {
+        Info in;
+        for (auto& seg : c) {
+            if (seg.empty()) {
+                continue;
+            }
+            if (in.poly.empty()) {
+                in.poly.push_back(seg.front());
+            }
+            const int k = seg.size() == 2 ? 1 : 8;
+            for (int j = 1; j <= k; ++j) {
+                const double t = double(j) / k, u = 1 - t;
+                gp_XY p;
+                if (seg.size() == 2) {
+                    p = seg[0] * u + seg[1] * t;
+                }
+                else if (seg.size() == 3) {
+                    p = seg[0] * (u * u) + seg[1] * (2 * t * u) + seg[2] * (t * t);
+                }
+                else {
+                    p = seg[0] * (u * u * u) + seg[1] * (3 * u * u * t) + seg[2] * (3 * u * t * t) + seg[3] * (t * t * t);
+                }
+                in.poly.push_back(p);
+            }
+        }
+        for (size_t i = 0, j = in.poly.empty() ? 0 : in.poly.size() - 1; i < in.poly.size(); j = i++) {
+            in.area += in.poly[j].X() * in.poly[i].Y() - in.poly[i].X() * in.poly[j].Y();
+        }
+        in.area /= 2;
+        info.push_back(std::move(in));
+    }
+    const size_t n = contours.size();
+    // Outer contours have an even number of contours around them; holes an odd number.
+    // This works whichever winding direction the source uses.
+    std::vector<int> depth(n, 0);
+    for (size_t i = 0; i < n; ++i) {
+        for (size_t j = 0; j < n; ++j) {
+            if (i != j && info[i].poly.size() > 2 && info[j].poly.size() > 2 &&
+                std::abs(info[j].area) > std::abs(info[i].area) && inside(info[j].poly, info[i].poly.front())) {
+                ++depth[i];
+            }
+        }
+    }
+    auto wireOf = [&](const OutlineContour& c) {
+        BRepBuilderAPI_MakeWire mw;
+        for (auto& seg : c) {
+            if (seg.size() == 2) {
+                const gp_Pnt a = to3d(seg[0]), b = to3d(seg[1]);
+                if (a.Distance(b) < 1e-9) {
+                    continue;
+                }
+                mw.Add(BRepBuilderAPI_MakeEdge(a, b).Edge());
+            }
+            else if (seg.size() >= 3) {
+                TColgp_Array1OfPnt poles(1, int(seg.size()));
+                for (size_t k = 0; k < seg.size(); ++k) {
+                    poles.SetValue(int(k) + 1, to3d(seg[k]));
+                }
+                Handle(Geom_BezierCurve) bez = new Geom_BezierCurve(poles);
+                mw.Add(BRepBuilderAPI_MakeEdge(bez).Edge());
+            }
+        }
+        return mw;
+    };
+    std::vector<TopoDS_Face> out;
+    for (size_t i = 0; i < n; ++i) {
+        if (depth[i] % 2 != 0 || info[i].poly.size() < 3 || std::abs(info[i].area) < 1e-9) {
+            continue;  // a hole (added to its outer contour below) or nothing at all
+        }
+        auto outer = wireOf(contours[i]);
+        if (!outer.IsDone()) {
+            continue;
+        }
+        BRepBuilderAPI_MakeFace mf(plane, outer.Wire(), true);
+        for (size_t j = 0; j < n; ++j) {
+            if (depth[j] == depth[i] + 1 && info[j].poly.size() > 2 && std::abs(info[j].area) < std::abs(info[i].area) &&
+                inside(info[i].poly, info[j].poly.front())) {
+                auto hole = wireOf(contours[j]);
+                if (hole.IsDone()) {
+                    mf.Add(hole.Wire());
+                }
+            }
+        }
+        if (!mf.IsDone()) {
+            continue;
+        }
+        ShapeFix_Face fix(mf.Face());
+        fix.FixOrientation();
+        fix.Perform();
+        const TopoDS_Face f = TopoDS::Face(fix.Face());
+        if (BRepCheck_Analyzer(f).IsValid()) {
+            out.push_back(f);
+        }
+    }
+    return out;
+}
+
 Result<TextOutline> textFaces(const SketchText& t, double x, double y, const gp_Ax3& frame)
 {
     std::lock_guard<std::mutex> guard(ftLock());
@@ -272,70 +379,15 @@ Result<TextOutline> textFaces(const SketchText& t, double x, double y, const gp_
 
     try {
         for (const Glyph& g : glyphs) {
-            // Outer contours have an even number of contours around them; holes an odd
-            // number. This works whichever winding direction the font uses.
-            const size_t n = g.contours.size();
-            std::vector<int> depth(n, 0);
-            for (size_t i = 0; i < n; ++i) {
-                for (size_t j = 0; j < n; ++j) {
-                    if (i != j && std::abs(g.contours[j].area) > std::abs(g.contours[i].area)
-                        && inside(g.contours[j].poly, g.contours[i].poly.front())) {
-                        ++depth[i];
-                    }
-                }
+            std::vector<OutlineContour> cs;
+            for (auto& c : g.contours) {
+                cs.push_back(c.segments);
             }
-            auto wireOf = [&](const Contour& c) {
-                BRepBuilderAPI_MakeWire mw;
-                for (auto& seg : c.segments) {
-                    if (seg.size() == 2) {
-                        const gp_Pnt a = to3d(seg[0], g.penX), b = to3d(seg[1], g.penX);
-                        if (a.Distance(b) < 1e-9) {
-                            continue;
-                        }
-                        mw.Add(BRepBuilderAPI_MakeEdge(a, b).Edge());
-                    }
-                    else {
-                        TColgp_Array1OfPnt poles(1, int(seg.size()));
-                        for (size_t k = 0; k < seg.size(); ++k) {
-                            poles.SetValue(int(k) + 1, to3d(seg[k], g.penX));
-                        }
-                        Handle(Geom_BezierCurve) bez = new Geom_BezierCurve(poles);
-                        mw.Add(BRepBuilderAPI_MakeEdge(bez).Edge());
-                    }
-                }
-                return mw;
-            };
-            for (size_t i = 0; i < n; ++i) {
-                if (depth[i] % 2 != 0) {
-                    continue;  // a hole: added to its outer contour below
-                }
-                auto outer = wireOf(g.contours[i]);
-                if (!outer.IsDone()) {
-                    continue;
-                }
-                BRepBuilderAPI_MakeFace mf(plane, outer.Wire(), true);
-                for (size_t j = 0; j < n; ++j) {
-                    // holes directly inside this outer contour
-                    if (depth[j] == depth[i] + 1 && std::abs(g.contours[j].area) < std::abs(g.contours[i].area)
-                        && inside(g.contours[i].poly, g.contours[j].poly.front())) {
-                        auto hole = wireOf(g.contours[j]);
-                        if (hole.IsDone()) {
-                            mf.Add(hole.Wire());
-                        }
-                    }
-                }
-                if (!mf.IsDone()) {
-                    continue;
-                }
-                ShapeFix_Face fix(mf.Face());
-                fix.FixOrientation();
-                fix.Perform();
-                const TopoDS_Face f = TopoDS::Face(fix.Face());
-                if (BRepCheck_Analyzer(f).IsValid()) {
-                    result.faces.push_back(f);
-                }
-            }
+            const double penX = g.penX;
+            auto faces = facesFromOutlines(cs, [&](const gp_XY& p) { return to3d(p, penX); }, plane);
+            result.faces.insert(result.faces.end(), faces.begin(), faces.end());
         }
+        return result;
     }
     catch (const Standard_Failure& f) {
         const char* m = f.GetMessageString();

@@ -1193,6 +1193,9 @@ void MainWindow::runCommand(const QString& id)
     else if (id == "insert.dxf") {
         importDxf();
     }
+    else if (id == "insert.svg") {
+        importSvg();
+    }
     else if (id == "inspect.section") {
         if (doc_->state().bodies.empty()) {
             statusBar()->showMessage(tr("There is nothing to slice yet: make a 3D body first."), 5000);
@@ -1938,6 +1941,54 @@ bool MainWindow::importDxfFile(const QString& path, std::optional<jig::LengthUni
         msg += tr(" (not imported: %1)").arg(skipped.join(", "));
     }
     statusBar()->showMessage(msg, 8000);
+    return true;
+}
+
+void MainWindow::importSvg()
+{
+    const QString path = QFileDialog::getOpenFileName(this, tr("Import SVG"), {}, tr("SVG artwork (*.svg)"));
+    if (!path.isEmpty()) {
+        importSvgFile(path);
+    }
+}
+
+bool MainWindow::importSvgFile(const QString& path)
+{
+    auto art = jig::readSvg(path.toStdString());
+    if (!art) {
+        QMessageBox::warning(this, tr("Could not import"), q(art.error().message));
+        return false;
+    }
+    if (!sketch_ && !createSketchOn("XY")) {
+        return false;
+    }
+    const std::string sid = sketch_->featureId();
+    auto r = doc_->transact(tr("Import SVG").toStdString(), [&](jig::Model& m) -> jig::Result<bool> {
+        jig::Feature* f = jig::Document::findFeature(m, sid);
+        if (!f) {
+            return jig::makeError("svg.sketch", "The sketch to import into is gone.");
+        }
+        auto sk = jig::Sketch::fromJson(f->params.value("geometry", nlohmann::json::object()));
+        if (!sk) {
+            return sk.error();
+        }
+        sk->addArtwork(0, 0, art->contours, art->width, {}, art->width, QFileInfo(path).completeBaseName().toStdString());
+        f->params["geometry"] = sk->toJson();
+        return true;
+    });
+    if (!r) {
+        QMessageBox::warning(this, tr("Could not import"), q(r.error().message));
+        return false;
+    }
+    sketch_->refreshFromDocument();
+    sketch_->lookAt();
+    refreshAll();
+    QString msg = tr("Imported %1 at %2 wide. Double-click its centre point to change the size; drag it to move it.")
+                      .arg(QFileInfo(path).fileName(), q(doc_->fmtLength(art->width)));
+    if (!art->unitsKnown) {
+        msg += " " + tr("(The file gives no physical size: 96 pixels per inch was assumed.)");
+    }
+    statusBar()->showMessage(msg, 10000);
     return true;
 }
 

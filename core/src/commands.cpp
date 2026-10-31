@@ -2,6 +2,7 @@
 #include "jig/commands.hpp"
 
 #include <algorithm>
+#include <filesystem>
 #include <cctype>
 #include <cmath>
 #include <fstream>
@@ -151,7 +152,7 @@ CommandRegistry::CommandRegistry()
         "solid.revolve", "solid.hole", "solid.mirror", "solid.pattern_rect", "solid.pattern_circ", "modify.parameters",
         "inspect.measure", "inspect.properties", "file.export_3mf", "construct.offset_plane", "construct.angle_plane",
         "construct.midplane", "solid.combine", "solid.split", "solid.move",
-        "inspect.section", "insert.dxf"};
+        "inspect.section", "insert.dxf", "insert.svg"};
     for (auto& c : commands_) {
         if (inApp.count(c.id)) {
             c.available = true;
@@ -1491,8 +1492,46 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
     }
     if (a.verb == "import") {
         // import dxf <path> [sketch=s1] [units=mm|in|…] [at=x,y]
+        // import svg <path> [sketch=s1] [width=<len>] [at=x,y]
+        if (a.positional.size() >= 2 && lower(a.positional[0]) == "svg") {
+            auto art = readSvg(a.positional[1]);
+            if (!art) {
+                return art.error();
+            }
+            const std::string sid = a.get("sketch", last_);
+            return editSketch("Import SVG", sid, [&](Sketch& s, const Document&) -> Result<bool> {
+                double x = 0, y = 0;
+                if (a.has("at")) {
+                    auto pe = parsePairExpr(a.get("at"));
+                    if (!pe) {
+                        return pe.error();
+                    }
+                    auto px = len(pe->first), py = len(pe->second);
+                    if (!px || !py) {
+                        return !px ? px.error() : py.error();
+                    }
+                    x = px.value();
+                    y = py.value();
+                }
+                std::string we = a.get("width");
+                double wv = art->width;
+                if (!we.empty()) {
+                    auto w = len(we);
+                    if (!w) {
+                        return w.error();
+                    }
+                    wv = w.value();
+                }
+                const std::string name = std::filesystem::path(a.positional[1]).stem().string();
+                const int id = s.addArtwork(x, y, art->contours, art->width, we, wv, name);
+                const int anchor = s.artworks().at(id).anchor;
+                s.addConstraint(ConstraintType::DistanceX, anchor, 0, 0, std::to_string(x));
+                s.addConstraint(ConstraintType::DistanceY, anchor, 0, 0, std::to_string(y));
+                return true;
+            });
+        }
         if (a.positional.size() < 2 || lower(a.positional[0]) != "dxf") {
-            return makeError("script.args", "Use: import dxf <path> [sketch=s1] [units=mm|in] [at=x,y]");
+            return makeError("script.args", "Use: import dxf|svg <path> [sketch=s1] …");
         }
         auto dwg = readDxf(a.positional[1]);
         if (!dwg) {

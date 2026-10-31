@@ -532,6 +532,11 @@ void Sketch::dropUnusedPoint(int pid)
             return;
         }
     }
+    for (auto& [id, a] : artworks_) {
+        if (a.anchor == pid) {
+            return;
+        }
+    }
     entities_.erase(pid);
     std::erase_if(constraints_, [&](const auto& kv) {
         const auto& c = kv.second;
@@ -760,6 +765,22 @@ int Sketch::addText(double x, double y, std::string text, std::string heightExpr
     return t.id;
 }
 
+int Sketch::addArtwork(double x, double y, std::vector<ArtContour> contours, double naturalWidth,
+                       std::string widthExpr, double widthValue, std::string name)
+{
+    SketchArtwork a;
+    a.anchor = addPoint(x, y);
+    a.id = nextId_++;
+    a.contours = std::move(contours);
+    a.naturalWidth = naturalWidth;
+    a.width = std::move(widthExpr);
+    a.widthValue = widthValue;
+    a.name = std::move(name);
+    const int id = a.id;
+    artworks_[id] = std::move(a);
+    return id;
+}
+
 SketchText* Sketch::text(int id)
 {
     auto it = texts_.find(id);
@@ -768,6 +789,13 @@ SketchText* Sketch::text(int id)
 
 bool Sketch::remove(int entityId)
 {
+    if (auto w = artworks_.find(entityId); w != artworks_.end()) {
+        const int anchor = w->second.anchor;
+        artworks_.erase(w);
+        remove(anchor);
+        return true;
+    }
+    std::erase_if(artworks_, [&](const auto& kv) { return kv.second.anchor == entityId; });
     if (auto t = texts_.find(entityId); t != texts_.end()) {
         const int anchor = t->second.anchor;
         texts_.erase(t);
@@ -887,6 +915,19 @@ SolveReport Sketch::solve(const ParamLookup& lookup)
             return r;
         }
         t.heightValue = q->value;
+    }
+    for (auto& [id, a] : artworks_) {
+        if (a.width.empty()) {
+            continue;
+        }
+        auto q = evaluate(a.width, lookup, Dim::len());
+        if (!q || !(q->value > 0)) {
+            SolveReport r;
+            r.state = SolveState::Failed;
+            r.message = q ? "Artwork width must be larger than zero." : "Artwork width: " + q.error().message;
+            return r;
+        }
+        a.widthValue = q->value;
     }
     return runSolver(lookup, nullptr, 0, 0);
 }
@@ -1428,6 +1469,27 @@ nlohmann::json Sketch::toJson() const
         }
         j["texts"] = txt;
     }
+    if (!artworks_.empty()) {
+        nlohmann::json arts = nlohmann::json::array();
+        for (auto& [id, a] : artworks_) {
+            nlohmann::json cs = nlohmann::json::array();
+            for (auto& c : a.contours) {
+                nlohmann::json jc = nlohmann::json::array();
+                for (auto& seg : c) {
+                    nlohmann::json flat = nlohmann::json::array();
+                    for (auto& pt : seg) {
+                        flat.push_back(pt[0]);
+                        flat.push_back(pt[1]);
+                    }
+                    jc.push_back(flat);
+                }
+                cs.push_back(jc);
+            }
+            arts.push_back({{"id", id}, {"anchor", a.anchor}, {"name", a.name}, {"natural_width", a.naturalWidth},
+                            {"width", a.width}, {"width_value", a.widthValue}, {"contours", cs}});
+        }
+        j["artworks"] = arts;
+    }
     return j;
 }
 
@@ -1486,9 +1548,38 @@ Result<Sketch> Sketch::fromJson(const nlohmann::json& j)
             }
             s.texts_[t.id] = t;
         }
+        for (auto& ja : j.value("artworks", nlohmann::json::array())) {
+            SketchArtwork a;
+            a.id = ja.at("id").get<int>();
+            a.anchor = ja.at("anchor").get<int>();
+            a.name = ja.value("name", std::string {});
+            a.naturalWidth = ja.value("natural_width", 1.0);
+            a.width = ja.value("width", std::string {});
+            a.widthValue = ja.value("width_value", 0.0);
+            for (auto& jc : ja.value("contours", nlohmann::json::array())) {
+                ArtContour c;
+                for (auto& flat : jc) {
+                    ArtSegment seg;
+                    for (size_t k = 0; k + 1 < flat.size(); k += 2) {
+                        seg.push_back({flat[k].get<double>(), flat[k + 1].get<double>()});
+                    }
+                    if (seg.size() >= 2 && seg.size() <= 4) {
+                        c.push_back(std::move(seg));
+                    }
+                }
+                a.contours.push_back(std::move(c));
+            }
+            if (!s.entities_.count(a.anchor)) {
+                return makeError("file.sketch", "Artwork in this file has lost its anchor point.");
+            }
+            s.artworks_[a.id] = std::move(a);
+        }
         s.nextId_ = j.value("next_id", 1);
         int maxId = 0;
         for (auto& [id, t] : s.texts_) {
+            maxId = std::max(maxId, id);
+        }
+        for (auto& [id, a] : s.artworks_) {
             maxId = std::max(maxId, id);
         }
         for (auto& [id, e] : s.entities_) {

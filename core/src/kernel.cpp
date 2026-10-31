@@ -649,6 +649,26 @@ Result<ProfileSet> buildProfiles(const Sketch& sketch, const gp_Ax3& frame)
                     set.regions.push_back(std::move(p));
                 }
             }
+            for (auto& [aid, art] : sketch.artworks()) {
+                auto [ax, ay] = sketch.pointXY(art.anchor);
+                auto faces = artworkFaces(art, ax, ay, frame);
+                if (!faces) {
+                    return faces.error();
+                }
+                int k = 0;
+                for (auto& f : faces.value()) {
+                    Profile p;
+                    p.key = "G" + std::to_string(aid) + "." + std::to_string(++k);
+                    p.face = f;
+                    for (TopExp_Explorer ee(f, TopAbs_EDGE); ee.More(); ee.Next()) {
+                        p.edgeEntity.Bind(ee.Current(), aid);
+                    }
+                    GProp_GProps g;
+                    BRepGProp::SurfaceProperties(f, g);
+                    p.area = g.Mass();
+                    set.regions.push_back(std::move(p));
+                }
+            }
             return true;
         };
         if (tools.IsEmpty()) {
@@ -944,8 +964,9 @@ Result<NamedShape> makeExtrusion(const ExtrudeInput& in)
             }
             else {
                 auto fused = booleanOp(in.featureId, BoolOp::Join, *acc, ns);
-                if (!fused && fused.error().code == "boolean.not_touching") {
-                    // separate areas (letters, two islands) stay separate pieces of one tool
+                if (!fused) {
+                    // separate areas (letters, two islands, pieces meeting only at a corner)
+                    // stay separate pieces of one tool
                     acc = std::make_unique<NamedShape>(namedCompound({*acc, ns}));
                     continue;
                 }
@@ -1072,8 +1093,9 @@ Result<NamedShape> makeRevolution(const std::string& featureId,
             }
             else {
                 auto fused = booleanOp(featureId, BoolOp::Join, *acc, ns);
-                if (!fused && fused.error().code == "boolean.not_touching") {
-                    // separate areas (letters, two islands) stay separate pieces of one tool
+                if (!fused) {
+                    // separate areas (letters, two islands, pieces meeting only at a corner)
+                    // stay separate pieces of one tool
                     acc = std::make_unique<NamedShape>(namedCompound({*acc, ns}));
                     continue;
                 }
