@@ -1252,7 +1252,7 @@ void MainWindow::refreshTimeline()
                              accentFor(palette())));
         QString tip = statusWord(st.level);
         if (!st.message.empty()) {
-            tip += ": " + q(st.message);
+            tip += ": " + coreText(st.message);
         }
         it->setToolTip(tip);
         it->setSizeHint(QSize(150, 52));
@@ -1323,12 +1323,12 @@ void MainWindow::showFeatureDetails(int index)
                        .arg(statusGlyph(st.level), q(f.name).toHtmlEscaped(), kindWord(f.kind),
                             statusWord(st.level));
     if (!st.message.empty()) {
-        html += "<p>" + q(st.message).toHtmlEscaped() + "</p>";
+        html += "<p>" + coreText(st.message).toHtmlEscaped() + "</p>";
     }
     if (!st.suggestions.empty()) {
         html += tr("<p><b>Ways to fix this:</b></p><ul>");
         for (auto& s : st.suggestions) {
-            html += "<li>" + q(s).toHtmlEscaped() + "</li>";
+            html += "<li>" + coreText(s).toHtmlEscaped() + "</li>";
         }
         html += "</ul>";
     }
@@ -1539,7 +1539,7 @@ bool MainWindow::openFile(const QString& path)
 {
     auto r = jig::loadDocument(path.toStdString());
     if (!r) {
-        QMessageBox::warning(this, tr("Could not open"), q(r.error().message));
+        QMessageBox::warning(this, tr("Could not open"), coreText(r.error().message));
         return false;
     }
     setDocument(std::move(r.value()), path);
@@ -1557,7 +1557,7 @@ bool MainWindow::openSample(const QString& name)
     run.strict = false;
     auto r = run.runText(f.readAll().toStdString());
     if (!r) {
-        QMessageBox::warning(this, tr("Sample problem"), q(r.error().message));
+        QMessageBox::warning(this, tr("Sample problem"), coreText(r.error().message));
     }
     // A sample opens as a fresh, unsaved design with clean undo history.
     jig::Model m = doc->model();
@@ -1573,7 +1573,7 @@ bool MainWindow::saveNamedVersion(const QString& label)
     }
     auto r = jig::saveVersion(*doc_, path_.toStdString(), label.toStdString());
     if (!r) {
-        QMessageBox::warning(this, tr("Could not save a version"), q(r.error().message));
+        QMessageBox::warning(this, tr("Could not save a version"), coreText(r.error().message));
         return false;
     }
     savedRevision_ = doc_->revision();
@@ -1601,7 +1601,7 @@ bool MainWindow::restoreVersion(int number)
     }
     auto v = jig::loadVersion(path_.toStdString(), number);
     if (!v) {
-        QMessageBox::warning(this, tr("Could not restore"), q(v.error().message));
+        QMessageBox::warning(this, tr("Could not restore"), coreText(v.error().message));
         return false;
     }
     if (sketch_) {
@@ -1627,7 +1627,7 @@ void MainWindow::showVersions()
     }
     auto list = jig::listVersions(path_.toStdString());
     if (!list) {
-        QMessageBox::warning(this, tr("Versions"), q(list.error().message));
+        QMessageBox::warning(this, tr("Versions"), coreText(list.error().message));
         return;
     }
     QDialog d(this);
@@ -1690,7 +1690,7 @@ bool MainWindow::saveTo(const QString& p)
 {
     auto r = jig::saveDocument(*doc_, p.toStdString());
     if (!r) {
-        QMessageBox::warning(this, tr("Could not save"), q(r.error().message));
+        QMessageBox::warning(this, tr("Could not save"), coreText(r.error().message));
         return false;
     }
     path_ = p;
@@ -1730,7 +1730,7 @@ void MainWindow::exportAs(const QString& format)
         r = format == "stl" ? jig::exportStl(shape, p.toStdString()) : jig::exportStep(shape, p.toStdString());
     }
     if (!r) {
-        QMessageBox::warning(this, tr("Could not export"), q(r.error().message));
+        QMessageBox::warning(this, tr("Could not export"), coreText(r.error().message));
         return;
     }
     exported_ = true;
@@ -2114,7 +2114,7 @@ bool MainWindow::createSketchOn(const std::string& plane, const std::string& fac
     });
     QTimer::singleShot(0, this, [this] { cancelPicker(); });
     if (!r) {
-        QMessageBox::warning(this, tr("Sketch"), q(r.error().message));
+        QMessageBox::warning(this, tr("Sketch"), coreText(r.error().message));
         return false;
     }
     cancelPicker();
@@ -2408,7 +2408,7 @@ void MainWindow::importDxf()
     }
     auto dwg = jig::readDxf(path.toStdString());
     if (!dwg) {
-        QMessageBox::warning(this, tr("Could not import"), q(dwg.error().message));
+        QMessageBox::warning(this, tr("Could not import"), coreText(dwg.error().message));
         return;
     }
     std::optional<jig::LengthUnit> units;
@@ -2438,7 +2438,7 @@ bool MainWindow::importDxfFile(const QString& path, std::optional<jig::LengthUni
 {
     auto dwg = jig::readDxf(path.toStdString());
     if (!dwg) {
-        QMessageBox::warning(this, tr("Could not import"), q(dwg.error().message));
+        QMessageBox::warning(this, tr("Could not import"), coreText(dwg.error().message));
         return false;
     }
     const double scale = units ? jig::millimetresPer(*units) : dwg->unitScale;
@@ -2463,7 +2463,7 @@ bool MainWindow::importDxfFile(const QString& path, std::optional<jig::LengthUni
         return true;
     });
     if (!r) {
-        QMessageBox::warning(this, tr("Could not import"), q(r.error().message));
+        QMessageBox::warning(this, tr("Could not import"), coreText(r.error().message));
         return false;
     }
     sketch_->refreshFromDocument();
@@ -2493,7 +2493,7 @@ bool MainWindow::importSvgFile(const QString& path)
 {
     auto art = jig::readSvg(path.toStdString());
     if (!art) {
-        QMessageBox::warning(this, tr("Could not import"), q(art.error().message));
+        QMessageBox::warning(this, tr("Could not import"), coreText(art.error().message));
         return false;
     }
     if (!sketch_ && !createSketchOn("XY")) {
@@ -2514,7 +2514,7 @@ bool MainWindow::importSvgFile(const QString& path)
         return true;
     });
     if (!r) {
-        QMessageBox::warning(this, tr("Could not import"), q(r.error().message));
+        QMessageBox::warning(this, tr("Could not import"), coreText(r.error().message));
         return false;
     }
     sketch_->refreshFromDocument();
@@ -2678,7 +2678,7 @@ bool MainWindow::moveStep(const std::string& id, int to)
 {
     auto r = doc_->moveFeature(id, to);
     if (!r) {
-        QMessageBox::information(this, tr("Cannot move this step there"), q(r.error().message) +
+        QMessageBox::information(this, tr("Cannot move this step there"), coreText(r.error().message) +
                                      (r.error().suggestions.empty() ? QString() : "\n\n" + q(r.error().suggestions.front())));
     }
     refreshAll();  // also puts a refused drag back where it was

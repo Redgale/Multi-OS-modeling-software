@@ -36,4 +36,8 @@ if(Python3_FOUND)
              COMMAND ${CMAKE_COMMAND} -DPYTHON=${Python3_EXECUTABLE} -DSRC=${PROJECT_SOURCE_DIR}
                      -DOUT=${CMAKE_CURRENT_BINARY_DIR}/registry_strings.h
                      -P ${CMAKE_CURRENT_SOURCE_DIR}/check_registry_strings.cmake)
+    add_test(NAME translations.core_strings_current
+             COMMAND ${CMAKE_COMMAND} -DPYTHON=${Python3_EXECUTABLE} -DSRC=${PROJECT_SOURCE_DIR}
+                     -DOUT=${CMAKE_CURRENT_BINARY_DIR}/core_strings.h -DCORE=1
+                     -P ${CMAKE_CURRENT_SOURCE_DIR}/check_registry_strings.cmake)
 endif()

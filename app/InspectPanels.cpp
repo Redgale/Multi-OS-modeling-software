@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "InspectPanels.hpp"
+#include "Translations.hpp"
 
 #include <cmath>
 #include <numbers>
@@ -180,7 +181,7 @@ void MeasurePanel::update()
     if (shapes.size() == 2) {
         auto r = jig::measureBetween(shapes[0], shapes[1]);
         if (!r) {
-            result_->setText("✕ " + QString::fromStdString(r.error().message));
+            result_->setText("✕ " + coreText(r.error().message));
             return;
         }
         QString t = "<b>" + tr("Distance: %1").arg(L(r->distance)) + "</b>";

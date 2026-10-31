@@ -1078,6 +1078,8 @@ private slots:
             }
             w.grab().save(shotPath("pseudo-language"));
         }
+        // a message from the core is translated too
+        QVERIFY(coreText("That step no longer exists.").startsWith('['));
         installLanguage("en");
         plain.removeDuplicates();
         QVERIFY2(plain.size() <= 3, qPrintable(plain.join("\n")));

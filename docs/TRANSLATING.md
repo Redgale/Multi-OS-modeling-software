@@ -14,8 +14,10 @@ Jigsmith's interface uses Qt Linguist. Everything a person reads in the app goes
 - No real languages yet. Machine translations are not shipped: a translation goes in when a
   person who speaks the language has reviewed it.
 
-Not translated yet: messages that come from the core (error explanations, step status),
-which are plain C++ strings; the standard CAD names shown beside the plain labels stay
+Messages from the core (error explanations, step status, suggestions) are translated
+where the app shows them; `tools/extract_core_messages.py` lists every whole sentence for
+the tools (`app/core_strings.h`). Sentences the core builds from values ("A 30 mm fillet is
+too big here…") stay English for now. The standard CAD names shown beside the plain labels stay
 English on purpose (they are what tutorials and searches use).
 
 ## Adding a language
@@ -35,5 +37,6 @@ When commands change in `core/src/commands.cpp`, refresh their strings (a test c
 
 ```bash
 python3 tools/extract_registry_strings.py core/src/commands.cpp app/registry_strings.h
+python3 tools/extract_core_messages.py core/src app/core_strings.h
 python3 tools/pseudo_translate.py translations/jigsmith.ts translations/jigsmith_qps.ts
 ```

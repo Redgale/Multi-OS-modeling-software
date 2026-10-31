@@ -10,6 +10,11 @@
 namespace jigapp
 {
 
+QString coreText(const std::string& s)
+{
+    return QCoreApplication::translate("Core", s.c_str());
+}
+
 QStringList availableLanguages()
 {
     QStringList out;

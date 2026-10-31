@@ -1,12 +1,20 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Regenerates the translatable command strings and fails if app/registry_strings.h is stale.
-execute_process(COMMAND ${PYTHON} ${SRC}/tools/extract_registry_strings.py ${SRC}/core/src/commands.cpp ${OUT}
-                RESULT_VARIABLE rc OUTPUT_QUIET)
-if(NOT rc EQUAL 0)
-    message(FATAL_ERROR "tools/extract_registry_strings.py failed")
+if(CORE)  # the core's messages (tools/extract_core_messages.py -> app/core_strings.h)
+    set(script ${SRC}/tools/extract_core_messages.py)
+    set(input ${SRC}/core/src)
+    set(kept ${SRC}/app/core_strings.h)
+else()     # the command labels (tools/extract_registry_strings.py -> app/registry_strings.h)
+    set(script ${SRC}/tools/extract_registry_strings.py)
+    set(input ${SRC}/core/src/commands.cpp)
+    set(kept ${SRC}/app/registry_strings.h)
 endif()
-execute_process(COMMAND ${CMAKE_COMMAND} -E compare_files ${OUT} ${SRC}/app/registry_strings.h RESULT_VARIABLE diff)
+execute_process(COMMAND ${PYTHON} ${script} ${input} ${OUT} RESULT_VARIABLE rc OUTPUT_QUIET)
+if(NOT rc EQUAL 0)
+    message(FATAL_ERROR "${script} failed")
+endif()
+execute_process(COMMAND ${CMAKE_COMMAND} -E compare_files ${OUT} ${kept} RESULT_VARIABLE diff)
 if(NOT diff EQUAL 0)
-    message(FATAL_ERROR "app/registry_strings.h is out of date: run tools/extract_registry_strings.py "
-                        "core/src/commands.cpp app/registry_strings.h, then update the translations")
+    message(FATAL_ERROR "${kept} is out of date: run ${script} ${input} ${kept} (see docs/TRANSLATING.md), "
+                        "then update the translations")
 endif()

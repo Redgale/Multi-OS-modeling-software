@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "SketchEditor.hpp"
+#include "Translations.hpp"
 
 #include "jig/kernel.hpp"
 
@@ -236,7 +237,7 @@ bool SketchEditor::commit(const QString& label, const jig::Sketch& next)
         return true;
     });
     if (!r) {
-        message_ = QString::fromStdString(r.error().message);
+        message_ = coreText(r.error().message);
         emit stateChanged();
         return false;
     }
@@ -628,7 +629,7 @@ void SketchEditor::placeSecond(const Snap& cur, const QStringList& rawTyped)
         }
         auto r = doc_.evalLength(typed[i].toStdString());
         if (!r) {
-            message_ = QString::fromStdString(r.error().message);
+            message_ = coreText(r.error().message);
             emit stateChanged();
             return std::nullopt;
         }
@@ -693,7 +694,7 @@ void SketchEditor::placeSecond(const Snap& cur, const QStringList& rawTyped)
         }
         auto w = doc_.evalLength(typed[0].toStdString());
         if (!w || !(w.value() > 0)) {
-            message_ = w ? tr("The width must be larger than zero.") : QString::fromStdString(w.error().message);
+            message_ = w ? tr("The width must be larger than zero.") : coreText(w.error().message);
             emit stateChanged();
             return;
         }
@@ -715,14 +716,14 @@ void SketchEditor::placeSecond(const Snap& cur, const QStringList& rawTyped)
         }
         auto r = doc_.evalLength(typed[0].toStdString());
         if (!r) {
-            message_ = QString::fromStdString(r.error().message);
+            message_ = coreText(r.error().message);
             emit stateChanged();
             return;
         }
         jig::Sketch s = work_;
         auto arc = s.filletCorner(roundAt_->x(), roundAt_->y(), r.value(), typed[0].toStdString());
         if (!arc) {
-            message_ = QString::fromStdString(arc.error().message);
+            message_ = coreText(arc.error().message);
             emit stateChanged();
             return;
         }
@@ -739,14 +740,14 @@ void SketchEditor::placeSecond(const Snap& cur, const QStringList& rawTyped)
         }
         auto d = doc_.evalLength(typed[0].toStdString());
         if (!d) {
-            message_ = QString::fromStdString(d.error().message);
+            message_ = coreText(d.error().message);
             emit stateChanged();
             return;
         }
         jig::Sketch s = work_;
         auto made = jig::offsetCurves(s, offsetChain_, d.value());
         if (!made) {
-            message_ = QString::fromStdString(made.error().message);
+            message_ = coreText(made.error().message);
             emit stateChanged();
             return;
         }
@@ -975,7 +976,7 @@ void SketchEditor::placeSecond(const Snap& cur, const QStringList& rawTyped)
             if (copy) {
                 auto r = s.copyCurves(picked, dx, dy);
                 if (!r) {
-                    message_ = QString::fromStdString(r.error().message);
+                    message_ = coreText(r.error().message);
                     break;
                 }
                 if (commit(tr("Copy"), s)) {
@@ -986,7 +987,7 @@ void SketchEditor::placeSecond(const Snap& cur, const QStringList& rawTyped)
             }
             auto r = s.moveCurves(picked, dx, dy);
             if (!r) {
-                message_ = QString::fromStdString(r.error().message);
+                message_ = coreText(r.error().message);
                 break;
             }
             if (commit(tr("Move"), s)) {
@@ -1015,7 +1016,7 @@ void SketchEditor::placeSecond(const Snap& cur, const QStringList& rawTyped)
             }
             auto r = s.patternRect(picked, gridCols_, gridDx_, 0, *n, 0, spacing);
             if (!r) {
-                message_ = QString::fromStdString(r.error().message);
+                message_ = coreText(r.error().message);
                 break;
             }
             if (commit(tr("Grid copy"), s)) {
@@ -1032,14 +1033,14 @@ void SketchEditor::placeSecond(const Snap& cur, const QStringList& rawTyped)
             if (typed.size() > 1 && !typed[1].trimmed().isEmpty()) {
                 auto av = doc_.evalAngle(typed[1].toStdString());
                 if (!av) {
-                    message_ = QString::fromStdString(av.error().message);
+                    message_ = coreText(av.error().message);
                     break;
                 }
                 total = av.value();
             }
             auto r = s.patternCircular(picked, a.x(), a.y(), *n, total);
             if (!r) {
-                message_ = QString::fromStdString(r.error().message);
+                message_ = coreText(r.error().message);
                 break;
             }
             if (commit(tr("Ring copy"), s)) {
@@ -1179,7 +1180,7 @@ void SketchEditor::placeSecond(const Snap& cur, const QStringList& rawTyped)
             if (!typed.isEmpty() && !typed[0].isEmpty()) {
                 auto av = doc_.evalAngle(typed[0].toStdString());
                 if (!av) {
-                    message_ = QString::fromStdString(av.error().message);
+                    message_ = coreText(av.error().message);
                     return;
                 }
                 sweep = av.value();
@@ -1314,7 +1315,7 @@ void SketchEditor::placeSecond(const Snap& cur, const QStringList& rawTyped)
                                                                             : QString::fromStdString(doc_.defaultLength(5, 0.25));
             auto h = doc_.evalLength(hExpr.toStdString());
             if (!h || !(h.value() > 0)) {
-                message_ = h ? tr("Text size must be larger than zero.") : QString::fromStdString(h.error().message);
+                message_ = h ? tr("Text size must be larger than zero.") : coreText(h.error().message);
                 return;
             }
             const int id = s.addText(a.x(), a.y(), typed[0].toStdString(), hExpr.toStdString(), h.value());
@@ -1569,7 +1570,7 @@ bool SketchEditor::mouseRelease(QMouseEvent* e)
             for (auto& edge : edges) {
                 auto r = jig::projectEdge(s, frame_, edge);
                 if (!r) {
-                    message_ = QString::fromStdString(r.error().message);
+                    message_ = coreText(r.error().message);
                     if (edges.size() == 1) {
                         break;
                     }
@@ -1621,12 +1622,12 @@ bool SketchEditor::mouseRelease(QMouseEvent* e)
             if (tool_ == Tool::Extend) {
                 auto r = s.extend(near->first, loc->x(), loc->y());
                 ok = r.ok();
-                message_ = ok ? QString() : QString::fromStdString(r.error().message);
+                message_ = ok ? QString() : coreText(r.error().message);
             }
             else {
                 auto r = s.breakAt(near->first, loc->x(), loc->y());
                 ok = r.ok();
-                message_ = ok ? QString() : QString::fromStdString(r.error().message);
+                message_ = ok ? QString() : coreText(r.error().message);
             }
             if (ok) {
                 commit(tool_ == Tool::Extend ? tr("Extend") : tr("Break"), s);
@@ -1652,7 +1653,7 @@ bool SketchEditor::mouseRelease(QMouseEvent* e)
             jig::Sketch s = work_;
             auto r = s.mirror(std::vector<int>(selection_.begin(), selection_.end()), near->first);
             if (!r) {
-                message_ = QString::fromStdString(r.error().message);
+                message_ = coreText(r.error().message);
                 break;
             }
             if (commit(tr("Mirror"), s)) {

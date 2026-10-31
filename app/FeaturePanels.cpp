@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "FeaturePanels.hpp"
+#include "Translations.hpp"
 
 #include "jig/screws.hpp"
 
@@ -239,7 +240,7 @@ void ExprField::evaluate()
         result_->setStyleSheet({});
     }
     else {
-        result_->setText("✕ " + q(r.error().message));
+        result_->setText("✕ " + coreText(r.error().message));
         result_->setStyleSheet("color: #c53030;");
     }
 }
@@ -418,12 +419,12 @@ void FeaturePanel::runPreview()
     if (previewOk_) {
         QString t = "<b>✓ " + tr("Preview") + "</b>";
         if (!o.status.message.empty()) {
-            t += "<br>⚠ " + q(o.status.message).toHtmlEscaped();
+            t += "<br>⚠ " + coreText(o.status.message).toHtmlEscaped();
         }
         status_->setText(t);
     }
     else {
-        QString t = "<b>✕ " + q(o.status.message).toHtmlEscaped() + "</b>";
+        QString t = "<b>✕ " + coreText(o.status.message).toHtmlEscaped() + "</b>";
         status_->setText(t);
         // sure repairs as buttons; the rest as advice
         for (const auto& fx : o.status.fixes) {
@@ -451,7 +452,7 @@ void FeaturePanel::runPreview()
             fixes_->layout()->addWidget(b);
         }
         for (auto& sgg : o.status.suggestions) {
-            auto* l = new QLabel("• " + q(sgg), fixes_);
+            auto* l = new QLabel("• " + coreText(sgg), fixes_);
             l->setWordWrap(true);
             fixes_->layout()->addWidget(l);
         }
@@ -494,7 +495,7 @@ bool FeaturePanel::accept()
                                return true;
                            });
     if (!r) {
-        status_->setText("<b>✕ " + q(r.error().message).toHtmlEscaped() + "</b>");
+        status_->setText("<b>✕ " + coreText(r.error().message).toHtmlEscaped() + "</b>");
         return false;
     }
     rememberValues();
@@ -2915,7 +2916,7 @@ void ParametersDialog::revalidate()
         else {
             auto v = jig::Document::evalParamIn(m, p.name);
             ok = v.ok();
-            text = ok ? "= " + q(jig::formatQuantity(v.value())) : "✕ " + q(v.error().message);
+            text = ok ? "= " + q(jig::formatQuantity(v.value())) : "✕ " + coreText(v.error().message);
         }
         bad += !ok;
         if (auto* it = table_->item(r, 3)) {
