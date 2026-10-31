@@ -10,8 +10,9 @@ decision or finding). Move items to STATUS.md when started.
   the environment's policy on building external code.
 - ~~B-002 Reorder regression tests~~ done in session 2 (`Document.ReorderStepsSafely`, UI
   `reorderTimeline`). Remaining: name-resolution checks for reorders inside the phone stand.
-- **B-003 Windows and macOS GUI evidence**: macOS screenshot runs work in CI. Windows: the crash
-  (no OpenGL 3.3 on the runner, unchecked) is fixed; confirm the Mesa-rendered screenshot in CI. Manual check of trackpad pinch on a real Mac.
+- **B-003 Windows and macOS GUI evidence**: screenshot runs work in CI on macOS and on Windows
+  (Mesa llvmpipe as Qt's software OpenGL, run 41225131582). Left: a Windows machine with a real GPU
+  driver; manual check of trackpad pinch on a real Mac.
 - **B-004 macOS renderer path**: verify GL 4.1 core on Apple silicon; spike a Qt RHI
   (Metal) backend for `Viewport`.
 - **B-005 Universal macOS binary**: CI builds arm64 and Intel separately; add a
@@ -24,8 +25,9 @@ decision or finding). Move items to STATUS.md when started.
   8.0 (warnings on Windows). Switch to `NCollection_*` types once 7.6 support is dropped, or
   wrap them in one compatibility header.
 - **B-011 Windows package DLL audit**: `packaging/windows/trim-dlls.ps1` (CI) keeps only DLLs reachable
-  from the programs and Qt plugins and writes THIRD_PARTY_DLLS.txt (conda package + licence). Review
-  that list before the first release.
+  from the programs and Qt plugins and writes THIRD_PARTY_DLLS.txt (conda package + licence); the
+  trimmed package renders, installs and runs in CI (run 41225131582). Review that list before the
+  first release.
 - **B-009 Recompute off the UI thread** for long timelines with a progress indicator
   (5.3.6), once any real design exceeds 100 ms.
 

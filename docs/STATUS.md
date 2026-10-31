@@ -81,7 +81,7 @@ ounces) is shown in inches. The owner's standing instruction is in `CLAUDE.md`.
 | Extrude drag handle (M2 part) | While extruding, an arrow runs from the chosen area's centre along the extrude direction; drag its round tip (it fills when the cursor is on it) to set the distance, snapped to 0.5 mm (1/32 in in inch designs); dragging back past the sketch goes the other way. The distance field follows, and typing still works | UI test `extrudeDragHandle` (grab the tip, pull to twice the length: 20 mm, snapped; the block's volume matches) |
 | Select Other (M2 part) | Hold the left button still for a moment over the model: a menu lists every face under the cursor, nearest first, with its name and body; choosing one selects it as if it had been clicked (so tools that wait for a face take it too). Moving cancels; the release after the menu is not a click | UI test `selectOther` (looking down on a block: the top then the hidden bottom; choosing the bottom selects it and the details show it) |
 | Windows installer (M8 part, B-006) | `Jigsmith-windows-x64-setup.exe` built with Inno Setup in the Windows CI job: installs per user without administrator rights (an administrator may install for everyone), Start menu entry, optional desktop icon, opens .jig files, uninstaller. Unsigned | CI installs it silently, runs the installed `jigsmith-cli` on the phone stand sample, checks the .jig association, uninstalls and checks the program is gone. CI run 41206253708: built, installed, ran, associated, uninstalled. Not yet tried by hand on a clean Windows machine |
-| Real window on macOS and Windows in CI (B-003) | macOS (Apple silicon and Intel): the app opens on the runner's desktop session, renders the phone stand sample, saves a screenshot and quits: **works** (run 41206632032). Windows: the first run **crashed** (0xC0000005); the debugger showed `Viewport::buildGrid` calling a null OpenGL 3.3 function, because the runner only has Windows' OpenGL 1.1 and the app did not check that its GL functions loaded. Fixed: without OpenGL 3.3 the app now explains the driver problem and keeps working (checked locally with Mesa capped at 2.1). The CI copy now gets Mesa's software OpenGL to render the screenshot | CI only; no Windows machine with a GPU has been tried |
+| Real window on macOS and Windows in CI (B-003) | macOS (Apple silicon and Intel): the app opens on the runner's desktop session, renders the phone stand sample, saves a screenshot and quits: **works** (run 41206632032). Windows: the first run **crashed** (0xC0000005); the debugger showed `Viewport::buildGrid` calling a null OpenGL 3.3 function, because the runner only has Windows' OpenGL 1.1 and the app did not check that its GL functions loaded. Fixed: without OpenGL 3.3 the app now explains the driver problem and keeps working (checked locally with Mesa capped at 2.1). On the runner, Qt only loads `opengl32.dll` from System32 (GL 1.1), so the CI copy gets Mesa's llvmpipe as Qt's software OpenGL (`opengl32sw.dll`, `QT_OPENGL=software`); with it the app renders the sample and saves the screenshot: **works** (run 41225131582; the run before it, without that, exited with code 3 "the 3D view could not draw", which is how a non-rendering run now fails). The trimmed DLL set (B-011) runs, and the installer installs, runs and uninstalls in the same run | CI only, software rendering; no Windows machine with a GPU has been tried |
 | Installed fonts for sketch text (B-020 part) | The core finds the fonts installed on the computer (the usual font folders on Linux, macOS and Windows, plus JIG_FONT_DIRS) with FreeType, headless; a text's font can be a family name, or family and style ("DejaVu Sans Bold"), matched case-insensitively. The Text tool's input box has a Font choice (Inter built in, then the installed families). A font missing on another computer still falls back to Inter with a note. Several lines: `\n` in the text starts a new line, each line centred, spaced by the font's line height | `Text.SeveralLinesStackAndCentre` (twice the volume, same width, centred); `Text.InstalledFontsByFamilyName` (a folder of our own: found by family and style; "Inter Regular" by name gives exactly the built-in outlines; an unknown name is not found); UI test picks an installed family when the machine has one |
 | SVG import (M5 part) | Insert ▸ SVG (or `import svg`): filled `path` (all commands incl. arcs and relative forms), `rect`, `circle`, `ellipse`, `polygon`, with group and element transforms and viewBox scaling, become closed outlines (lines and exact Béziers) in a scalable artwork block centred on a draggable point; holes by nesting; size from the file's physical width (96 px/in assumed otherwise, and said); double-click the centre to set a width (expressions work); outlines become closed areas for extrude/cut; unfilled shapes, text, images and `use` are counted and reported. Our own small XML reader (no new dependency) | `SvgImport.ShapesHolesTransformsAndUnits` (a hand-written SVG with defs, a hole, an arc, a transform, a cubic: areas by formula, half width = quarter area; 1500 mutated files never crash or hang, also under ASan/UBSan, which found a real infinite loop on a stray `/`, fixed); UI test imports and resizes |
 | DXF import (M5 part) | Insert ▸ DXF (or `import dxf`): LINE, CIRCLE, ARC, LWPOLYLINE and POLYLINE with bulge arcs become editable sketch curves; ends that meet share a point so outlines close into areas; units from `$INSUNITS`, asked for when the file does not say (the design's unit offered first); unsupported entities (text, hatches, splines, blocks) are counted and reported; one undo removes the import | `DxfImport.*` (a hand-written inch DXF: four areas match formulas in in², unit override, junk refused; 3000 mutated files never crash, also under ASan/UBSan); UI test imports into a new floor sketch and undoes |
@@ -127,8 +127,9 @@ self-overlapping solid for an impossible shell (12 mm wall in a 10 mm box) where
 refuses it, so Jigsmith reported the impossible shell as fine. The shell now checks walls
 itself (commit 31d7fb5), independent of the OCCT version.
 
-GUI rendering is verified only on Linux (Xvfb + Mesa); on macOS and Windows the app is built
-and packaged but its window is not exercised in CI (B-003). Builds are unsigned.
+GUI rendering is verified in CI on Linux (Xvfb + Mesa), macOS (the runner's session) and
+Windows (Mesa llvmpipe as Qt's software OpenGL): each renders the phone stand sample and saves a
+screenshot (B-003). No real GPU on Windows or Linux has been tried. Builds are unsigned.
 
 ## What is stubbed or not started
 
@@ -147,7 +148,7 @@ and packaged but its window is not exercised in CI (B-003). Builds are unsigned.
 
 ## What is broken or unverified
 
-- Rendering on Windows and macOS: unverified (no display on CI runners). B-003.
+- Rendering on Windows and macOS: verified only on CI runners (software OpenGL on Windows); no real Windows GPU driver yet. B-003.
 - The crash-recovery prompt has not been exercised with a real forced kill.
 - Code of Conduct contact: the owner should add a dedicated contact address.
 
@@ -163,7 +164,7 @@ and packaged but its window is not exercised in CI (B-003). Builds are unsigned.
 1. Leftovers: revolve up to a face, linked sketch patterns, rotate in the Move tool.
 2. M7/M8 leftovers: core messages built from values as translatable templates, more one-click fixes; first real
    language once a reviewer is found.
-3. Windows/macOS GUI screenshots in CI (B-003); Windows DLL audit (B-011); B-001 libslvs
+3. Review THIRD_PARTY_DLLS.txt before the first release (B-011); B-001 libslvs
    spike where building SolveSpace is allowed.
 
 ## How to resume
