@@ -66,7 +66,8 @@ timeline edit/rename/suppress/roll back/delete with dependents warning, Paramete
   preferences; STEP import UI with unit correction; parser fuzzing (SVG, DXF, STEP).
 - M7 (tutorial, marking menu, navigation settings done): tooltips audit, error-explanation actions.
 - M8 (screen-reader names, keyboard-only modelling done): accessibility (scaling checks),
-  localisation (Qt Linguist), performance, installers, v0.1.
+  localisation (set up, pseudo-language done; core messages and real languages left),
+  performance, installers, v0.1.
 
 ## Ideas (unscheduled)
 

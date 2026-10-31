@@ -39,7 +39,7 @@ elif command -v xbps-install >/dev/null 2>&1; then
     [ "$mode" = print ] || $SUDO xbps-install -Syu xbps
     cmd="xbps-install -Sy base-devel cmake ninja pkg-config occt-devel qt6-base-devel eigen boost-headers json-c++ gtest-devel tbb-devel freetype-devel MesaLib-devel"
 elif command -v apt-get >/dev/null 2>&1; then
-    cmd="apt-get install -y build-essential cmake ninja-build libocct-modeling-algorithms-dev libocct-modeling-data-dev libocct-data-exchange-dev libocct-foundation-dev libtbb-dev libeigen3-dev libboost-dev nlohmann-json3-dev libgtest-dev qt6-base-dev libgl-dev libfreetype-dev"
+    cmd="apt-get install -y build-essential cmake ninja-build libocct-modeling-algorithms-dev libocct-modeling-data-dev libocct-data-exchange-dev libocct-foundation-dev libtbb-dev libeigen3-dev libboost-dev nlohmann-json3-dev libgtest-dev qt6-base-dev qt6-tools-dev qt6-l10n-tools libgl-dev libfreetype-dev"
     [ "$mode" = print ] || $SUDO apt-get update
 elif command -v dnf >/dev/null 2>&1; then
     cmd="dnf install -y gcc-c++ cmake ninja-build opencascade-devel qt6-qtbase-devel eigen3-devel boost-devel json-devel gtest-devel tbb-devel freetype-devel mesa-libGL-devel"

@@ -21,6 +21,7 @@
 #include "Icons.hpp"
 #include "MainWindow.hpp"
 #include "MarkingMenu.hpp"
+#include "Translations.hpp"
 #include "SketchEditor.hpp"
 #include "Tutorial.hpp"
 #include "Viewport.hpp"
@@ -939,6 +940,34 @@ private slots:
         for (auto& [id, b] : st.bodies) {
             QVERIFY(std::abs(jig::massProperties(b->shape()).zmax - 12) < 1e-9);
         }
+    }
+
+    // Translations: in the pseudo-language every menu entry and toolbar button is translated
+    // (an untranslatable string would stay plain), and the window still lays out.
+    void pseudoTranslation()
+    {
+        if (!availableLanguages().contains("qps")) {
+            QSKIP("built without Qt LinguistTools: no translations in this build");
+        }
+        QCOMPARE(installLanguage("qps"), QString("qps"));
+        QStringList plain;
+        {
+            MainWindow w;
+            w.resize(1280, 820);
+            w.show();
+            QVERIFY(QTest::qWaitForWindowExposed(&w));
+            for (QAction* a : w.findChildren<QAction*>()) {
+                const QString t = a->text();
+                // translated text is wrapped in [ ]; separators and file names have none
+                if (!t.isEmpty() && !a->isSeparator() && !t.startsWith('[') && !t.contains(".jig") && !t.contains('/')) {
+                    plain << a->objectName() + ": " + t;
+                }
+            }
+            w.grab().save(shotPath("pseudo-language"));
+        }
+        installLanguage("en");
+        plain.removeDuplicates();
+        QVERIFY2(plain.size() <= 3, qPrintable(plain.join("\n")));
     }
 
     // Keyboard only: find Sketch by typing, pick the floor with 1, type a rectangle from a

@@ -2,6 +2,7 @@
 #include "MainWindow.hpp"
 
 #include "MarkingMenu.hpp"
+#include "Translations.hpp"
 
 #include <array>
 
@@ -157,6 +158,7 @@ QString kindWord(jig::FeatureKind k)
 
 class CommandPalette : public QDialog
 {
+    Q_OBJECT  // (so tr() uses this class's context, which is what translators see)
 public:
     explicit CommandPalette(QWidget* parent)
         : QDialog(parent, Qt::Popup | Qt::FramelessWindowHint)
@@ -207,7 +209,7 @@ private:
         list_->clear();
         for (auto& m : jig::CommandRegistry::instance().search(text.toStdString())) {
             const auto& c = *m.info;
-            QString line = q(c.label);
+            QString line = QCoreApplication::translate("Command", c.label.c_str());
             if (c.standardName != c.label) {
                 line += "  —  " + q(c.standardName);  // always show the standard CAD name
             }
@@ -577,14 +579,17 @@ QAction* MainWindow::registryAction(const char* id)
 
 void MainWindow::buildActions()
 {
+    // labels and tooltips come from the core in English; translated here (app/registry_strings.h
+    // lists them for the translation tools). The standard CAD name stays as it is.
+    auto cmd = [](const std::string& s) { return QCoreApplication::translate("Command", s.c_str()); };
     for (const auto& c : jig::CommandRegistry::instance().all()) {
-        auto* a = new QAction(q(c.label), this);
+        auto* a = new QAction(cmd(c.label), this);
         a->setObjectName(q(c.id));
-        QString tip = "<b>" + q(c.label) + "</b>";
+        QString tip = "<b>" + cmd(c.label) + "</b>";
         if (c.standardName != c.label) {
             tip += " (" + q(c.standardName) + ")";
         }
-        tip += "<br>" + q(c.tooltip).toHtmlEscaped();
+        tip += "<br>" + cmd(c.tooltip).toHtmlEscaped();
         if (!c.shortcut.empty()) {
             QKeySequence ks(q(c.shortcut));
             tip += "<br>" + tr("Key: %1").arg(ks.toString(QKeySequence::NativeText));
@@ -737,7 +742,7 @@ void MainWindow::buildToolbar()
     tools->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
     tools->setIconSize(QSize(24, 24));
     for (const char* panel : {"CREATE", "MODIFY", "CONSTRUCT", "INSPECT", "INSERT"}) {
-        auto* title = new QLabel(QString("<small><b>%1</b></small>").arg(tr(panel)), this);
+        auto* title = new QLabel(QString("<small><b>%1</b></small>").arg(QCoreApplication::translate("Command", panel)), this);
         title->setContentsMargins(10, 0, 4, 0);
         tools->addWidget(title);
         for (const auto& c : jig::CommandRegistry::instance().all()) {
@@ -1918,6 +1923,14 @@ void MainWindow::openSettings()
     form->addRow(tr("Theme"), theme);
     form->addRow(tr("Units of this design"), design);
     form->addRow(tr("Units for new designs"), fresh);
+    auto* language = new QComboBox(&d);
+    language->addItem(tr("The computer's language"), QString());
+    language->addItem("English", "en");
+    for (const QString& code : availableLanguages()) {
+        language->addItem(languageName(code), code);
+    }
+    language->setCurrentIndex(std::max(0, language->findData(QSettings().value("language").toString())));
+    form->addRow(tr("Language (after a restart)"), language);
     form->addRow(tr("Mouse and trackpad"), navCombo);
     form->addRow(QString(), navHelp);
     form->addRow(QString(), invert);
@@ -1940,6 +1953,7 @@ void MainWindow::openSettings()
         return;
     }
     QSettings().setValue("units/new", fresh->currentData().toString());
+    QSettings().setValue("language", language->currentData().toString());
     setNavigation(NavPreset(navCombo->currentData().toInt()), invert->isChecked(), speed->currentData().toFloat());
     if (auto u = jig::lengthUnitFromString(design->currentData().toString().toStdString())) {
         setDesignUnits(*u);
@@ -2715,3 +2729,5 @@ void MainWindow::deleteFeature(const std::string& id)
 }
 
 }  // namespace jigapp
+
+#include "MainWindow.moc"
