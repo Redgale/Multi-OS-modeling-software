@@ -47,7 +47,9 @@ enum class FeatureKind
 {
     Sketch,
     Extrude,
-    Fillet
+    Fillet,
+    Chamfer,
+    Shell
 };
 
 const char* toString(FeatureKind k);

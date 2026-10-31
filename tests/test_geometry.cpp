@@ -198,3 +198,95 @@ TEST(Queries, PointInsideAndTangentChain)
     const auto& pb = *plain->state().bodies.begin()->second;
     EXPECT_EQ(tangentChain(pb, 0).size(), 1u);
 }
+
+TEST(Golden, PenCupWithParameters)
+{
+    // Scenario A3: height, dia and wall drive the cup; changing them keeps it valid.
+    auto doc = buildSample("pen_cup.jigs");
+    expectAllOk(*doc);
+    auto p = props(*doc);
+    ASSERT_TRUE(p.valid);
+    // analytic shell volume, less the 2 mm base round and the two 1 mm rim rounds
+    const double shell = M_PI * 40 * 40 * 95 - M_PI * 37.6 * 37.6 * (95 - 2.4);
+    const double rounds = (4 - M_PI) * 4 / 4 * 2 * M_PI * 40 * 1.0          // base: (1 - pi/4) r^2 L, r = 2
+                          + (1 - M_PI / 4) * 1 * (2 * M_PI * 40 + 2 * M_PI * 37.6);  // rim, r = 1
+    EXPECT_NEAR(p.volume, shell - rounds, 5.0);
+    EXPECT_NEAR(p.zmax, 95, 1e-6);
+    // a mini version, as the guide suggests
+    run(*doc, "param height = 60 mm");
+    run(*doc, "param dia = 50 mm");
+    expectAllOk(*doc);
+    auto q = props(*doc);
+    EXPECT_TRUE(q.valid);
+    EXPECT_NEAR(q.zmax, 60, 1e-6);
+    EXPECT_NEAR(q.xmax - q.xmin, 50, 1e-6);
+    EXPECT_EQ(q.faces, p.faces);
+    // thicker walls also work
+    run(*doc, "param wall = 3 mm");
+    expectAllOk(*doc);
+}
+
+TEST(Chamfer, BevelsAndExplains)
+{
+    auto doc = build("sketch id=s1\nrect center=0,0 w=60 h=40\nextrude sketch=s1 distance=10\n"
+                     "chamfer id=c1 edges=face:e1/start distance=1mm\n");
+    expectAllOk(*doc);
+    // an equal-distance chamfer along the 200 mm bottom outline removes d^2/2 per mm, and the
+    // four corner mitres give back d^3/3 each: exactly 24000 - 100 + 4/3
+    EXPECT_NEAR(props(*doc).volume, 24000 - 0.5 * 200 + 4.0 / 3.0, 1e-3);
+    ScriptRunner r(*doc);
+    r.strict = false;
+    ASSERT_TRUE(r.runLine("set c1 distance=12mm").ok());
+    const auto& st = doc->status(doc->featureIndex("c1"));
+    ASSERT_EQ(int(st.level), int(StatusLevel::Error));
+    EXPECT_NE(st.message.find("too big"), std::string::npos) << st.message;
+    ASSERT_FALSE(st.suggestions.empty());
+    EXPECT_EQ(st.suggestions[0].rfind("Try ", 0), 0u) << st.suggestions[0];
+}
+
+TEST(Shell, TooThickIsExplainedWithAWorkingValue)
+{
+    auto doc = std::make_unique<Document>();
+    ScriptRunner r(*doc);
+    r.strict = false;
+    ASSERT_TRUE(r.runText("sketch id=s1\nrect center=0,0 w=60 h=40\nextrude sketch=s1 distance=10\n"
+                          "shell id=sh1 faces=face:e1/end thickness=12mm\n").ok());  // taller than the 10 mm box
+    const auto& st = doc->status(doc->featureIndex("sh1"));
+    ASSERT_EQ(int(st.level), int(StatusLevel::Error));
+    EXPECT_NE(st.message.find("does not fit"), std::string::npos) << st.message;
+    ASSERT_FALSE(st.suggestions.empty());
+    ASSERT_EQ(st.suggestions[0].rfind("Try ", 0), 0u) << st.suggestions[0];
+    const double t = std::stod(st.suggestions[0].substr(4));
+    ASSERT_TRUE(r.runLine("set sh1 thickness=\"" + std::to_string(t) + " mm\"").ok());
+    EXPECT_EQ(int(doc->status(doc->featureIndex("sh1")).level), int(StatusLevel::Ok));
+    EXPECT_NEAR(props(*doc).volume, 24000.0 - (60 - 2 * t) * (40 - 2 * t) * (10 - t), 1e-3);
+}
+
+TEST(Shell, InnerWallsHaveStableNames)
+{
+    // A fillet on an inside edge of the shell must survive resizing the box.
+    auto doc = build("param w = 60 mm\nsketch id=s1\nrect center=0,0 w=w h=40\nextrude sketch=s1 distance=20\n"
+                     "shell id=sh1 faces=face:e1/end thickness=2mm\n");
+    const auto& body = *doc->state().bodies.begin()->second;
+    int inner = 0;
+    for (int i = 0; i < body.faceCount(); ++i) {
+        inner += body.faceName(i).rfind("sh1/inner:", 0) == 0;
+    }
+    EXPECT_EQ(inner, 5);  // four inner walls and the inner floor
+    const auto floorName = std::string("sh1/inner:e1/start");
+    ASSERT_EQ(body.findFaces(floorName).size(), 1u);
+    run(*doc, "fillet id=f1 edges=face:" + floorName + " radius=1mm");
+    run(*doc, "param w = 80 mm");
+    expectAllOk(*doc);
+}
+
+TEST(Shell, ClosedHollowKeepsOuterNames)
+{
+    auto doc = build("sketch id=s1\nrect center=0,0 w=60 h=40\nextrude sketch=s1 distance=20\n"
+                     "shell id=sh1 faces=none thickness=2mm\n");
+    const auto& body = *doc->state().bodies.begin()->second;
+    EXPECT_EQ(body.findFaces("e1/end").size(), 1u);
+    EXPECT_EQ(body.findFaces("e1/start").size(), 1u);
+    EXPECT_EQ(body.findFaces("sh1/inner:e1/end").size(), 1u);
+    EXPECT_NEAR(props(*doc).volume, 60 * 40 * 20 - 56 * 36 * 16, 1e-3);
+}

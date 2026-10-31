@@ -23,7 +23,10 @@
 #include <BRepBuilderAPI_Transform.hxx>
 #include <BRepCheck_Analyzer.hxx>
 #include <BRepClass3d_SolidClassifier.hxx>
+#include <BRepFilletAPI_MakeChamfer.hxx>
 #include <BRepFilletAPI_MakeFillet.hxx>
+#include <BRepOffsetAPI_MakeOffsetShape.hxx>
+#include <BRepOffsetAPI_MakeThickSolid.hxx>
 #include <BRepGProp.hxx>
 #include <BRepLProp_SLProps.hxx>
 #include <BRepMesh_IncrementalMesh.hxx>
@@ -882,16 +885,30 @@ Result<NamedShape> booleanOp(const std::string& featureId,
 namespace
 {
 
-std::optional<TopoDS_Shape> tryFillet(const TopoDS_Shape& shape,
+// Fillet and chamfer share OCCT's local-operation machinery, our naming and our
+// failure diagnosis; only the builder differs.
+std::optional<TopoDS_Shape> tryEdgeOp(const TopoDS_Shape& shape,
                                       const std::vector<TopoDS_Edge>& edges,
                                       double r,
-                                      std::unique_ptr<BRepFilletAPI_MakeFillet>* keep = nullptr,
+                                      bool chamfer,
+                                      std::unique_ptr<BRepFilletAPI_LocalOperation>* keep = nullptr,
                                       std::string* why = nullptr)
 {
     try {
-        auto mk = std::make_unique<BRepFilletAPI_MakeFillet>(shape);
-        for (auto& e : edges) {
-            mk->Add(r, e);
+        std::unique_ptr<BRepFilletAPI_LocalOperation> mk;
+        if (chamfer) {
+            auto c = std::make_unique<BRepFilletAPI_MakeChamfer>(shape);
+            for (auto& e : edges) {
+                c->Add(r, e);
+            }
+            mk = std::move(c);
+        }
+        else {
+            auto f = std::make_unique<BRepFilletAPI_MakeFillet>(shape);
+            for (auto& e : edges) {
+                f->Add(r, e);
+            }
+            mk = std::move(f);
         }
         mk->Build();
         if (!mk->IsDone()) {
@@ -927,24 +944,29 @@ std::string fmtMm(double v)
 
 }  // namespace
 
-Result<NamedShape> filletEdges(const std::string& featureId,
-                               const NamedShape& body,
-                               const std::vector<int>& edgeIndices,
-                               double radius)
+namespace
 {
+Result<NamedShape> edgeTreatment(const std::string& featureId,
+                                 const NamedShape& body,
+                                 const std::vector<int>& edgeIndices,
+                                 double radius,
+                                 bool chamfer)
+{
+    const std::string what = chamfer ? "chamfer" : "fillet";
     if (edgeIndices.empty()) {
-        return makeError("fillet.no_edges", "Pick at least one edge to round.");
+        return makeError(what + ".no_edges", chamfer ? "Pick at least one edge to bevel." : "Pick at least one edge to round.");
     }
     if (!(radius > 1e-6)) {
-        return makeError("fillet.radius", "The fillet radius must be larger than zero.");
+        return makeError(what + ".radius", chamfer ? "The chamfer distance must be larger than zero."
+                                                  : "The fillet radius must be larger than zero.");
     }
     std::vector<TopoDS_Edge> edges;
     for (int i : edgeIndices) {
         edges.push_back(TopoDS::Edge(body.edge(i)));
     }
-    std::unique_ptr<BRepFilletAPI_MakeFillet> mk;
+    std::unique_ptr<BRepFilletAPI_LocalOperation> mk;
     std::string why;
-    auto res = tryFillet(body.shape(), edges, radius, &mk, &why);
+    auto res = tryEdgeOp(body.shape(), edges, radius, chamfer, &mk, &why);
     if (!res) {
         // Probable cause: the shortest edge next to the selected edges.
         double nearest = 1e300;
@@ -964,7 +986,7 @@ Result<NamedShape> filletEdges(const std::string& featureId,
         // Find the largest radius that works (bisection, a handful of kernel calls).
         double ok = 0, bad = radius;
         for (double r = radius * 0.5; r > radius / 64; r *= 0.5) {
-            if (tryFillet(body.shape(), edges, r)) {
+            if (tryEdgeOp(body.shape(), edges, r, chamfer)) {
                 ok = r;
                 break;
             }
@@ -973,7 +995,7 @@ Result<NamedShape> filletEdges(const std::string& featureId,
         if (ok > 0) {
             for (int k = 0; k < 4; ++k) {
                 double mid = 0.5 * (ok + bad);
-                (tryFillet(body.shape(), edges, mid) ? ok : bad) = mid;
+                (tryEdgeOp(body.shape(), edges, mid, chamfer) ? ok : bad) = mid;
             }
         }
         std::vector<std::string> sug;
@@ -983,23 +1005,25 @@ Result<NamedShape> filletEdges(const std::string& featureId,
                 sug.push_back("Try " + fmtMm(s) + " or less.");
             }
         }
-        sug.push_back("Round fewer edges at once, or fillet the larger edges first.");
+        sug.push_back(chamfer ? "Bevel fewer edges at once, or chamfer the longer edges first."
+                              : "Round fewer edges at once, or fillet the larger edges first.");
         std::string msg;
-        if (nearest < 2 * radius) {
-            msg = "A " + fmtMm(radius) + " fillet is too big here: the neighbouring face is only "
+        if (nearest < (chamfer ? 1.0 : 2.0) * radius) {
+            msg = "A " + fmtMm(radius) + " " + what + " is too big here: the neighbouring face is only "
                 + fmtMm(nearest) + " across.";
         }
         else {
-            msg = "The rounded surfaces for a " + fmtMm(radius)
-                + " fillet could not be joined where these edges meet.";
+            msg = chamfer ? "The bevels for a " + fmtMm(radius) + " chamfer could not be joined where these edges meet."
+                          : "The rounded surfaces for a " + fmtMm(radius)
+                                + " fillet could not be joined where these edges meet.";
         }
-        return makeError("fillet.failed", msg, sug, why);
+        return makeError(what + ".failed", msg, sug, why);
     }
     NamedShape out(*res);
     propagateFaceNames(*mk, {&body}, out);
     for (size_t k = 0; k < edges.size(); ++k) {
         assignNames(out, toVector(mk->Generated(edges[k]), TopAbs_FACE),
-                    featureId + "/fillet:" + body.edgeName(edgeIndices[k]));
+                    featureId + "/" + what + ":" + body.edgeName(edgeIndices[k]));
     }
     std::vector<TopoDS_Shape> corners;
     for (auto& e : edges) {
@@ -1015,6 +1039,197 @@ Result<NamedShape> filletEdges(const std::string& featureId,
     nameLeftovers(out, featureId);
     return out;
 }
+}  // namespace
+
+Result<NamedShape> filletEdges(const std::string& featureId,
+                               const NamedShape& body,
+                               const std::vector<int>& edgeIndices,
+                               double radius)
+{
+    return edgeTreatment(featureId, body, edgeIndices, radius, false);
+}
+
+Result<NamedShape> chamferEdges(const std::string& featureId,
+                                const NamedShape& body,
+                                const std::vector<int>& edgeIndices,
+                                double distance)
+{
+    return edgeTreatment(featureId, body, edgeIndices, distance, true);
+}
+
+// ---------------------------------------------------------------- shell
+
+namespace
+{
+std::optional<TopoDS_Shape> tryShell(const TopoDS_Shape& shape,
+                                     const TopTools_ListOfShape& openings,
+                                     double t,
+                                     std::unique_ptr<BRepOffsetAPI_MakeThickSolid>* keep = nullptr,
+                                     std::string* why = nullptr)
+{
+    try {
+        auto mk = std::make_unique<BRepOffsetAPI_MakeThickSolid>();
+        mk->MakeThickSolidByJoin(shape, openings, -t, 1e-3);
+        mk->Build();
+        if (!mk->IsDone()) {
+            return std::nullopt;
+        }
+        TopoDS_Shape res = mk->Shape();
+        if (res.IsNull() || !BRepCheck_Analyzer(res).IsValid()) {
+            if (why) {
+                *why = "result failed BRepCheck";
+            }
+            return std::nullopt;
+        }
+        GProp_GProps g;
+        BRepGProp::VolumeProperties(res, g);
+        if (!(g.Mass() > 0)) {
+            return std::nullopt;
+        }
+        if (keep) {
+            *keep = std::move(mk);
+        }
+        return res;
+    }
+    catch (const Standard_Failure& f) {
+        if (why) {
+            *why = kernelText(f);
+        }
+        return std::nullopt;
+    }
+}
+}  // namespace
+
+Result<NamedShape> shellSolid(const std::string& featureId,
+                              const NamedShape& body,
+                              const std::vector<int>& openFaces,
+                              double thickness)
+{
+    if (!(thickness > 1e-6)) {
+        return makeError("shell.thickness", "The wall thickness must be larger than zero.");
+    }
+    if (openFaces.empty()) {
+        // A closed hollow. OCCT's thick-solid builder returns only the inward offset solid
+        // when no face is removed, so build it explicitly: original minus inward offset.
+        try {
+            BRepOffsetAPI_MakeOffsetShape off;
+            off.PerformByJoin(body.shape(), -thickness, 1e-3);
+            if (!off.IsDone() || off.Shape().IsNull()) {
+                return makeError("shell.failed",
+                                 "A " + fmtMm(thickness) + " wall does not fit inside this shape.",
+                                 {"Try a thinner wall."});
+            }
+            NamedShape inner(off.Shape());
+            for (int u = 0; u < inner.faceCount(); ++u) {
+                const Fingerprint fu = inner.faceFingerprint(u);
+                double best = 1e300;
+                std::string name;
+                for (int f = 0; f < body.faceCount(); ++f) {
+                    const Fingerprint fb = body.faceFingerprint(f);
+                    const double d = std::hypot(fb.cx - fu.cx, fb.cy - fu.cy, fb.cz - fu.cz)
+                                   + (fb.type == fu.type ? 0 : 1e6);
+                    if (d < best) {
+                        best = d;
+                        name = body.faceName(f);
+                    }
+                }
+                inner.setFaceName(u, featureId + "/inner:" + name);
+            }
+            inner.deriveEdgeNames();
+            return booleanOp(featureId, BoolOp::Cut, body, inner);
+        }
+        catch (const Standard_Failure& f) {
+            return makeError("shell.failed", "A " + fmtMm(thickness) + " wall does not fit inside this shape.",
+                             {"Try a thinner wall."}, kernelText(f));
+        }
+    }
+    TopTools_ListOfShape openings;
+    for (int f : openFaces) {
+        openings.Append(body.face(f));
+    }
+    std::unique_ptr<BRepOffsetAPI_MakeThickSolid> mk;
+    std::string why;
+    auto res = tryShell(body.shape(), openings, thickness, &mk, &why);
+    if (!res) {
+        double ok = 0, bad = thickness;
+        for (double t = thickness * 0.5; t > thickness / 64; t *= 0.5) {
+            if (tryShell(body.shape(), openings, t)) {
+                ok = t;
+                break;
+            }
+            bad = t;
+        }
+        if (ok > 0) {
+            for (int k = 0; k < 4; ++k) {
+                double mid = 0.5 * (ok + bad);
+                (tryShell(body.shape(), openings, mid) ? ok : bad) = mid;
+            }
+        }
+        std::vector<std::string> sug;
+        if (ok > 0) {
+            double s = std::floor(ok * 0.95 * 10) / 10;
+            if (s > 0) {
+                sug.push_back("Try " + fmtMm(s) + " or less.");
+            }
+        }
+        sug.push_back("Add fillets to sharp inside corners first, or remove a different face.");
+        return makeError("shell.failed",
+                         "A " + fmtMm(thickness) + " wall does not fit inside this shape: some part of it is "
+                             "thinner than twice the wall.",
+                         sug, why);
+    }
+    NamedShape out(*res);
+    propagateFaceNames(*mk, {&body}, out);
+    // Inner walls: named after the outer face they are offset from (closest centroid
+    // among faces of the same surface type), e.g. "sh1/inner:e1/side:7".
+    std::vector<int> unnamed;
+    for (int i = 0; i < out.faceCount(); ++i) {
+        if (out.faceName(i).empty()) {
+            unnamed.push_back(i);
+        }
+    }
+    std::map<std::string, std::vector<TopoDS_Shape>> byName;
+    const double tol = 1e-6 * std::max(1.0, bodyScale(body.shape()));
+    for (int u : unnamed) {
+        const Fingerprint fu = out.faceFingerprint(u);
+        // An outer face OCCT rebuilt without reporting it (closed hollows do this) is the
+        // same surface as an original face: it keeps that face's name.
+        std::string same;
+        for (int f = 0; f < body.faceCount() && same.empty(); ++f) {
+            const Fingerprint fb = body.faceFingerprint(f);
+            if (fb.type == fu.type && std::hypot(fb.cx - fu.cx, fb.cy - fu.cy, fb.cz - fu.cz) < tol
+                && std::abs(fb.size - fu.size) <= 1e-6 * std::max(1.0, fb.size)) {
+                same = body.faceName(f);
+            }
+        }
+        if (!same.empty()) {
+            byName[same].push_back(out.face(u));
+            continue;
+        }
+        double best = 1e300;
+        std::string name;
+        for (int f = 0; f < body.faceCount(); ++f) {
+            const Fingerprint fb = body.faceFingerprint(f);
+            if (fb.type != fu.type) {
+                continue;
+            }
+            const double d = std::hypot(fb.cx - fu.cx, fb.cy - fu.cy, fb.cz - fu.cz);
+            if (d < best) {
+                best = d;
+                name = body.faceName(f);
+            }
+        }
+        if (!name.empty()) {
+            byName[featureId + "/inner:" + name].push_back(out.face(u));
+        }
+    }
+    for (auto& [n, faces] : byName) {
+        assignNames(out, faces, n);
+    }
+    nameLeftovers(out, featureId);
+    return out;
+}
+
 
 // ---------------------------------------------------------------- queries
 

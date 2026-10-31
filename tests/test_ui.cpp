@@ -179,6 +179,81 @@ private slots:
         QTest::qWait(150);
         w.grab().save(shotPath("model"));
     }
+
+    void penCupShellAndChamfer()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        Viewport* view = w.viewport();
+        QVERIFY(w.createSketchOn("XY"));
+        SketchEditor* sk = w.sketchEditor();
+        QVERIFY(sk);
+        sk->setTool(SketchEditor::Tool::Circle);
+        const QPoint c = sk->screenOf(0, 0);
+        QTest::mouseMove(view, c);
+        QTest::mouseClick(view, Qt::LeftButton, Qt::NoModifier, c);
+        QTest::mouseMove(view, sk->screenOf(20, 0));
+        sk->typeValues({"80 mm"});
+        w.runCommand("sketch.finish");
+        w.runCommand("solid.extrude");
+        auto* ex = qobject_cast<ExtrudePanel*>(w.featurePanel());
+        QVERIFY(ex);
+        ex->distance()->setText("95 mm");
+        QTRY_VERIFY(ex->previewOk());
+        QVERIFY(ex->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+
+        // Shell: click the top face in the 3D view to leave it open.
+        w.runCommand("solid.shell");
+        auto* sh = qobject_cast<ShellPanel*>(w.featurePanel());
+        QVERIFY(sh);
+        QTRY_VERIFY(sh->previewOk());     // closed hollow preview first
+        QTRY_VERIFY(view->meshesReady());
+        view->homeView();
+        QTest::qWait(200);
+        QSignalSpy clicks(view, &Viewport::faceClicked);
+        const QPoint top = view->project(QVector3D(0, 0, 95)).toPoint();
+        QTest::mouseMove(view, top);
+        QTest::mouseClick(view, Qt::LeftButton, Qt::NoModifier, top);
+        QCOMPARE(clicks.count(), 1);
+        QCOMPARE(clicks.at(0).at(1).toString(), QString("e1/end"));
+        QTRY_COMPARE(int(sh->faceCount()), 1);
+        sh->thickness()->setText("2.4 mm");
+        QTest::qWait(300);  // the preview is debounced: let it run and re-tessellate
+        QTRY_VERIFY(sh->previewOk());
+        QTRY_VERIFY(view->meshesReady());
+        QTest::qWait(1500);
+        w.grab().save(shotPath("shell-panel"));
+        QVERIFY(sh->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        const double shelled = M_PI * 40 * 40 * 95 - M_PI * 37.6 * 37.6 * (95 - 2.4);
+        QVERIFY2(std::abs(volume(w) - shelled) < 1, qPrintable(QString::number(volume(w))));
+
+        // Chamfer the outside bottom edge so the print does not flare.
+        w.runCommand("solid.chamfer");
+        auto* ch = qobject_cast<FilletPanel*>(w.featurePanel());
+        QVERIFY(ch);
+        const auto& body = *w.document().state().bodies.begin()->second;
+        const std::string bodyId = w.document().state().bodies.begin()->first;
+        const auto bottom = body.findFaces("e1/start");
+        QCOMPARE(int(bottom.size()), 1);
+        for (int e : body.edgesOfFace(bottom[0])) {
+            ch->toggleEdge(bodyId, e);
+        }
+        ch->radius()->setText("0.5 mm");
+        QTRY_VERIFY(ch->previewOk());
+        QVERIFY(ch->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        QVERIFY(volume(w) < shelled);
+        QCOMPARE(int(w.document().model().features.size()), 4);
+        QVERIFY(w.document().model().features[3].kind == jig::FeatureKind::Chamfer);
+        QTRY_VERIFY(view->meshesReady());
+        view->homeView();
+        QTest::qWait(150);
+        w.grab().save(shotPath("pen-cup"));
+    }
 };
 
 int main(int argc, char** argv)

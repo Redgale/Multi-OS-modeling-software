@@ -114,6 +114,10 @@ QString kindWord(jig::FeatureKind k)
             return MainWindow::tr("Extrude");
         case jig::FeatureKind::Fillet:
             return MainWindow::tr("Fillet");
+        case jig::FeatureKind::Chamfer:
+            return MainWindow::tr("Chamfer");
+        case jig::FeatureKind::Shell:
+            return MainWindow::tr("Shell");
     }
     return {};
 }
@@ -1055,6 +1059,12 @@ void MainWindow::runCommand(const QString& id)
     else if (id == "solid.fillet") {
         openFillet();
     }
+    else if (id == "solid.chamfer") {
+        openChamfer();
+    }
+    else if (id == "solid.shell") {
+        openShell();
+    }
     else if (id == "modify.parameters") {
         openParameters();
     }
@@ -1519,6 +1529,32 @@ void MainWindow::openFillet(const std::string& editId)
     showPanel(new FilletPanel(*doc_, view_, editId, panelHost_));
 }
 
+void MainWindow::openChamfer(const std::string& editId)
+{
+    if (sketch_) {
+        exitSketch();
+    }
+    cancelPicker();
+    if (doc_->stateBefore(editId.empty() ? doc_->activeCount() : doc_->featureIndex(editId)).bodies.empty()) {
+        statusBar()->showMessage(tr("There is no 3D body to bevel yet: sketch and extrude first."), 5000);
+        return;
+    }
+    showPanel(new FilletPanel(*doc_, view_, editId, panelHost_, true));
+}
+
+void MainWindow::openShell(const std::string& editId)
+{
+    if (sketch_) {
+        exitSketch();
+    }
+    cancelPicker();
+    if (doc_->stateBefore(editId.empty() ? doc_->activeCount() : doc_->featureIndex(editId)).bodies.empty()) {
+        statusBar()->showMessage(tr("There is no 3D body to hollow yet: sketch and extrude first."), 5000);
+        return;
+    }
+    showPanel(new ShellPanel(*doc_, view_, editId, panelHost_));
+}
+
 void MainWindow::openParameters()
 {
     ParametersDialog d(*doc_, this);
@@ -1562,6 +1598,12 @@ void MainWindow::editFeature(int index)
             break;
         case jig::FeatureKind::Fillet:
             openFillet(f.id);
+            break;
+        case jig::FeatureKind::Chamfer:
+            openChamfer(f.id);
+            break;
+        case jig::FeatureKind::Shell:
+            openShell(f.id);
             break;
     }
 }

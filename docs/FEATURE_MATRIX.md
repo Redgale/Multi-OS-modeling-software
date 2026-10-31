@@ -115,8 +115,8 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Fillet variable | 18 | v0.1 M3 | — | |
 | Fillet chord length, setback corners, G2 | 18 | v0.2 | — | |
 | Tangent chain selection | 18, 23 | v0.1 M3 | **app** | |
-| Chamfer: equal, two distances, distance+angle | 18 | v0.1 M3 | — | |
-| Shell (inside/outside, openings) | 18 | v0.1 M3 | — | |
+| Chamfer: equal, two distances, distance+angle | 18 | v0.1 M3 | **app**: equal distance; two distances / angle not yet | |
+| Shell (inside/outside, openings) | 18 | v0.1 M3 | **app**: inside, openings or closed hollow; outside not yet | |
 | Draft | 18 | v0.2 | — | |
 | Scale | 17, 18 | v0.2 | — | |
 | Combine join/cut/intersect, keep tools | 17 | v0.1 M4 | kernel booleans exist | |
@@ -183,7 +183,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | 1. Phone stand | v0.1 (A1, A4, A7) | sketch, rectangle, polyline, slot, extrude join/cut/symmetric, sketch on face, fillet, export | **Builds headlessly** (`samples/phone_stand.jigs`); golden test passes; edit-early regression passes |
 | 2. Hinged box | v0.2 | components, shell, project/offset, patterns, revolute joint, interference | — |
 | 3. Knob | v0.1 (A2) | revolve, arc, trim, axis, circular pattern, cut, fillet, text | — (needs M1, M4, M5) |
-| 4. Pen cup | v0.1 (A3) | parameters, circle, extrude, shell, fillets, text + cut | parameters and extrude work; shell M3, text M5 |
+| 4. Pen cup | v0.1 (A3) | parameters, circle, extrude, shell, fillets, text + cut | **builds** (`samples/pen_cup.jigs`, golden test, parameter changes); engraved text waits for Text (M5) |
 
 ## Shortcuts (PDF ch. 45)
 

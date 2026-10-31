@@ -5,6 +5,7 @@
 #include <cmath>
 #include <future>
 #include <map>
+#include <set>
 
 #include <QCoreApplication>
 #include <QKeyEvent>
@@ -278,6 +279,9 @@ void Viewport::uploadMesh(const std::string& body, std::shared_ptr<const jig::Na
     g->edgeVertexCount = int(m.edgeLines.size() / 3);
     g->edgeLines = std::move(m.edgeLines);
     g->segEdge = std::move(m.segEdge);
+    g->positions = std::move(m.positions);
+    g->indices = std::move(m.indices);
+    g->triFace = std::move(m.triFace);
     meshes_.push_back(std::move(g));
 }
 
@@ -465,6 +469,14 @@ void Viewport::setEdgeHighlight(const std::string& body, std::vector<int> edges)
     update();
 }
 
+void Viewport::setFaceHighlight(const std::string& body, std::vector<int> faces)
+{
+    hlFaceBody_ = body;
+    hlFaces_ = std::move(faces);
+    overlayDirty_ = true;
+    update();
+}
+
 void Viewport::setModelTint(std::optional<QColor> c)
 {
     tint_ = c;
@@ -524,6 +536,25 @@ void Viewport::uploadOverlay()
     ovLineCount_ = int(v.size() / 7);
     for (auto& ov : overlayData_.tris) {
         push(ov.p, ov.c);
+    }
+    if (!hlFaces_.empty()) {
+        QColor fc = colors_.selected;
+        fc.setAlpha(110);
+        const std::set<int> want(hlFaces_.begin(), hlFaces_.end());
+        for (auto& m : meshes_) {
+            if (m->body != hlFaceBody_) {
+                continue;
+            }
+            for (size_t t = 0; t < m->triFace.size(); ++t) {
+                if (!want.count(int(m->triFace[t]))) {
+                    continue;
+                }
+                for (int k = 0; k < 3; ++k) {
+                    const uint32_t idx = m->indices[t * 3 + k];
+                    push({m->positions[idx * 3], m->positions[idx * 3 + 1], m->positions[idx * 3 + 2]}, fc);
+                }
+            }
+        }
     }
     ovTriCount_ = int(v.size() / 7) - ovLineCount_;
     ovVao_.bind();
@@ -693,6 +724,7 @@ void Viewport::paintGL()
             }
             uploadMesh(it->body, it->shape, std::move(m));
             changed = true;
+            overlayDirty_ = true;
         }
         it = js.erase(it);
     }
@@ -1010,7 +1042,12 @@ void Viewport::mouseReleaseEvent(QMouseEvent* e)
         }
         if (pickMode_ == PickMode::Edges) {
             if (auto h = pickEdgeAt(pos)) {
-                emit edgeClicked(QString::fromStdString(h->body), h->edge, e->modifiers());
+                for (auto& m : meshes_) {
+                    if (m->body == h->body && h->edge < m->shape->edgeCount()) {
+                        emit edgeClicked(QString::fromStdString(h->body),
+                                         QString::fromStdString(m->shape->edgeName(h->edge)), e->modifiers());
+                    }
+                }
             }
             drag_ = Drag::None;
             return;
@@ -1022,6 +1059,14 @@ void Viewport::mouseReleaseEvent(QMouseEvent* e)
         selected_ = pickAt(pos);
         emit selectionChanged(selected_ ? QString::fromStdString(selected_->body) : QString(),
                               selected_ ? selected_->face : -1);
+        if (selected_) {
+            for (auto& m : meshes_) {
+                if (m->body == selected_->body && selected_->face < m->shape->faceCount()) {
+                    emit faceClicked(QString::fromStdString(selected_->body),
+                                     QString::fromStdString(m->shape->faceName(selected_->face)), e->modifiers());
+                }
+            }
+        }
         update();
     }
     drag_ = Drag::None;

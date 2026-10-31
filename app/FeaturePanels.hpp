@@ -131,17 +131,18 @@ private:
     ExprField* distance_;
 };
 
+// Fillet (round) and Chamfer (bevel) share this panel: pick edges, type one size.
 class FilletPanel : public FeaturePanel
 {
     Q_OBJECT
 public:
-    FilletPanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent = nullptr);
+    FilletPanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent = nullptr,
+                bool chamfer = false);
     ~FilletPanel() override;
     // Add/remove an edge of the body as it was before this step (and its tangent chain).
     void toggleEdge(const std::string& body, int edge);
-    // A click in the view: the edge index is on the shape currently displayed (which may
-    // be the preview); it is mapped to the body before this step by persistent name.
-    void toggleShownEdge(const std::string& body, int shownEdge);
+    // A click in the view, by persistent edge name (works on the preview body too).
+    void toggleEdgeByName(const std::string& body, const std::string& name);
     ExprField* radius() const
     {
         return radius_;
@@ -158,10 +159,42 @@ protected:
 
 private:
     void refreshEdges();
+    bool chamfer_ = false;
     std::string body_;
     std::set<int> edges_;
     ExprField* radius_;
     QCheckBox* chain_;
+    QLabel* count_;
+};
+
+// Shell: hollow a body; click the faces to leave open.
+class ShellPanel : public FeaturePanel
+{
+    Q_OBJECT
+public:
+    ShellPanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent = nullptr);
+    ~ShellPanel() override;
+    void toggleFace(const std::string& body, int face);       // face of the body before this step
+    void toggleFaceByName(const std::string& body, const std::string& name);  // a click in the view
+    ExprField* thickness() const
+    {
+        return thickness_;
+    }
+    size_t faceCount() const
+    {
+        return faces_.size();
+    }
+
+protected:
+    jig::Feature draft() const override;
+    QString title() const override;
+    void rememberValues() override;
+
+private:
+    void refreshFaces();
+    std::string body_;
+    std::set<int> faces_;
+    ExprField* thickness_;
     QLabel* count_;
 };
 

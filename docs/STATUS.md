@@ -8,7 +8,8 @@ Session 1 did Phase 0 and the Phase 1 spikes (**GO for M1**, `docs/PHASE1_REPORT
 Session 2 delivered the core of **M1 (interactive sketching)** and **M2 (Extrude, Fillet,
 timeline editing, parameters)** in the desktop app, an original **icon set** for every
 tool, build-from-source support for **Void, Fedora, Arch and openSUSE**, and a publish job
-for downloadable builds. 53 tests, including a UI workflow test that drives the real
+for downloadable builds, then Chamfer and Shell (part of M3) with the pen cup sample.
+58 tests, including UI workflow tests that drive the real
 window.
 
 ## What works, and how it was verified
@@ -31,6 +32,7 @@ window.
 | Extrude panel (M2) | Live preview, sketch and profile choice, distance (expressions), through-all, one side/other side/symmetric, Join/Cut/New/Intersect and **Auto** (Cut when the extrusion goes into material), OK/Cancel/Esc/Enter, values remembered for the session | UI test: 24000 mm³, then edit from the timeline to 20 mm → 48000 mm³ |
 | Fillet panel (M2) | Edge picking in the view (GPU, hidden edges rejected), tangent-chain selection, live preview on the rounded body (clicks map back by persistent name), failure message with one-click working radius | UI test: real edge picks, 4 edges, volume matches the analytic value; 30 mm radius refused with "too big" |
 | Timeline editing (M2) | Double-click to edit, right-click: rename, suppress/unsuppress, roll back to here, delete with a dependents warning | `Document.DependentsAreFound`; UI test edits a step |
+| Chamfer and Shell (M3 part) | Chamfer panel (edge picking, distance), Shell panel (click faces to leave open; none = closed hollow), failure explanations with a working value; inner walls get stable names (`sh1/inner:<outer face>`) | `Golden.PenCupWithParameters` (A3 without text), `Chamfer.*`, `Shell.*` (closed hollow found and fixed an OCCT behaviour: no open face returns only the offset solid); UI test builds a pen cup by clicking the top face |
 | Parameters (M5 part) | Table dialog: name, value with units/expressions, kind, live result, comment; refuses invalid names, duplicates, cycles | exercised manually under Xvfb only (no automated UI test yet: B-015) |
 | Performance | All headless budgets met | `jigsmith-bench`, numbers in PHASE1_REPORT.md |
 
@@ -47,6 +49,7 @@ window.
 | Void Linux glibc and musl, Fedora, Arch (official container images, `scripts/install-deps.sh` only): build + 50 tests | ✓ passed (run 41148659255) |
 | openSUSE Tumbleweed | ✓ passed (run 41148826070) after replacing busybox-gawk in the minimal container |
 | OCCT built from source (`scripts/build-occt.sh`) | first run failed: OCCT's data-exchange toolkits need X11 headers; headers added, re-run pending |
+| **Session 2, later pushes** | **No jobs started: GitHub reported failed account payments / spending limit** (owner action under Billing & plans). CI now runs only the Linux jobs on ordinary pushes; the full matrix runs on PRs, main, weekly and on demand. Everything in this table after session 2's first push was verified locally on Linux only |
 | Publish `continuous` pre-release | builds collected; **release creation refused (HTTP 403)** because the repository limits the workflow token to read-only. Owner action: Settings ▸ Actions ▸ General ▸ Workflow permissions ▸ "Read and write permissions", then re-run the job |
 
 Also verified locally: the whole tree builds warning-clean and passes all tests with
@@ -62,7 +65,8 @@ Clang 18 as well as GCC 13.
 - M2 still missing: extrude drag handle on the canvas, two-sides/to-object/taper/thin,
   Browser visibility/isolate/rename, selection filters, Select Other, timeline reorder and
   groups, one-click "fix this" beyond the fillet radius.
-- Not built yet: Revolve, Hole, Chamfer, Shell, patterns, mirror, construction tools,
+- M3 still missing: Hole, Mirror, patterns, Press Pull, variable fillet.
+- Not built yet: Revolve, construction tools,
   Measure, Section, Text, SVG/DXF import, 3MF, local versions, tutorial, marking menu.
 - Reorder of timeline steps (model supports it; no command or tests yet, B-002).
 - libslvs comparison (B-001).
@@ -74,6 +78,8 @@ Clang 18 as well as GCC 13.
 - Code of Conduct contact: the owner should add a dedicated contact address.
 
 ## Decisions waiting for the owner
+
+- **GitHub Actions billing**: jobs are refused until the payment / spending limit is fixed.
 
 0. **Allow CI to publish releases**: enable read-and-write workflow permissions (see the CI table) so the `continuous` pre-release can be created.
 

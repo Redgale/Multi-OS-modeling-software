@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "FeaturePanels.hpp"
 
+#include <cctype>
 #include <map>
 #include <regex>
 
@@ -253,7 +254,12 @@ bool FeaturePanel::accept()
                            [&](jig::Model& m) -> jig::Result<bool> {
                                if (isNew) {
                                    jig::Feature nf = f;
-                                   const std::string id = jig::Document::newId(m, nf.id.substr(0, 1));
+                                   // prefix = the draft id without its number ("sh1" -> "sh")
+                                   std::string prefix = nf.id;
+                                   while (!prefix.empty() && std::isdigit(static_cast<unsigned char>(prefix.back()))) {
+                                       prefix.pop_back();
+                                   }
+                                   const std::string id = jig::Document::newId(m, prefix);
                                    nf.id = id;  // same as the draft's id: ids are counter-based
                                    jig::Document::insertAtMarker(m, nf);
                                    return true;
@@ -487,11 +493,15 @@ void ExtrudePanel::rememberValues()
 
 // ---------------------------------------------------------------- Fillet
 
-FilletPanel::FilletPanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent)
+FilletPanel::FilletPanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent, bool chamfer)
     : FeaturePanel(doc, view, std::move(editId), parent)
+    , chamfer_(chamfer)
 {
-    auto* head = new QLabel("<h3>" + tr("Fillet") + "</h3><p>" +
-                                tr("Round edges. Click edges in the 3D view to add or remove them.") + "</p>",
+    auto* head = new QLabel(chamfer ? "<h3>" + tr("Chamfer") + "</h3><p>" +
+                                          tr("Bevel edges with a flat cut. Click edges in the 3D view to add or remove "
+                                             "them. A small chamfer on the bottom edge stops 3D prints flaring.") + "</p>"
+                                    : "<h3>" + tr("Fillet") + "</h3><p>" +
+                                          tr("Round edges. Click edges in the 3D view to add or remove them.") + "</p>",
                             this);
     head->setWordWrap(true);
     form_->addWidget(head);
@@ -503,18 +513,19 @@ FilletPanel::FilletPanel(jig::Document& doc, Viewport* view, std::string editId,
     addRow(tr("Edges"), count_);
     form_->addWidget(chain_);
     form_->addWidget(clear);
-    addRow(tr("Radius"), radius_);
+    addRow(chamfer ? tr("Distance") : tr("Radius"), radius_);
     connect(clear, &QPushButton::clicked, this, [this] {
         edges_.clear();
         refreshEdges();
     });
     connect(radius_, &ExprField::changed, this, [this] { schedulePreview(); });
-    connect(view_.data(), &Viewport::edgeClicked, this,
-            [this](const QString& body, int edge, Qt::KeyboardModifiers) { toggleShownEdge(body.toStdString(), edge); });
+    connect(view_.data(), &Viewport::edgeClicked, this, [this](const QString& body, const QString& name, Qt::KeyboardModifiers) {
+        toggleEdgeByName(body.toStdString(), name.toStdString());
+    });
 
     const jig::Feature* edit = editId_.empty() ? nullptr : doc_.feature(editId_);
     if (edit) {
-        radius_->setText(q(edit->params.value("radius", std::string("1 mm"))));
+        radius_->setText(q(edit->params.value(chamfer ? "distance" : "radius", std::string("1 mm"))));
         const auto before = stateBefore();
         for (auto& jr : edit->params.value("edges", nlohmann::json::array())) {
             jig::ShapeRef ref = jig::ShapeRef::fromJson(jr);
@@ -530,7 +541,8 @@ FilletPanel::FilletPanel(jig::Document& doc, Viewport* view, std::string editId,
         }
     }
     else {
-        radius_->setText(remembered().count("fillet.radius") ? remembered()["fillet.radius"] : "2 mm");
+        const QString key = chamfer ? "chamfer.distance" : "fillet.radius";
+        radius_->setText(remembered().count(key) ? remembered()[key] : (chamfer ? "1 mm" : "2 mm"));
     }
     view_->setPickMode(PickMode::Edges);
     refreshEdges();
@@ -544,24 +556,18 @@ FilletPanel::~FilletPanel()
     }
 }
 
-void FilletPanel::toggleShownEdge(const std::string& body, int shownEdge)
+void FilletPanel::toggleEdgeByName(const std::string& body, const std::string& name)
 {
     const auto before = stateBefore();
     auto bit = before->bodies.find(body);
-    if (bit == before->bodies.end() || shownEdge < 0) {
+    if (bit == before->bodies.end()) {
         return;
     }
-    jig::FeatureOutcome shown = jig::applyFeature(doc_, draft(), before);
-    const auto& st = (edges_.empty() || !shown.after || !previewOk_) ? before : shown.after;
-    auto sit = st->bodies.find(body);
-    if (sit == st->bodies.end() || shownEdge >= sit->second->edgeCount()) {
-        return;
-    }
-    auto hits = bit->second->findEdges(sit->second->edgeName(shownEdge));
+    auto hits = bit->second->findEdges(name);
     if (hits.size() == 1) {
         toggleEdge(body, hits[0]);
     }
-    // else: the click was on a surface the fillet itself made; nothing to toggle
+    // else: the click was on a surface this step itself made; nothing to toggle
 }
 
 void FilletPanel::toggleEdge(const std::string& body, int e)
@@ -572,7 +578,7 @@ void FilletPanel::toggleEdge(const std::string& body, int e)
         return;
     }
     if (!body_.empty() && body_ != body) {
-        status_->setText("<b>✕ " + tr("A fillet rounds edges of one body at a time.") + "</b>");
+        status_->setText("<b>✕ " + tr("Pick edges of one body at a time.") + "</b>");
         return;
     }
     body_ = body;
@@ -606,7 +612,7 @@ void FilletPanel::refreshEdges()
         }
         view_->setBodies(std::move(bodies));
         view_->setModelTint(std::nullopt);
-        status_->setText(tr("Pick edges to round."));
+        status_->setText(chamfer_ ? tr("Pick edges to bevel.") : tr("Pick edges to round."));
         ok_->setEnabled(false);
         previewOk_ = false;
         return;
@@ -619,13 +625,13 @@ jig::Feature FilletPanel::draft() const
     jig::Feature f;
     if (editId_.empty()) {
         jig::Model tmp = doc_.model();
-        f.id = jig::Document::newId(tmp, "f");
-        f.name = tr("Fillet %1").arg(q(f.id.substr(1))).toStdString();
+        f.id = jig::Document::newId(tmp, chamfer_ ? "c" : "f");
+        f.name = (chamfer_ ? tr("Chamfer %1") : tr("Fillet %1")).arg(q(f.id.substr(1))).toStdString();
     }
     else {
         f = *doc_.feature(editId_);
     }
-    f.kind = jig::FeatureKind::Fillet;
+    f.kind = chamfer_ ? jig::FeatureKind::Chamfer : jig::FeatureKind::Fillet;
     nlohmann::json refs = nlohmann::json::array();
     const auto before = stateBefore();
     auto bit = before->bodies.find(body_);
@@ -634,18 +640,150 @@ jig::Feature FilletPanel::draft() const
             refs.push_back(bit->second->edgeRef(body_, e).toJson());
         }
     }
-    f.params = {{"edges", refs}, {"radius", radius_->text().isEmpty() ? std::string("1 mm") : radius_->text().toStdString()}};
+    f.params = {{"edges", refs},
+                {chamfer_ ? "distance" : "radius", radius_->text().isEmpty() ? std::string("1 mm") : radius_->text().toStdString()}};
     return f;
 }
 
 QString FilletPanel::title() const
 {
-    return tr("fillet");
+    return chamfer_ ? tr("chamfer") : tr("fillet");
 }
 
 void FilletPanel::rememberValues()
 {
-    remembered()["fillet.radius"] = radius_->text();
+    remembered()[chamfer_ ? "chamfer.distance" : "fillet.radius"] = radius_->text();
+}
+
+// ---------------------------------------------------------------- Shell
+
+ShellPanel::ShellPanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent)
+    : FeaturePanel(doc, view, std::move(editId), parent)
+{
+    auto* head = new QLabel("<h3>" + tr("Shell") + "</h3><p>" +
+                                tr("Hollow the body, leaving walls. Click the faces to leave open (for a cup, the "
+                                   "top). With no face picked, the inside is a closed hollow.") + "</p>",
+                            this);
+    head->setWordWrap(true);
+    form_->addWidget(head);
+    count_ = new QLabel(this);
+    auto* clear = new QPushButton(tr("Clear open faces"), this);
+    thickness_ = new ExprField(doc, jig::Dim::len(), this);
+    addRow(tr("Open faces"), count_);
+    form_->addWidget(clear);
+    addRow(tr("Wall thickness"), thickness_);
+    auto* tip = new QLabel(tr("For 3D prints, use at least two nozzle widths (0.8 mm for a 0.4 mm nozzle)."), this);
+    tip->setWordWrap(true);
+    form_->addWidget(tip);
+    connect(clear, &QPushButton::clicked, this, [this] {
+        faces_.clear();
+        refreshFaces();
+    });
+    connect(thickness_, &ExprField::changed, this, [this] { schedulePreview(); });
+    connect(view_.data(), &Viewport::faceClicked, this, [this](const QString& body, const QString& name, Qt::KeyboardModifiers) {
+        toggleFaceByName(body.toStdString(), name.toStdString());
+    });
+    const jig::Feature* edit = editId_.empty() ? nullptr : doc_.feature(editId_);
+    const auto before = stateBefore();
+    if (edit) {
+        thickness_->setText(q(edit->params.value("thickness", std::string("2 mm"))));
+        body_ = edit->params.value("body", std::string {});
+        for (auto& jr : edit->params.value("faces", nlohmann::json::array())) {
+            jig::ShapeRef ref = jig::ShapeRef::fromJson(jr);
+            auto bit = before->bodies.find(ref.body);
+            if (bit != before->bodies.end()) {
+                auto res = jig::resolve(*bit->second, ref);
+                if (res.index >= 0) {
+                    faces_.insert(res.index);
+                    body_ = ref.body;
+                }
+            }
+        }
+    }
+    else {
+        thickness_->setText(remembered().count("shell.thickness") ? remembered()["shell.thickness"] : "2 mm");
+    }
+    if (body_.empty() && !before->bodies.empty()) {
+        body_ = before->bodies.begin()->first;
+    }
+    view_->setPickMode(PickMode::Faces);
+    refreshFaces();
+}
+
+ShellPanel::~ShellPanel()
+{
+    if (view_) {
+        view_->setFaceHighlight({}, {});
+    }
+}
+
+void ShellPanel::toggleFaceByName(const std::string& body, const std::string& name)
+{
+    const auto before = stateBefore();
+    auto bit = before->bodies.find(body);
+    if (bit == before->bodies.end()) {
+        return;
+    }
+    auto hits = bit->second->findFaces(name);
+    if (hits.size() == 1) {
+        toggleFace(body, hits[0]);
+    }
+}
+
+void ShellPanel::toggleFace(const std::string& body, int face)
+{
+    if (!faces_.empty() && body != body_) {
+        status_->setText("<b>✕ " + tr("Pick faces of one body at a time.") + "</b>");
+        return;
+    }
+    body_ = body;
+    if (!faces_.erase(face)) {
+        faces_.insert(face);
+    }
+    refreshFaces();
+}
+
+void ShellPanel::refreshFaces()
+{
+    count_->setText(faces_.empty() ? tr("None: a closed hollow. Click faces to leave them open.")
+                                   : tr("%n face(s) left open", "", int(faces_.size())));
+    schedulePreview();
+}
+
+jig::Feature ShellPanel::draft() const
+{
+    jig::Feature f;
+    if (editId_.empty()) {
+        jig::Model tmp = doc_.model();
+        f.id = jig::Document::newId(tmp, "sh");
+        f.name = tr("Shell %1").arg(q(f.id.substr(2))).toStdString();
+    }
+    else {
+        f = *doc_.feature(editId_);
+    }
+    f.kind = jig::FeatureKind::Shell;
+    nlohmann::json refs = nlohmann::json::array();
+    const auto before = stateBefore();
+    auto bit = before->bodies.find(body_);
+    if (bit != before->bodies.end()) {
+        for (int fi : faces_) {
+            refs.push_back(bit->second->faceRef(body_, fi).toJson());
+        }
+    }
+    f.params = {{"faces", refs},
+                {"thickness", thickness_->text().isEmpty() ? std::string("2 mm") : thickness_->text().toStdString()},
+                {"body", body_}};
+    return f;
+}
+
+QString ShellPanel::title() const
+{
+    return tr("shell");
+}
+
+void ShellPanel::rememberValues()
+{
+    remembered()["shell.thickness"] = thickness_->text();
 }
 
 // ---------------------------------------------------------------- Parameters

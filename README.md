@@ -6,9 +6,9 @@ telemetry, no paywall. Your designs are files on your computer.
 
 ![The phone stand sample in Jigsmith](docs/images/phone_stand_light.png)
 
-| Sketching | Fillet with live preview |
-|---|---|
-| ![Sketch mode](docs/images/sketch_mode.png) | ![Fillet panel](docs/images/fillet_panel.png) |
+| Sketching | Fillet with live preview | Pen cup (shell + chamfer) |
+|---|---|---|
+| ![Sketch mode](docs/images/sketch_mode.png) | ![Fillet panel](docs/images/fillet_panel.png) | ![Pen cup](docs/images/pen_cup.png) |
 
 > **Status: early development (pre-v0.1).** You can sketch, extrude and fillet a part in
 > the app, edit any step later, and export it. Many v0.1 tools (Revolve, Hole, Shell,
@@ -42,8 +42,9 @@ run, build from source; it takes a few minutes.
   points can move, filled squares are fixed. Gaps in an outline are ringed in red.
 - **Extrude** with a live preview: distance or through everything, one side, other side or
   symmetric, and Join / Cut / New body / Intersect, with **Auto** choosing Join or Cut.
-- **Fillet** by clicking edges (tangent chains in one click). A radius that is too big is
-  explained, with a one-click working value.
+- **Fillet** and **Chamfer** by clicking edges (tangent chains in one click), and **Shell**
+  by clicking the faces to leave open. A size that does not fit is explained, with a
+  one-click working value.
 - **Edit any step** later (double-click it in the timeline), rename, suppress, roll back,
   delete with a warning about steps that depend on it; **Parameters** table with units and
   expressions; unlimited undo.

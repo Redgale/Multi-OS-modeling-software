@@ -148,6 +148,7 @@ public:
         return pickMode_;
     }
     void setEdgeHighlight(const std::string& body, std::vector<int> edges);
+    void setFaceHighlight(const std::string& body, std::vector<int> faces);
     // Model colour override for previews; nullopt restores the theme colour.
     void setModelTint(std::optional<QColor> c);
     std::optional<PickResult> pickFaceAt(const QPoint& p)
@@ -177,7 +178,10 @@ public slots:
 signals:
     void hovered(const QString& description);
     void selectionChanged(const QString& bodyId, int faceIndex);
-    void edgeClicked(const QString& bodyId, int edgeIndex, Qt::KeyboardModifiers mods);
+    // Clicks report the persistent name of what is on screen, so tools never have to
+    // guess which version of a body (preview or not) an index belongs to.
+    void edgeClicked(const QString& bodyId, const QString& edgeName, Qt::KeyboardModifiers mods);
+    void faceClicked(const QString& bodyId, const QString& faceName, Qt::KeyboardModifiers mods);
     void meshesUpdated();
 
 protected:
@@ -213,6 +217,8 @@ private:
         QVector3D bmin, bmax;
         std::vector<float> edgeLines;   // CPU copy for edge picking and highlights
         std::vector<uint32_t> segEdge;
+        std::vector<float> positions;   // CPU copy for face highlights
+        std::vector<uint32_t> indices, triFace;
     };
     void uploadOverlay();
     void drawOverlay();
@@ -270,6 +276,8 @@ private:
     std::optional<EdgePick> hoverEdge_;
     std::string hlBody_;
     std::vector<int> hlEdges_;
+    std::string hlFaceBody_;
+    std::vector<int> hlFaces_;
     std::optional<QColor> tint_;
 };
 

@@ -21,6 +21,10 @@ const char* toString(FeatureKind k)
             return "extrude";
         case FeatureKind::Fillet:
             return "fillet";
+        case FeatureKind::Chamfer:
+            return "chamfer";
+        case FeatureKind::Shell:
+            return "shell";
     }
     return "sketch";
 }
@@ -35,6 +39,12 @@ std::optional<FeatureKind> featureKindFromString(std::string_view s)
     }
     if (s == "fillet") {
         return FeatureKind::Fillet;
+    }
+    if (s == "chamfer") {
+        return FeatureKind::Chamfer;
+    }
+    if (s == "shell") {
+        return FeatureKind::Shell;
     }
     return std::nullopt;
 }

@@ -223,6 +223,19 @@ Result<NamedShape> filletEdges(const std::string& featureId,
                                const std::vector<int>& edgeIndices,
                                double radius);
 
+// Equal-distance chamfer (bevel) of resolved edges; failures are diagnosed like fillets.
+Result<NamedShape> chamferEdges(const std::string& featureId,
+                                const NamedShape& body,
+                                const std::vector<int>& edgeIndices,
+                                double distance);
+
+// Hollow the body with walls of `thickness` (inward), removing `openFaces` (may be
+// empty: a closed hollow). Inner walls are named "<feature>/inner:<outer face>".
+Result<NamedShape> shellSolid(const std::string& featureId,
+                              const NamedShape& body,
+                              const std::vector<int>& openFaces,
+                              double thickness);
+
 // True when the point lies strictly inside the solid (used to choose Join or Cut).
 bool pointInside(const TopoDS_Shape& solid, double x, double y, double z);
 

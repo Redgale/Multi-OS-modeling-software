@@ -4,6 +4,7 @@
 // A failing feature returns no state: the document keeps the previous geometry
 // (clean rollback) and marks the step in the timeline.
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <sstream>
 
@@ -321,11 +322,12 @@ FeatureOutcome applyExtrude(const Document& doc, const Feature& f, const std::sh
 
 // ---------------------------------------------------------------- fillet
 
-FeatureOutcome applyFillet(const Document& doc, const Feature& f, const std::shared_ptr<const ModelState>& in)
+FeatureOutcome applyFillet(const Document& doc, const Feature& f, const std::shared_ptr<const ModelState>& in,
+                           bool chamfer = false)
 {
     const auto& p = f.params;
     FeatureStatus status;
-    auto r = doc.evalLength(p.value("radius", std::string("1 mm")));
+    auto r = doc.evalLength(p.value(chamfer ? "distance" : "radius", std::string("1 mm")));
     if (!r) {
         return failed(r.error());
     }
@@ -369,23 +371,26 @@ FeatureOutcome applyFillet(const Document& doc, const Feature& f, const std::sha
     if (missing || ambiguous) {
         std::string msg;
         if (missing) {
-            msg += std::to_string(missing) + " of the edges this fillet rounded no longer exist. ";
+            msg += std::to_string(missing) + (chamfer ? " of the edges this chamfer bevelled no longer exist. "
+                                                      : " of the edges this fillet rounded no longer exist. ");
         }
         if (ambiguous) {
             msg += std::to_string(ambiguous) + " edge" + (ambiguous == 1 ? " was" : "s were")
                  + " split, and Jigsmith can't tell which piece you meant.";
         }
         return failed(msg,
-                      {"Edit the fillet and pick the edges again.",
+                      {chamfer ? "Edit the chamfer and pick the edges again." : "Edit the fillet and pick the edges again.",
                        "Or roll back to the step that changed them."},
                       unresolved);
     }
     std::sort(edges.begin(), edges.end());
     edges.erase(std::unique(edges.begin(), edges.end()), edges.end());
     if (edges.empty()) {
-        return failed("This fillet has no edges.", {"Edit the fillet and pick edges to round."});
+        return failed(chamfer ? "This chamfer has no edges." : "This fillet has no edges.",
+                      {chamfer ? "Edit the chamfer and pick edges to bevel." : "Edit the fillet and pick edges to round."});
     }
-    auto res = filletEdges(f.id, *in->bodies.at(bodyId), edges, r.value());
+    auto res = chamfer ? chamferEdges(f.id, *in->bodies.at(bodyId), edges, r.value())
+                       : filletEdges(f.id, *in->bodies.at(bodyId), edges, r.value());
     if (!res) {
         return failed(res.error());
     }
@@ -393,6 +398,65 @@ FeatureOutcome applyFillet(const Document& doc, const Feature& f, const std::sha
         status.level = StatusLevel::Warning;
         status.message = std::to_string(rebound) + " edge" + (rebound == 1 ? " was" : "s were")
                        + " re-attached by shape similarity after an earlier change. Check the result.";
+    }
+    auto out = copyState(in);
+    out->bodies[bodyId] = std::make_shared<NamedShape>(std::move(res.value()));
+    return {out, status};
+}
+
+// ---------------------------------------------------------------- shell
+
+FeatureOutcome applyShell(const Document& doc, const Feature& f, const std::shared_ptr<const ModelState>& in)
+{
+    const auto& p = f.params;
+    FeatureStatus status;
+    auto t = doc.evalLength(p.value("thickness", std::string("2 mm")));
+    if (!t) {
+        return failed(t.error());
+    }
+    std::string bodyId = p.value("body", std::string {});
+    std::vector<int> faces;
+    int missing = 0, ambiguous = 0, rebound = 0;
+    for (auto& jr : p.value("faces", nlohmann::json::array())) {
+        ShapeRef ref = ShapeRef::fromJson(jr);
+        if (bodyId.empty()) {
+            bodyId = ref.body;
+        }
+        auto bit = in->bodies.find(ref.body);
+        if (bit == in->bodies.end()) {
+            ++missing;
+            continue;
+        }
+        Resolution res = resolve(*bit->second, ref);
+        if (res.status == ResolveStatus::Exact || res.status == ResolveStatus::Rebound) {
+            faces.push_back(res.index);
+            rebound += res.status == ResolveStatus::Rebound;
+        }
+        else if (res.status == ResolveStatus::Ambiguous) {
+            ++ambiguous;
+        }
+        else {
+            ++missing;
+        }
+    }
+    if (missing || ambiguous) {
+        return failed("Some of the faces this shell left open no longer exist or were split.",
+                      {"Edit the shell and pick the open faces again."});
+    }
+    if (bodyId.empty() && in->bodies.size() == 1) {
+        bodyId = in->bodies.begin()->first;
+    }
+    auto bit = in->bodies.find(bodyId);
+    if (bit == in->bodies.end()) {
+        return failed("There is no body to hollow out.", {"Create a solid first, then shell it."});
+    }
+    auto res = shellSolid(f.id, *bit->second, faces, t.value());
+    if (!res) {
+        return failed(res.error());
+    }
+    if (rebound) {
+        status.level = StatusLevel::Warning;
+        status.message = "An open face was re-attached by shape similarity after an earlier change. Check it.";
     }
     auto out = copyState(in);
     out->bodies[bodyId] = std::make_shared<NamedShape>(std::move(res.value()));
@@ -411,6 +475,10 @@ FeatureOutcome applyFeature(const Document& doc, const Feature& f, const std::sh
                 return applyExtrude(doc, f, in);
             case FeatureKind::Fillet:
                 return applyFillet(doc, f, in);
+            case FeatureKind::Chamfer:
+                return applyFillet(doc, f, in, true);
+            case FeatureKind::Shell:
+                return applyShell(doc, f, in);
         }
     }
     catch (const std::exception& ex) {

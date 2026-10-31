@@ -110,6 +110,8 @@ const std::map<QString, QString>& icons()
         {"feature.sketch", "M3 17 L9 11 L21 11 L15 17 Z a M14 3 L18 7 L11 14 L8 15 L9 12 Z"},
         {"feature.extrude", "M3 18 L8 14 L20 14 L15 18 Z f M8 14 L8 7 L20 7 L20 14 Z a M13 12 L13 3 M10 5.5 L13 2.5 L16 5.5"},
         {"feature.fillet", "M4 20 L4 4 L20 4 f M4 20 L12 20 Q20 20 20 12 L20 4 L4 4 Z"},
+        {"feature.chamfer", "M4 4 L20 4 L20 20 L4 20 Z f M12 20 L20 12 L20 20 Z a M12 20 L20 12"},
+        {"feature.shell", "M4 7 L12 3 L20 7 L20 17 L12 21 L4 17 Z f M8 8.5 L12 6.5 L16 8.5 L12 10.5 Z"},
     };
     return m;
 }

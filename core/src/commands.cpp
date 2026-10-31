@@ -119,8 +119,8 @@ CommandRegistry::CommandRegistry()
     add({"solid.pattern_circ", "Ring copy", "Circular Pattern", "CREATE", "Repeat features or bodies around an axis.", "", {"array", "repeat around", "spokes"}, true, false, false, m3});
     add({"solid.presspull", "Press pull", "Press Pull", "MODIFY", "Drag a face to push or pull it; adapts to what you pick.", "Q", {"push", "pull", "drag face"}, false, false, false, m3});
     add({"solid.fillet", "Fillet", "Fillet", "MODIFY", "Round off edges so parts look finished and are comfortable to hold.", "F", {"round the edges", "round", "soften", "radius"}, true, false, true, m3});
-    add({"solid.chamfer", "Chamfer", "Chamfer", "MODIFY", "Cut a flat bevel on edges; great for the bottom of 3D prints.", "", {"bevel", "angled edge", "elephant foot"}, true, false, false, m3});
-    add({"solid.shell", "Shell", "Shell", "MODIFY", "Hollow out a solid, leaving walls of a set thickness.", "", {"hollow", "wall", "empty inside", "cup"}, true, false, false, m3});
+    add({"solid.chamfer", "Chamfer", "Chamfer", "MODIFY", "Cut a flat bevel on edges; great for the bottom of 3D prints.", "", {"bevel", "angled edge", "elephant foot"}, true, false, true, m3});
+    add({"solid.shell", "Shell", "Shell", "MODIFY", "Hollow out a solid, leaving walls of a set thickness.", "", {"hollow", "wall", "empty inside", "cup"}, true, false, true, m3});
     add({"solid.combine", "Combine", "Combine", "MODIFY", "Join, cut or intersect two bodies.", "", {"boolean", "merge", "subtract", "union"}, false, false, false, m4});
     add({"solid.split", "Split body", "Split Body", "MODIFY", "Cut a body into pieces with a plane, e.g. to fit a small printer.", "", {"slice", "cut in half", "divide"}, false, false, false, m4});
     add({"solid.move", "Move / copy", "Move/Copy", "MODIFY", "Move, rotate or copy bodies.", "M", {"translate", "rotate", "position", "duplicate"}, false, false, false, m4});
@@ -145,7 +145,8 @@ CommandRegistry::CommandRegistry()
         "sketch.create", "sketch.finish", "sketch.line", "sketch.rectangle", "sketch.circle", "sketch.point",
         "sketch.dimension", "sketch.construction", "constraint.coincident", "constraint.midpoint", "constraint.fix",
         "constraint.parallel", "constraint.perpendicular", "constraint.horizontal", "constraint.tangent",
-        "constraint.symmetric", "constraint.equal", "solid.extrude", "solid.fillet", "modify.parameters"};
+        "constraint.symmetric", "constraint.equal", "solid.extrude", "solid.fillet", "solid.chamfer", "solid.shell",
+        "modify.parameters"};
     for (auto& c : commands_) {
         if (inApp.count(c.id)) {
             c.available = true;
@@ -799,8 +800,10 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
         }
         return checkFeature(id);
     }
-    if (a.verb == "fillet") {
+    if (a.verb == "fillet" || a.verb == "chamfer") {
         // fillet edges="<sel>;<sel>" radius=2mm [body=e1]
+        // chamfer edges="<sel>;<sel>" distance=1mm [body=e1]
+        const bool isChamfer = a.verb == "chamfer";
         // selectors: all | face:<face name> | feature:<feature id> | name:<edge name>
         const ModelState& st = doc.state();
         std::string bodyId = a.get("body");
@@ -868,20 +871,73 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
             }
         }
         std::string id;
-        auto r = doc.transact("Fillet", [&](Model& m) -> Result<bool> {
+        auto r = doc.transact(isChamfer ? "Chamfer" : "Fillet", [&](Model& m) -> Result<bool> {
             Feature f;
-            f.id = a.get("id", Document::newId(m, "f"));
+            f.id = a.get("id", Document::newId(m, isChamfer ? "c" : "f"));
             if (findFeature(m, f.id)) {
                 return makeError("script.args", "The id '" + f.id + "' is already used.");
             }
-            f.name = a.get("name", "Fillet " + f.id.substr(1));
-            f.kind = FeatureKind::Fillet;
-            f.params["radius"] = a.get("radius", "1 mm");
+            f.name = a.get("name", (isChamfer ? "Chamfer " : "Fillet ") + f.id.substr(1));
+            f.kind = isChamfer ? FeatureKind::Chamfer : FeatureKind::Fillet;
+            if (isChamfer) {
+                f.params["distance"] = a.get("distance", "1 mm");
+            }
+            else {
+                f.params["radius"] = a.get("radius", "1 mm");
+            }
             nlohmann::json refs = nlohmann::json::array();
             for (int e : picked) {
                 refs.push_back(body.edgeRef(bodyId, e).toJson());
             }
             f.params["edges"] = refs;
+            id = f.id;
+            insertFeature(m, std::move(f));
+            return true;
+        });
+        if (!r) {
+            return r;
+        }
+        return checkFeature(id);
+    }
+    if (a.verb == "shell") {
+        // shell faces="face:<name>;face:<name>" thickness=2mm [body=e1]   (faces=none: closed hollow)
+        const ModelState& st = doc.state();
+        std::string bodyId = a.get("body");
+        if (bodyId.empty()) {
+            if (st.bodies.size() != 1) {
+                return makeError("script.args", "Say which body to shell with body=<id>.");
+            }
+            bodyId = st.bodies.begin()->first;
+        }
+        auto bit = st.bodies.find(bodyId);
+        if (bit == st.bodies.end()) {
+            return makeError("script.args", "There is no body called '" + bodyId + "'.");
+        }
+        const NamedShape& body = *bit->second;
+        nlohmann::json refs = nlohmann::json::array();
+        const std::string sel = a.get("faces", "none");
+        if (sel != "none") {
+            for (auto& one : split(sel, ';')) {
+                if (one.rfind("face:", 0) != 0) {
+                    return makeError("script.args", "Shell faces are given as face:<face name>.");
+                }
+                auto hits = body.findFaces(one.substr(5));
+                if (hits.size() != 1) {
+                    return makeError("script.args", "No single face called '" + one.substr(5) + "'.");
+                }
+                refs.push_back(body.faceRef(bodyId, hits[0]).toJson());
+            }
+        }
+        std::string id;
+        auto r = doc.transact("Shell", [&](Model& m) -> Result<bool> {
+            Feature f;
+            f.id = a.get("id", Document::newId(m, "sh"));
+            if (findFeature(m, f.id)) {
+                return makeError("script.args", "The id '" + f.id + "' is already used.");
+            }
+            f.name = a.get("name", "Shell " + f.id.substr(2));
+            f.kind = FeatureKind::Shell;
+            f.params = {{"faces", refs}, {"thickness", a.get("thickness", "2 mm")}, {"body", bodyId}};
             id = f.id;
             insertFeature(m, std::move(f));
             return true;

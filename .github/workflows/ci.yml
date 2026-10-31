@@ -3,9 +3,16 @@
 # on every push and pull request. A red run blocks merging (branch protection).
 name: CI
 
+# Cost control: every push runs the fast Linux checks (audit, build + all tests incl. UI,
+# sanitizers). The full matrix (Windows, both macOS, other distributions, OCCT from source,
+# publishing) runs on pull requests, pushes to main, weekly, on demand (Actions tab ▸ CI ▸
+# Run workflow), and on pushes whose message contains [full ci]. macOS minutes cost about
+# 10x Linux minutes.
 on:
   push:
   pull_request:
+  schedule:
+    - cron: "17 4 * * 1"
   workflow_dispatch:
 
 permissions:
@@ -89,6 +96,7 @@ jobs:
 
   macos:
     name: macOS (${{ matrix.arch }})
+    if: ${{ github.event_name != 'push' || github.ref == 'refs/heads/main' || contains(github.event.head_commit.message, '[full ci]') }}
     strategy:
       fail-fast: false
       matrix:
@@ -123,6 +131,7 @@ jobs:
 
   windows:
     name: Windows (x64)
+    if: ${{ github.event_name != 'push' || github.ref == 'refs/heads/main' || contains(github.event.head_commit.message, '[full ci]') }}
     runs-on: windows-2022
     timeout-minutes: 60
     defaults:
@@ -172,6 +181,7 @@ jobs:
     # scripts/install-deps.sh, so the "build from source" instructions stay true.
     # No JavaScript actions here: they cannot run in musl containers.
     name: Linux ${{ matrix.name }}
+    if: ${{ github.event_name != 'push' || github.ref == 'refs/heads/main' || contains(github.event.head_commit.message, '[full ci]') }}
     runs-on: ubuntu-24.04
     container: ${{ matrix.image }}
     strategy:
@@ -215,6 +225,7 @@ jobs:
   occt-from-source:
     # For distributions without an OCCT package: scripts/build-occt.sh, then Jigsmith.
     name: Linux, OCCT built from source
+    if: ${{ github.event_name != 'push' || github.ref == 'refs/heads/main' || contains(github.event.head_commit.message, '[full ci]') }}
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -242,7 +253,7 @@ jobs:
     # Rolling pre-release with the latest green build for every platform, downloadable
     # without a GitHub account: https://github.com/<owner>/<repo>/releases/tag/continuous
     name: Publish builds (continuous pre-release)
-    if: github.event_name == 'push'
+    if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || contains(github.event.head_commit.message, '[full ci]')) }}
     needs: [linux, macos, windows]
     runs-on: ubuntu-24.04
     permissions:
