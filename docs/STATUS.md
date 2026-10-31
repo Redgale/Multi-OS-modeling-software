@@ -49,24 +49,29 @@ included, also pass under AddressSanitizer + UBSan (leak checking on for the cor
 
 ### CI results (GitHub Actions, branch `claude/pensive-mayer-l4r19c`)
 
-| Job | Result |
-|---|---|
-| License audit | ✓ passed |
-| Linux (Ubuntu 24.04, OCCT 7.6.3): build, tests (UI tests under Xvfb from session 2), bench, GUI screenshot, AppImage | ✓ passed (runs 2 and 5); session-2 run: see below |
-| Linux ASan + UBSan (core) | ✓ passed (runs 1, 2, 5) |
-| macOS 15 Apple silicon (Homebrew, OCCT 7.9.3, Eigen 5): build, 50 tests, bench, .dmg | ✓ passed (run 5), after two portability fixes (Eigen 5 version check; no floating `from_chars` in Apple libc++) |
-| macOS 15 Intel: build, 50 tests, bench, .dmg | ✓ passed (run 5) |
-| Windows 2022 (conda-forge OCCT 8.0.1, Qt 6.8.3, MSVC 14.44): build, 50 tests, bench, portable zip | ✓ passed (run 41146742253). First vcpkg attempt spent 89+ min compiling OCCT and was cancelled; switched to prebuilt conda-forge OCCT (D-013, dependencies install in about 3 min). Two fixes on the way: Boost headers without a CMake package; OCCT 8 removed `Standard_Failure::DynamicType()` |
-| Void Linux glibc and musl, Fedora, Arch (official container images, `scripts/install-deps.sh` only): build + 50 tests | ✓ passed (run 41148659255) |
-| openSUSE Tumbleweed | ✓ passed (run 41148826070) after replacing busybox-gawk in the minimal container |
-| OCCT built from source (`scripts/build-occt.sh`) | first run failed: OCCT's data-exchange toolkits need X11 headers; headers added, re-run pending |
-| **Session 2, later pushes** | **No jobs started: GitHub reported failed account payments / spending limit** (owner action under Billing & plans). CI now runs only the Linux jobs on ordinary pushes; the full matrix runs on PRs, main, weekly and on demand. Everything in this table after session 2's first push was verified locally on Linux only |
-| Publish `continuous` pre-release | builds collected; **release creation refused (HTTP 403)** because the repository limits the workflow token to read-only. Owner action: Settings ▸ Actions ▸ General ▸ Workflow permissions ▸ "Read and write permissions", then re-run the job |
+Latest full run: [run 41161765171](https://github.com/Redgale/Multi-OS-modeling-software/actions/runs/41161765171)
+on commit 31d7fb5 (2026-10-31): **all 13 jobs green**.
 
-Also verified locally: the whole tree builds warning-clean and passes all tests with
-Clang 18 as well as GCC 13.
+| Job | OCCT | Result |
+|---|---|---|
+| License audit | — | ✓ |
+| Linux (Ubuntu 24.04): build, all tests incl. the 11 UI workflow scenarios under Xvfb, bench, GUI screenshot, AppImage | 7.6.3 | ✓ |
+| Linux ASan + UBSan (core), leak checking on (OCCT STEP registries suppressed) | 7.6.3 | ✓ |
+| macOS 15 Apple silicon: build, 78 tests, bench, .dmg | 7.9.x (Homebrew) | ✓ |
+| macOS 15 Intel: build, 78 tests, bench, .dmg | 7.9.x (Homebrew) | ✓ |
+| Windows 2022 (conda-forge, MSVC): build, 78 tests, bench, portable zip | 8.0.x | ✓ |
+| Void Linux glibc and musl, Fedora, Arch, openSUSE Tumbleweed (containers, `scripts/install-deps.sh` only): build + 78 tests | distribution packages | ✓ (5 jobs) |
+| OCCT built from source (`scripts/build-occt.sh`) | source | ✓ |
+| Publish `continuous` pre-release | — | ✓ [AppImage, two .dmg, Windows zip](https://github.com/Redgale/Multi-OS-modeling-software/releases/tag/continuous) |
 
-**All six jobs green in a single run** ([run 41146742253](https://github.com/Redgale/Multi-OS-modeling-software/actions/runs/41146742253)): the same 50 tests pass on OCCT 7.6.3 (Linux), 7.9.3 (macOS) and 8.0.1 (Windows). "macOS and Windows unverified locally; CI result: as above" (brief 8.7). GUI rendering is still verified only on Linux.
+The run before it (41161215933) was the first full run since billing was restored. Every
+job built, and one test failed everywhere except Ubuntu: OCCT 7.9 and 8.0 build a
+self-overlapping solid for an impossible shell (12 mm wall in a 10 mm box) where 7.6
+refuses it, so Jigsmith reported the impossible shell as fine. The shell now checks walls
+itself (commit 31d7fb5), independent of the OCCT version.
+
+GUI rendering is verified only on Linux (Xvfb + Mesa); on macOS and Windows the app is built
+and packaged but its window is not exercised in CI (B-003). Builds are unsigned.
 
 ## What is stubbed or not started
 
@@ -94,10 +99,6 @@ Clang 18 as well as GCC 13.
 - Code of Conduct contact: the owner should add a dedicated contact address.
 
 ## Decisions waiting for the owner
-
-- **GitHub Actions billing**: jobs are refused until the payment / spending limit is fixed.
-
-0. **Allow CI to publish releases**: enable read-and-write workflow permissions (see the CI table) so the `continuous` pre-release can be created.
 
 1. **Trademark**: Jigsmith passed package-registry and web checks, but a formal
    trademark search (USPTO/EUIPO) is a legal decision (D-001).
