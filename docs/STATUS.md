@@ -77,8 +77,15 @@ ounces) is shown in inches. The owner's standing instruction is in `CLAUDE.md`.
 
 ### CI results (GitHub Actions, branch `claude/pensive-mayer-l4r19c`)
 
-Latest full run: [run 41161765171](https://github.com/Redgale/Multi-OS-modeling-software/actions/runs/41161765171)
-on commit 31d7fb5 (2026-10-31): **all 13 jobs green**.
+Latest full run: [run 41175802640](https://github.com/Redgale/Multi-OS-modeling-software/actions/runs/41175802640)
+on commit aec55b3 (2026-10-31): **all 13 jobs green**, including the sketch tools, Press Pull,
+construction axes, hole table and body patterns added since the previous full run. The run
+before it (41174366403, commit 52b3536) was green on every platform except the
+OCCT-from-source job: `libTKFeat` could not find `libTKBool` because RUNPATH does not reach
+libraries' own dependencies; fixed by linking with `--disable-new-dtags` and giving
+`build-occt.sh`'s OCCT an `$ORIGIN` runpath.
+
+Earlier full run: run 41161765171 on commit 31d7fb5, all 13 jobs green.
 
 | Job | OCCT | Result |
 |---|---|---|
