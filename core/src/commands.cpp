@@ -457,7 +457,7 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
     if (doc.units() != LengthUnit::Millimetre) {
         static const std::set<std::string> lengthKeys {
             "w", "h", "d", "r", "width", "height", "distance", "depth", "diameter", "thickness", "radius",
-            "offset", "dx", "dy", "dz", "distance2", "thin", "r", "spacing1", "spacing2", "cbore_diameter", "cbore_depth", "csink_diameter",
+            "offset", "dx", "dy", "dz", "distance2", "thin", "r", "radius", "radius2", "spacing1", "spacing2", "cbore_diameter", "cbore_depth", "csink_diameter",
             "center", "corner", "points", "c1", "c2", "p1", "p2", "at"};
         for (auto& [k, v] : a.kv) {
             if (!lengthKeys.count(k)) {
@@ -1105,6 +1105,14 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
                 refs.push_back(body.edgeRef(bodyId, e).toJson());
             }
             f.params["edges"] = refs;
+            for (const char* key : {"type", "distance2", "angle", "radius2"}) {
+                if (a.has(key)) {
+                    f.params[key] = a.get(key);
+                }
+            }
+            if (a.get("flip", "no") == "yes") {
+                f.params["flip"] = true;
+            }
             id = f.id;
             insertFeature(m, std::move(f));
             return true;

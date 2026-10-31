@@ -336,18 +336,34 @@ Result<NamedShape> booleanOp(const std::string& featureId,
                              const NamedShape& target,
                              const NamedShape& tool);
 
-// Fillet of resolved edges with a constant radius. On failure the Error carries a
-// probable cause and, when one can be found, the largest radius that does work.
+// How an edge is rounded or bevelled beyond a single size.
+struct EdgeOptions
+{
+    enum class Mode
+    {
+        Equal,          // constant radius / equal-distance chamfer
+        TwoDistances,   // chamfer: `size` on one face, `second` on the other
+        DistanceAngle,  // chamfer: `size` on one face, at `second` radians from it
+        Variable        // fillet: `size` at the edge's start, `second` at its end
+    } mode = Mode::Equal;
+    double second = 0;
+    bool flip = false;  // measure the first size on the other face / swap start and end
+};
+
+// Fillet of resolved edges. On failure the Error carries a probable cause and, when one
+// can be found, the largest radius that does work.
 Result<NamedShape> filletEdges(const std::string& featureId,
                                const NamedShape& body,
                                const std::vector<int>& edgeIndices,
-                               double radius);
+                               double radius,
+                               const EdgeOptions& options = {});
 
-// Equal-distance chamfer (bevel) of resolved edges; failures are diagnosed like fillets.
+// Chamfer (bevel) of resolved edges; failures are diagnosed like fillets.
 Result<NamedShape> chamferEdges(const std::string& featureId,
                                 const NamedShape& body,
                                 const std::vector<int>& edgeIndices,
-                                double distance);
+                                double distance,
+                                const EdgeOptions& options = {});
 
 // Hollow the body with walls of `thickness` (inward), removing `openFaces` (may be
 // empty: a closed hollow). Inner walls are named "<feature>/inner:<outer face>".

@@ -253,6 +253,16 @@ private slots:
         }
         ch->radius()->setText("0.5 mm");
         QTRY_VERIFY(ch->previewOk());
+        // the second-size fields appear only for the types that use them
+        QVERIFY(!ch->second()->isVisible());
+        ch->type()->setCurrentIndex(ch->type()->findData("two"));
+        QVERIFY(ch->second()->isVisible());
+        ch->second()->setText("1 mm");
+        QTest::qWait(300);
+        QTRY_VERIFY2(ch->previewOk(), qPrintable(ch->statusText()));
+        ch->type()->setCurrentIndex(ch->type()->findData("equal"));
+        QTest::qWait(300);
+        QTRY_VERIFY(ch->previewOk());
         QVERIFY(ch->accept());
         QTRY_VERIFY(w.featurePanel() == nullptr);
         QVERIFY(volume(w) < shelled);

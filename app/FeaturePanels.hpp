@@ -184,6 +184,18 @@ public:
     {
         return edges_.size();
     }
+    QComboBox* type() const
+    {
+        return type_;
+    }
+    ExprField* second() const
+    {
+        return second_;
+    }
+    ExprField* angle() const
+    {
+        return angle_;
+    }
 
 protected:
     jig::Feature draft() const override;
@@ -192,10 +204,14 @@ protected:
 
 private:
     void refreshEdges();
+    void updateVisibility();
     bool chamfer_ = false;
     std::string body_;
     std::set<int> edges_;
     ExprField* radius_;
+    QComboBox* type_;
+    ExprField *second_, *angle_;
+    QCheckBox* flip_;
     QCheckBox* chain_;
     QLabel* count_;
 };

@@ -1385,21 +1385,38 @@ std::optional<TopoDS_Shape> tryEdgeOp(const TopoDS_Shape& shape,
                                       double r,
                                       bool chamfer,
                                       std::unique_ptr<BRepFilletAPI_LocalOperation>* keep = nullptr,
-                                      std::string* why = nullptr)
+                                      std::string* why = nullptr,
+                                      const EdgeOptions& opt = {},
+                                      const std::vector<TopoDS_Face>& sideFaces = {})
 {
+    using Mode = EdgeOptions::Mode;
     try {
         std::unique_ptr<BRepFilletAPI_LocalOperation> mk;
         if (chamfer) {
             auto c = std::make_unique<BRepFilletAPI_MakeChamfer>(shape);
-            for (auto& e : edges) {
-                c->Add(r, e);
+            for (size_t i = 0; i < edges.size(); ++i) {
+                const auto& e = edges[i];
+                if (opt.mode == Mode::TwoDistances && i < sideFaces.size()) {
+                    c->Add(r, opt.second, e, sideFaces[i]);  // r measured on sideFaces[i]
+                }
+                else if (opt.mode == Mode::DistanceAngle && i < sideFaces.size()) {
+                    c->AddDA(r, opt.second, e, sideFaces[i]);
+                }
+                else {
+                    c->Add(r, e);
+                }
             }
             mk = std::move(c);
         }
         else {
             auto f = std::make_unique<BRepFilletAPI_MakeFillet>(shape);
             for (auto& e : edges) {
-                f->Add(r, e);
+                if (opt.mode == Mode::Variable) {
+                    opt.flip ? f->Add(opt.second, r, e) : f->Add(r, opt.second, e);
+                }
+                else {
+                    f->Add(r, e);
+                }
             }
             mk = std::move(f);
         }
@@ -1436,7 +1453,8 @@ Result<NamedShape> edgeTreatment(const std::string& featureId,
                                  const NamedShape& body,
                                  const std::vector<int>& edgeIndices,
                                  double radius,
-                                 bool chamfer)
+                                 bool chamfer,
+                                 const EdgeOptions& opt = {})
 {
     const std::string what = chamfer ? "chamfer" : "fillet";
     if (edgeIndices.empty()) {
@@ -1446,13 +1464,28 @@ Result<NamedShape> edgeTreatment(const std::string& featureId,
         return makeError(what + ".radius", chamfer ? "The chamfer distance must be larger than zero."
                                                   : "The fillet radius must be larger than zero.");
     }
+    if (opt.mode != EdgeOptions::Mode::Equal && !(opt.second > 1e-9)) {
+        return makeError(what + ".second", opt.mode == EdgeOptions::Mode::DistanceAngle
+                                               ? "The chamfer angle must be larger than zero."
+                                               : "The second size must be larger than zero.");
+    }
+    if (opt.mode == EdgeOptions::Mode::DistanceAngle && opt.second >= std::numbers::pi / 2) {
+        return makeError(what + ".second", "The chamfer angle must be less than 90 degrees.");
+    }
     std::vector<TopoDS_Edge> edges;
+    std::vector<TopoDS_Face> sides;  // the face each first size is measured on
     for (int i : edgeIndices) {
         edges.push_back(TopoDS::Edge(body.edge(i)));
+        // deterministic: the adjacent face whose name sorts first (or last, flipped)
+        std::vector<int> fs = body.facesOfEdge(i);
+        std::sort(fs.begin(), fs.end(), [&](int a, int b) { return body.faceName(a) < body.faceName(b); });
+        if (!fs.empty()) {
+            sides.push_back(TopoDS::Face(body.face(opt.flip ? fs.back() : fs.front())));
+        }
     }
     std::unique_ptr<BRepFilletAPI_LocalOperation> mk;
     std::string why;
-    auto res = tryEdgeOp(body.shape(), edges, radius, chamfer, &mk, &why);
+    auto res = tryEdgeOp(body.shape(), edges, radius, chamfer, &mk, &why, opt, sides);
     if (!res) {
         // Probable cause: the shortest edge next to the selected edges.
         double nearest = 1e300;
@@ -1472,7 +1505,7 @@ Result<NamedShape> edgeTreatment(const std::string& featureId,
         // Find the largest radius that works (bisection, a handful of kernel calls).
         double ok = 0, bad = radius;
         for (double r = radius * 0.5; r > radius / 64; r *= 0.5) {
-            if (tryEdgeOp(body.shape(), edges, r, chamfer)) {
+            if (tryEdgeOp(body.shape(), edges, r, chamfer, nullptr, nullptr, opt, sides)) {
                 ok = r;
                 break;
             }
@@ -1481,7 +1514,7 @@ Result<NamedShape> edgeTreatment(const std::string& featureId,
         if (ok > 0) {
             for (int k = 0; k < 4; ++k) {
                 double mid = 0.5 * (ok + bad);
-                (tryEdgeOp(body.shape(), edges, mid, chamfer) ? ok : bad) = mid;
+                (tryEdgeOp(body.shape(), edges, mid, chamfer, nullptr, nullptr, opt, sides) ? ok : bad) = mid;
             }
         }
         std::vector<std::string> sug;
@@ -1530,17 +1563,19 @@ Result<NamedShape> edgeTreatment(const std::string& featureId,
 Result<NamedShape> filletEdges(const std::string& featureId,
                                const NamedShape& body,
                                const std::vector<int>& edgeIndices,
-                               double radius)
+                               double radius,
+                               const EdgeOptions& options)
 {
-    return edgeTreatment(featureId, body, edgeIndices, radius, false);
+    return edgeTreatment(featureId, body, edgeIndices, radius, false, options);
 }
 
 Result<NamedShape> chamferEdges(const std::string& featureId,
                                 const NamedShape& body,
                                 const std::vector<int>& edgeIndices,
-                                double distance)
+                                double distance,
+                                const EdgeOptions& options)
 {
-    return edgeTreatment(featureId, body, edgeIndices, distance, true);
+    return edgeTreatment(featureId, body, edgeIndices, distance, true, options);
 }
 
 // ---------------------------------------------------------------- shell

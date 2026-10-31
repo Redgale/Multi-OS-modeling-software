@@ -987,8 +987,35 @@ FeatureOutcome applyFillet(const Document& doc, const Feature& f, const std::sha
         return failed(chamfer ? "This chamfer has no edges." : "This fillet has no edges.",
                       {chamfer ? "Edit the chamfer and pick edges to bevel." : "Edit the fillet and pick edges to round."});
     }
-    auto res = chamfer ? chamferEdges(f.id, *in->bodies.at(bodyId), edges, r.value())
-                       : filletEdges(f.id, *in->bodies.at(bodyId), edges, r.value());
+    EdgeOptions opt;
+    opt.flip = p.value("flip", false);
+    const std::string type = p.value("type", std::string("equal"));
+    if (chamfer && type == "two") {
+        opt.mode = EdgeOptions::Mode::TwoDistances;
+        auto d2 = doc.evalLength(p.value("distance2", std::string("1 mm")));
+        if (!d2) {
+            return failed(d2.error());
+        }
+        opt.second = d2.value();
+    }
+    else if (chamfer && type == "angle") {
+        opt.mode = EdgeOptions::Mode::DistanceAngle;
+        auto a = doc.evalAngle(p.value("angle", std::string("45 deg")));
+        if (!a) {
+            return failed(a.error());
+        }
+        opt.second = a.value();
+    }
+    else if (!chamfer && type == "variable") {
+        opt.mode = EdgeOptions::Mode::Variable;
+        auto r2 = doc.evalLength(p.value("radius2", std::string("1 mm")));
+        if (!r2) {
+            return failed(r2.error());
+        }
+        opt.second = r2.value();
+    }
+    auto res = chamfer ? chamferEdges(f.id, *in->bodies.at(bodyId), edges, r.value(), opt)
+                       : filletEdges(f.id, *in->bodies.at(bodyId), edges, r.value(), opt);
     if (!res) {
         return failed(res.error());
     }

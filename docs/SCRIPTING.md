@@ -61,8 +61,8 @@ nothing is committed.
 | Command | Meaning |
 |---|---|
 | `extrude id=e1 sketch=s1 distance=<len> [direction=one\|reverse\|symmetric\|two] [distance2=<len>] [taper=<angle>] [thin=<len> thin_side=center\|inside\|outside] [extent=distance\|all] [op=new\|join\|cut\|intersect] [profiles=all\|<key>;<key>] [target=<body id>]` | Extrude closed areas of a sketch. `extent=all` goes through everything; `direction=two` uses `distance2` for the other side; `taper` narrows the shape (negative widens); `thin` makes a wall along the outline |
-| `fillet id=f1 edges="<selector>;<selector>" radius=<len> [body=<id>]` | Round edges. Selectors: `all`, `face:<face name>` (all edges of that face), `feature:<id>` (edges touching faces made by that feature), `name:<edge name>` |
-| `chamfer id=c1 edges="<selector>;…" distance=<len> [body=<id>]` | Bevel edges (equal distance); same selectors as fillet |
+| `fillet id=f1 edges="<selector>;<selector>" radius=<len> [type=variable radius2=<len> [flip=yes]] [body=<id>]` | Round edges. Selectors: `all`, `face:<face name>` (all edges of that face), `feature:<id>` (edges touching faces made by that feature), `name:<edge name>` |
+| `chamfer id=c1 edges="<selector>;…" distance=<len> [type=equal\|two\|angle] [distance2=<len>] [angle=<angle>] [flip=yes] [body=<id>]` | Bevel edges; same selectors as fillet. `two`: `distance` on one face, `distance2` on the other; `angle`: `distance` at `angle` from the first face; `flip` swaps the faces |
 | `shell id=sh1 faces="face:<name>;…" thickness=<len> [body=<id>]` | Hollow a body leaving walls; the listed faces are removed (left open). `faces=none` makes a closed hollow |
 | `revolve id=r1 sketch=s1 axis=X\|Y\|Z\|line:<name> [angle=<angle>] [op=new\|join\|cut\|intersect] [profiles=…]` | Spin closed areas around an axis (default a full turn). The outline must stay on one side of the axis |
 | `hole id=h1 sketch=s2 diameter=<len> (depth=<len> \| extent=all) [type=simple\|counterbore\|countersink]` | A hole at every free point of the sketch, drilled into the face the sketch sits on. Counterbore: `cbore_diameter= cbore_depth=`; countersink: `csink_diameter= csink_angle=` |

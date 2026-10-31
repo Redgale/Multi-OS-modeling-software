@@ -744,3 +744,27 @@ TEST(SvgImport, ShapesHolesTransformsAndUnits)
         }
     }
 }
+
+TEST(EdgeOptions, ChamferTwoDistancesAngleAndVariableFillet)
+{
+    // one top edge of a 40 x 20 x 10 block, along X: the bevel removes a triangle prism
+    const std::string block = "sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=40 h=20\nextrude id=e1 sketch=s1 distance=10\n";
+    const std::string edge = "name:E[e1/end|e1/side:5]";
+    auto removed = [&](const std::string& line) {
+        auto d = build(block + line + "\n");
+        expectAllOk(*d);
+        return 8000 - props(*d).volume;
+    };
+    EXPECT_NEAR(removed("chamfer id=c1 edges=\"" + edge + "\" distance=2mm"), 0.5 * 2 * 2 * 40, 1e-6);
+    // 2 mm on one face, 4 mm on the other: same triangle area whichever way round
+    const double two = removed("chamfer id=c1 edges=\"" + edge + "\" distance=2mm type=two distance2=4mm");
+    EXPECT_NEAR(two, 0.5 * 2 * 4 * 40, 1e-6);
+    EXPECT_NEAR(removed("chamfer id=c1 edges=\"" + edge + "\" distance=2mm type=two distance2=4mm flip=yes"), two, 1e-6);
+    // 2 mm at 30 degrees: the other leg is 2 tan 30
+    EXPECT_NEAR(removed("chamfer id=c1 edges=\"" + edge + "\" distance=2mm type=angle angle=30deg"),
+                0.5 * 2 * 2 * std::tan(pi / 6) * 40, 1e-6);
+    // variable fillet from 1 mm to 3 mm: removes more than a 1 mm round, less than 3 mm
+    const double v = removed("fillet id=f1 edges=\"" + edge + "\" radius=1mm type=variable radius2=3mm");
+    EXPECT_GT(v, (1 - pi / 4) * 1 * 40);
+    EXPECT_LT(v, (1 - pi / 4) * 9 * 40);
+}

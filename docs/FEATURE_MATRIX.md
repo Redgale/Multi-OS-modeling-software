@@ -112,10 +112,10 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Clearance hole sizes | 16 | v0.1 M3 | — | Hobby tip table |
 | Tapped holes, Thread (modelled/cosmetic) | 16 | v0.2 | — | |
 | Fillet constant | 18 | v0.1 M3 | **app** (edge picking, preview, one-click fix) + scripts | |
-| Fillet variable | 18 | v0.1 M3 | — | |
+| Fillet variable | 18 | v0.1 M3 | **app** + scripts: one radius at each end of an edge | |
 | Fillet chord length, setback corners, G2 | 18 | v0.2 | — | |
 | Tangent chain selection | 18, 23 | v0.1 M3 | **app** | |
-| Chamfer: equal, two distances, distance+angle | 18 | v0.1 M3 | **app**: equal distance; two distances / angle not yet | |
+| Chamfer: equal, two distances, distance+angle | 18 | v0.1 M3 | **app** + scripts: all three | |
 | Shell (inside/outside, openings) | 18 | v0.1 M3 | **app**: inside, openings or closed hollow; outside not yet | |
 | Draft | 18 | v0.2 | — | |
 | Scale | 17, 18 | v0.2 | — | |

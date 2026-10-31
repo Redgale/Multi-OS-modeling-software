@@ -45,6 +45,120 @@ const QColor kPreviewTint(132, 176, 238);
 
 }  // namespace
 
+// ---------------------------------------------------------------- shared helpers
+
+namespace
+{
+
+QLabel* heading(QWidget* parent, const QString& title, const QString& text)
+{
+    auto* l = new QLabel("<h3>" + title + "</h3><p>" + text + "</p>", parent);
+    l->setWordWrap(true);
+    return l;
+}
+
+QComboBox* combo(QWidget* parent, const std::vector<std::pair<QString, QString>>& items)
+{
+    auto* c = new QComboBox(parent);
+    for (auto& [label, data] : items) {
+        c->addItem(label, data);
+    }
+    return c;
+}
+
+void select(QComboBox* c, const std::string& data)
+{
+    const int i = c->findData(q(data));
+    if (i >= 0) {
+        c->setCurrentIndex(i);
+    }
+}
+
+std::string current(const QComboBox* c)
+{
+    return c->currentData().toString().toStdString();
+}
+
+std::string text(const ExprField* f, const char* fallback)
+{
+    return f->text().isEmpty() ? std::string(fallback) : f->text().toStdString();
+}
+
+// Sketches before the insertion point.
+void fillSketches(QComboBox* c, const jig::Document& doc, int limit, const jig::ModelState& before)
+{
+    for (int i = 0; i < limit; ++i) {
+        const auto& f = doc.model().features[size_t(i)];
+        if (f.kind == jig::FeatureKind::Sketch && before.sketches.count(f.id)) {
+            c->addItem(q(f.name), q(f.id));
+        }
+    }
+}
+
+void fillProfileList(QListWidget* list, const jig::SketchState* sk, const nlohmann::json& chosen,
+                     jig::LengthUnit units = jig::LengthUnit::Millimetre)
+{
+    list->blockSignals(true);
+    list->clear();
+    if (sk) {
+        std::set<std::string> keys;
+        if (chosen.is_array()) {
+            for (auto& k : chosen) {
+                keys.insert(k.get<std::string>());
+            }
+        }
+        int n = 1;
+        for (auto& r : sk->profiles.regions) {
+            auto* item = new QListWidgetItem(QObject::tr("Area %1 · %2").arg(n++).arg(q(jig::formatArea(r.area, units))), list);
+            item->setData(Qt::UserRole, q(r.key));
+            item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+            item->setCheckState(keys.empty() || keys.count(r.key) ? Qt::Checked : Qt::Unchecked);
+        }
+        if (sk->profiles.regions.empty()) {
+            new QListWidgetItem(QObject::tr("(no closed areas: the outline has a gap)"), list);
+        }
+    }
+    list->blockSignals(false);
+}
+
+nlohmann::json chosenProfiles(const QListWidget* list)
+{
+    nlohmann::json keys = nlohmann::json::array();
+    bool all = true;
+    for (int i = 0; i < list->count(); ++i) {
+        auto* it = list->item(i);
+        if (it->data(Qt::UserRole).toString().isEmpty()) {
+            continue;
+        }
+        if (it->checkState() == Qt::Checked) {
+            keys.push_back(it->data(Qt::UserRole).toString().toStdString());
+        }
+        else {
+            all = false;
+        }
+    }
+    return all ? nlohmann::json("all") : keys;
+}
+
+// A new feature's id and name, or the edited feature.
+jig::Feature startDraft(const jig::Document& doc, const std::string& editId, const std::string& prefix,
+                        const QString& word)
+{
+    if (!editId.empty()) {
+        return *doc.feature(editId);
+    }
+    jig::Feature f;
+    jig::Model tmp = doc.model();
+    f.id = jig::Document::newId(tmp, prefix);
+    f.name = QString("%1 %2").arg(word, q(f.id.substr(prefix.size()))).toStdString();
+    return f;
+}
+
+const std::vector<std::pair<QString, QString>> kAxes {
+    {QObject::tr("Z axis (up)"), "Z"}, {QObject::tr("X axis"), "X"}, {QObject::tr("Y axis"), "Y"}};
+
+}  // namespace
+
 // ---------------------------------------------------------------- ExprField
 
 ExprField::ExprField(jig::Document& doc, jig::Dim dim, QWidget* parent)
@@ -575,12 +689,31 @@ FilletPanel::FilletPanel(jig::Document& doc, Viewport* view, std::string editId,
     addRow(tr("Edges"), count_);
     form_->addWidget(chain_);
     form_->addWidget(clear);
+    type_ = chamfer ? combo(this, {{tr("Equal distance"), "equal"}, {tr("Two distances"), "two"}, {tr("Distance and angle"), "angle"}})
+                    : combo(this, {{tr("Constant radius"), "equal"}, {tr("Variable: one radius at each end"), "variable"}});
+    second_ = new ExprField(doc, jig::Dim::len(), this);
+    angle_ = new ExprField(doc, jig::Dim::ang(), this);
+    flip_ = new QCheckBox(chamfer ? tr("Swap the two sides") : tr("Swap the start and end"), this);
+    addRow(tr("Type"), type_);
     addRow(chamfer ? tr("Distance") : tr("Radius"), radius_);
+    addRow(chamfer ? tr("Second distance") : tr("Radius at the other end"), second_);
+    addRow(tr("Angle from the first face"), angle_);
+    form_->addWidget(flip_);
     connect(clear, &QPushButton::clicked, this, [this] {
         edges_.clear();
         refreshEdges();
     });
     connect(radius_, &ExprField::changed, this, [this] { schedulePreview(); });
+    for (auto* e : {second_, angle_}) {
+        connect(e, &ExprField::changed, this, [this] { schedulePreview(); });
+    }
+    connect(type_, &QComboBox::currentIndexChanged, this, [this] {
+        updateVisibility();
+        schedulePreview();
+    });
+    connect(flip_, &QCheckBox::toggled, this, [this] { schedulePreview(); });
+    second_->setText(q(doc_.defaultLength(chamfer ? 2 : 4, chamfer ? 0.0625 : 0.125)));
+    angle_->setText("45 deg");
     connect(view_.data(), &Viewport::edgeClicked, this, [this](const QString& body, const QString& name, Qt::KeyboardModifiers) {
         toggleEdgeByName(body.toStdString(), name.toStdString());
     });
@@ -588,6 +721,14 @@ FilletPanel::FilletPanel(jig::Document& doc, Viewport* view, std::string editId,
     const jig::Feature* edit = editId_.empty() ? nullptr : doc_.feature(editId_);
     if (edit) {
         radius_->setText(q(edit->params.value(chamfer ? "distance" : "radius", std::string("1 mm"))));
+        select(type_, edit->params.value("type", std::string("equal")));
+        if (edit->params.contains(chamfer ? "distance2" : "radius2")) {
+            second_->setText(q(edit->params.value(chamfer ? "distance2" : "radius2", std::string {})));
+        }
+        if (edit->params.contains("angle")) {
+            angle_->setText(q(edit->params.value("angle", std::string("45 deg"))));
+        }
+        flip_->setChecked(edit->params.value("flip", false));
         const auto before = stateBefore();
         for (auto& jr : edit->params.value("edges", nlohmann::json::array())) {
             jig::ShapeRef ref = jig::ShapeRef::fromJson(jr);
@@ -608,7 +749,25 @@ FilletPanel::FilletPanel(jig::Document& doc, Viewport* view, std::string editId,
                                                  : (chamfer ? q(doc_.defaultLength(1, 0.03125)) : q(doc_.defaultLength(2, 0.0625))));
     }
     view_->setPickMode(PickMode::Edges);
+    updateVisibility();
     refreshEdges();
+}
+
+void FilletPanel::updateVisibility()
+{
+    const std::string t = current(type_);
+    auto show = [this](QWidget* w, bool on) {
+        w->setVisible(on);
+        const int i = form_->indexOf(w);
+        if (i > 0) {
+            if (auto* item = form_->itemAt(i - 1); item && item->widget()) {
+                item->widget()->setVisible(on);
+            }
+        }
+    };
+    show(second_, t == "two" || t == "variable");
+    show(angle_, t == "angle");
+    flip_->setVisible(t != "equal");
 }
 
 FilletPanel::~FilletPanel()
@@ -705,6 +864,19 @@ jig::Feature FilletPanel::draft() const
     }
     f.params = {{"edges", refs},
                 {chamfer_ ? "distance" : "radius", radius_->text().isEmpty() ? std::string("1 mm") : radius_->text().toStdString()}};
+    const std::string t = current(type_);
+    if (t != "equal") {
+        f.params["type"] = t;
+        if (flip_->isChecked()) {
+            f.params["flip"] = true;
+        }
+    }
+    if (t == "two" || t == "variable") {
+        f.params[chamfer_ ? "distance2" : "radius2"] = second_->text().toStdString();
+    }
+    if (t == "angle") {
+        f.params["angle"] = angle_->text().toStdString();
+    }
     return f;
 }
 
@@ -849,119 +1021,6 @@ void ShellPanel::rememberValues()
     remembered()["shell.thickness"] = thickness_->text();
 }
 
-// ---------------------------------------------------------------- shared helpers
-
-namespace
-{
-
-QLabel* heading(QWidget* parent, const QString& title, const QString& text)
-{
-    auto* l = new QLabel("<h3>" + title + "</h3><p>" + text + "</p>", parent);
-    l->setWordWrap(true);
-    return l;
-}
-
-QComboBox* combo(QWidget* parent, const std::vector<std::pair<QString, QString>>& items)
-{
-    auto* c = new QComboBox(parent);
-    for (auto& [label, data] : items) {
-        c->addItem(label, data);
-    }
-    return c;
-}
-
-void select(QComboBox* c, const std::string& data)
-{
-    const int i = c->findData(q(data));
-    if (i >= 0) {
-        c->setCurrentIndex(i);
-    }
-}
-
-std::string current(const QComboBox* c)
-{
-    return c->currentData().toString().toStdString();
-}
-
-std::string text(const ExprField* f, const char* fallback)
-{
-    return f->text().isEmpty() ? std::string(fallback) : f->text().toStdString();
-}
-
-// Sketches before the insertion point.
-void fillSketches(QComboBox* c, const jig::Document& doc, int limit, const jig::ModelState& before)
-{
-    for (int i = 0; i < limit; ++i) {
-        const auto& f = doc.model().features[size_t(i)];
-        if (f.kind == jig::FeatureKind::Sketch && before.sketches.count(f.id)) {
-            c->addItem(q(f.name), q(f.id));
-        }
-    }
-}
-
-void fillProfileList(QListWidget* list, const jig::SketchState* sk, const nlohmann::json& chosen,
-                     jig::LengthUnit units = jig::LengthUnit::Millimetre)
-{
-    list->blockSignals(true);
-    list->clear();
-    if (sk) {
-        std::set<std::string> keys;
-        if (chosen.is_array()) {
-            for (auto& k : chosen) {
-                keys.insert(k.get<std::string>());
-            }
-        }
-        int n = 1;
-        for (auto& r : sk->profiles.regions) {
-            auto* item = new QListWidgetItem(QObject::tr("Area %1 · %2").arg(n++).arg(q(jig::formatArea(r.area, units))), list);
-            item->setData(Qt::UserRole, q(r.key));
-            item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
-            item->setCheckState(keys.empty() || keys.count(r.key) ? Qt::Checked : Qt::Unchecked);
-        }
-        if (sk->profiles.regions.empty()) {
-            new QListWidgetItem(QObject::tr("(no closed areas: the outline has a gap)"), list);
-        }
-    }
-    list->blockSignals(false);
-}
-
-nlohmann::json chosenProfiles(const QListWidget* list)
-{
-    nlohmann::json keys = nlohmann::json::array();
-    bool all = true;
-    for (int i = 0; i < list->count(); ++i) {
-        auto* it = list->item(i);
-        if (it->data(Qt::UserRole).toString().isEmpty()) {
-            continue;
-        }
-        if (it->checkState() == Qt::Checked) {
-            keys.push_back(it->data(Qt::UserRole).toString().toStdString());
-        }
-        else {
-            all = false;
-        }
-    }
-    return all ? nlohmann::json("all") : keys;
-}
-
-// A new feature's id and name, or the edited feature.
-jig::Feature startDraft(const jig::Document& doc, const std::string& editId, const std::string& prefix,
-                        const QString& word)
-{
-    if (!editId.empty()) {
-        return *doc.feature(editId);
-    }
-    jig::Feature f;
-    jig::Model tmp = doc.model();
-    f.id = jig::Document::newId(tmp, prefix);
-    f.name = QString("%1 %2").arg(word, q(f.id.substr(prefix.size()))).toStdString();
-    return f;
-}
-
-const std::vector<std::pair<QString, QString>> kAxes {
-    {QObject::tr("Z axis (up)"), "Z"}, {QObject::tr("X axis"), "X"}, {QObject::tr("Y axis"), "Y"}};
-
-}  // namespace
 
 // ---------------------------------------------------------------- Revolve
 
