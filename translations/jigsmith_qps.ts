@@ -876,14 +876,389 @@
 <context>
     <name>Core</name>
     <message>
-        <location filename="../app/core_strings.h" line="+4" />
+        <location filename="../app/core_strings.h" line="+6" />
         <source>Start an empty design with the origin planes ready to sketch on.</source>
         <translation>[Stárt áñ émptý désîgñ wîth thé örîgîñ pláñés réádý tö skétçh öñ.~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <location line="+1" />
+        <source>Open a Jigsmith design (.jig) from your computer.</source>
+        <translation>[Öpéñ á Jîgsmîth désîgñ (.jîg) fröm ýöür çömpütér.~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Save your design to a .jig file on your computer.</source>
+        <translation>[Sávé ýöür désîgñ tö á .jîg fîlé öñ ýöür çömpütér.~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Save a copy under a new name, e.g. for a size variant.</source>
+        <translation>[Sávé á çöpý üñdér á ñéw ñámé, é.g. för á sîzé várîáñt.~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Keep a named snapshot of this design inside its file.</source>
+        <translation>[Kéép á ñáméd sñápshöt öf thîs désîgñ îñsîdé îts fîlé.~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>See the snapshots saved in this file and restore one.</source>
+        <translation>[Séé thé sñápshöts sávéd îñ thîs fîlé áñd réstöré öñé.~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Save a triangle mesh for your 3D-printer slicer.</source>
+        <translation>[Sávé á trîáñglé mésh för ýöür 3D-prîñtér slîçér.~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Save an exact solid that other CAD programs can open.</source>
+        <translation>[Sávé áñ éxáçt sölîd thát öthér ÇÁD prögráms çáñ öpéñ.~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Save a modern print file that remembers units.</source>
+        <translation>[Sávé á mödérñ prîñt fîlé thát rémémbérs üñîts.~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Take back the last change. Nothing is ever lost: you can redo it.</source>
+        <translation>[Táké báçk thé lást çháñgé. Ñöthîñg îs évér löst: ýöü çáñ rédö ît.~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Bring back a change you undid.</source>
+        <translation>[Brîñg báçk á çháñgé ýöü üñdîd.~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Type what you want to do and pick the tool.</source>
+        <translation>[Týpé whát ýöü wáñt tö dö áñd pîçk thé tööl.~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Zoom so the whole design fits on screen. Use it whenever you feel lost.</source>
+        <translation>[Zööm sö thé whölé désîgñ fîts öñ sçrééñ. Üsé ît whéñévér ýöü féél löst.~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Return to the default angled view.</source>
+        <translation>[Rétürñ tö thé défáült áñgléd vîéw.~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Switch between a natural view and a measured, parallel view.</source>
+        <translation>[Swîtçh bétwééñ á ñátürál vîéw áñd á méásüréd, párállél vîéw.~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Start a flat drawing on a plane or flat face. Most parts start here.</source>
+        <translation>[Stárt á flát dráwîñg öñ á pláñé ör flát fáçé. Möst párts stárt héré.~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Leave the sketch and go back to 3D tools.</source>
+        <translation>[Léávé thé skétçh áñd gö báçk tö 3D tööls.~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Draw straight lines; keep clicking to chain them.</source>
+        <translation>[Dráw stráîght lîñés; kéép çlîçkîñg tö çháîñ thém.~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Draw a rectangle from corner to corner or from its center.</source>
+        <translation>[Dráw á réçtáñglé fröm çörñér tö çörñér ör fröm îts çéñtér.~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Draw a circle from its center and diameter.</source>
+        <translation>[Dráw á çîrçlé fröm îts çéñtér áñd dîámétér.~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Draw part of a circle from its center, start and end.</source>
+        <translation>[Dráw párt öf á çîrçlé fröm îts çéñtér, stárt áñd éñd.~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Draw an arc through its two ends and one point on it.</source>
+        <translation>[Dráw áñ árç thröügh îts twö éñds áñd öñé pöîñt öñ ît.~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Continue from the end of a line or arc with an arc that leaves it smoothly.</source>
+        <translation>[Çöñtîñüé fröm thé éñd öf á lîñé ör árç wîth áñ árç thát léávés ît smööthlý.~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Draw a circle across its diameter by clicking both ends.</source>
+        <translation>[Dráw á çîrçlé áçröss îts dîámétér bý çlîçkîñg böth éñds.~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Draw a circle through three points.</source>
+        <translation>[Dráw á çîrçlé thröügh thréé pöîñts.~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Draw a rectangle at any angle: one side, then its depth.</source>
+        <translation>[Dráw á réçtáñglé át áñý áñglé: öñé sîdé, théñ îts dépth.~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Draw a shape with equal sides, like a hex nut.</source>
+        <translation>[Dráw á shápé wîth éqüál sîdés, lîké á héx ñüt.~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Draw an oval from its center and two axes.</source>
+        <translation>[Dráw áñ övál fröm îts çéñtér áñd twö áxés.~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Draw a rounded-end slot, ideal for adjustable screws.</source>
+        <translation>[Dráw á röüñdéd-éñd slöt, îdéál för ádjüstáblé sçréws.~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Draw a smooth curve through the points you click.</source>
+        <translation>[Dráw á smööth çürvé thröügh thé pöîñts ýöü çlîçk.~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Place a reference point, e.g. for a hole center.</source>
+        <translation>[Pláçé á référéñçé pöîñt, é.g. för á hölé çéñtér.~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Add lettering you can extrude or cut, e.g. a name plate.</source>
+        <translation>[Ádd léttérîñg ýöü çáñ éxtrüdé ör çüt, é.g. á ñámé pláté.~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Copy the selected sketch curves across a line; the copies stay mirrored.</source>
+        <translation>[Çöpý thé séléçtéd skétçh çürvés áçröss á lîñé; thé çöpîés stáý mîrröréd.~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Repeat the selected sketch curves in rows and columns.</source>
+        <translation>[Répéát thé séléçtéd skétçh çürvés îñ röws áñd çölümñs.~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Repeat the selected sketch curves around a center, e.g. a bolt circle.</source>
+        <translation>[Répéát thé séléçtéd skétçh çürvés áröüñd á çéñtér, é.g. á bölt çîrçlé.~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Bring edges of a body into this sketch as fixed references.</source>
+        <translation>[Brîñg édgés öf á bödý îñtö thîs skétçh ás fîxéd référéñçés.~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Set an exact size: click a line, circle or two items, then type.</source>
+        <translation>[Sét áñ éxáçt sîzé: çlîçk á lîñé, çîrçlé ör twö îtéms, théñ týpé.~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Delete the piece of a curve between its nearest crossings.</source>
+        <translation>[Délété thé pîéçé öf á çürvé bétwééñ îts ñéárést çrössîñgs.~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Lengthen a line or arc until it meets the next curve.</source>
+        <translation>[Léñgthéñ á lîñé ör árç üñtîl ît mééts thé ñéxt çürvé.~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Split a curve where other curves cross it.</source>
+        <translation>[Splît á çürvé whéré öthér çürvés çröss ît.~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Make a parallel copy at a set distance, e.g. a wall or clearance.</source>
+        <translation>[Máké á párállél çöpý át á sét dîstáñçé, é.g. á wáll ör çléáráñçé.~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Round a sharp corner between two sketch curves.</source>
+        <translation>[Röüñd á shárp çörñér bétwééñ twö skétçh çürvés.~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Move the selected sketch curves, or copy them (hold Ctrl).</source>
+        <translation>[Mövé thé séléçtéd skétçh çürvés, ör çöpý thém (höld Çtrl).~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Turn a curve into a guide that is ignored when extruding.</source>
+        <translation>[Türñ á çürvé îñtö á güîdé thát îs îgñöréd whéñ éxtrüdîñg.~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Push a closed sketch area into 3D, adding or cutting material.</source>
+        <translation>[Püsh á çlöséd skétçh áréá îñtö 3D, áddîñg ör çüttîñg mátérîál.~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Spin a profile around an axis, like a lathe: knobs, cups, wheels.</source>
+        <translation>[Spîñ á pröfîlé áröüñd áñ áxîs, lîké á láthé: kñöbs, çüps, whééls.~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Drill a plain, counterbored or countersunk hole for a screw.</source>
+        <translation>[Drîll á pláîñ, çöüñtérböréd ör çöüñtérsüñk hölé för á sçréw.~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Copy a body across a plane, e.g. to make a symmetric part.</source>
+        <translation>[Çöpý á bödý áçröss á pláñé, é.g. tö máké á sýmmétrîç párt.~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Repeat a feature in rows and columns.</source>
+        <translation>[Répéát á féátüré îñ röws áñd çölümñs.~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Repeat a feature around an axis.</source>
+        <translation>[Répéát á féátüré áröüñd áñ áxîs.~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Push or pull a flat face by a distance; on a rounded edge or hole it opens the step that made it.</source>
+        <translation>[Püsh ör püll á flát fáçé bý á dîstáñçé; öñ á röüñdéd édgé ör hölé ît öpéñs thé stép thát mádé ît.~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Round off edges so parts look finished and are comfortable to hold.</source>
+        <translation>[Röüñd öff édgés sö párts löök fîñîshéd áñd áré çömförtáblé tö höld.~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Cut a flat bevel on edges; great for the bottom of 3D prints.</source>
+        <translation>[Çüt á flát bévél öñ édgés; gréát för thé böttöm öf 3D prîñts.~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Hollow out a solid, leaving walls of a set thickness.</source>
+        <translation>[Höllöw öüt á sölîd, léávîñg wálls öf á sét thîçkñéss.~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Join, cut or intersect two bodies.</source>
+        <translation>[Jöîñ, çüt ör îñtérséçt twö bödîés.~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Cut a body into pieces with a plane, e.g. to fit a small printer.</source>
+        <translation>[Çüt á bödý îñtö pîéçés wîth á pláñé, é.g. tö fît á smáll prîñtér.~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Move, rotate or copy bodies.</source>
+        <translation>[Mövé, rötáté ör çöpý bödîés.~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>A plane parallel to a face or plane at a set distance.</source>
+        <translation>[Á pláñé párállél tö á fáçé ör pláñé át á sét dîstáñçé.~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>A plane tilted around an edge or axis.</source>
+        <translation>[Á pláñé tîltéd áröüñd áñ édgé ör áxîs.~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>A plane halfway between two faces or planes.</source>
+        <translation>[Á pláñé hálfwáý bétwééñ twö fáçés ör pláñés.~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>A reference axis for revolves, patterns and turning bodies: along an edge, through a hole or where two planes meet.</source>
+        <translation>[Á référéñçé áxîs för révölvés, páttérñs áñd türñîñg bödîés: álöñg áñ édgé, thröügh á hölé ör whéré twö pláñés méét.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>A reference point: typed coordinates, the end or centre of an edge, or the centre of a face.</source>
+        <translation>[Á référéñçé pöîñt: týpéd çöördîñátés, thé éñd ör çéñtré öf áñ édgé, ör thé çéñtré öf á fáçé.~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Read distances, angles, lengths and areas.</source>
+        <translation>[Réád dîstáñçés, áñglés, léñgths áñd áréás.~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Slice the view to look inside walls and holes.</source>
+        <translation>[Slîçé thé vîéw tö löök îñsîdé wálls áñd hölés.~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Volume, area, weight and center of mass of a body.</source>
+        <translation>[Völümé, áréá, wéîght áñd çéñtér öf máss öf á bödý.~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Bring in a solid from another CAD program.</source>
+        <translation>[Brîñg îñ á sölîd fröm áñöthér ÇÁD prögrám.~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Bring vector artwork into a sketch, e.g. a logo.</source>
+        <translation>[Brîñg véçtör ártwörk îñtö á skétçh, é.g. á lögö.~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Bring a 2D drawing or laser-cut file into a sketch.</source>
+        <translation>[Brîñg á 2D dráwîñg ör lásér-çüt fîlé îñtö á skétçh.~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Name sizes like width or wall and use them in any field.</source>
+        <translation>[Ñámé sîzés lîké wîdth ör wáll áñd üsé thém îñ áñý fîéld.~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>A guided tour that builds your first part with you.</source>
+        <translation>[Á güîdéd töür thát büîlds ýöür fîrst párt wîth ýöü.~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
         <source>A closing quote (") is missing.</source>
         <translation>[Á çlösîñg qüöté (") îs mîssîñg.~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Use letters, digits and _, starting with a letter, e.g. wall_t.</source>
+        <translation>[Üsé léttérs, dîgîts áñd _, stártîñg wîth á léttér, é.g. wáll_t.~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>A polyline needs at least two points.</source>
+        <translation>[Á pölýlîñé ñééds át léást twö pöîñts.~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Slot needs c1=x,y c2=x,y width=w with valid values.</source>
+        <translation>[Slöt ñééds ç1=x,ý ç2=x,ý wîdth=w wîth válîd válüés.~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The two slot centers must be different points.</source>
+        <translation>[Thé twö slöt çéñtérs müst bé dîfféréñt pöîñts.~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Arc needs center=x,y r=&lt;len&gt; from=&lt;angle&gt; to=&lt;angle&gt; with valid values.</source>
+        <translation>[Árç ñééds çéñtér=x,ý r=&lt;len&gt; fröm=&lt;angle&gt; tö=&lt;angle&gt; wîth válîd válüés.~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Text needs center=x,y height=&lt;len&gt; text="…" with valid values.</source>
+        <translation>[Téxt ñééds çéñtér=x,ý héîght=&lt;len&gt; téxt="…" wîth válîd válüés.~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <location line="+1" />
@@ -909,6 +1284,86 @@
         <location line="+1" />
         <source>There is no curve near that point to trim.</source>
         <translation>[Théré îs ñö çürvé ñéár thát pöîñt tö trîm.~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>A closed smooth curve needs at least 3 points.</source>
+        <translation>[Á çlöséd smööth çürvé ñééds át léást 3 pöîñts.~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>A smooth curve needs at least 2 points.</source>
+        <translation>[Á smööth çürvé ñééds át léást 2 pöîñts.~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Ellipse needs center=x,y a=&lt;len&gt; b=&lt;len&gt; with valid values.</source>
+        <translation>[Éllîpsé ñééds çéñtér=x,ý á=&lt;len&gt; b=&lt;len&gt; wîth válîd válüés.~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Both radii of an ellipse must be larger than zero.</source>
+        <translation>[Böth rádîî öf áñ éllîpsé müst bé lárgér tháñ zérö.~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Polygon needs center=x,y d=&lt;len&gt; with valid values.</source>
+        <translation>[Pölýgöñ ñééds çéñtér=x,ý d=&lt;len&gt; wîth válîd válüés.~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>A polygon needs 3 to 64 sides.</source>
+        <translation>[Á pölýgöñ ñééds 3 tö 64 sîdés.~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Say which body to fillet with body=&lt;id&gt;.</source>
+        <translation>[Sáý whîçh bödý tö fîllét wîth bödý=&lt;id&gt;.~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Say which body to shell with body=&lt;id&gt;.</source>
+        <translation>[Sáý whîçh bödý tö shéll wîth bödý=&lt;id&gt;.~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Shell faces are given as face:&lt;face name&gt;.</source>
+        <translation>[Shéll fáçés áré gîvéñ ás fáçé:&lt;face name&gt;.~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>A point's at= needs three coordinates, like at=10,0,5.</source>
+        <translation>[Á pöîñt's át= ñééds thréé çöördîñátés, lîké át=10,0,5.~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Unknown step in reorder.</source>
+        <translation>[Üñkñöwñ stép îñ réördér.~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>There is nothing more to undo.</source>
+        <translation>[Théré îs ñöthîñg möré tö üñdö.~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>There is nothing more to redo.</source>
+        <translation>[Théré îs ñöthîñg möré tö rédö.~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Say which body to measure with body=&lt;id&gt;.</source>
+        <translation>[Sáý whîçh bödý tö méásüré wîth bödý=&lt;id&gt;.~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Use face:&lt;name&gt; or edge:&lt;name&gt;; the faces command lists face names.</source>
+        <translation>[Üsé fáçé:&lt;name&gt; ör édgé:&lt;name&gt;; thé fáçés çömmáñd lîsts fáçé ñámés.~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>See docs/SCRIPTING.md for the list of script commands.</source>
+        <translation>[Séé döçs/SÇRÎPTÎÑG.md för thé lîst öf sçrîpt çömmáñds.~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <location line="+1" />
@@ -1029,6 +1484,21 @@
         <location line="+1" />
         <source>Create it in the Parameters table, or check the spelling.</source>
         <translation>[Çréáté ît îñ thé Párámétérs táblé, ör çhéçk thé spéllîñg.~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Try a value like 45 deg.</source>
+        <translation>[Trý á válüé lîké 45 dég.~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Try a value like 20 mm or 2 in.</source>
+        <translation>[Trý á válüé lîké 20 mm ör 2 îñ.~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The expression does not give a finite number.</source>
+        <translation>[Thé éxpréssîöñ döés ñöt gîvé á fîñîté ñümbér.~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <location line="+1" />
@@ -1192,8 +1662,18 @@
     </message>
     <message>
         <location line="+1" />
+        <source>The face this sketch sits on was split, and Jigsmith can't tell which piece you meant.</source>
+        <translation>[Thé fáçé thîs skétçh sîts öñ wás splît, áñd Jîgsmîth çáñ't téll whîçh pîéçé ýöü méáñt.~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
         <source>Edit the sketch and pick the face again.</source>
         <translation>[Édît thé skétçh áñd pîçk thé fáçé ágáîñ.~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The original face changed; the sketch was re-attached to the most similar face. Check it is the right one.</source>
+        <translation>[Thé örîgîñál fáçé çháñgéd; thé skétçh wás ré-áttáçhéd tö thé möst sîmîlár fáçé. Çhéçk ît îs thé rîght öñé.~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <location line="+1" />
@@ -1217,6 +1697,11 @@
     </message>
     <message>
         <location line="+1" />
+        <source>1 line end is not connected.</source>
+        <translation>[1 lîñé éñd îs ñöt çöññéçtéd.~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
         <source>Turn on 'Show gaps' to highlight open ends.</source>
         <translation>[Türñ öñ 'Shöw gáps' tö hîghlîght öpéñ éñds.~~~~~~~~~~~]</translation>
     </message>
@@ -1229,6 +1714,16 @@
         <location line="+1" />
         <source>Turn on 'Show gaps' in the sketch.</source>
         <translation>[Türñ öñ 'Shöw gáps' îñ thé skétçh.~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>There is no body to cut yet.</source>
+        <translation>[Théré îs ñö bödý tö çüt ýét.~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>There is no body to intersect yet.</source>
+        <translation>[Théré îs ñö bödý tö îñtérséçt ýét.~~~~~~~~~]</translation>
     </message>
     <message>
         <location line="+1" />
@@ -1357,6 +1852,266 @@
     </message>
     <message>
         <location line="+1" />
+        <source>The axis line of this revolve is gone from the sketch.</source>
+        <translation>[Thé áxîs lîñé öf thîs révölvé îs göñé fröm thé skétçh.~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Edit the revolve and pick an axis again.</source>
+        <translation>[Édît thé révölvé áñd pîçk áñ áxîs ágáîñ.~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The axis line has no length.</source>
+        <translation>[Thé áxîs lîñé hás ñö léñgth.~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Revolve can only turn up to a plane or flat face that the axis lies in.</source>
+        <translation>[Révölvé çáñ öñlý türñ üp tö á pláñé ör flát fáçé thát thé áxîs lîés îñ.~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Pick a face or plane through the axis, or type an angle.</source>
+        <translation>[Pîçk á fáçé ör pláñé thröügh thé áxîs, ör týpé áñ áñglé.~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The profile sits on the axis, so there is no way to tell where it starts turning.</source>
+        <translation>[Thé pröfîlé sîts öñ thé áxîs, sö théré îs ñö wáý tö téll whéré ît stárts türñîñg.~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>This revolve has an unknown operation.</source>
+        <translation>[Thîs révölvé hás áñ üñkñöwñ öpérátîöñ.~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The hole sketch has no points to put holes at.</source>
+        <translation>[Thé hölé skétçh hás ñö pöîñts tö püt hölés át.~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Add a Point in the sketch where each hole should go.</source>
+        <translation>[Ádd á Pöîñt îñ thé skétçh whéré éáçh hölé shöüld gö.~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The hole fit must be close, normal or loose.</source>
+        <translation>[Thé hölé fît müst bé çlösé, ñörmál ör löösé.~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Edit the pattern and pick a body.</source>
+        <translation>[Édît thé páttérñ áñd pîçk á bödý.~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Pattern an Extrude, Revolve or Hole that comes earlier in the timeline, or a body.</source>
+        <translation>[Páttérñ áñ Éxtrüdé, Révölvé ör Hölé thát çömés éárlîér îñ thé tîmélîñé, ör á bödý.~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The number of copies must be a whole number from 2 to 1000.</source>
+        <translation>[Thé ñümbér öf çöpîés müst bé á whölé ñümbér fröm 2 tö 1000.~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The number of copies in each direction must be a whole number from 1 to 1000.</source>
+        <translation>[Thé ñümbér öf çöpîés îñ éáçh dîréçtîöñ müst bé á whölé ñümbér fröm 1 tö 1000.~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>This pattern makes no copies.</source>
+        <translation>[Thîs páttérñ mákés ñö çöpîés.~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Use a count of 2 or more.</source>
+        <translation>[Üsé á çöüñt öf 2 ör möré.~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The body the pattern should change no longer exists.</source>
+        <translation>[Thé bödý thé páttérñ shöüld çháñgé ñö löñgér éxîsts.~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Some copies do not touch the others, so they cannot be joined into one body.</source>
+        <translation>[Sömé çöpîés dö ñöt töüçh thé öthérs, sö théý çáññöt bé jöîñéd îñtö öñé bödý.~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Make them new bodies instead.</source>
+        <translation>[Máké thém ñéw bödîés îñstéád.~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Use a smaller spacing.</source>
+        <translation>[Üsé á smállér spáçîñg.~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Some copies do not touch the body, so they cannot be joined.</source>
+        <translation>[Sömé çöpîés dö ñöt töüçh thé bödý, sö théý çáññöt bé jöîñéd.~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Use fewer copies or a smaller spacing.</source>
+        <translation>[Üsé féwér çöpîés ör á smállér spáçîñg.~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Check the pattern axis or directions.</source>
+        <translation>[Çhéçk thé páttérñ áxîs ör dîréçtîöñs.~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Mirror an Extrude, Revolve or Hole that comes earlier in the timeline.</source>
+        <translation>[Mîrrör áñ Éxtrüdé, Révölvé ör Hölé thát çömés éárlîér îñ thé tîmélîñé.~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The body the mirrored step should change no longer exists.</source>
+        <translation>[Thé bödý thé mîrröréd stép shöüld çháñgé ñö löñgér éxîsts.~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The mirrored copy does not touch the body, so it cannot be joined.</source>
+        <translation>[Thé mîrröréd çöpý döés ñöt töüçh thé bödý, sö ît çáññöt bé jöîñéd.~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Check the mirror plane.</source>
+        <translation>[Çhéçk thé mîrrör pláñé.~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>There is no body to mirror.</source>
+        <translation>[Théré îs ñö bödý tö mîrrör.~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Edit the mirror and choose a body.</source>
+        <translation>[Édît thé mîrrör áñd çhöösé á bödý.~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The mirrored copy does not touch the original, so they cannot be joined.</source>
+        <translation>[Thé mîrröréd çöpý döés ñöt töüçh thé örîgîñál, sö théý çáññöt bé jöîñéd.~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Mirror as a new body instead.</source>
+        <translation>[Mîrrör ás á ñéw bödý îñstéád.~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Model the half so it meets the mirror plane.</source>
+        <translation>[Mödél thé hálf sö ît mééts thé mîrrör pláñé.~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>A fillet can round edges of one body at a time.</source>
+        <translation>[Á fîllét çáñ röüñd édgés öf öñé bödý át á tîmé.~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Split this into one fillet per body.</source>
+        <translation>[Splît thîs îñtö öñé fîllét pér bödý.~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>1 edge was split, and Jigsmith can't tell which piece you meant.</source>
+        <translation>[1 édgé wás splît, áñd Jîgsmîth çáñ't téll whîçh pîéçé ýöü méáñt.~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Edit the chamfer and pick the edges again.</source>
+        <translation>[Édît thé çhámfér áñd pîçk thé édgés ágáîñ.~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Edit the fillet and pick the edges again.</source>
+        <translation>[Édît thé fîllét áñd pîçk thé édgés ágáîñ.~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Or roll back to the step that changed them.</source>
+        <translation>[Ör röll báçk tö thé stép thát çháñgéd thém.~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>This chamfer has no edges.</source>
+        <translation>[Thîs çhámfér hás ñö édgés.~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>This fillet has no edges.</source>
+        <translation>[Thîs fîllét hás ñö édgés.~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Edit the chamfer and pick edges to bevel.</source>
+        <translation>[Édît thé çhámfér áñd pîçk édgés tö bévél.~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Edit the fillet and pick edges to round.</source>
+        <translation>[Édît thé fîllét áñd pîçk édgés tö röüñd.~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>1 edge was re-attached by shape similarity after an earlier change. Check the result.</source>
+        <translation>[1 édgé wás ré-áttáçhéd bý shápé sîmîlárîtý áftér áñ éárlîér çháñgé. Çhéçk thé résült.~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Some of the faces this shell left open no longer exist or were split.</source>
+        <translation>[Sömé öf thé fáçés thîs shéll léft öpéñ ñö löñgér éxîst ör wéré splît.~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Edit the shell and pick the open faces again.</source>
+        <translation>[Édît thé shéll áñd pîçk thé öpéñ fáçés ágáîñ.~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>There is no body to hollow out.</source>
+        <translation>[Théré îs ñö bödý tö höllöw öüt.~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Create a solid first, then shell it.</source>
+        <translation>[Çréáté á sölîd fîrst, théñ shéll ît.~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>An open face was re-attached by shape similarity after an earlier change. Check it.</source>
+        <translation>[Áñ öpéñ fáçé wás ré-áttáçhéd bý shápé sîmîlárîtý áftér áñ éárlîér çháñgé. Çhéçk ît.~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Something went wrong in this step, so it was skipped.</source>
+        <translation>[Söméthîñg wéñt wröñg îñ thîs stép, sö ît wás skîppéd.~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Undo the last change.</source>
+        <translation>[Üñdö thé lást çháñgé.~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Please report this as a bug.</source>
+        <translation>[Pléásé répört thîs ás á büg.~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Unknown feature type.</source>
+        <translation>[Üñkñöwñ féátüré týpé.~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
         <source>This file is not a Jigsmith design, or it is damaged.</source>
         <translation>[Thîs fîlé îs ñöt á Jîgsmîth désîgñ, ör ît îs dámágéd.~~~~~~~~~~~~~]</translation>
     </message>
@@ -1402,11 +2157,346 @@
     </message>
     <message>
         <location line="+1" />
-        <source>Jigsmith design.</source>
-        <translation>[Jîgsmîth désîgñ.~~~~]</translation>
+        <source>This file could not be opened. It may be damaged or not a Jigsmith design.</source>
+        <translation>[Thîs fîlé çöüld ñöt bé öpéñéd. Ît máý bé dámágéd ör ñöt á Jîgsmîth désîgñ.~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+122" />
+        <source>Pick an edge to project.</source>
+        <translation>[Pîçk áñ édgé tö pröjéçt.~~~~~~]</translation>
     </message>
     <message>
         <location line="+1" />
+        <source>This edge points straight at the sketch, so it projects to a point.</source>
+        <translation>[Thîs édgé pöîñts stráîght át thé skétçh, sö ît pröjéçts tö á pöîñt.~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>This round edge is tilted to the sketch, so it would project to an ellipse, which sketches cannot hold yet.</source>
+        <translation>[Thîs röüñd édgé îs tîltéd tö thé skétçh, sö ît wöüld pröjéçt tö áñ éllîpsé, whîçh skétçhés çáññöt höld ýét.~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Project it in a sketch parallel to the edge's face.</source>
+        <translation>[Pröjéçt ît îñ á skétçh párállél tö thé édgé's fáçé.~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Only straight and round edges can be projected yet.</source>
+        <translation>[Öñlý stráîght áñd röüñd édgés çáñ bé pröjéçtéd ýét.~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>A wall along open curves needs a thickness.</source>
+        <translation>[Á wáll álöñg öpéñ çürvés ñééds á thîçkñéss.~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The wall is thicker than an arc is round.</source>
+        <translation>[Thé wáll îs thîçkér tháñ áñ árç îs röüñd.~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Use a thinner wall or a bigger arc.</source>
+        <translation>[Üsé á thîññér wáll ör á bîggér árç.~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>A wall along these curves could not be built.</source>
+        <translation>[Á wáll álöñg thésé çürvés çöüld ñöt bé büîlt.~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>A wall of this thickness does not fit along these curves.</source>
+        <translation>[Á wáll öf thîs thîçkñéss döés ñöt fît álöñg thésé çürvés.~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>This sketch has no open curves to build a wall along.</source>
+        <translation>[Thîs skétçh hás ñö öpéñ çürvés tö büîld á wáll álöñg.~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Draw a line or a chain of lines that does not close.</source>
+        <translation>[Dráw á lîñé ör á çháîñ öf lîñés thát döés ñöt çlösé.~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>This is not an SVG file.</source>
+        <translation>[Thîs îs ñöt áñ SVG fîlé.~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>This SVG has no filled shapes to bring in.</source>
+        <translation>[Thîs SVG hás ñö fîlléd shápés tö brîñg îñ.~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Text must be converted to paths first (in Inkscape: Path ▸ Object to Path).</source>
+        <translation>[Téxt müst bé çöñvértéd tö páths fîrst (îñ Îñksçápé: Páth ▸ Öbjéçt tö Páth).~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The shapes in this SVG have no size.</source>
+        <translation>[Thé shápés îñ thîs SVG hávé ñö sîzé.~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>This SVG file is damaged and could not be read.</source>
+        <translation>[Thîs SVG fîlé îs dámágéd áñd çöüld ñöt bé réád.~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>This artwork could not be turned into shapes.</source>
+        <translation>[Thîs ártwörk çöüld ñöt bé türñéd îñtö shápés.~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The text engine could not start.</source>
+        <translation>[Thé téxt éñgîñé çöüld ñöt stárt.~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The built-in font could not be loaded.</source>
+        <translation>[Thé büîlt-îñ föñt çöüld ñöt bé löádéd.~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>This text could not be turned into shapes.</source>
+        <translation>[Thîs téxt çöüld ñöt bé türñéd îñtö shápés.~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Try another font.</source>
+        <translation>[Trý áñöthér föñt.~~~~]</translation>
+    </message>
+    <message>
+        <location line="+5" />
+        <source>There is no parameter called '%1'.</source>
+        <translation>[Théré îs ñö párámétér çálléd '%1'.~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Parameter '%1' depends on itself.</source>
+        <translation>[Párámétér '%1' dépéñds öñ îtsélf.~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>“%1” uses “%2”, so it must stay after it.</source>
+        <translation>[“%1” üsés “%2”, sö ît müst stáý áftér ît.~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Move it to a place after “%1”.</source>
+        <translation>[Mövé ît tö á pláçé áftér “%1”.~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>“%1” uses “%2”, so “%2” must stay before it.</source>
+        <translation>[“%1” üsés “%2”, sö “%2” müst stáý béföré ît.~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Move it to a place before “%1”.</source>
+        <translation>[Mövé ît tö á pláçé béföré “%1”.~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Moving “%1” there would stop %2 from working.</source>
+        <translation>[Mövîñg “%1” théré wöüld stöp %2 fröm wörkîñg.~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Open curves, used as a wall by %1.</source>
+        <translation>[Öpéñ çürvés, üséd ás á wáll bý %1.~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>This design uses a feature this version of Jigsmith doesn't know (%1).</source>
+        <translation>[Thîs désîgñ üsés á féátüré thîs vérsîöñ öf Jîgsmîth döésñ't kñöw (%1).~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The plane '%1' is missing or comes later in the timeline.</source>
+        <translation>[Thé pláñé '%1' îs mîssîñg ör çömés látér îñ thé tîmélîñé.~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The axis '%1' does not exist (or comes later in the timeline).</source>
+        <translation>[Thé áxîs '%1' döés ñöt éxîst (ör çömés látér îñ thé tîmélîñé).~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The point '%1' does not exist (or comes later in the timeline).</source>
+        <translation>[Thé pöîñt '%1' döés ñöt éxîst (ör çömés látér îñ thé tîmélîñé).~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>An axis can run along a straight edge or through a round edge or face (a hole, a cylinder); this %1 has no axis.</source>
+        <translation>[Áñ áxîs çáñ rüñ álöñg á stráîght édgé ör thröügh á röüñd édgé ör fáçé (á hölé, á çýlîñdér); thîs %1 hás ñö áxîs.~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Only a circle or an arc has a centre; this is a %1.</source>
+        <translation>[Öñlý á çîrçlé ör áñ árç hás á çéñtré; thîs îs á %1.~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>A point on an edge sits at its start, end, middle or centre, not at '%1'.</source>
+        <translation>[Á pöîñt öñ áñ édgé sîts át îts stárt, éñd, mîddlé ör çéñtré, ñöt át '%1'.~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>%1 line ends are not connected.</source>
+        <translation>[%1 lîñé éñds áré ñöt çöññéçtéd.~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The smallest gap is %1: drag those ends together to close it.</source>
+        <translation>[Thé smállést gáp îs %1: drág thösé éñds tögéthér tö çlösé ît.~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The sketch's closed area changed shape; the %1 now uses its only closed area. Check the result.</source>
+        <translation>[Thé skétçh's çlöséd áréá çháñgéd shápé; thé %1 ñöw üsés îts öñlý çlöséd áréá. Çhéçk thé résült.~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Some of the closed areas this %1 used are gone from the sketch.</source>
+        <translation>[Sömé öf thé çlöséd áréás thîs %1 üséd áré göñé fröm thé skétçh.~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Edit the %1 and pick the areas again.</source>
+        <translation>[Édît thé %1 áñd pîçk thé áréás ágáîñ.~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The sketch has no closed area to %1.</source>
+        <translation>[Thé skétçh hás ñö çlöséd áréá tö %1.~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The sketch this %1 uses (%2) is missing or has a problem.</source>
+        <translation>[Thé skétçh thîs %1 üsés (%2) îs mîssîñg ör hás á pröblém.~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Edit this %1 and pick another sketch.</source>
+        <translation>[Édît thîs %1 áñd pîçk áñöthér skétçh.~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The body this pattern repeats (%1) no longer exists.</source>
+        <translation>[Thé bödý thîs páttérñ répéáts (%1) ñö löñgér éxîsts.~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The step this pattern repeats (%1) is missing, after the pattern, or has a problem.</source>
+        <translation>[Thé stép thîs páttérñ répéáts (%1) îs mîssîñg, áftér thé páttérñ, ör hás á pröblém.~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The step this mirror copies (%1) is missing, after the mirror, or has a problem.</source>
+        <translation>[Thé stép thîs mîrrör çöpîés (%1) îs mîssîñg, áftér thé mîrrör, ör hás á pröblém.~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>%1 of the edges this chamfer bevelled no longer exist.</source>
+        <translation>[%1 öf thé édgés thîs çhámfér bévélléd ñö löñgér éxîst.~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>%1 of the edges this fillet rounded no longer exist.</source>
+        <translation>[%1 öf thé édgés thîs fîllét röüñdéd ñö löñgér éxîst.~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>%1 edges were split, and Jigsmith can't tell which piece you meant.</source>
+        <translation>[%1 édgés wéré splît, áñd Jîgsmîth çáñ't téll whîçh pîéçé ýöü méáñt.~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>%1 edges were re-attached by shape similarity after an earlier change. Check the result.</source>
+        <translation>[%1 édgés wéré ré-áttáçhéd bý shápé sîmîlárîtý áftér áñ éárlîér çháñgé. Çhéçk thé résült.~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>A wall of %1 does not fit this outline.</source>
+        <translation>[Á wáll öf %1 döés ñöt fît thîs öütlîñé.~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Try %1 or less.</source>
+        <translation>[Trý %1 ör léss.~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>A %1 chamfer is too big here: the neighbouring face is only %2 across.</source>
+        <translation>[Á %1 çhámfér îs töö bîg héré: thé ñéîghböürîñg fáçé îs öñlý %2 áçröss.~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>A %1 fillet is too big here: the neighbouring face is only %2 across.</source>
+        <translation>[Á %1 fîllét îs töö bîg héré: thé ñéîghböürîñg fáçé îs öñlý %2 áçröss.~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The bevels for a %1 chamfer could not be joined where these edges meet.</source>
+        <translation>[Thé bévéls för á %1 çhámfér çöüld ñöt bé jöîñéd whéré thésé édgés méét.~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The rounded surfaces for a %1 fillet could not be joined where these edges meet.</source>
+        <translation>[Thé röüñdéd sürfáçés för á %1 fîllét çöüld ñöt bé jöîñéd whéré thésé édgés méét.~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>A %1 wall does not fit inside this shape.</source>
+        <translation>[Á %1 wáll döés ñöt fît îñsîdé thîs shápé.~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>A %1 wall does not fit inside this shape: some part of it is thinner than twice the wall.</source>
+        <translation>[Á %1 wáll döés ñöt fît îñsîdé thîs shápé: sömé párt öf ît îs thîññér tháñ twîçé thé wáll.~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>There is no screw size called '%1' in the clearance table.</source>
+        <translation>[Théré îs ñö sçréw sîzé çálléd '%1' îñ thé çléáráñçé táblé.~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>A %1 round does not fit this corner.</source>
+        <translation>[Á %1 röüñd döés ñöt fît thîs çörñér.~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>A dimension must be larger than zero (got %1).</source>
+        <translation>[Á dîméñsîöñ müst bé lárgér tháñ zérö (göt %1).~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>%1 degrees of freedom left: some geometry can still move.</source>
+        <translation>[%1 dégréés öf fréédöm léft: sömé géömétrý çáñ stîll mövé.~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>An offset of %1 inward is bigger than the radius.</source>
+        <translation>[Áñ öffsét öf %1 îñwárd îs bîggér tháñ thé rádîüs.~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The font file %1 could not be read; using the built-in font (Inter).</source>
+        <translation>[Thé föñt fîlé %1 çöüld ñöt bé réád; üsîñg thé büîlt-îñ föñt (Îñtér).~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The font '%1' is not available here; using the built-in font (Inter).</source>
+        <translation>[Thé föñt '%1' îs ñöt áváîláblé héré; üsîñg thé büîlt-îñ föñt (Îñtér).~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="-191" />
         <source>There is nothing to export yet.</source>
         <translation>[Théré îs ñöthîñg tö éxpört ýét.~~~~~~~~]</translation>
     </message>
@@ -1414,6 +2504,301 @@
         <location line="+1" />
         <source>The 3MF file could not be created.</source>
         <translation>[Thé 3MF fîlé çöüld ñöt bé çréátéd.~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The file could not be written.</source>
+        <translation>[Thé fîlé çöüld ñöt bé wrîttéñ.~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The file could not be written (the disk may be full).</source>
+        <translation>[Thé fîlé çöüld ñöt bé wrîttéñ (thé dîsk máý bé füll).~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>A sketch can only be placed on a flat face.</source>
+        <translation>[Á skétçh çáñ öñlý bé pláçéd öñ á flát fáçé.~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>That face is curved. A sketch needs a flat face or a plane.</source>
+        <translation>[Thát fáçé îs çürvéd. Á skétçh ñééds á flát fáçé ör á pláñé.~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Pick a flat face, or create a tangent construction plane first.</source>
+        <translation>[Pîçk á flát fáçé, ör çréáté á táñgéñt çöñstrüçtîöñ pláñé fîrst.~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The sketch curves could not be split into regions.</source>
+        <translation>[Thé skétçh çürvés çöüld ñöt bé splît îñtö régîöñs.~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The sketch shape could not be processed.</source>
+        <translation>[Thé skétçh shápé çöüld ñöt bé pröçésséd.~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Pick at least one closed area (profile) to extrude.</source>
+        <translation>[Pîçk át léást öñé çlöséd áréá (pröfîlé) tö éxtrüdé.~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The extrude distance must be larger than zero.</source>
+        <translation>[Thé éxtrüdé dîstáñçé müst bé lárgér tháñ zérö.~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Type a distance such as 10 mm, or drag the arrow.</source>
+        <translation>[Týpé á dîstáñçé süçh ás 10 mm, ör drág thé árröw.~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The second distance must not be negative.</source>
+        <translation>[Thé séçöñd dîstáñçé müst ñöt bé ñégátîvé.~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The taper angle must be between -89 and 89 degrees.</source>
+        <translation>[Thé tápér áñglé müst bé bétwééñ -89 áñd 89 dégréés.~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Use a thinner wall, or put it outside the outline.</source>
+        <translation>[Üsé á thîññér wáll, ör püt ît öütsîdé thé öütlîñé.~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>This taper is too steep for this shape and distance.</source>
+        <translation>[Thîs tápér îs töö stéép för thîs shápé áñd dîstáñçé.~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Use a smaller angle or a shorter distance.</source>
+        <translation>[Üsé á smállér áñglé ör á shörtér dîstáñçé.~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>This profile could not be extruded.</source>
+        <translation>[Thîs pröfîlé çöüld ñöt bé éxtrüdéd.~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Pick at least one closed area (profile) to revolve.</source>
+        <translation>[Pîçk át léást öñé çlöséd áréá (pröfîlé) tö révölvé.~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The revolve angle must not be zero.</source>
+        <translation>[Thé révölvé áñglé müst ñöt bé zérö.~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The outline crosses the revolve axis, so it would sweep through itself.</source>
+        <translation>[Thé öütlîñé çrössés thé révölvé áxîs, sö ît wöüld swéép thröügh îtsélf.~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Keep the whole outline on one side of the axis line.</source>
+        <translation>[Kéép thé whölé öütlîñé öñ öñé sîdé öf thé áxîs lîñé.~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Draw the axis exactly along the edge of the profile, not through it.</source>
+        <translation>[Dráw thé áxîs éxáçtlý álöñg thé édgé öf thé pröfîlé, ñöt thröügh ît.~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>This profile could not be revolved.</source>
+        <translation>[Thîs pröfîlé çöüld ñöt bé révölvéd.~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Place at least one point in the sketch to mark where the hole goes.</source>
+        <translation>[Pláçé át léást öñé pöîñt îñ thé skétçh tö márk whéré thé hölé göés.~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Add a Point in the sketch at each hole centre.</source>
+        <translation>[Ádd á Pöîñt îñ thé skétçh át éáçh hölé çéñtré.~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The hole diameter must be larger than zero.</source>
+        <translation>[Thé hölé dîámétér müst bé lárgér tháñ zérö.~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The hole depth must be larger than zero.</source>
+        <translation>[Thé hölé dépth müst bé lárgér tháñ zérö.~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The counterbore must be wider than the hole and shallower than it.</source>
+        <translation>[Thé çöüñtérböré müst bé wîdér tháñ thé hölé áñd shállöwér tháñ ît.~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>A drill point angle must be between 30 and 170 degrees (118° is usual).</source>
+        <translation>[Á drîll pöîñt áñglé müst bé bétwééñ 30 áñd 170 dégréés (118° îs üsüál).~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The countersink must be wider than the hole, with an angle between 6 and 170 degrees.</source>
+        <translation>[Thé çöüñtérsîñk müst bé wîdér tháñ thé hölé, wîth áñ áñglé bétwééñ 6 áñd 170 dégréés.~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The hole could not be made.</source>
+        <translation>[Thé hölé çöüld ñöt bé mádé.~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The new shape could not be combined with the body.</source>
+        <translation>[Thé ñéw shápé çöüld ñöt bé çömbîñéd wîth thé bödý.~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Check that the shapes overlap or touch properly.</source>
+        <translation>[Çhéçk thát thé shápés övérláp ör töüçh pröpérlý.~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Try a slightly different size so faces don't exactly coincide.</source>
+        <translation>[Trý á slîghtlý dîfféréñt sîzé sö fáçés döñ't éxáçtlý çöîñçîdé.~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>This cut would remove the whole body.</source>
+        <translation>[Thîs çüt wöüld rémövé thé whölé bödý.~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>These shapes do not overlap, so nothing is left.</source>
+        <translation>[Thésé shápés dö ñöt övérláp, sö ñöthîñg îs léft.~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Check the distance and direction.</source>
+        <translation>[Çhéçk thé dîstáñçé áñd dîréçtîöñ.~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The new shape does not touch the body, so it cannot be joined.</source>
+        <translation>[Thé ñéw shápé döés ñöt töüçh thé bödý, sö ît çáññöt bé jöîñéd.~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Use 'New body' if you want a separate part.</source>
+        <translation>[Üsé 'Ñéw bödý' îf ýöü wáñt á sépáráté párt.~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Change the distance or sketch position so the shapes touch.</source>
+        <translation>[Çháñgé thé dîstáñçé ör skétçh pösîtîöñ sö thé shápés töüçh.~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Combining the shapes gave a damaged result, so it was not applied.</source>
+        <translation>[Çömbîñîñg thé shápés gávé á dámágéd résült, sö ît wás ñöt ápplîéd.~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Pick at least one edge to bevel.</source>
+        <translation>[Pîçk át léást öñé édgé tö bévél.~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Pick at least one edge to round.</source>
+        <translation>[Pîçk át léást öñé édgé tö röüñd.~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The chamfer distance must be larger than zero.</source>
+        <translation>[Thé çhámfér dîstáñçé müst bé lárgér tháñ zérö.~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The fillet radius must be larger than zero.</source>
+        <translation>[Thé fîllét rádîüs müst bé lárgér tháñ zérö.~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The chamfer angle must be larger than zero.</source>
+        <translation>[Thé çhámfér áñglé müst bé lárgér tháñ zérö.~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The second size must be larger than zero.</source>
+        <translation>[Thé séçöñd sîzé müst bé lárgér tháñ zérö.~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The chamfer angle must be less than 90 degrees.</source>
+        <translation>[Thé çhámfér áñglé müst bé léss tháñ 90 dégréés.~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Bevel fewer edges at once, or chamfer the longer edges first.</source>
+        <translation>[Bévél féwér édgés át öñçé, ör çhámfér thé löñgér édgés fîrst.~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Round fewer edges at once, or fillet the larger edges first.</source>
+        <translation>[Röüñd féwér édgés át öñçé, ör fîllét thé lárgér édgés fîrst.~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The wall thickness must be larger than zero.</source>
+        <translation>[Thé wáll thîçkñéss müst bé lárgér tháñ zérö.~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Try a thinner wall.</source>
+        <translation>[Trý á thîññér wáll.~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Add fillets to sharp inside corners first, or remove a different face.</source>
+        <translation>[Ádd fîlléts tö shárp îñsîdé çörñérs fîrst, ör rémövé á dîfféréñt fáçé.~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The distance between these two could not be measured.</source>
+        <translation>[Thé dîstáñçé bétwééñ thésé twö çöüld ñöt bé méásüréd.~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The STL file could not be created.</source>
+        <translation>[Thé STL fîlé çöüld ñöt bé çréátéd.~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The STEP file could not be created.</source>
+        <translation>[Thé STÉP fîlé çöüld ñöt bé çréátéd.~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>This STEP file could not be read. It may be damaged.</source>
+        <translation>[Thîs STÉP fîlé çöüld ñöt bé réád. Ît máý bé dámágéd.~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>This STEP file has no shapes Jigsmith can use.</source>
+        <translation>[Thîs STÉP fîlé hás ñö shápés Jîgsmîth çáñ üsé.~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The cut could not be worked out for this shape.</source>
+        <translation>[Thé çüt çöüld ñöt bé wörkéd öüt för thîs shápé.~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Use M2 to M12, or #4, #6, #8, #10, 1/4", 5/16", 3/8", 1/2".</source>
+        <translation>[Üsé M2 tö M12, ör #4, #6, #8, #10, 1/4", 5/16", 3/8", 1/2".~~~]</translation>
     </message>
     <message>
         <location line="+1" />
@@ -1552,8 +2937,53 @@
     </message>
     <message>
         <location line="+1" />
+        <source>Some constraints contradict each other. Remove one of the highlighted constraints, or turn a dimension into a reference (driven) dimension.</source>
+        <translation>[Sömé çöñstráîñts çöñtrádîçt éáçh öthér. Rémövé öñé öf thé hîghlîghtéd çöñstráîñts, ör türñ á dîméñsîöñ îñtö á référéñçé (drîvéñ) dîméñsîöñ.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Some constraints say the same thing twice. Remove one of the highlighted constraints.</source>
+        <translation>[Sömé çöñstráîñts sáý thé sámé thîñg twîçé. Rémövé öñé öf thé hîghlîghtéd çöñstráîñts.~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>These constraints can't all be met with this geometry. Undo the last change, or drag the geometry closer to the shape you want first.</source>
+        <translation>[Thésé çöñstráîñts çáñ't áll bé mét wîth thîs géömétrý. Üñdö thé lást çháñgé, ör drág thé géömétrý çlösér tö thé shápé ýöü wáñt fîrst.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
         <source>Fully defined: nothing can move.</source>
         <translation>[Füllý défîñéd: ñöthîñg çáñ mövé.~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>1 degree of freedom left: some geometry can still move.</source>
+        <translation>[1 dégréé öf fréédöm léft: sömé géömétrý çáñ stîll mövé.~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The file contains an unknown sketch shape.</source>
+        <translation>[Thé fîlé çöñtáîñs áñ üñkñöwñ skétçh shápé.~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The file contains an unknown constraint.</source>
+        <translation>[Thé fîlé çöñtáîñs áñ üñkñöwñ çöñstráîñt.~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>A text in this file has lost its anchor point.</source>
+        <translation>[Á téxt îñ thîs fîlé hás löst îts áñçhör pöîñt.~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Artwork in this file has lost its anchor point.</source>
+        <translation>[Ártwörk îñ thîs fîlé hás löst îts áñçhör pöîñt.~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>A sketch in this file is damaged.</source>
+        <translation>[Á skétçh îñ thîs fîlé îs dámágéd.~~~~~~~~]</translation>
     </message>
     <message>
         <location line="+1" />
@@ -1772,7 +3202,7 @@
 <context>
     <name>Settings</name>
     <message>
-        <location filename="../app/Translations.cpp" line="+30" />
+        <location filename="../app/Translations.cpp" line="+134" />
         <source>Pseudo-translation (for testing)</source>
         <translation>[Pséüdö-tráñslátîöñ (för téstîñg)~~~~~~~~~]</translation>
     </message>

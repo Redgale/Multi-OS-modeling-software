@@ -66,8 +66,8 @@ Result<std::vector<int>> offsetCurves(Sketch& s, const std::vector<int>& curves,
         }
         if (e.type == EntityType::Circle || e.type == EntityType::Arc) {
             if (e.r + d <= 1e-9) {
-                return makeError("offset.too_far", "An offset of " + std::to_string(-d) +
-                                                       " mm inward is bigger than the radius.",
+                return makeError("offset.too_far", fmt("An offset of %1 inward is bigger than the radius.",
+                                                           {formatQuantity(Quantity {-d, Dim::len()})}),
                                  {"Use a smaller distance."});
             }
             auto [cx, cy] = s.pointXY(e.center);

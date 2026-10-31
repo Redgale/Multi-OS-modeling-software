@@ -174,11 +174,11 @@ Result<Quantity> evalParamImpl(const Model& m, const std::string& name, std::set
         }
     }
     if (!p) {
-        return makeError("param.unknown", "There is no parameter called '" + name + "'.");
+        return makeError("param.unknown", fmt("There is no parameter called '%1'.", {name}));
     }
     if (!visiting.insert(name).second) {
         return makeError("param.cycle",
-                         "Parameter '" + name + "' depends on itself.",
+                         fmt("Parameter '%1' depends on itself.", {name}),
                          {"Change one of the expressions so they don't refer to each other in a loop."});
     }
     std::optional<Error> innerError;  // the real reason a referenced parameter failed
@@ -349,8 +349,8 @@ Result<bool> Document::moveFeature(const std::string& id, int to)
         for (int k = to; k < from; ++k) {
             const Feature& other = model_.features[size_t(k)];
             if (mentions(f, other.id)) {
-                return makeError("move.order", "“" + f.name + "” uses “" + other.name + "”, so it must stay after it.",
-                                 {"Move it to a place after “" + other.name + "”."});
+                return makeError("move.order", fmt("“%1” uses “%2”, so it must stay after it.", {f.name, other.name}),
+                                 {fmt("Move it to a place after “%1”.", {other.name})});
             }
         }
     }
@@ -358,9 +358,8 @@ Result<bool> Document::moveFeature(const std::string& id, int to)
         for (int k = from + 1; k <= to; ++k) {
             const Feature& other = model_.features[size_t(k)];
             if (mentions(other, f.id)) {
-                return makeError("move.order", "“" + other.name + "” uses “" + f.name + "”, so “" + f.name +
-                                                   "” must stay before it.",
-                                 {"Move it to a place before “" + other.name + "”."});
+                return makeError("move.order", fmt("“%1” uses “%2”, so “%2” must stay before it.", {other.name, f.name}),
+                                 {fmt("Move it to a place before “%1”.", {other.name})});
             }
         }
     }
@@ -395,7 +394,7 @@ Result<bool> Document::moveFeature(const std::string& id, int to)
         for (auto& b : broken) {
             list += (list.empty() ? "“" : ", “") + b + "”";
         }
-        return makeError("move.breaks", "Moving “" + name + "” there would stop " + list + " from working.",
+        return makeError("move.breaks", fmt("Moving “%1” there would stop %2 from working.", {name, list}),
                          {"Try another place in the timeline."});
     }
     return true;
@@ -550,7 +549,7 @@ void Document::recompute()
                 (prof == nlohmann::json("open") || prof == nlohmann::json::array({"open"})) &&
                 statuses_[size_t(j)].level == StatusLevel::Ok) {
                 statuses_[size_t(i)] = {};
-                statuses_[size_t(i)].message = "Open curves, used as a wall by " + g.name + ".";
+                statuses_[size_t(i)].message = fmt("Open curves, used as a wall by %1.", {g.name});
                 break;
             }
         }
@@ -693,8 +692,8 @@ Result<std::unique_ptr<Document>> Document::fromJson(const nlohmann::json& input
             auto k = featureKindFromString(jf.at("kind").get<std::string>());
             if (!k) {
                 return makeError("file.feature",
-                                 "This design uses a feature this version of Jigsmith doesn't know ("
-                                     + jf.at("kind").get<std::string>() + ").",
+                                 fmt("This design uses a feature this version of Jigsmith doesn't know (%1).",
+                                     {jf.at("kind").get<std::string>()}),
                                  {"Update Jigsmith to open it."});
             }
             f.kind = *k;

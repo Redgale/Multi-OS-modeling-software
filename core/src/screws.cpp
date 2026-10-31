@@ -71,7 +71,7 @@ Result<double> clearanceDiameter(std::string_view size, HoleFit fit)
     if (!s) {
         Error e;
         e.code = "hole.size";
-        e.message = "There is no screw size called '" + std::string(size) + "' in the clearance table.";
+        e.message = fmt("There is no screw size called '%1' in the clearance table.", {std::string(size)});
         e.suggestions = {"Use M2 to M12, or #4, #6, #8, #10, 1/4\", 5/16\", 3/8\", 1/2\".", "Or type the diameter."};
         return e;
     }

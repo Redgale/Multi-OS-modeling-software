@@ -581,7 +581,7 @@ Result<int> Sketch::filletCorner(double x, double y, double r, const std::string
     }
     const double d = r / std::tan(angle / 2);  // corner to tangent points
     if (d >= L1 - 1e-9 || d >= L2 - 1e-9) {
-        return makeError("sketch.fillet", "A " + std::to_string(r) + " mm round does not fit this corner.",
+        return makeError("sketch.fillet", fmt("A %1 round does not fit this corner.", {formatQuantity(Quantity {r, Dim::len()})}),
                          {"Use a smaller radius: the round must fit on both lines."});
     }
     const double t1x = px + u1x * d, t1y = py + u1y * d, t2x = px + u2x * d, t2y = py + u2y * d;
@@ -1237,8 +1237,7 @@ SolveReport Sketch::runSolver(const ParamLookup& lookup, const int* dragPoint, d
             }
             else {
                 if (v <= 0 && k.type != ConstraintType::Angle) {
-                    return fail(cid, "A dimension must be larger than zero (got "
-                                         + formatQuantity(*q) + ").");
+                    return fail(cid, fmt("A dimension must be larger than zero (got %1).", {formatQuantity(*q)}));
                 }
                 val = slot(v);
             }
@@ -1627,8 +1626,8 @@ SolveReport Sketch::runSolver(const ParamLookup& lookup, const int* dragPoint, d
     }
     else {
         rep.state = SolveState::UnderConstrained;
-        rep.message = std::to_string(rep.dof) + " degree" + (rep.dof == 1 ? "" : "s")
-                    + " of freedom left: some geometry can still move.";
+        rep.message = rep.dof == 1 ? std::string("1 degree of freedom left: some geometry can still move.")
+                                   : fmt("%1 degrees of freedom left: some geometry can still move.", {std::to_string(rep.dof)});
     }
     return finish();
 }

@@ -16,8 +16,12 @@ Jigsmith's interface uses Qt Linguist. Everything a person reads in the app goes
 
 Messages from the core (error explanations, step status, suggestions) are translated
 where the app shows them; `tools/extract_core_messages.py` lists every whole sentence for
-the tools (`app/core_strings.h`). Sentences the core builds from values ("A 30 mm fillet is
-too big here…") stay English for now. The standard CAD names shown beside the plain labels stay
+the tools (`app/core_strings.h`). Sentences the core builds from values are written as
+patterns, `fmt("A %1 fillet is too big here: the neighbouring face is only %2 across.", {…})`:
+translate the pattern and keep each `%1`, `%2` (their order may change). The app recognises
+the finished English sentence by its pattern, translates the pattern and puts the values
+back; several sentences side by side are translated one by one (D-016). A step's kind inside
+a sentence ("the extrude") and messages for script writers stay English. The standard CAD names shown beside the plain labels stay
 English on purpose (they are what tutorials and searches use).
 
 ## Adding a language

@@ -867,7 +867,7 @@ Result<NamedShape> makeExtrusion(const ExtrudeInput& in)
                 };
                 auto o = offsetFace(outer), i = offsetFace(inner);
                 if (!o || !i) {
-                    return makeError("extrude.thin", "A wall of " + fmtMm(t) + " does not fit this outline.",
+                    return makeError("extrude.thin", fmt("A wall of %1 does not fit this outline.", {fmtMm(t)}),
                                      {"Use a thinner wall, or put it outside the outline."});
                 }
                 BRepAlgoAPI_Cut ring(*o, *i);
@@ -875,7 +875,7 @@ Result<NamedShape> makeExtrusion(const ExtrudeInput& in)
                 TopoDS_Shape r = ring.Shape();
                 TopExp_Explorer fx(r, TopAbs_FACE);
                 if (!ring.IsDone() || !fx.More()) {
-                    return makeError("extrude.thin", "A wall of " + fmtMm(t) + " does not fit this outline.",
+                    return makeError("extrude.thin", fmt("A wall of %1 does not fit this outline.", {fmtMm(t)}),
                                      {"Use a thinner wall, or put it outside the outline."});
                 }
                 face = TopoDS::Face(fx.Current());
@@ -1189,12 +1189,12 @@ Result<NamedShape> makeHoleTool(const std::string& featureId,
         Error err = makeError("hole.counterbore", "The counterbore must be wider than the hole and shallower than it.");
         if (!(spec.cboreDiameter > spec.diameter)) {
             const double w = rounded(spec.diameter * 1.8);
-            err.fixes.push_back({"Make the counterbore " + fmtMm(w) + " wide", "cbore_diameter", fmtMm(w)});
+            err.fixes.push_back({fmt("Make the counterbore %1 wide", {fmtMm(w)}), "cbore_diameter", fmtMm(w)});
         }
         if (!(spec.cboreDepth > 0 && spec.cboreDepth < depth)) {
             const double h = rounded(std::min(depth / 2, spec.diameter));
             if (h > 0) {
-                err.fixes.push_back({"Make the counterbore " + fmtMm(h) + " deep", "cbore_depth", fmtMm(h)});
+                err.fixes.push_back({fmt("Make the counterbore %1 deep", {fmtMm(h)}), "cbore_depth", fmtMm(h)});
             }
         }
         return err;
@@ -1209,7 +1209,7 @@ Result<NamedShape> makeHoleTool(const std::string& featureId,
         Error err = makeError("hole.countersink", "The countersink must be wider than the hole, with an angle between 6 and 170 degrees.");
         if (!(spec.csinkDiameter > spec.diameter)) {
             const double w = rounded(spec.diameter * 2);
-            err.fixes.push_back({"Make the countersink " + fmtMm(w) + " wide", "csink_diameter", fmtMm(w)});
+            err.fixes.push_back({fmt("Make the countersink %1 wide", {fmtMm(w)}), "csink_diameter", fmtMm(w)});
         }
         if (!(spec.csinkAngle > 0.1 && spec.csinkAngle < 3.0)) {
             err.fixes.push_back({"Use 90 deg", "csink_angle", "90 deg"});
@@ -1605,7 +1605,7 @@ Result<NamedShape> edgeTreatment(const std::string& featureId,
         if (ok > 0) {
             double s = std::floor(ok * 0.95 * 10) / 10;
             if (s > 0) {
-                sug.push_back("Try " + fmtMm(s) + " or less.");
+                sug.push_back(fmt("Try %1 or less.", {fmtMm(s)}));
                 fixSize = s;
             }
         }
@@ -1613,17 +1613,18 @@ Result<NamedShape> edgeTreatment(const std::string& featureId,
                               : "Round fewer edges at once, or fillet the larger edges first.");
         std::string msg;
         if (nearest < (chamfer ? 1.0 : 2.0) * radius) {
-            msg = "A " + fmtMm(radius) + " " + what + " is too big here: the neighbouring face is only "
-                + fmtMm(nearest) + " across.";
+            msg = fmt(chamfer ? "A %1 chamfer is too big here: the neighbouring face is only %2 across."
+                              : "A %1 fillet is too big here: the neighbouring face is only %2 across.",
+                      {fmtMm(radius), fmtMm(nearest)});
         }
         else {
-            msg = chamfer ? "The bevels for a " + fmtMm(radius) + " chamfer could not be joined where these edges meet."
-                          : "The rounded surfaces for a " + fmtMm(radius)
-                                + " fillet could not be joined where these edges meet.";
+            msg = fmt(chamfer ? "The bevels for a %1 chamfer could not be joined where these edges meet."
+                              : "The rounded surfaces for a %1 fillet could not be joined where these edges meet.",
+                      {fmtMm(radius)});
         }
         Error err = makeError(what + ".failed", msg, sug, why);
         if (fixSize > 0) {
-            err.fixes.push_back({"Use " + fmtMm(fixSize), "size", fmtMm(fixSize)});
+            err.fixes.push_back({fmt("Use %1", {fmtMm(fixSize)}), "size", fmtMm(fixSize)});
         }
         return err;
     }
@@ -1757,14 +1758,14 @@ Result<NamedShape> shellSolid(const std::string& featureId,
             double x0, y0, z0, x1, y1, z1;
             bb.Get(x0, y0, z0, x1, y1, z1);
             if (2 * thickness >= std::min({x1 - x0, y1 - y0, z1 - z0})) {
-                return makeError("shell.failed", "A " + fmtMm(thickness) + " wall does not fit inside this shape.",
+                return makeError("shell.failed", fmt("A %1 wall does not fit inside this shape.", {fmtMm(thickness)}),
                                  {"Try a thinner wall."});
             }
             BRepOffsetAPI_MakeOffsetShape off;
             off.PerformByJoin(body.shape(), -thickness, 1e-3);
             if (!off.IsDone() || off.Shape().IsNull()) {
                 return makeError("shell.failed",
-                                 "A " + fmtMm(thickness) + " wall does not fit inside this shape.",
+                                 fmt("A %1 wall does not fit inside this shape.", {fmtMm(thickness)}),
                                  {"Try a thinner wall."});
             }
             NamedShape inner(off.Shape());
@@ -1787,7 +1788,7 @@ Result<NamedShape> shellSolid(const std::string& featureId,
             return booleanOp(featureId, BoolOp::Cut, body, inner);
         }
         catch (const Standard_Failure& f) {
-            return makeError("shell.failed", "A " + fmtMm(thickness) + " wall does not fit inside this shape.",
+            return makeError("shell.failed", fmt("A %1 wall does not fit inside this shape.", {fmtMm(thickness)}),
                              {"Try a thinner wall."}, kernelText(f));
         }
     }
@@ -1818,17 +1819,17 @@ Result<NamedShape> shellSolid(const std::string& featureId,
         if (ok > 0) {
             double s = std::floor(ok * 0.95 * 10) / 10;
             if (s > 0) {
-                sug.push_back("Try " + fmtMm(s) + " or less.");
+                sug.push_back(fmt("Try %1 or less.", {fmtMm(s)}));
                 fixSize = s;
             }
         }
         sug.push_back("Add fillets to sharp inside corners first, or remove a different face.");
         Error err = makeError("shell.failed",
-                              "A " + fmtMm(thickness) + " wall does not fit inside this shape: some part of it is "
-                                  "thinner than twice the wall.",
+                              fmt("A %1 wall does not fit inside this shape: some part of it is thinner than twice the wall.",
+                                  {fmtMm(thickness)}),
                               sug, why);
         if (fixSize > 0) {
-            err.fixes.push_back({"Use " + fmtMm(fixSize), "size", fmtMm(fixSize)});
+            err.fixes.push_back({fmt("Use %1", {fmtMm(fixSize)}), "size", fmtMm(fixSize)});
         }
         return err;
     }

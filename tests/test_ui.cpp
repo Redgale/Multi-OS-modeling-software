@@ -1289,7 +1289,18 @@ private slots:
         }
         // a message from the core is translated too
         QVERIFY(coreText("That step no longer exists.").startsWith('['));
+        // and one built from values: the pattern is translated, the values come back as they were
+        const std::string built = jig::fmt("The axis '%1' does not exist (or comes later in the timeline).", {"ax7"});
+        const QString t = coreText(built);
+        QVERIFY2(t.startsWith('[') && t.contains("'ax7'"), qPrintable(t));
+        // two such sentences side by side are translated one by one
+        const QString two = coreText(jig::fmt("%1 of the edges this fillet rounded no longer exist.", {"2"}) + " " +
+                                     jig::fmt("%1 edges were split, and Jigsmith can't tell which piece you meant.", {"3"}));
+        QVERIFY2(two.count('[') == 2 && two.contains("2") && two.contains("3"), qPrintable(two));
+        // something the core never says is left as it is
+        QCOMPARE(coreText("Not a message from the core"), QString("Not a message from the core"));
         installLanguage("en");
+        QCOMPARE(coreText(built), QString::fromStdString(built));
         plain.removeDuplicates();
         QVERIFY2(plain.size() <= 3, qPrintable(plain.join("\n")));
     }

@@ -426,7 +426,7 @@ Result<TextOutline> textFaces(const SketchText& t, double x, double y, const gp_
     if (!t.font.empty() && std::filesystem::exists(t.font)) {
         if (FT_New_Face(lib, t.font.c_str(), 0, &face) != 0) {
             face = nullptr;
-            result.note = "The font file " + t.font + " could not be read; using the built-in font (Inter).";
+            result.note = fmt("The font file %1 could not be read; using the built-in font (Inter).", {t.font});
         }
     }
     else if (!t.font.empty() && t.font != "Inter") {
@@ -436,7 +436,7 @@ Result<TextOutline> textFaces(const SketchText& t, double x, double y, const gp_
             face = nullptr;
         }
         if (!face) {
-            result.note = "The font '" + t.font + "' is not available here; using the built-in font (Inter).";
+            result.note = fmt("The font '%1' is not available here; using the built-in font (Inter).", {t.font});
         }
     }
     if (!face && FT_New_Memory_Face(lib, jig_font_inter_regular, FT_Long(jig_font_inter_regular_size), 0, &face) != 0) {

@@ -99,7 +99,7 @@ Result<gp_Ax3> planeFrame(const nlohmann::json& ref, const std::shared_ptr<const
         }
         auto it = in->planes.find(name);
         if (it == in->planes.end()) {
-            return makeError("plane.missing", "The plane '" + name + "' is missing or comes later in the timeline.",
+            return makeError("plane.missing", fmt("The plane '%1' is missing or comes later in the timeline.", {name}),
                              {"Pick another plane."});
         }
         return it->second;
@@ -150,7 +150,7 @@ std::optional<gp_Pnt> namedPoint(const std::string& name, const std::shared_ptr<
 
 FeatureOutcome missingAxis(const std::string& name)
 {
-    return failed("The axis '" + name + "' does not exist (or comes later in the timeline).",
+    return failed(fmt("The axis '%1' does not exist (or comes later in the timeline).", {name}),
                   {"Pick X, Y, Z or a construction axis made earlier."});
 }
 
@@ -164,7 +164,7 @@ FeatureOutcome applyAxis(const Document&, const Feature& f, const std::shared_pt
         const std::string n1 = p.value("from", std::string {}), n2 = p.value("to", std::string {});
         auto a = namedPoint(n1, in), b = namedPoint(n2, in);
         if (!a || !b) {
-            return failed("The point '" + (!a ? n1 : n2) + "' does not exist (or comes later in the timeline).",
+            return failed(fmt("The point '%1' does not exist (or comes later in the timeline).", {!a ? n1 : n2}),
                           {"Pick the origin (O) or a construction point made earlier."});
         }
         if (a->Distance(*b) < 1e-7) {
@@ -188,8 +188,8 @@ FeatureOutcome applyAxis(const Document&, const Feature& f, const std::shared_pt
         }
         const MeasureItem m = measureItem(face ? bit->second->face(r.index) : bit->second->edge(r.index));
         if (!m.axis) {
-            return failed("An axis can run along a straight edge or through a round edge or face (a hole, a "
-                          "cylinder); this " + m.kind + " has no axis.");
+            return failed(fmt("An axis can run along a straight edge or through a round edge or face (a hole, a "
+                              "cylinder); this %1 has no axis.", {m.kind}));
         }
         axis = *m.axis;
     }
@@ -245,7 +245,7 @@ FeatureOutcome applyPoint(const Document& doc, const Feature& f, const std::shar
             if (where == "center") {
                 const MeasureItem m = measureItem(e);
                 if (!m.radius || !m.axis) {
-                    return failed("Only a circle or an arc has a centre; this is a " + m.kind + ".",
+                    return failed(fmt("Only a circle or an arc has a centre; this is a %1.", {m.kind}),
                                   {"Choose its start, end or middle instead."});
                 }
                 at = m.axis->Location();
@@ -258,7 +258,7 @@ FeatureOutcome applyPoint(const Document& doc, const Feature& f, const std::shar
                 at = c.Value(where == "start" ? u0 : where == "end" ? u1 : 0.5 * (u0 + u1));
             }
             else {
-                return failed("A point on an edge sits at its start, end, middle or centre, not at '" + where + "'.");
+                return failed(fmt("A point on an edge sits at its start, end, middle or centre, not at '%1'.", {where}));
             }
         }
     }
@@ -460,11 +460,10 @@ FeatureOutcome applySketch(const Document& doc, const Feature& f, const std::sha
                     best = std::min(best, g.gap);
                 }
             }
-            status.message += " " + std::to_string(gaps.size()) + " line end"
-                            + (gaps.size() == 1 ? " is" : "s are") + " not connected.";
+            status.message += " " + (gaps.size() == 1 ? std::string("1 line end is not connected.")
+                                                      : fmt("%1 line ends are not connected.", {std::to_string(gaps.size())}));
             if (best < 1e300) {
-                status.suggestions.push_back("The smallest gap is " + mm(best)
-                                             + ": drag those ends together to close it.");
+                status.suggestions.push_back(fmt("The smallest gap is %1: drag those ends together to close it.", {mm(best)}));
             }
         }
         status.suggestions.push_back("Turn on 'Show gaps' to highlight open ends.");
@@ -527,17 +526,17 @@ std::optional<FeatureOutcome> selectProfiles(const SketchState& sk, const nlohma
             if (want.size() == 1 && sk.profiles.regions.size() == 1) {
                 profiles = {&sk.profiles.regions[0]};
                 status.level = StatusLevel::Warning;
-                status.message = "The sketch's closed area changed shape; the " + what +
-                                 " now uses its only closed area. Check the result.";
+                status.message = fmt("The sketch's closed area changed shape; the %1 now uses its only closed area. "
+                                     "Check the result.", {what});
             }
             else {
-                return failed("Some of the closed areas this " + what + " used are gone from the sketch.",
-                              {"Edit the " + what + " and pick the areas again."});
+                return failed(fmt("Some of the closed areas this %1 used are gone from the sketch.", {what}),
+                              {fmt("Edit the %1 and pick the areas again.", {what})});
             }
         }
     }
     if (profiles.empty()) {
-        return failed("The sketch has no closed area to " + what + ".",
+        return failed(fmt("The sketch has no closed area to %1.", {what}),
                       {"Close the outline: look for small gaps between line ends.",
                        "Turn on 'Show gaps' in the sketch."});
     }
@@ -558,7 +557,7 @@ FeatureOutcome applyTool(const Feature& f, BoolOp op, NamedShape tool, const std
         return {out, status};
     }
     if (in->bodies.empty()) {
-        return failed("There is no body to " + std::string(op == BoolOp::Cut ? "cut" : "intersect") + " yet.",
+        return failed(op == BoolOp::Cut ? std::string("There is no body to cut yet.") : std::string("There is no body to intersect yet."),
                       {"Use 'New body' for the first shape."});
     }
     std::string target = p.value("target", std::string {});
@@ -595,8 +594,8 @@ const SketchState* findSketch(const std::shared_ptr<const ModelState>& in, const
 
 FeatureOutcome missingSketch(const std::string& what, const std::string& id)
 {
-    return failed("The sketch this " + what + " uses (" + id + ") is missing or has a problem.",
-                  {"Fix the sketch first: it is marked in the timeline.", "Edit this " + what + " and pick another sketch."});
+    return failed(fmt("The sketch this %1 uses (%2) is missing or has a problem.", {what, id}),
+                  {"Fix the sketch first: it is marked in the timeline.", fmt("Edit this %1 and pick another sketch.", {what})});
 }
 
 FeatureOutcome applyExtrude(const Document& doc, const Feature& f, const std::shared_ptr<const ModelState>& in)
@@ -920,7 +919,7 @@ FeatureOutcome applyMove(const Document& doc, const Feature& f, const std::share
         const std::string n1 = p.value("from", std::string("O")), n2 = p.value("to", std::string("O"));
         auto a = namedPoint(n1, in), b = namedPoint(n2, in);
         if (!a || !b) {
-            return failed("The point '" + (!a ? n1 : n2) + "' does not exist (or comes later in the timeline).",
+            return failed(fmt("The point '%1' does not exist (or comes later in the timeline).", {!a ? n1 : n2}),
                           {"Pick the origin (O) or a construction point made earlier."});
         }
         shift += gp_Vec(a->Transformed(rot), *b);
@@ -1177,7 +1176,7 @@ FeatureOutcome applyPattern(const Document& doc, const Feature& f, const std::sh
     if (!bodyId.empty()) {
         auto bit = in->bodies.find(bodyId);
         if (bit == in->bodies.end()) {
-            return failed("The body this pattern repeats (" + bodyId + ") no longer exists.",
+            return failed(fmt("The body this pattern repeats (%1) no longer exists.", {bodyId}),
                           {"Edit the pattern and pick a body."});
         }
         rec.tool = bit->second;
@@ -1188,7 +1187,7 @@ FeatureOutcome applyPattern(const Document& doc, const Feature& f, const std::sh
         const std::string src = p.value("feature", std::string {});
         auto rit = in->tools.find(src);
         if (rit == in->tools.end()) {
-            return failed("The step this pattern repeats (" + src + ") is missing, after the pattern, or has a problem.",
+            return failed(fmt("The step this pattern repeats (%1) is missing, after the pattern, or has a problem.", {src}),
                           {"Pattern an Extrude, Revolve or Hole that comes earlier in the timeline, or a body."});
         }
         rec = rit->second;
@@ -1330,7 +1329,7 @@ FeatureOutcome applyMirror(const Document&, const Feature& f, const std::shared_
         const std::string src = p.value("feature", std::string {});
         auto rit = in->tools.find(src);
         if (rit == in->tools.end()) {
-            return failed("The step this mirror copies (" + src + ") is missing, after the mirror, or has a problem.",
+            return failed(fmt("The step this mirror copies (%1) is missing, after the mirror, or has a problem.", {src}),
                           {"Mirror an Extrude, Revolve or Hole that comes earlier in the timeline."});
         }
         const ToolRecord& rec = rit->second;
@@ -1432,12 +1431,12 @@ FeatureOutcome applyFillet(const Document& doc, const Feature& f, const std::sha
     if (missing || ambiguous) {
         std::string msg;
         if (missing) {
-            msg += std::to_string(missing) + (chamfer ? " of the edges this chamfer bevelled no longer exist. "
-                                                      : " of the edges this fillet rounded no longer exist. ");
+            msg += fmt(chamfer ? "%1 of the edges this chamfer bevelled no longer exist." : "%1 of the edges this fillet rounded no longer exist.",
+                       {std::to_string(missing)}) + " ";
         }
         if (ambiguous) {
-            msg += std::to_string(ambiguous) + " edge" + (ambiguous == 1 ? " was" : "s were")
-                 + " split, and Jigsmith can't tell which piece you meant.";
+            msg += ambiguous == 1 ? std::string("1 edge was split, and Jigsmith can't tell which piece you meant.")
+                                  : fmt("%1 edges were split, and Jigsmith can't tell which piece you meant.", {std::to_string(ambiguous)});
         }
         return failed(msg,
                       {chamfer ? "Edit the chamfer and pick the edges again." : "Edit the fillet and pick the edges again.",
@@ -1484,8 +1483,9 @@ FeatureOutcome applyFillet(const Document& doc, const Feature& f, const std::sha
     }
     if (rebound) {
         status.level = StatusLevel::Warning;
-        status.message = std::to_string(rebound) + " edge" + (rebound == 1 ? " was" : "s were")
-                       + " re-attached by shape similarity after an earlier change. Check the result.";
+        status.message = rebound == 1 ? std::string("1 edge was re-attached by shape similarity after an earlier change. Check the result.")
+                                      : fmt("%1 edges were re-attached by shape similarity after an earlier change. Check the result.",
+                                            {std::to_string(rebound)});
     }
     auto out = copyState(in);
     out->bodies[bodyId] = std::make_shared<NamedShape>(std::move(res.value()));

@@ -397,3 +397,26 @@ solver (it changes only through its dimension or by editing).
 **How to reverse.** Map the same entities onto planegcs ellipses and B-splines later; the
 file format (centre, axis end and minor radius; ordered fit points and a closed flag) can
 stay.
+
+## D-016 Messages built from values: patterns matched in the app (accepted)
+
+**Context.** Many core messages contain values ("A 2.5 mm fillet is too big here…", a step's
+name). The core is headless and plain C++, so it cannot call Qt's translator, and the app
+only receives the finished English text (in errors, step statuses and suggestions that pass
+through many layers).
+
+**Options.** (a) Carry a pattern and its values next to every message (new fields in Error,
+FeatureStatus, SolveReport, text notes, and every place that copies them). (b) Write the
+sentence in the core as a pattern (`fmt("… %1 …", {value})`), list the patterns for the
+app, and let the app recognise a finished sentence by its pattern, translate the pattern and
+put the captured values back. (c) Leave them English.
+
+**Decision.** (b). No message type changes, and the English text the CLI, tests and logs see
+is the same. `tools/extract_core_messages.py` writes the patterns into `app/core_strings.h`
+(compiled as `kCorePatterns`, and read by lupdate); a ctest keeps the file current. A value
+never spans the end of a sentence, so several sentences side by side are matched one by one.
+
+**Consequences.** A message built from values that does not go through `fmt` stays English;
+a pattern that could match another pattern's text would be ambiguous (none do today; the
+first in the list wins). Words that are values themselves ("extrude" in "the extrude") stay
+English until they become translatable words.
