@@ -141,7 +141,7 @@ public:
     void showAllBodies();
     bool bodyVisible(const std::string& body) const
     {
-        return !hiddenBodies_.count(body);
+        return !doc_->hiddenBodies().count(body);
     }
     QTreeWidget* browser() const
     {
@@ -195,8 +195,6 @@ private:
 
     Viewport* view_ = nullptr;
     QTreeWidget* browser_ = nullptr;
-    std::set<std::string> hiddenBodies_;
-    std::set<std::string> foldedGroups_;
     QPointer<QComboBox> selectFilter_;  // (a QPointer: panels may be destroyed after it on exit)
     QActionGroup* navGroup_ = nullptr;
     QListWidget* timeline_ = nullptr;

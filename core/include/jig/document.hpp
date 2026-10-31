@@ -13,6 +13,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -222,6 +223,20 @@ public:
         return revision_;
     }
 
+    // ---- how the design is shown (saved with it, never an undo step) -------
+    // Bodies hidden in the view and timeline groups shown folded. Changing them bumps
+    // revision() so the change counts as unsaved, but the model and its results stay.
+    const std::set<std::string>& hiddenBodies() const
+    {
+        return hidden_;
+    }
+    void setHiddenBodies(std::set<std::string> ids);
+    const std::set<std::string>& foldedGroups() const
+    {
+        return folded_;
+    }
+    void setFoldedGroups(std::set<std::string> groups);
+
     // ---- files ------------------------------------------------------------
     nlohmann::json toJson() const;
     static Result<std::unique_ptr<Document>> fromJson(const nlohmann::json& j);
@@ -255,6 +270,7 @@ private:
     int recomputed_ = 0;
     double lastMs_ = 0;
     uint64_t revision_ = 0;
+    std::set<std::string> hidden_, folded_;
 };
 
 // Applies one feature to `in`. Implemented in features.cpp. Never throws.

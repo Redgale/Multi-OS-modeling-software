@@ -592,6 +592,24 @@ TopoDS_Shape Document::combinedShape() const
     return c;
 }
 
+// ---------------------------------------------------------------- view
+
+void Document::setHiddenBodies(std::set<std::string> ids)
+{
+    if (ids != hidden_) {
+        hidden_ = std::move(ids);
+        ++revision_;
+    }
+}
+
+void Document::setFoldedGroups(std::set<std::string> groups)
+{
+    if (groups != folded_) {
+        folded_ = std::move(groups);
+        ++revision_;
+    }
+}
+
 // ---------------------------------------------------------------- json
 
 nlohmann::json Document::toJson() const
@@ -627,6 +645,9 @@ nlohmann::json Document::toJson() const
     j["features"] = feats;
     j["rollback"] = model_.rollback;
     j["counters"] = model_.counters;
+    if (!hidden_.empty() || !folded_.empty()) {
+        j["view"] = {{"hidden_bodies", hidden_}, {"folded_groups", folded_}};
+    }
     return j;
 }
 
@@ -648,7 +669,7 @@ Result<std::unique_ptr<Document>> Document::fromJson(const nlohmann::json& input
         }
         Model m;
         static const std::set<std::string> known {"format_version", "units", "up_axis", "parameters",
-                                                  "features", "rollback", "counters"};
+                                                  "features", "rollback", "counters", "view"};
         for (auto& [k, val] : j.items()) {
             if (!known.count(k)) {
                 m.extra[k] = val;
@@ -692,6 +713,10 @@ Result<std::unique_ptr<Document>> Document::fromJson(const nlohmann::json& input
         m.counters = j.value("counters", std::map<std::string, int> {});
         auto doc = std::make_unique<Document>();
         doc->resetModel(std::move(m));
+        if (j.contains("view") && j["view"].is_object()) {
+            doc->hidden_ = j["view"].value("hidden_bodies", std::set<std::string> {});
+            doc->folded_ = j["view"].value("folded_groups", std::set<std::string> {});
+        }
         return doc;
     }
     catch (const nlohmann::json::exception& ex) {

@@ -1010,7 +1010,6 @@ void MainWindow::buildDocks()
 
 void MainWindow::setDocument(std::unique_ptr<jig::Document> doc, const QString& path)
 {
-    hiddenBodies_.clear();  // visibility belongs to the view of one design
     if (panel_) {
         panel_->cancel();
     }
@@ -1076,7 +1075,7 @@ void MainWindow::refreshAll()
     }
     std::vector<Viewport::BodyInput> bodies;
     for (auto& [id, b] : doc_->state().bodies) {
-        if (!hiddenBodies_.count(id)) {
+        if (!doc_->hiddenBodies().count(id)) {
             bodies.push_back({id, b});
         }
     }
@@ -1140,7 +1139,7 @@ void MainWindow::refreshBrowser()
     for (auto& [id, b] : doc_->state().bodies) {
         auto mp = jig::massProperties(b->shape());
         const jig::Feature* f = doc_->feature(id);
-        const bool shown = !hiddenBodies_.count(id);
+        const bool shown = !doc_->hiddenBodies().count(id);
         // the checkbox shows visibility; "hidden" is also written out (not colour alone)
         auto* it = new QTreeWidgetItem(bodies, {tr("%1  (%2)%3")
                                                     .arg(f ? q(f->name) : q(id),
@@ -1167,12 +1166,14 @@ void MainWindow::refreshBrowser()
 
 void MainWindow::setBodyVisible(const std::string& body, bool on)
 {
+    auto hidden = doc_->hiddenBodies();  // saved with the design
     if (on) {
-        hiddenBodies_.erase(body);
+        hidden.erase(body);
     }
     else {
-        hiddenBodies_.insert(body);
+        hidden.insert(body);
     }
+    doc_->setHiddenBodies(std::move(hidden));
     refreshAll();
 }
 
@@ -1240,12 +1241,13 @@ QMenu* MainWindow::openSelectOther(const QPoint& viewPos)
 
 void MainWindow::isolateBody(const std::string& body)
 {
-    hiddenBodies_.clear();
+    std::set<std::string> hidden;
     for (auto& [id, b] : doc_->state().bodies) {
         if (id != body) {
-            hiddenBodies_.insert(id);
+            hidden.insert(id);
         }
     }
+    doc_->setHiddenBodies(std::move(hidden));
     refreshAll();
     statusBar()->showMessage(tr("Only this body is shown. Right-click a body and choose Show all to bring the rest back."),
                              6000);
@@ -1253,7 +1255,7 @@ void MainWindow::isolateBody(const std::string& body)
 
 void MainWindow::showAllBodies()
 {
-    hiddenBodies_.clear();
+    doc_->setHiddenBodies({});
     refreshAll();
 }
 
@@ -1273,7 +1275,7 @@ void MainWindow::refreshTimeline()
         const std::string& g = feats[i].group;
         if (!g.empty()) {
             const bool first = i == 0 || feats[i - 1].group != g;
-            const bool folded = foldedGroups_.count(g) > 0;
+            const bool folded = doc_->foldedGroups().count(g) > 0;
             if (first) {
                 int n = 0;
                 for (size_t k = i; k < feats.size() && feats[k].group == g; ++k) {
@@ -2723,7 +2725,7 @@ void MainWindow::timelineMenu(const QPoint& pos)
     });
     if (!f.group.empty()) {
         m.addAction(tr("Take out of the group"), this, [this, id = f.id] { setStepGroup(id, {}); });
-        const bool folded = foldedGroups_.count(f.group) > 0;
+        const bool folded = doc_->foldedGroups().count(f.group) > 0;
         m.addAction(folded ? tr("Unfold the group") : tr("Fold the group"), this,
                     [this, g = f.group, folded] { setGroupFolded(g, !folded); });
     }
@@ -2747,13 +2749,15 @@ void MainWindow::setStepGroup(const std::string& id, const std::string& group)
 
 void MainWindow::setGroupFolded(const std::string& group, bool folded)
 {
+    auto groups = doc_->foldedGroups();  // saved with the design
     if (folded) {
-        foldedGroups_.insert(group);
+        groups.insert(group);
     }
     else {
-        foldedGroups_.erase(group);
+        groups.erase(group);
     }
-    refreshTimeline();
+    doc_->setFoldedGroups(std::move(groups));
+    refreshAll();  // the title shows the unsaved change
 }
 
 bool MainWindow::moveStep(const std::string& id, int to)

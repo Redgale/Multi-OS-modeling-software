@@ -310,3 +310,28 @@ TEST(Document, TimelineGroupsAreSaved)
     run(*doc, "group name=\"\" steps=e1");
     EXPECT_TRUE(doc->model().features[1].group.empty());
 }
+
+TEST(Document, VisibilityIsSavedButNotUndone)
+{
+    auto doc = build("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=10 h=10\nextrude id=e1 sketch=s1 distance=5\n"
+                     "group name=\"Base\" steps=s1;e1\n");
+    const auto rev = doc->revision();
+    doc->setHiddenBodies({"e1"});
+    doc->setFoldedGroups({"Base"});
+    EXPECT_GT(doc->revision(), rev);  // counts as an unsaved change
+    const auto r2 = doc->revision();
+    doc->setHiddenBodies({"e1"});
+    EXPECT_EQ(doc->revision(), r2);  // no change, nothing to save
+    const auto path = (tempDir() / "visibility.jig").string();
+    ASSERT_TRUE(saveDocument(*doc, path).ok());
+    auto back = loadDocument(path);
+    ASSERT_TRUE(back.ok()) << back.error().message;
+    EXPECT_EQ((*back)->hiddenBodies(), std::set<std::string> {"e1"});
+    EXPECT_EQ((*back)->foldedGroups(), std::set<std::string> {"Base"});
+    EXPECT_FALSE((*back)->model().extra.contains("view"));  // read, not kept as unknown
+    // hiding is not a design step: undo takes back the group, not the visibility
+    ASSERT_TRUE(doc->undo());
+    EXPECT_EQ(doc->hiddenBodies(), std::set<std::string> {"e1"});
+    // a design with nothing hidden writes no view block
+    EXPECT_FALSE(build("param a = 1 mm\n")->toJson().contains("view"));
+}
