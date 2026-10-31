@@ -181,6 +181,11 @@ struct ProfileSet
     std::vector<std::string> notes;  // e.g. a missing font was replaced
 };
 
+// Offset copy of sketch curves: a single line (to its left for a positive distance), a
+// single circle or arc (bigger radius for positive), or one closed outline (outward for
+// positive, sharp corners). Adds the new curves to the sketch and returns their ids.
+Result<std::vector<int>> offsetCurves(Sketch& sketch, const std::vector<int>& curves, double distance);
+
 // Glyph outlines of a sketch text as flat faces in the sketch plane, centred on (x, y).
 struct TextOutline
 {

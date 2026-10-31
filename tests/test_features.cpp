@@ -514,3 +514,47 @@ TEST(SketchTrim, LinesCirclesAndLoneCurves)
                       "trim sketch=s1 at=5,0\n");
     EXPECT_EQ(lineCount(*lone), 0);
 }
+
+TEST(SketchOffset, OutlinesAndSingleCurves)
+{
+    auto areas = [](const Document& d) {
+        std::vector<double> a;
+        for (auto& r : d.state().sketches.at("s1")->profiles.regions) {
+            a.push_back(r.area);
+        }
+        std::sort(a.begin(), a.end());
+        return a;
+    };
+    // rectangle, outward 3 mm with sharp corners: a 46 x 26 frame around it
+    auto out = build("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=40 h=20\noffset sketch=s1 at=20,0 distance=3\n");
+    ASSERT_EQ(areas(*out).size(), 2u);
+    EXPECT_NEAR(areas(*out)[0] + areas(*out)[1], 46 * 26, 1e-6);
+    // inward: a 34 x 14 rectangle inside
+    auto in = build("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=40 h=20\noffset sketch=s1 at=20,0 distance=-3\n");
+    ASSERT_EQ(areas(*in).size(), 2u);
+    EXPECT_NEAR(areas(*in)[1], 34 * 14, 1e-6);   // the inner rectangle
+    EXPECT_NEAR(areas(*in)[0], 800 - 34 * 14, 1e-6);  // the ring between them
+    // a slot (lines and arcs) grows into a wider slot
+    auto slot = build("sketch id=s1 plane=XY\nslot sketch=s1 c1=0,0 c2=20,0 width=8\noffset sketch=s1 at=10,4 distance=2\n");
+    ASSERT_EQ(areas(*slot).size(), 2u);
+    EXPECT_NEAR(areas(*slot)[0] + areas(*slot)[1], 20 * 12 + pi * 36, 1e-6);
+    // single curves: a circle grows (and stays concentric), a line moves to its left
+    auto circ = build("sketch id=s1 plane=XY\ncircle sketch=s1 center=5,5 d=10\noffset sketch=s1 at=10,5 distance=2\n");
+    ASSERT_EQ(areas(*circ).size(), 2u);
+    EXPECT_NEAR(areas(*circ)[0], pi * 49 - pi * 25, 1e-6);  // the ring between them
+    EXPECT_NEAR(areas(*circ)[1], pi * 25, 1e-6);            // the original disc
+    auto line = build("sketch id=s1 plane=XY\nline sketch=s1 p1=0,0 p2=10,0\noffset sketch=s1 at=5,0 distance=4\n");
+    int above = 0;
+    for (auto& [id, e] : line->state().sketches.at("s1")->solved.entities()) {
+        if (e.type == EntityType::Line) {
+            above += std::abs(line->state().sketches.at("s1")->solved.pointXY(e.p1).second - 4) < 1e-9;
+        }
+    }
+    EXPECT_EQ(above, 1);
+    // an inward offset that cannot fit is explained
+    auto bad = std::make_unique<Document>();
+    ScriptRunner r(*bad);
+    auto res = r.runText("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=40 h=20\noffset sketch=s1 at=20,0 distance=-12\n");
+    ASSERT_FALSE(res.ok());
+    EXPECT_NE(res.error().message.find("could not be offset"), std::string::npos) << res.error().message;
+}

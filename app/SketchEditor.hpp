@@ -43,6 +43,7 @@ public:
         Polygon,  // centre, corner; sides typed (default 6)
         Text,     // click the centre, type the words and the size
         Trim,     // click the piece of a curve to remove (between its crossings)
+        Offset,   // click a curve (or a closed outline), type the distance
         Point,
         Dimension
     };
@@ -157,6 +158,7 @@ private:
     QString arcRadiusExpr_;          // typed at the second step (arc radius, slot length)
     int editText_ = 0;
     std::optional<jig::Sketch::TrimPiece> trimHover_;  // the piece Trim would remove
+    std::vector<int> offsetHover_, offsetChain_;        // Offset: under the cursor / chosen
     QString lastTextHeight_;  // empty: the design's default size               // text being changed (double-click on its anchor)
     std::vector<std::vector<QVector3D>> textEdges_;  // glyph outlines, for drawing
     int chainStart_ = 0;             // line chains: the first point, clicking it closes

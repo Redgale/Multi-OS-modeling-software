@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "SketchEditor.hpp"
 
+#include "jig/kernel.hpp"
+
 #include <cmath>
 #include <numbers>
 
@@ -66,7 +68,7 @@ SketchEditor::SketchEditor(Viewport* view, jig::Document& doc, std::string featu
         inputLabels_.push_back(l);
         inputFields_.push_back(f);
         connect(f, &QLineEdit::returnPressed, this, [this] {
-            if (dimTarget_ || editText_) {
+            if (dimTarget_ || editText_ || !offsetChain_.empty()) {
                 placeSecond(cursor_, inputValues());
                 return;
             }
@@ -354,6 +356,8 @@ void SketchEditor::setTool(Tool t)
 void SketchEditor::resetToolState()
 {
     trimHover_.reset();
+    offsetHover_.clear();
+    offsetChain_.clear();
     first_.reset();
     second_.reset();
     editText_ = 0;
@@ -396,6 +400,11 @@ QString SketchEditor::toolHint() const
                           : tr("Click where the middle of the text goes.");
         case Tool::Trim:
             return tr("Click the piece of a curve to remove. It is cut where other curves cross it.");
+        case Tool::Offset:
+            return offsetChain_.empty()
+                       ? tr("Click a curve, or any curve of a closed outline, to copy it at a distance.")
+                       : tr("Type the distance and press Enter: positive goes outward (or to the left of a line), "
+                            "negative inward.");
         case Tool::Point:
             return tr("Click to place a point.");
         case Tool::Dimension:
@@ -507,6 +516,30 @@ void SketchEditor::placeSecond(const Snap& cur, const QStringList& rawTyped)
         commit(tr("Dimension"), s);
         dimFirst_ = dimTarget_ = dimSecond_ = 0;
         hideInput();
+        rebuildOverlay();
+        emit stateChanged();
+        return;
+    }
+    if (!offsetChain_.empty()) {
+        if (typed.isEmpty() || typed[0].isEmpty()) {
+            return;
+        }
+        auto d = doc_.evalLength(typed[0].toStdString());
+        if (!d) {
+            message_ = QString::fromStdString(d.error().message);
+            emit stateChanged();
+            return;
+        }
+        jig::Sketch s = work_;
+        auto made = jig::offsetCurves(s, offsetChain_, d.value());
+        if (!made) {
+            message_ = QString::fromStdString(made.error().message);
+            emit stateChanged();
+            return;
+        }
+        if (commit(tr("Offset"), s)) {
+            resetToolState();
+        }
         rebuildOverlay();
         emit stateChanged();
         return;
@@ -883,6 +916,15 @@ bool SketchEditor::mouseMove(QMouseEvent* e)
     }
     cursor_ = snapAt(pos, tool_ == Tool::Line || tool_ == Tool::Rectangle, e->modifiers());
     cursorValid_ = toLocal(pos).has_value();
+    if (tool_ == Tool::Offset && offsetChain_.empty()) {
+        offsetHover_.clear();
+        if (auto loc = toLocal(pos)) {
+            auto near = work_.curveNear(loc->x(), loc->y());
+            if (near && near->second < 8 * view_->worldPerPixel()) {
+                offsetHover_ = work_.chainOf(near->first);
+            }
+        }
+    }
     if (tool_ == Tool::Trim) {
         trimHover_.reset();
         if (auto loc = toLocal(pos)) {
@@ -936,6 +978,20 @@ bool SketchEditor::mouseRelease(QMouseEvent* e)
                     selection_.insert(hit);
                 }
             }
+            break;
+        }
+        case Tool::Offset: {
+            if (!offsetChain_.empty() || offsetHover_.empty()) {
+                if (offsetHover_.empty()) {
+                    message_ = tr("Click on a curve to offset it.");
+                }
+                break;
+            }
+            offsetChain_ = offsetHover_;
+            showInput({tr("Distance")}, {QString::fromStdString(doc_.defaultLength(2, 0.0625))});
+            inputFields_[0]->selectAll();
+            inputFields_[0]->setFocus();
+            inputBox_->move(pos.toPoint() + QPoint(18, 18));
             break;
         }
         case Tool::Trim: {
@@ -1360,6 +1416,11 @@ void SketchEditor::rebuildOverlay()
         for (size_t i = 0; i + 1 < pts.size(); ++i) {
             ov.lines.push_back({pts[i], vc.text});
             ov.lines.push_back({pts[i + 1], vc.text});
+        }
+    }
+    for (int id : offsetChain_.empty() ? offsetHover_ : offsetChain_) {
+        if (const jig::SketchEntity* e = s.entity(id)) {
+            addPoly(polyline(s, *e), kAccent, offsetChain_.empty());
         }
     }
     if (tool_ == Tool::Trim && trimHover_) {

@@ -13,6 +13,7 @@ add_library(jig_core STATIC
     src/io.cpp
     src/kernel.cpp
     src/sketch.cpp
+    src/sketch_offset.cpp
     src/text.cpp
     ${CMAKE_CURRENT_BINARY_DIR}/generated/font_inter_regular.cpp
 )

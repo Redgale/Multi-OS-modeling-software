@@ -70,7 +70,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Fillet (sketch) | 11 | v0.1 M1 | — | |
 | Trim, Extend, Break | 11 | v0.1 M1 | **app** + scripts: Trim (lines, circles, arcs); Extend and Break not yet | |
 | Sketch scale | 11 | v0.2 | — | Not in brief's list |
-| Offset (chains) | 11 | v0.1 M1 | — | |
+| Offset (chains) | 11 | v0.1 M1 | **app** + scripts: closed outlines (sharp corners) and single curves; not associative yet | |
 | Move/Copy (sketch) | 11 | v0.1 M1 | — | |
 | Stretch | 11 | v0.2 | — | |
 | Delete | 11 | v0.1 M1 | **app** | |

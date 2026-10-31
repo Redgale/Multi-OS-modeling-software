@@ -382,6 +382,43 @@ std::optional<std::pair<int, double>> Sketch::curveNear(double x, double y) cons
     return best;
 }
 
+std::vector<int> Sketch::chainOf(int curve) const
+{
+    const SketchEntity* start = entity(curve);
+    if (!start || start->type == EntityType::Point) {
+        return {};
+    }
+    auto ends = [&](const SketchEntity& e) {
+        std::vector<std::pair<double, double>> out;
+        if (e.type == EntityType::Line || e.type == EntityType::Arc) {
+            out.push_back(pointXY(e.p1));
+            out.push_back(pointXY(e.p2));
+        }
+        return out;
+    };
+    std::vector<int> chain {curve};
+    std::set<int> seen {curve};
+    for (size_t i = 0; i < chain.size(); ++i) {
+        const auto mine = ends(entities_.at(chain[i]));
+        for (auto& [id, e] : entities_) {
+            if (seen.count(id) || e.type == EntityType::Point || e.type == EntityType::Circle || e.construction) {
+                continue;
+            }
+            bool touches = false;
+            for (auto [x1, y1] : mine) {
+                for (auto [x2, y2] : ends(e)) {
+                    touches = touches || std::hypot(x1 - x2, y1 - y2) < 1e-6;
+                }
+            }
+            if (touches) {
+                seen.insert(id);
+                chain.push_back(id);
+            }
+        }
+    }
+    return chain;
+}
+
 void Sketch::dropUnusedPoint(int pid)
 {
     const SketchEntity* p = entity(pid);

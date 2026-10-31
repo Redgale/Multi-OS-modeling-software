@@ -710,6 +710,24 @@ private slots:
         QCOMPARE(arcs, 1);
         w.runCommand("edit.undo");  // one undo brings the circle back
         QTRY_COMPARE(regions(), 3);
+
+        // Offset: click the rectangle's side, type -3 mm: a smaller rectangle inside it
+        w.runCommand("sketch.offset");
+        QCOMPARE(int(sk->tool()), int(SketchEditor::Tool::Offset));
+        click(-10, 0);
+        sk->typeValues({"-3 mm"});
+        QVERIFY2(sk->message().isEmpty(), qPrintable(sk->message()));
+        QCOMPARE(regions(), 5);  // the circle (back after the undo) also crosses the new corner
+        int at7 = 0;               // the four new sides sit 3 mm inside, at x or y = ±7
+        for (auto& [id, e] : sk->sketch().entities()) {
+            if (e.type == jig::EntityType::Line && !e.construction) {
+                auto [ax, ay] = sk->sketch().pointXY(e.p1);
+                auto [bx, by] = sk->sketch().pointXY(e.p2);
+                at7 += (std::abs(std::abs(ax) - 7) < 1e-9 && std::abs(ax - bx) < 1e-9) ||
+                       (std::abs(std::abs(ay) - 7) < 1e-9 && std::abs(ay - by) < 1e-9);
+            }
+        }
+        QCOMPARE(at7, 4);
     }
 
     // Revolve a ring, drill it from its top face, repeat the hole around the axis,

@@ -1215,6 +1215,7 @@ void MainWindow::runCommand(const QString& id)
             {"sketch.line", T::Line},       {"sketch.rectangle", T::Rectangle}, {"sketch.circle", T::Circle},
             {"sketch.arc", T::Arc},         {"sketch.slot", T::Slot},           {"sketch.polygon", T::Polygon},
             {"sketch.text", T::Text},       {"sketch.trim", T::Trim},
+            {"sketch.offset", T::Offset},
             {"sketch.point", T::Point},     {"sketch.dimension", T::Dimension}};
         static const std::map<QString, CT> cons {
             {"constraint.coincident", CT::Coincident}, {"constraint.horizontal", CT::Horizontal},

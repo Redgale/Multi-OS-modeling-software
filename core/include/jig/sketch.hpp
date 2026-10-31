@@ -160,6 +160,10 @@ public:
     // point-on-curve constraint, or the existing point when they meet at one). Length
     // and diameter dimensions of the trimmed curve that no longer apply are removed.
     bool trim(int entityId, double x, double y);
+    // Curves connected end to end with `curve` (sharing an end point), including itself.
+    std::vector<int> chainOf(int curve) const;
+    // Counter-clockwise arc on existing points (used when building offsets).
+    int addArcOn(int center, int p1, int p2, double r, double a0, double a1);
     // The curve nearest to (x, y) (not points or construction), and its distance.
     std::optional<std::pair<int, double>> curveNear(double x, double y) const;
 
@@ -202,7 +206,6 @@ private:
     SolveReport runSolver(const ParamLookup& lookup, const int* dragPoint, double dx, double dy,
                           const std::vector<int>& skip = {});
     void syncCurvePoints();
-    int addArcOn(int center, int p1, int p2, double r, double a0, double a1);
     void dropUnusedPoint(int pointId);
 
     std::map<int, SketchEntity> entities_;
