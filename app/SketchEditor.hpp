@@ -13,6 +13,7 @@
 
 #include <QObject>
 #include <QPointF>
+#include <QRectF>
 #include <QPointer>
 #include <QString>
 #include <gp_Ax3.hxx>
@@ -100,6 +101,15 @@ public:
     QPoint screenOf(double x, double y) const;
     void typeValues(const QStringList& values);  // as if typed into the value box + Enter
     bool editTextAt(int anchorPoint);            // opens the value box on an existing text
+    // Constraint glyphs and dimension labels: where they are drawn (after a paint), and
+    // selecting / editing them as a click or double-click would.
+    std::optional<QPointF> glyphCenter(int constraintId) const;
+    void selectConstraint(int constraintId, bool add = false);
+    bool editDimension(int constraintId);
+    const std::set<int>& selectedConstraints() const
+    {
+        return selectedConstraints_;
+    }
 
     // Interactor
     bool mousePress(QMouseEvent* e) override;
@@ -159,6 +169,10 @@ private:
     int editText_ = 0;
     std::optional<jig::Sketch::TrimPiece> trimHover_;  // the piece Trim would remove
     std::vector<int> offsetHover_, offsetChain_;        // Offset: under the cursor / chosen
+    std::vector<std::pair<int, QRectF>> glyphBoxes_;     // constraint glyphs as last painted
+    std::set<int> selectedConstraints_;
+    int editConstraint_ = 0;                             // dimension being changed (double-click)
+    int glyphAt(const QPointF& screen) const;
     QString lastTextHeight_;  // empty: the design's default size               // text being changed (double-click on its anchor)
     std::vector<std::vector<QVector3D>> textEdges_;  // glyph outlines, for drawing
     int chainStart_ = 0;             // line chains: the first point, clicking it closes

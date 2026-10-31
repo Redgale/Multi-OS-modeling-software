@@ -730,6 +730,71 @@ private slots:
         QCOMPARE(at7, 4);
     }
 
+    // Constraints and dimensions: click a glyph to select it, Delete removes it;
+    // double-click a dimension to change its value.
+    void selectDeleteAndEditConstraints()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        Viewport* view = w.viewport();
+        QVERIFY(w.createSketchOn("XY"));
+        SketchEditor* sk = w.sketchEditor();
+        sk->setTool(SketchEditor::Tool::CenterRectangle);
+        QTest::mouseMove(view, sk->screenOf(0, 0));
+        QTest::mouseClick(view, Qt::LeftButton, Qt::NoModifier, sk->screenOf(0, 0));
+        QTest::mouseMove(view, sk->screenOf(10, 8));
+        sk->typeValues({"60 mm", "40 mm"});
+        sk->setTool(SketchEditor::Tool::Select);
+        std::vector<int> dims;
+        for (auto& [cid, k] : sk->sketch().constraints()) {
+            if (k.type == jig::ConstraintType::Distance) {
+                dims.push_back(cid);
+            }
+        }
+        QCOMPARE(int(dims.size()), 2);
+        view->update();
+        QTRY_VERIFY(sk->glyphCenter(dims[0]).has_value());  // painted
+        const int dofBefore = sk->report().dof;
+
+        // double-click the first dimension, type 50 mm
+        const QPoint g0 = sk->glyphCenter(dims[0])->toPoint();
+        QTest::mouseMove(view, g0);
+        QTest::mouseDClick(view, Qt::LeftButton, Qt::NoModifier, g0);
+        sk->typeValues({"50 mm"});
+        double width = 0;
+        for (auto& [id, e] : sk->sketch().entities()) {
+            if (e.type == jig::EntityType::Line && !e.construction) {
+                auto [ax, ay] = sk->sketch().pointXY(e.p1);
+                auto [bx, by] = sk->sketch().pointXY(e.p2);
+                width = std::max(width, std::abs(bx - ax));
+            }
+        }
+        QVERIFY2(std::abs(width - 50) < 1e-6, qPrintable(QString::number(width)));
+
+        // click the other dimension's label and delete it: one more degree of freedom
+        view->update();
+        QTest::qWait(50);
+        int other = 0;
+        for (auto& [cid, k] : sk->sketch().constraints()) {
+            if (k.type == jig::ConstraintType::Distance && k.expr == "40 mm") {
+                other = cid;
+            }
+        }
+        QVERIFY(other);
+        QTRY_VERIFY(sk->glyphCenter(other).has_value());
+        const QPoint g1 = sk->glyphCenter(other)->toPoint();
+        QTest::qWait(600);  // not a double click
+        QTest::mouseMove(view, g1);
+        QTest::mouseClick(view, Qt::LeftButton, Qt::NoModifier, g1);
+        QCOMPARE(int(sk->selectedConstraints().size()), 1);
+        QVERIFY(sk->selectedConstraints().count(other));
+        QTest::keyClick(view, Qt::Key_Delete);
+        QVERIFY(!sk->sketch().constraints().count(other));
+        QCOMPARE(sk->report().dof, dofBefore + 1);
+    }
+
     // Revolve a ring, drill it from its top face, repeat the hole around the axis,
     // and mirror the result: the M3 panels driven like a person would.
     void ringRevolveHolePatternMirror()

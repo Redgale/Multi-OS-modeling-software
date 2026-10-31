@@ -68,7 +68,7 @@ SketchEditor::SketchEditor(Viewport* view, jig::Document& doc, std::string featu
         inputLabels_.push_back(l);
         inputFields_.push_back(f);
         connect(f, &QLineEdit::returnPressed, this, [this] {
-            if (dimTarget_ || editText_ || !offsetChain_.empty()) {
+            if (dimTarget_ || editText_ || editConstraint_ || !offsetChain_.empty()) {
                 placeSecond(cursor_, inputValues());
                 return;
             }
@@ -123,6 +123,7 @@ bool SketchEditor::refreshFromDocument()
         }
     }
     std::erase_if(selection_, [&](int id) { return !work_.entity(id); });
+    std::erase_if(selectedConstraints_, [&](int id) { return !work_.constraints().count(id); });
     profileTris_.clear();
     textEdges_.clear();
     if (it != doc_.state().sketches.end()) {
@@ -355,6 +356,7 @@ void SketchEditor::setTool(Tool t)
 
 void SketchEditor::resetToolState()
 {
+    editConstraint_ = 0;
     trimHover_.reset();
     offsetHover_.clear();
     offsetChain_.clear();
@@ -516,6 +518,28 @@ void SketchEditor::placeSecond(const Snap& cur, const QStringList& rawTyped)
         commit(tr("Dimension"), s);
         dimFirst_ = dimTarget_ = dimSecond_ = 0;
         hideInput();
+        rebuildOverlay();
+        emit stateChanged();
+        return;
+    }
+    if (editConstraint_) {
+        if (rawTyped.isEmpty() || rawTyped[0].trimmed().isEmpty()) {
+            return;
+        }
+        jig::Sketch s = work_;
+        auto it = s.constraints().find(editConstraint_);
+        if (it == s.constraints().end()) {
+            resetToolState();
+            return;
+        }
+        const bool angle = it->second.type == jig::ConstraintType::Angle;
+        const std::string expr = angle ? rawTyped[0].trimmed().toStdString() : doc_.lengthInput(rawTyped[0].trimmed().toStdString());
+        const auto k = it->second;
+        s.removeConstraint(editConstraint_);
+        s.addConstraint(k.type, k.a, k.b, k.c, expr);
+        if (commit(tr("Change dimension"), s)) {
+            resetToolState();
+        }
         rebuildOverlay();
         emit stateChanged();
         return;
@@ -965,10 +989,15 @@ bool SketchEditor::mouseRelease(QMouseEvent* e)
     cursorValid_ = toLocal(pos).has_value();
     switch (tool_) {
         case Tool::Select: {
-            const int hit = entityNear(pos);
             const bool add = e->modifiers() & (Qt::ShiftModifier | Qt::ControlModifier | Qt::MetaModifier);
+            if (const int g = glyphAt(pos)) {  // a constraint glyph or dimension label
+                selectConstraint(g, add);
+                break;
+            }
+            const int hit = entityNear(pos);
             if (!add) {
                 selection_.clear();
+                selectedConstraints_.clear();
             }
             if (hit) {
                 if (selection_.count(hit) && add) {
@@ -1111,6 +1140,63 @@ bool SketchEditor::mouseRelease(QMouseEvent* e)
     return true;
 }
 
+int SketchEditor::glyphAt(const QPointF& screen) const
+{
+    for (auto& [cid, box] : glyphBoxes_) {
+        if (box.adjusted(-2, -2, 2, 2).contains(screen)) {
+            return cid;
+        }
+    }
+    return 0;
+}
+
+std::optional<QPointF> SketchEditor::glyphCenter(int constraintId) const
+{
+    for (auto& [cid, box] : glyphBoxes_) {
+        if (cid == constraintId) {
+            return box.center();
+        }
+    }
+    return std::nullopt;
+}
+
+void SketchEditor::selectConstraint(int constraintId, bool add)
+{
+    if (!add) {
+        selection_.clear();
+        selectedConstraints_.clear();
+    }
+    if (add && selectedConstraints_.count(constraintId)) {
+        selectedConstraints_.erase(constraintId);
+    }
+    else {
+        selectedConstraints_.insert(constraintId);
+    }
+    message_ = tr("Constraint selected: press Delete to remove it. Double-click a dimension to change it.");
+    rebuildOverlay();
+    emit stateChanged();
+}
+
+bool SketchEditor::editDimension(int constraintId)
+{
+    auto it = work_.constraints().find(constraintId);
+    using CT = jig::ConstraintType;
+    if (it == work_.constraints().end() || !(it->second.type == CT::Distance || it->second.type == CT::Diameter ||
+                                             it->second.type == CT::Radius || it->second.type == CT::Angle)) {
+        return false;
+    }
+    resetToolState();
+    editConstraint_ = constraintId;
+    showInput({it->second.type == CT::Angle ? tr("Angle") : tr("Value")}, {QString::fromStdString(it->second.expr)});
+    if (auto c = glyphCenter(constraintId)) {
+        inputBox_->move(c->toPoint() + QPoint(14, 14));
+    }
+    inputFields_[0]->selectAll();
+    inputFields_[0]->setFocus();
+    emit stateChanged();
+    return true;
+}
+
 bool SketchEditor::editTextAt(int anchorPoint)
 {
     for (auto& [id, t] : work_.texts()) {
@@ -1134,6 +1220,12 @@ bool SketchEditor::mouseDoubleClick(QMouseEvent* e)
     // Qt delivers the second press of a quick double click as this event instead of a
     // press. Unless the double click means something, treat it as the press it is, so a
     // fast second click is never lost.
+    if (tool_ == Tool::Select) {
+        if (const int g = glyphAt(e->position()); g && editDimension(g)) {
+            pressed_ = false;
+            return true;
+        }
+    }
     if (tool_ == Tool::Select && editTextAt(entityNear(e->position()))) {
         pressed_ = false;  // ignore the release that follows
         return true;
@@ -1150,7 +1242,7 @@ bool SketchEditor::mouseDoubleClick(QMouseEvent* e)
 bool SketchEditor::key(QKeyEvent* e)
 {
     if (e->key() == Qt::Key_Escape) {
-        if (first_ || dimFirst_ || dimTarget_) {
+        if (first_ || dimFirst_ || dimTarget_ || editConstraint_ || editText_ || !offsetChain_.empty()) {
             resetToolState();
         }
         else if (tool_ != Tool::Select) {
@@ -1158,6 +1250,7 @@ bool SketchEditor::key(QKeyEvent* e)
         }
         else {
             selection_.clear();
+            selectedConstraints_.clear();
         }
         rebuildOverlay();
         emit stateChanged();
@@ -1324,10 +1417,14 @@ void SketchEditor::toggleConstruction()
 
 void SketchEditor::deleteSelection()
 {
-    if (selection_.empty()) {
+    if (selection_.empty() && selectedConstraints_.empty()) {
         return;
     }
     jig::Sketch s = work_;
+    for (int cid : selectedConstraints_) {
+        s.removeConstraint(cid);
+    }
+    selectedConstraints_.clear();
     for (int id : selection_) {
         const auto* e = s.entity(id);
         if (!e) {
@@ -1579,6 +1676,8 @@ void SketchEditor::paint(QPainter& p)
             return scr(cx + e->r * 0.7071, cy + e->r * 0.7071);
         };
         std::map<int, int> stack;  // per entity: offset glyphs so they don't overlap
+        glyphBoxes_.clear();
+        auto num = [this](double mm) { return QString::fromStdString(jig::formatLength(mm, doc_.units(), false)); };
         for (auto& [cid, k] : s.constraints()) {
             using CT = jig::ConstraintType;
             QString g;
@@ -1596,14 +1695,14 @@ void SketchEditor::paint(QPainter& p)
                 case CT::PointOnCurve: g = "∘"; break;
                 case CT::Distance: {
                     auto q = doc_.evalLength(k.expr);
-                    g = q ? fmt(q.value()) : "?";
+                    g = q ? num(q.value()) : "?";
                     if (k.b) {
                         at = k.b;
                     }
                     break;
                 }
-                case CT::Diameter: { auto q = doc_.evalLength(k.expr); g = "Ø" + (q ? fmt(q.value()) : "?"); break; }
-                case CT::Radius: { auto q = doc_.evalLength(k.expr); g = "R" + (q ? fmt(q.value()) : "?"); break; }
+                case CT::Diameter: { auto q = doc_.evalLength(k.expr); g = "Ø" + (q ? num(q.value()) : "?"); break; }
+                case CT::Radius: { auto q = doc_.evalLength(k.expr); g = "R" + (q ? num(q.value()) : "?"); break; }
                 case CT::Angle: { auto q = doc_.evalAngle(k.expr); g = q ? fmt(q.value() * 180 / kPi) + "°" : "?"; break; }
                 default: break;  // coincident, x/y placement: not labelled (too noisy)
             }
@@ -1618,9 +1717,11 @@ void SketchEditor::paint(QPainter& p)
             const QPointF pos = *m + QPointF(8 + 16 * n, -10);
             const bool dim = k.type == CT::Distance || k.type == CT::Diameter || k.type == CT::Radius || k.type == CT::Angle;
             const QRectF box(pos.x() - 2, pos.y() - 11, p.fontMetrics().horizontalAdvance(g) + 6, 15);
-            p.setPen(Qt::NoPen);
-            QColor bg = vc.background;
-            bg.setAlpha(220);
+            glyphBoxes_.emplace_back(cid, box);
+            const bool picked = selectedConstraints_.count(cid) > 0;
+            p.setPen(picked ? QPen(vc.selected, 2) : QPen(Qt::NoPen));  // selected: outlined, not just coloured
+            QColor bg = picked ? vc.selected : vc.background;
+            bg.setAlpha(picked ? 90 : 220);
             p.setBrush(bg);
             p.drawRoundedRect(box, 3, 3);
             p.setPen(dim ? vc.text : kFree.darker(130));
