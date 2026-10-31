@@ -57,6 +57,8 @@ nothing is committed.
 | `copy [sketch=s1] at=x,y;… [by=dx,dy] [angle=<angle> about=x,y]` | The same, leaving the originals: the copies keep the constraints among them |
 | `grid [sketch=s1] at=x,y;… count=n1[,n2] spacing=<len>[,<len>]` | Copies in columns to the right and rows upward (counts include the original) |
 | `ring [sketch=s1] at=x,y;… center=x,y count=<n> [angle=360 deg]` | Copies around a centre; a full turn spaces them evenly |
+| `ellipse [sketch=s1] center=x,y a=<len> b=<len> [angle=<angle>]` | Ellipse with radii a (along the angle) and b, both dimensioned |
+| `spline [sketch=s1] points=x,y;x,y;… [closed=yes]` | Smooth curve through the points (at least 2; 3 when closed) |
 | `trim [sketch=s1] at=x,y` | Remove the piece of the curve nearest (x, y) between its crossings with other curves |
 | `polygon [sketch=s1] center=x,y d=<len> [sides=6]` | Regular polygon; `d` is the diameter of the circle through the corners. One corner points straight up |
 | `arc [sketch=s1] center=x,y r=<len> from=<angle> to=<angle> [chord=yes]` | Counter-clockwise arc; `chord=yes` closes it with a straight line (a "D" shape) |

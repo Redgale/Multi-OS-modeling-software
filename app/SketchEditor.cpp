@@ -277,6 +277,11 @@ std::vector<QPointF> SketchEditor::polyline(const jig::Sketch& s, const jig::Ske
             pts.emplace_back(cx + e.r * std::cos(a), cy + e.r * std::sin(a));
         }
     }
+    else if (e.type == jig::EntityType::Ellipse || e.type == jig::EntityType::Spline) {
+        for (auto [x, y] : s.curvePoints(e.id, 24)) {
+            pts.emplace_back(x, y);
+        }
+    }
     return pts;
 }
 
@@ -370,6 +375,7 @@ void SketchEditor::resetToolState()
     trimHover_.reset();
     gridCols_ = 0;
     gridDx_ = 0;
+    splinePts_.clear();
     offsetHover_.clear();
     offsetChain_.clear();
     first_.reset();
@@ -406,6 +412,15 @@ QString SketchEditor::toolHint() const
             return second_ ? tr("Click a point the arc passes through (this sets how much it bends).")
                  : first_  ? tr("Click where the arc ends.")
                            : tr("Click where the arc starts.");
+        case Tool::Ellipse:
+            return second_ ? tr("Click to set the other radius, or type it and press Enter.")
+                 : first_  ? tr("Click the end of the long axis, or type its radius and press Enter.")
+                           : tr("Click the centre of the ellipse.");
+        case Tool::Spline:
+            return splinePts_.empty()
+                       ? tr("Click where the smooth curve starts.")
+                       : tr("Click the next point it passes through. Enter, Esc or double-click ends; "
+                            "click the first point to close it.");
         case Tool::Slot:
             return second_ ? tr("Click to set the width, or type it and press Enter.")
                  : first_  ? tr("Click the other end's centre, or type the centre-to-centre length.")
@@ -562,7 +577,7 @@ void SketchEditor::placeSecond(const Snap& cur, const QStringList& rawTyped)
         else if (e->type == jig::EntityType::Circle) {
             s.addConstraint(jig::ConstraintType::Diameter, dimTarget_, 0, 0, expr);
         }
-        else if (e->type == jig::EntityType::Arc) {
+        else if (e->type == jig::EntityType::Arc || e->type == jig::EntityType::Ellipse) {
             s.addConstraint(jig::ConstraintType::Radius, dimTarget_, 0, 0, expr);
         }
         commit(tr("Dimension"), s);
@@ -720,6 +735,43 @@ void SketchEditor::placeSecond(const Snap& cur, const QStringList& rawTyped)
         return int(std::lround(q->value));
     };
     switch (tool_) {
+        case Tool::Ellipse: {
+            if (!second_) {
+                auto ra = typedLen(0);
+                const double L = std::hypot(dir.x(), dir.y());
+                const double R = ra ? *ra : L;
+                if (R < 1e-9) {
+                    return;
+                }
+                const QPointF u = L > 1e-9 ? dir / L : QPointF(1, 0);
+                second_ = Snap {a + u * R, 0};
+                arcRadiusExpr_ = ra ? typed[0] : QString();
+                showInput({tr("Minor radius")});
+                break;
+            }
+            const QPointF ax = second_->local;
+            const QPointF u = (ax - a) / QLineF(a, ax).length();
+            auto rb = typedLen(0);
+            const double minor = rb ? *rb : std::abs(QPointF::dotProduct(b - a, QPointF(-u.y(), u.x())));
+            if (minor < 1e-9) {
+                return;
+            }
+            const int el = s.addEllipse(a.x(), a.y(), ax.x(), ax.y(), minor);
+            const jig::SketchEntity E = *s.entity(el);
+            if (first_->point) {
+                s.addConstraint(jig::ConstraintType::Coincident, E.center, first_->point);
+            }
+            if (!arcRadiusExpr_.isEmpty()) {
+                s.addConstraint(jig::ConstraintType::Distance, E.center, E.p1, 0, arcRadiusExpr_.toStdString());
+            }
+            if (rb) {
+                s.addConstraint(jig::ConstraintType::Radius, el, 0, 0, typed[0].toStdString());
+            }
+            if (commit(tr("Ellipse"), s)) {
+                resetToolState();
+            }
+            break;
+        }
         case Tool::Move: {
             auto across = typedLen(0), up = typedLen(1);
             double dx = dir.x(), dy = dir.y();
@@ -1143,6 +1195,17 @@ bool SketchEditor::mousePress(QMouseEvent* e)
             auto [x2, y2] = work_.pointXY(en->p2);
             dragOffset2_ = QPointF(x2 - x1, y2 - y1);
         }
+        else if (en->type == jig::EntityType::Spline) {
+            double best = 1e300;  // the fit point nearest the press
+            for (int pid : en->pts) {
+                const double d = QLineF(QPointF(screenOf(work_.pointXY(pid).first, work_.pointXY(pid).second)),
+                                        pressScreen_).length();
+                if (d < best) {
+                    best = d;
+                    dragPoint_ = pid;
+                }
+            }
+        }
         else {
             dragPoint_ = en->center;
         }
@@ -1471,6 +1534,15 @@ bool SketchEditor::mouseRelease(QMouseEvent* e)
                 v = 2 * en->r;
                 label = tr("Diameter");
             }
+            else if (en->type == jig::EntityType::Spline) {
+                dimTarget_ = 0;
+                message_ = tr("A smooth curve has no single size: dimension the points it passes through instead.");
+                break;
+            }
+            else if (en->type == jig::EntityType::Ellipse) {
+                v = en->r;
+                label = tr("Minor radius");  // the major radius: dimension the centre to the axis end
+            }
             else {
                 v = en->r;
                 label = tr("Radius");
@@ -1492,12 +1564,32 @@ bool SketchEditor::mouseRelease(QMouseEvent* e)
             if (tool_ == Tool::PatternRect) {
                 break;  // typed only
             }
+            if (tool_ == Tool::Spline) {
+                const QPointF start = splinePts_.empty() ? QPointF()
+                                                         : QPointF(screenOf(splinePts_.front().local.x(),
+                                                                            splinePts_.front().local.y()));
+                if (splinePts_.size() >= 3 && QLineF(start, pos).length() < kHitPx) {
+                    finishSpline(true);  // back on the first point: closed
+                    break;
+                }
+                if (!splinePts_.empty() && QLineF(splinePts_.back().local, cursor_.local).length() < 1e-9) {
+                    break;  // the same spot twice
+                }
+                splinePts_.push_back(cursor_);
+                if (!first_) {
+                    first_ = cursor_;
+                }
+                break;
+            }
             if (!first_) {
                 first_ = cursor_;
                 const bool two = tool_ != Tool::Circle;
                 (void)two;
                 if (tool_ == Tool::Move) {
                     showInput({tr("Across"), tr("Up")});
+                }
+                else if (tool_ == Tool::Ellipse) {
+                    showInput({tr("Major radius")});
                 }
                 else if (tool_ == Tool::PatternCirc) {
                     showInput({tr("How many"), tr("Angle")}, {"6", "360 deg"});
@@ -1573,6 +1665,11 @@ std::set<int> SketchEditor::entitiesInBox(const QRectF& box, bool crossing) cons
             for (int i = 0; i <= 16; ++i) {
                 const double u = i / 16.0;
                 samples.push_back(screenOf(ax + (bx - ax) * u, ay + (by - ay) * u));
+            }
+        }
+        else if (e.type == jig::EntityType::Ellipse || e.type == jig::EntityType::Spline) {
+            for (auto [x, y] : work_.curvePoints(id, 16)) {
+                samples.push_back(screenOf(x, y));
             }
         }
         else {
@@ -1671,6 +1768,29 @@ bool SketchEditor::editTextAt(int anchorPoint)
     return false;
 }
 
+void SketchEditor::finishSpline(bool closed)
+{
+    if (splinePts_.size() < 2) {
+        resetToolState();
+        return;
+    }
+    jig::Sketch s = work_;
+    std::vector<std::pair<double, double>> pts;
+    for (auto& p : splinePts_) {
+        pts.emplace_back(p.local.x(), p.local.y());
+    }
+    const int c = s.addSpline(pts, closed);
+    const jig::SketchEntity S = *s.entity(c);
+    for (size_t i = 0; i < splinePts_.size() && i < S.pts.size(); ++i) {
+        if (splinePts_[i].point) {  // clicked on an existing point: start or pass there
+            s.addConstraint(jig::ConstraintType::Coincident, S.pts[i], splinePts_[i].point);
+        }
+    }
+    if (commit(closed ? tr("Closed smooth curve") : tr("Smooth curve"), s)) {
+        resetToolState();
+    }
+}
+
 bool SketchEditor::mouseDoubleClick(QMouseEvent* e)
 {
     // Qt delivers the second press of a quick double click as this event instead of a
@@ -1690,6 +1810,14 @@ bool SketchEditor::mouseDoubleClick(QMouseEvent* e)
         pressed_ = false;  // ignore the release that follows
         return true;
     }
+    if (tool_ == Tool::Spline && !splinePts_.empty()) {
+        mousePress(e);  // the second click places a point; then the curve ends there
+        mouseRelease(e);
+        finishSpline(false);
+        pressed_ = false;
+        emit stateChanged();
+        return true;
+    }
     if (tool_ == Tool::Line && first_) {
         resetToolState();  // double-click ends a chain of lines
         pressed_ = false;
@@ -1701,6 +1829,13 @@ bool SketchEditor::mouseDoubleClick(QMouseEvent* e)
 
 bool SketchEditor::key(QKeyEvent* e)
 {
+    if (tool_ == Tool::Spline && !splinePts_.empty() &&
+        (e->key() == Qt::Key_Escape || e->key() == Qt::Key_Return || e->key() == Qt::Key_Enter)) {
+        finishSpline(false);
+        rebuildOverlay();
+        emit stateChanged();
+        return true;
+    }
     if (e->key() == Qt::Key_Escape) {
         if (first_ || dimFirst_ || dimTarget_ || editConstraint_ || editText_ || editArtwork_ || roundAt_ ||
             !offsetChain_.empty()) {
@@ -2080,6 +2215,33 @@ void SketchEditor::rebuildOverlay()
             const int cid = tmp.addCircle(a.x(), a.y(), std::max(1e-6, QLineF(a, b).length()));
             addPoly(polyline(tmp, *tmp.entity(cid)), kAccent, false);
         }
+        else if (tool_ == Tool::Spline && !splinePts_.empty()) {
+            jig::Sketch tmp;
+            std::vector<std::pair<double, double>> pts;
+            for (auto& q : splinePts_) {
+                pts.emplace_back(q.local.x(), q.local.y());
+            }
+            pts.emplace_back(b.x(), b.y());
+            const int c = tmp.addSpline(pts, false);
+            addPoly(polyline(tmp, *tmp.entity(c)), kAccent, false);
+        }
+        else if (tool_ == Tool::Ellipse) {
+            if (!second_) {
+                addPoly({a, b}, kAccent, true);
+            }
+            else {
+                jig::Sketch tmp;
+                const QPointF ax = second_->local;
+                const double L = QLineF(a, ax).length();
+                if (L > 1e-9) {
+                    const QPointF u = (ax - a) / L;
+                    const double minor = std::abs(QPointF::dotProduct(b - a, QPointF(-u.y(), u.x())));
+                    if (minor > 1e-9) {
+                        addPoly(polyline(tmp, *tmp.entity(tmp.addEllipse(a.x(), a.y(), ax.x(), ax.y(), minor))), kAccent, false);
+                    }
+                }
+            }
+        }
         else if (tool_ == Tool::Arc3) {
             if (!second_) {
                 addPoly({a, b}, kAccent, true);
@@ -2167,6 +2329,7 @@ void SketchEditor::paint(QPainter& p)
         if (e.type != jig::EntityType::Point && freeSet.count(id)) {
             owner.insert(e.p1);
             owner.insert(e.p2);
+            owner.insert(e.pts.begin(), e.pts.end());
         }
     }
     for (auto& [id, e] : s.entities()) {

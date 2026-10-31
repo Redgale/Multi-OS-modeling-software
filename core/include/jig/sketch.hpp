@@ -25,7 +25,9 @@ enum class EntityType
     Point,
     Line,
     Circle,
-    Arc
+    Arc,
+    Ellipse,  // center, p1 = end of the major axis (sets its length and direction), r = minor radius
+    Spline    // a smooth curve through the fit points `pts` (closed: back round to the first)
 };
 
 struct SketchEntity
@@ -39,7 +41,13 @@ struct SketchEntity
     double r = 0;
     double a0 = 0, a1 = 0;  // arc start/end angle (rad), counter-clockwise
     bool internal = false;  // point owned by a curve (hidden in the UI)
+    std::vector<int> pts;   // spline fit points, in order
+    bool closed = false;    // spline: runs back to its first point
 };
+
+// A spline's shape as cubic Bézier pieces (each: start, two handles, end), one per pair of
+// neighbouring fit points: a smooth curve through every fit point (Catmull-Rom).
+using Bezier2 = std::array<std::pair<double, double>, 4>;
 
 enum class ConstraintType
 {
@@ -144,6 +152,13 @@ public:
     int addCircle(double cx, double cy, double r);
     // Counter-clockwise arc from angle a0 to a1 around (cx, cy).
     int addArc(double cx, double cy, double r, double a0, double a1);
+    // Ellipse from its centre, the end of its major axis and the minor radius.
+    int addEllipse(double cx, double cy, double ax, double ay, double minor);
+    // Smooth curve through the given points (at least two; three for a closed one).
+    int addSpline(const std::vector<std::pair<double, double>>& points, bool closed = false);
+    std::vector<Bezier2> splinePieces(int splineId) const;
+    // Points along any curve, for drawing and picking (a line gives its two ends).
+    std::vector<std::pair<double, double>> curvePoints(int entityId, int perPiece = 24) const;
     // Composite shapes with the constraints that keep them in shape (but no sizes).
     struct SlotIds
     {

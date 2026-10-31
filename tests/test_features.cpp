@@ -971,3 +971,62 @@ TEST(SketchCopy, MoveCopyAndPatterns)
     EXPECT_NEAR(one.pointXY(one.entity(arc)->center).second, 10, 1e-9);
     EXPECT_NEAR(one.entity(arc)->a0, pi / 2, 1e-9);
 }
+
+TEST(SketchCurves, EllipsesAndSmoothCurves)
+{
+    // an ellipse 20 x 10 (radii 10 and 5), turned 30°: area pi a b
+    auto doc = build("sketch id=s1 plane=XY\nellipse sketch=s1 center=5,5 a=10 b=5 angle=30 deg\n"
+                     "extrude id=e1 sketch=s1 distance=4\n");
+    expectAllOk(*doc);
+    const auto& st = *doc->state().sketches.at("s1");
+    ASSERT_EQ(st.profiles.regions.size(), 1u);
+    EXPECT_NEAR(st.profiles.regions[0].area, pi * 50, 1e-6);
+    EXPECT_NEAR(props(*doc).volume, pi * 50 * 4, 1e-4);
+    // the minor radius follows a parameter (also when it becomes the longer one)
+    auto prm = build("param b = 5 mm\nsketch id=s1 plane=XY\nellipse sketch=s1 center=0,0 a=10 b=b\n");
+    run(*prm, "param b = 12 mm");
+    expectAllOk(*prm);
+    EXPECT_NEAR(prm->state().sketches.at("s1")->profiles.regions[0].area, pi * 120, 1e-6);
+
+    // a closed smooth curve through four points makes one region; an open one closed by a line
+    auto sp = build("sketch id=s1 plane=XY\nspline sketch=s1 points=0,0;20,0;20,20;0,20 closed=yes\n");
+    expectAllOk(*sp);
+    const auto& sr = sp->state().sketches.at("s1")->profiles.regions;
+    ASSERT_EQ(sr.size(), 1u);
+    EXPECT_GT(sr[0].area, 400);  // bulges out past the square through its points
+    EXPECT_LT(sr[0].area, 700);
+    auto open = build("sketch id=s1 plane=XY\nspline sketch=s1 points=0,0;10,8;20,0\nline sketch=s1 p1=0,0 p2=20,0\n");
+    EXPECT_EQ(open->state().sketches.at("s1")->profiles.regions.size(), 1u);
+    // the curve passes through its fit points, and the drawing does too
+    Sketch s;
+    const int c = s.addSpline({{0, 0}, {10, 8}, {20, 0}, {30, 5}});
+    auto pts = s.curvePoints(c, 16);
+    bool through = false;
+    for (auto [x, y] : pts) {
+        through |= std::hypot(x - 10, y - 8) < 1e-9;
+    }
+    EXPECT_TRUE(through);
+    EXPECT_EQ(s.openEndpoints().size(), 2u);
+    // nothing holds its fit points: they are reported free (drawn hollow)
+    auto rep = s.solve();
+    EXPECT_TRUE(std::find(rep.freeEntities.begin(), rep.freeEntities.end(), c) != rep.freeEntities.end());
+    EXPECT_EQ(rep.dof, 8);
+    // moving a fit point reshapes it; the shape is saved and read back
+    auto json = s.toJson();
+    auto back = Sketch::fromJson(json);
+    ASSERT_TRUE(back.ok());
+    EXPECT_EQ(back->entity(c)->pts.size(), 4u);
+    // copies and mirrors carry them along
+    const int e = s.addEllipse(50, 0, 60, 0, 3);
+    auto cp = s.copyCurves({c, e}, 0, 40);
+    ASSERT_TRUE(cp.ok());
+    EXPECT_EQ(s.entity((*cp)[1])->type, EntityType::Ellipse);
+    EXPECT_NEAR(s.pointXY(s.entity((*cp)[1])->center).second, 40, 1e-9);
+    // trimming or breaking them is explained, not done wrongly
+    EXPECT_FALSE(s.breakAt(c, 10, 8).ok());
+    EXPECT_FALSE(s.trimPiece(e, 60, 0).has_value());
+    // removing one removes its fit points
+    const size_t before = s.entities().size();
+    s.remove(c);
+    EXPECT_EQ(s.entities().size(), before - 5);
+}

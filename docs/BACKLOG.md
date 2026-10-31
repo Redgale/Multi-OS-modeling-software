@@ -34,7 +34,8 @@ Done: sketch mode, plane/face picker, look-at, Line/Rectangle/Centre rectangle/C
 Dimension, typed values, snapping, automatic H/V, constraint commands, drag, DOF display,
 conflict refusal, gap rings, profiles, construction toggle, delete.
 
-- B-013 Arc (3-point, tangent, centre), Polygon, Ellipse, Slot, Fit-point spline tools.
+- B-013 (3-point and centre arc, Polygon, Ellipse, Slot, fit-point spline done) tangent arc; constraints along
+  ellipses and splines; trim/extend/break of them.
 - B-014 (Trim, Extend, Break, Offset, sketch Fillet, Mirror, Move/Copy, Grid/Ring copy done) linked sketch
   patterns, rotate in the Move tool.
 - B-016 Select and delete individual constraints (click a glyph); window selection; collinear,

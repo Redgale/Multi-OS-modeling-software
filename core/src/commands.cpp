@@ -85,9 +85,9 @@ CommandRegistry::CommandRegistry()
     add({"sketch.arc", "Arc", "Arc", "SKETCH CREATE", "Draw part of a circle from its center, start and end.", "", {"curve", "bend"}, false, false, false, m1});
     add({"sketch.arc3", "3-point arc", "3-Point Arc", "SKETCH CREATE", "Draw an arc through its two ends and one point on it.", "", {"curve through points", "bend"}, false, false, false, m1});
     add({"sketch.polygon", "Polygon", "Polygon", "SKETCH CREATE", "Draw a shape with equal sides, like a hex nut.", "", {"hexagon", "nut"}, false, false, false, m1});
-    add({"sketch.ellipse", "Ellipse", "Ellipse", "SKETCH CREATE", "Draw an oval from its center and two axes.", "", {"oval"}, false, false, false, m1});
+    add({"sketch.ellipse", "Ellipse", "Ellipse", "SKETCH CREATE", "Draw an oval from its center and two axes.", "", {"oval"}, false, false, true, m1});
     add({"sketch.slot", "Slot", "Slot", "SKETCH CREATE", "Draw a rounded-end slot, ideal for adjustable screws.", "", {"oblong", "obround"}, false, false, true, m1});
-    add({"sketch.spline", "Smooth curve", "Fit Point Spline", "SKETCH CREATE", "Draw a smooth curve through the points you click.", "", {"spline", "freeform", "organic"}, false, false, false, m1});
+    add({"sketch.spline", "Smooth curve", "Fit Point Spline", "SKETCH CREATE", "Draw a smooth curve through the points you click.", "", {"spline", "freeform", "organic"}, false, false, true, m1});
     add({"sketch.point", "Point", "Point", "SKETCH CREATE", "Place a reference point, e.g. for a hole center.", "", {"marker"}, false, false, false, m1});
     add({"sketch.text", "Text", "Text", "SKETCH CREATE", "Add lettering you can extrude or cut, e.g. a name plate.", "", {"label", "letters", "engrave", "name"}, false, false, false, m5});
     add({"sketch.mirror", "Mirror (sketch)", "Sketch Mirror", "SKETCH CREATE", "Copy the selected sketch curves across a line; the copies stay mirrored.", "", {"symmetric copy", "flip"}, false, false, true, m1});
@@ -147,7 +147,7 @@ CommandRegistry::CommandRegistry()
     // shell, revolve, hole, patterns, mirror, parameters). Everything else above keeps its "coming in" note.
     static const std::set<std::string> inApp {
         "sketch.create", "sketch.finish", "sketch.line", "sketch.rectangle", "sketch.circle", "sketch.point",
-        "sketch.arc", "sketch.arc3", "sketch.slot", "sketch.polygon", "sketch.text", "sketch.trim", "sketch.offset", "sketch.fillet", "sketch.project", "sketch.extend", "sketch.break", "sketch.mirror", "sketch.move", "sketch.pattern_rect", "sketch.pattern_circ",
+        "sketch.arc", "sketch.arc3", "sketch.slot", "sketch.polygon", "sketch.ellipse", "sketch.spline", "sketch.text", "sketch.trim", "sketch.offset", "sketch.fillet", "sketch.project", "sketch.extend", "sketch.break", "sketch.mirror", "sketch.move", "sketch.pattern_rect", "sketch.pattern_circ",
         "sketch.dimension", "sketch.construction", "constraint.coincident", "constraint.collinear", "constraint.concentric",
         "constraint.midpoint", "constraint.fix",
         "constraint.parallel", "constraint.perpendicular", "constraint.horizontal", "constraint.tangent",
@@ -461,9 +461,10 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
         static const std::set<std::string> lengthKeys {
             "w", "h", "d", "r", "width", "height", "distance", "depth", "diameter", "thickness", "radius",
             "offset", "dx", "dy", "dz", "distance2", "thin", "r", "radius", "radius2", "spacing1", "spacing2", "cbore_diameter", "cbore_depth", "csink_diameter",
-            "center", "corner", "points", "c1", "c2", "p1", "p2", "at"};
+            "center", "corner", "points", "c1", "c2", "p1", "p2", "at", "by", "about", "spacing", "axis"};
         for (auto& [k, v] : a.kv) {
-            if (!lengthKeys.count(k)) {
+            const bool ellipseRadius = a.verb == "ellipse" && (k == "a" || k == "b");
+            if (!lengthKeys.count(k) && !ellipseRadius) {
                 continue;
             }
             std::string out, tok;
@@ -1125,6 +1126,58 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
             if (!r) {
                 return r.error();
             }
+            return true;
+        });
+    }
+    if (a.verb == "ellipse" || a.verb == "spline") {
+        // ellipse [sketch=s1] center=x,y a=<len> b=<len> [angle=<angle>]   (a, b = the two radii; dimensioned)
+        // spline [sketch=s1] points=x,y;x,y;… [closed=yes]                 (a smooth curve through them)
+        const std::string sid = a.get("sketch", last_);
+        return editSketch(a.verb == "ellipse" ? "Ellipse" : "Smooth curve", sid,
+                          [&](Sketch& s, const Document&) -> Result<bool> {
+            if (a.verb == "spline") {
+                std::vector<std::pair<double, double>> pts;
+                const std::string list = a.get("points", "");
+                for (size_t from = 0; from < list.size();) {
+                    const size_t semi = std::min(list.find(';', from), list.size());
+                    auto pe = parsePairExpr(list.substr(from, semi - from));
+                    if (!pe) {
+                        return pe.error();
+                    }
+                    auto px = len(pe->first), py = len(pe->second);
+                    if (!px || !py) {
+                        return !px ? px.error() : py.error();
+                    }
+                    pts.emplace_back(px.value(), py.value());
+                    from = semi + 1;
+                }
+                const bool closed = a.get("closed", "no") == "yes";
+                if (pts.size() < (closed ? 3u : 2u)) {
+                    return makeError("script.args", closed ? "A closed smooth curve needs at least 3 points."
+                                                           : "A smooth curve needs at least 2 points.");
+                }
+                s.addSpline(pts, closed);
+                return true;
+            }
+            auto pe = parsePairExpr(a.get("center", "0,0"));
+            if (!pe) {
+                return pe.error();
+            }
+            auto cx = len(pe->first), cy = len(pe->second);
+            const std::string ae = a.get("a", "10 mm"), be = a.get("b", "5 mm");
+            auto ra = len(ae), rb = len(be);
+            auto ang = doc.evalAngle(a.get("angle", "0 deg"));
+            if (!cx || !cy || !ra || !rb || !ang) {
+                return makeError("script.args", "Ellipse needs center=x,y a=<len> b=<len> with valid values.");
+            }
+            if (!(ra.value() > 0) || !(rb.value() > 0)) {
+                return makeError("script.args", "Both radii of an ellipse must be larger than zero.");
+            }
+            const int el = s.addEllipse(cx.value(), cy.value(), cx.value() + ra.value() * std::cos(ang.value()),
+                                        cy.value() + ra.value() * std::sin(ang.value()), rb.value());
+            const SketchEntity E = *s.entity(el);
+            s.addConstraint(ConstraintType::Distance, E.center, E.p1, 0, ae);
+            s.addConstraint(ConstraintType::Radius, el, 0, 0, be);
             return true;
         });
     }

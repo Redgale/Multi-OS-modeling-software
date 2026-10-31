@@ -10,6 +10,9 @@
 #include <sstream>
 #include <typeinfo>
 
+#include <Bnd_Box.hxx>
+#include <BRep_Builder.hxx>
+#include <BRep_Tool.hxx>
 #include <BRepAdaptor_Curve.hxx>
 #include <BRepAdaptor_Surface.hxx>
 #include <BRepAlgoAPI_Common.hxx>
@@ -20,48 +23,51 @@
 #include <BRepBuilderAPI_Copy.hxx>
 #include <BRepBuilderAPI_MakeEdge.hxx>
 #include <BRepBuilderAPI_MakeFace.hxx>
+#include <BRepBuilderAPI_MakeVertex.hxx>
+#include <BRepBuilderAPI_MakeWire.hxx>
 #include <BRepBuilderAPI_Transform.hxx>
 #include <BRepCheck_Analyzer.hxx>
 #include <BRepClass3d_SolidClassifier.hxx>
+#include <BRepExtrema_DistShapeShape.hxx>
 #include <BRepFilletAPI_MakeChamfer.hxx>
 #include <BRepFilletAPI_MakeFillet.hxx>
-#include <BRepOffsetAPI_MakeOffsetShape.hxx>
-#include <BRepOffsetAPI_MakeThickSolid.hxx>
 #include <BRepGProp.hxx>
 #include <BRepLProp_SLProps.hxx>
 #include <BRepMesh_IncrementalMesh.hxx>
-#include <BRepBuilderAPI_MakeWire.hxx>
+#include <BRepOffsetAPI_MakeOffset.hxx>
+#include <BRepOffsetAPI_MakeOffsetShape.hxx>
+#include <BRepOffsetAPI_MakeThickSolid.hxx>
 #include <BRepPrimAPI_MakePrism.hxx>
 #include <BRepPrimAPI_MakeRevol.hxx>
-#include <BRepOffsetAPI_MakeOffset.hxx>
-#include <LocOpe_DPrism.hxx>
-#include <gp_Lin.hxx>
-#include <BRepBuilderAPI_MakeVertex.hxx>
-#include <BRepExtrema_DistShapeShape.hxx>
-#include <BRep_Builder.hxx>
-#include <TopoDS_Compound.hxx>
-#include <BRep_Tool.hxx>
-#include <Bnd_Box.hxx>
+#include <BRepTools_History.hxx>
 #include <GCPnts_TangentialDeflection.hxx>
+#include <Geom_BSplineCurve.hxx>
+#include <gp_Circ.hxx>
+#include <gp_Dir2d.hxx>
+#include <gp_Elips.hxx>
+#include <gp_Lin.hxx>
+#include <gp_Pln.hxx>
 #include <GProp_GProps.hxx>
 #include <Interface_Static.hxx>
+#include <LocOpe_DPrism.hxx>
 #include <Poly_Triangulation.hxx>
-#include <STEPControl_Reader.hxx>
 #include <ShapeUpgrade_UnifySameDomain.hxx>
-#include <BRepTools_History.hxx>
-#include <STEPControl_Writer.hxx>
 #include <Standard_Failure.hxx>
+#include <STEPControl_Reader.hxx>
+#include <STEPControl_Writer.hxx>
 #include <StlAPI_Writer.hxx>
+#include <TColgp_Array1OfPnt.hxx>
+#include <TColStd_Array1OfInteger.hxx>
+#include <TColStd_Array1OfReal.hxx>
 #include <TColStd_SequenceOfAsciiString.hxx>
 #include <TopExp.hxx>
 #include <TopExp_Explorer.hxx>
-#include <TopTools_IndexedDataMapOfShapeListOfShape.hxx>
-#include <TopTools_ListOfShape.hxx>
 #include <TopoDS.hxx>
+#include <TopoDS_Compound.hxx>
 #include <TopoDS_Edge.hxx>
 #include <TopoDS_Vertex.hxx>
-#include <gp_Circ.hxx>
-#include <gp_Pln.hxx>
+#include <TopTools_IndexedDataMapOfShapeListOfShape.hxx>
+#include <TopTools_ListOfShape.hxx>
 
 namespace jig
 {
@@ -617,6 +623,49 @@ Result<ProfileSet> buildProfiles(const Sketch& sketch, const gp_Ax3& frame)
                     }
                     edge = BRepBuilderAPI_MakeEdge(circ, a0, a1).Edge();
                 }
+            }
+            else if (e.type == EntityType::Ellipse) {
+                auto [cx, cy] = sketch.pointXY(e.center);
+                auto [ax, ay] = sketch.pointXY(e.p1);
+                double major = std::hypot(ax - cx, ay - cy), minor = e.r;
+                if (major < 1e-7 || minor < 1e-7) {
+                    continue;
+                }
+                gp_Dir2d ux(ax - cx, ay - cy);
+                if (minor > major) {  // OCCT wants the longer axis first
+                    std::swap(major, minor);
+                    ux = gp_Dir2d(-ux.Y(), ux.X());
+                }
+                grow(cx, cy, major);
+                const gp_Dir xd(frame.XDirection().XYZ() * ux.X() + frame.YDirection().XYZ() * ux.Y());
+                edge = BRepBuilderAPI_MakeEdge(gp_Elips(gp_Ax2(to3d(cx, cy), frame.Direction(), xd), major, minor)).Edge();
+            }
+            else if (e.type == EntityType::Spline) {
+                // the Bézier pieces joined into one cubic B-spline (each inner knot repeated 3 times)
+                const auto pieces = sketch.splinePieces(id);
+                if (pieces.empty()) {
+                    continue;
+                }
+                const int n = int(pieces.size());
+                TColgp_Array1OfPnt poles(1, 3 * n + 1);
+                int k = 1;
+                for (int i = 0; i < n; ++i) {
+                    for (int j = i == 0 ? 0 : 1; j < 4; ++j) {
+                        poles.SetValue(k++, to3d(pieces[size_t(i)][size_t(j)].first, pieces[size_t(i)][size_t(j)].second));
+                        grow(pieces[size_t(i)][size_t(j)].first, pieces[size_t(i)][size_t(j)].second, 0);
+                    }
+                }
+                TColStd_Array1OfReal knots(1, n + 1);
+                TColStd_Array1OfInteger mults(1, n + 1);
+                for (int i = 0; i <= n; ++i) {
+                    knots.SetValue(i + 1, i);
+                    mults.SetValue(i + 1, i == 0 || i == n ? 4 : 3);
+                }
+                if (poles.First().Distance(poles.Last()) < 1e-7 && !e.closed) {
+                    continue;  // an open curve that starts and ends in one place
+                }
+                Handle(Geom_BSplineCurve) bs = new Geom_BSplineCurve(poles, knots, mults, 3);
+                edge = BRepBuilderAPI_MakeEdge(bs).Edge();
             }
             else {
                 continue;

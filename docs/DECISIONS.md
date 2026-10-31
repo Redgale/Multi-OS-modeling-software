@@ -366,3 +366,34 @@ principle change outlines, so golden tests record the FreeType version.
 
 **How to reverse.** Replace `core/src/text.cpp`; the sketch format (`texts` with text,
 font, height expression, angle, anchor) does not depend on the engine.
+
+## D-015 Ellipses and smooth curves outside the constraint solver (accepted)
+
+**Context.** The brief lists Ellipse and Fit Point Spline for v0.1 M1. planegcs has ellipse
+and B-spline entities, but each needs internal-alignment constraints, its own glyph and
+dimension handling, and new code in every tool that walks curves (trim, offset, project).
+
+**Options.** (a) Full planegcs ellipses and B-splines. (b) Keep the solver to points: an
+ellipse is its centre point, an axis-end point and a minor radius set before solving (from
+its radius dimension); a smooth curve is an ordered list of fit points with the curve
+computed from them. (c) Approximate both with many short arcs or lines.
+
+**Decision.** (b). The fit points and the ellipse's two points are ordinary sketch points,
+so they can be dragged, dimensioned, fixed and made coincident with other geometry. The
+smooth curve is a uniform Catmull-Rom curve (open ends mirror their neighbour, closed
+curves wrap round), stored as cubic Bézier pieces; the solid gets the same pieces as one
+cubic B-spline (inner knots of multiplicity 3), and the screen draws the same pieces, so
+what you see is what is extruded.
+
+**Evidence.** `SketchCurves.EllipsesAndSmoothCurves`: area of a turned ellipse equals
+pi·a·b; the curve passes exactly through its fit points; extrudes to the expected volume;
+save/load keeps the points. UI test draws, closes, ends and drags them.
+
+**Consequences.** No tangent, point-on-curve or equal constraints along an ellipse or a
+smooth curve yet; trim, extend, break and offset refuse them with a reason; other curves
+are not split where they cross them. The ellipse's minor radius has no freedom in the
+solver (it changes only through its dimension or by editing).
+
+**How to reverse.** Map the same entities onto planegcs ellipses and B-splines later; the
+file format (centre, axis end and minor radius; ordered fit points and a closed flag) can
+stay.

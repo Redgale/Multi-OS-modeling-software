@@ -906,6 +906,72 @@ private slots:
         QCOMPARE(regions(), 5);
     }
 
+    // Ellipse by clicks and typing; a closed smooth curve by clicking round and back to the start.
+    void ellipseAndSpline()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        Viewport* view = w.viewport();
+        QVERIFY(w.createSketchOn("XY"));
+        SketchEditor* sk = w.sketchEditor();
+        auto click = [&](double x, double y) {
+            QTest::mouseMove(view, sk->screenOf(x, y));
+            QTest::mouseClick(view, Qt::LeftButton, Qt::NoModifier, sk->screenOf(x, y));
+        };
+        auto regions = [&] { return w.document().state().sketches.begin()->second->profiles.regions; };
+        w.runCommand("sketch.ellipse");
+        QCOMPARE(int(sk->tool()), int(SketchEditor::Tool::Ellipse));
+        click(-30, 0);
+        sk->typeValues({"15 mm"});        // the long radius, towards the cursor
+        QTest::mouseMove(view, sk->screenOf(-30, 5));
+        sk->typeValues({"6 mm"});
+        QVERIFY2(sk->message().isEmpty(), qPrintable(sk->message()));
+        QCOMPARE(int(regions().size()), 1);
+        QVERIFY(std::abs(regions()[0].area - std::acos(-1.0) * 15 * 6) < 1e-6);
+        QCOMPARE(sk->report().dof, 3);  // only its place and turn are free
+
+        w.runCommand("sketch.spline");
+        click(10, 0);
+        click(30, 0);
+        click(30, 20);
+        click(10, 20);
+        click(10, 0);  // back on the first point: closed
+        QVERIFY2(sk->message().isEmpty(), qPrintable(sk->message()));
+        QCOMPARE(int(regions().size()), 2);
+        int splines = 0;
+        for (auto& [id, e] : sk->sketch().entities()) {
+            splines += e.type == jig::EntityType::Spline && e.closed && e.pts.size() == 4;
+        }
+        QCOMPARE(splines, 1);
+        // an open one ends with Enter
+        click(40, 30);
+        click(50, 35);
+        click(60, 30);
+        QTest::keyClick(view, Qt::Key_Return);
+        int open = 0;
+        for (auto& [id, e] : sk->sketch().entities()) {
+            open += e.type == jig::EntityType::Spline && !e.closed;
+        }
+        QCOMPARE(open, 1);
+        // drag a fit point: the curve follows
+        sk->setTool(SketchEditor::Tool::Select);
+        QTest::mousePress(view, Qt::LeftButton, Qt::NoModifier, sk->screenOf(50, 35));
+        QMouseEvent mv(QEvent::MouseMove, QPointF(sk->screenOf(50, 45)), view->mapToGlobal(QPointF(sk->screenOf(50, 45))),
+                       Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+        QApplication::sendEvent(view, &mv);
+        QTest::mouseRelease(view, Qt::LeftButton, Qt::NoModifier, sk->screenOf(50, 45));
+        bool moved = false;
+        for (auto& [id, e] : sk->sketch().entities()) {
+            if (e.type == jig::EntityType::Spline && !e.closed) {
+                moved = std::abs(sk->sketch().pointXY(e.pts[1]).second - 45) < 0.5;
+            }
+        }
+        QVERIFY(moved);
+        w.grab().save(shotPath("sketch-curves"));
+    }
+
     // Drag a box in Select: left to right takes what is inside, right to left what it touches.
     void windowSelection()
     {

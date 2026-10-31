@@ -122,7 +122,7 @@ Result<int> Sketch::extend(int entityId, double x, double y)
 {
     const SketchEntity* t = entity(entityId);
     if (!t || (t->type != EntityType::Line && t->type != EntityType::Arc)) {
-        return editError("sketch.extend", "Extend works on lines and arcs.");
+        return editError("sketch.extend", "Extend works on lines and arcs (not ellipses or smooth curves yet).");
     }
     const Geo T = geoOf(*this, *t);
     // the end nearest the click
@@ -146,7 +146,8 @@ Result<int> Sketch::extend(int entityId, double x, double y)
     double best = 1e300;
     std::pair<double, double> hit;
     for (auto& [id, e] : entities_) {
-        if (id == entityId || e.type == EntityType::Point || e.construction) {
+        if (id == entityId || e.type == EntityType::Point || e.construction || e.type == EntityType::Ellipse ||
+            e.type == EntityType::Spline) {
             continue;
         }
         const Geo C = geoOf(*this, e);
@@ -213,8 +214,8 @@ Result<int> Sketch::extend(int entityId, double x, double y)
 Result<std::vector<int>> Sketch::breakAt(int entityId, double x, double y)
 {
     const SketchEntity* t = entity(entityId);
-    if (!t || t->type == EntityType::Point) {
-        return editError("sketch.break", "Click a line, circle or arc to break it.");
+    if (!t || t->type == EntityType::Point || t->type == EntityType::Ellipse || t->type == EntityType::Spline) {
+        return editError("sketch.break", "Click a line, circle or arc to break it (not an ellipse or smooth curve yet).");
     }
     auto piece = trimPiece(entityId, x, y);
     if (!piece || piece->whole) {
@@ -436,6 +437,27 @@ Result<std::vector<int>> Sketch::mirror(const std::vector<int>& ids, int axisLin
                 out.push_back(c);
                 break;
             }
+            case EntityType::Ellipse: {
+                // centre and axis end mirrored; the minor radius is copied (not linked)
+                SketchEntity m = e;
+                m.id = nextId_++;
+                m.center = mirrorPoint(e.center);
+                m.p1 = mirrorPoint(e.p1);
+                entities_[m.id] = m;
+                out.push_back(m.id);
+                break;
+            }
+            case EntityType::Spline: {
+                SketchEntity m = e;
+                m.id = nextId_++;
+                m.pts.clear();
+                for (auto it = e.pts.rbegin(); it != e.pts.rend(); ++it) {  // keeps it running the same way round
+                    m.pts.push_back(mirrorPoint(*it));
+                }
+                entities_[m.id] = m;
+                out.push_back(m.id);
+                break;
+            }
         }
     }
     syncCurvePoints();
@@ -485,6 +507,9 @@ std::vector<int> withPoints(const Sketch& s, const std::vector<int>& ids)
                 push(e->p1);
                 push(e->p2);
                 push(e->center);
+                for (int pid : e->pts) {
+                    push(pid);
+                }
             }
         }
     }
@@ -546,6 +571,21 @@ Result<std::vector<int>> Sketch::copyCurves(const std::vector<int>& ids, double 
             case EntityType::Arc:
                 n = addArcOn(pointFor(e.center), pointFor(e.p1), pointFor(e.p2), e.r, e.a0 + angle, e.a1 + angle);
                 break;
+            case EntityType::Ellipse:
+            case EntityType::Spline: {
+                SketchEntity c = e;
+                c.id = n = nextId_++;
+                if (e.type == EntityType::Ellipse) {
+                    c.center = pointFor(e.center);
+                    c.p1 = pointFor(e.p1);
+                }
+                c.pts.clear();
+                for (int pid : e.pts) {
+                    c.pts.push_back(pointFor(pid));
+                }
+                entities_[n] = c;
+                break;
+            }
         }
         entities_.at(n).construction = e.construction;
         map[id] = n;

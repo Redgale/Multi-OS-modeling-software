@@ -712,7 +712,8 @@ void MainWindow::buildToolbar()
         sketchBar_->addAction(registryAction(id));
     }
     sketchBar_->addAction(centerRect_);
-    for (const char* id : {"sketch.circle", "sketch.arc", "sketch.arc3", "sketch.slot", "sketch.polygon", "sketch.text",
+    for (const char* id : {"sketch.circle", "sketch.arc", "sketch.arc3", "sketch.slot", "sketch.polygon", "sketch.ellipse",
+                           "sketch.spline", "sketch.text",
                            "sketch.point", "sketch.dimension", "sketch.construction", "sketch.trim", "sketch.offset",
                            "sketch.extend", "sketch.break", "sketch.fillet", "sketch.mirror", "sketch.move",
                            "sketch.pattern_rect", "sketch.pattern_circ", "sketch.project"}) {
@@ -1246,6 +1247,7 @@ void MainWindow::runCommand(const QString& id)
         static const std::map<QString, T> tools {
             {"sketch.line", T::Line},       {"sketch.rectangle", T::Rectangle}, {"sketch.circle", T::Circle},
             {"sketch.arc", T::Arc},         {"sketch.arc3", T::Arc3},         {"sketch.slot", T::Slot},           {"sketch.polygon", T::Polygon},
+            {"sketch.ellipse", T::Ellipse}, {"sketch.spline", T::Spline},
             {"sketch.text", T::Text},       {"sketch.trim", T::Trim},
             {"sketch.offset", T::Offset},   {"sketch.fillet", T::Round},
             {"sketch.project", T::Project}, {"sketch.extend", T::Extend},     {"sketch.break", T::Break},

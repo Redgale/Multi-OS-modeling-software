@@ -52,6 +52,10 @@ const char* entityTypeName(EntityType t)
             return "circle";
         case EntityType::Arc:
             return "arc";
+        case EntityType::Ellipse:
+            return "ellipse";
+        case EntityType::Spline:
+            return "spline";
     }
     return "point";
 }
@@ -69,6 +73,12 @@ std::optional<EntityType> entityTypeFromString(std::string_view s)
     }
     if (s == "arc") {
         return EntityType::Arc;
+    }
+    if (s == "ellipse") {
+        return EntityType::Ellipse;
+    }
+    if (s == "spline") {
+        return EntityType::Spline;
     }
     return std::nullopt;
 }
@@ -187,6 +197,124 @@ int Sketch::addArcOn(int center, int p1, int p2, double r, double a0, double a1)
     return e.id;
 }
 
+int Sketch::addEllipse(double cx, double cy, double ax, double ay, double minor)
+{
+    SketchEntity e;
+    e.id = nextId_++;
+    e.type = EntityType::Ellipse;
+    e.center = addPoint(cx, cy, true);
+    e.p1 = addPoint(ax, ay, true);
+    e.r = minor;
+    entities_[e.id] = e;
+    return e.id;
+}
+
+int Sketch::addSpline(const std::vector<std::pair<double, double>>& points, bool closed)
+{
+    SketchEntity e;
+    e.id = nextId_++;
+    e.type = EntityType::Spline;
+    e.closed = closed && points.size() >= 3;
+    for (auto [x, y] : points) {
+        e.pts.push_back(addPoint(x, y, true));
+    }
+    entities_[e.id] = e;
+    return e.id;
+}
+
+std::vector<Bezier2> Sketch::splinePieces(int splineId) const
+{
+    std::vector<Bezier2> out;
+    const SketchEntity* e = entity(splineId);
+    if (!e || e->type != EntityType::Spline || e->pts.size() < 2) {
+        return out;
+    }
+    std::vector<std::pair<double, double>> P;
+    for (int pid : e->pts) {
+        P.push_back(pointXY(pid));
+    }
+    const int n = int(P.size());
+    // the neighbour before/after each point; open ends mirror their neighbour
+    auto at = [&](int i) -> std::pair<double, double> {
+        if (e->closed) {
+            return P[size_t(((i % n) + n) % n)];
+        }
+        if (i < 0) {
+            return {2 * P[0].first - P[1].first, 2 * P[0].second - P[1].second};
+        }
+        if (i >= n) {
+            return {2 * P[size_t(n - 1)].first - P[size_t(n - 2)].first,
+                    2 * P[size_t(n - 1)].second - P[size_t(n - 2)].second};
+        }
+        return P[size_t(i)];
+    };
+    const int pieces = e->closed ? n : n - 1;
+    for (int i = 0; i < pieces; ++i) {
+        auto p0 = at(i - 1), p1 = at(i), p2 = at(i + 1), p3 = at(i + 2);
+        out.push_back({p1,
+                       std::pair {p1.first + (p2.first - p0.first) / 6, p1.second + (p2.second - p0.second) / 6},
+                       std::pair {p2.first - (p3.first - p1.first) / 6, p2.second - (p3.second - p1.second) / 6},
+                       p2});
+    }
+    return out;
+}
+
+std::vector<std::pair<double, double>> Sketch::curvePoints(int entityId, int perPiece) const
+{
+    std::vector<std::pair<double, double>> out;
+    const SketchEntity* e = entity(entityId);
+    if (!e) {
+        return out;
+    }
+    switch (e->type) {
+        case EntityType::Point:
+            out.push_back({e->x, e->y});
+            break;
+        case EntityType::Line:
+            out.push_back(pointXY(e->p1));
+            out.push_back(pointXY(e->p2));
+            break;
+        case EntityType::Circle:
+        case EntityType::Arc: {
+            auto [cx, cy] = pointXY(e->center);
+            double a0 = 0, span = 2 * std::numbers::pi;
+            if (e->type == EntityType::Arc) {
+                a0 = e->a0;
+                span = std::fmod(e->a1 - e->a0 + 4 * std::numbers::pi, 2 * std::numbers::pi);
+            }
+            const int n = std::max(8, perPiece * 2);
+            for (int i = 0; i <= n; ++i) {
+                const double t = a0 + span * i / n;
+                out.push_back({cx + e->r * std::cos(t), cy + e->r * std::sin(t)});
+            }
+            break;
+        }
+        case EntityType::Ellipse: {
+            auto [cx, cy] = pointXY(e->center);
+            auto [ax, ay] = pointXY(e->p1);
+            const double a = std::hypot(ax - cx, ay - cy), th = std::atan2(ay - cy, ax - cx);
+            const int n = std::max(8, perPiece * 2);
+            for (int i = 0; i <= n; ++i) {
+                const double t = 2 * std::numbers::pi * i / n;
+                const double u = a * std::cos(t), v = e->r * std::sin(t);
+                out.push_back({cx + u * std::cos(th) - v * std::sin(th), cy + u * std::sin(th) + v * std::cos(th)});
+            }
+            break;
+        }
+        case EntityType::Spline:
+            for (auto& b : splinePieces(entityId)) {
+                for (int i = out.empty() ? 0 : 1; i <= perPiece; ++i) {
+                    const double t = double(i) / perPiece, m = 1 - t;
+                    const double w0 = m * m * m, w1 = 3 * m * m * t, w2 = 3 * m * t * t, w3 = t * t * t;
+                    out.push_back({w0 * b[0].first + w1 * b[1].first + w2 * b[2].first + w3 * b[3].first,
+                                   w0 * b[0].second + w1 * b[1].second + w2 * b[2].second + w3 * b[3].second});
+                }
+            }
+            break;
+    }
+    return out;
+}
+
 // ---------------------------------------------------------------- trim
 
 namespace
@@ -197,6 +325,12 @@ double wrap(double a)  // into [0, 2pi)
 {
     a = std::fmod(a, kTau);
     return a < 0 ? a + kTau : a;
+}
+
+// Ellipses and splines are not cut by (or attached to) other curves yet.
+bool freeForm(EntityType t)
+{
+    return t == EntityType::Ellipse || t == EntityType::Spline;
 }
 
 struct Cut
@@ -211,7 +345,7 @@ struct Cut
 std::optional<Sketch::TrimPiece> Sketch::trimPiece(int entityId, double x, double y) const
 {
     const SketchEntity* t = entity(entityId);
-    if (!t || t->type == EntityType::Point) {
+    if (!t || t->type == EntityType::Point || freeForm(t->type)) {
         return std::nullopt;
     }
     const double eps = 1e-7;
@@ -261,7 +395,7 @@ std::optional<Sketch::TrimPiece> Sketch::trimPiece(int entityId, double x, doubl
     };
     std::vector<double> cuts;
     for (auto& [id, e] : entities_) {
-        if (id == entityId || e.type == EntityType::Point || e.construction) {
+        if (id == entityId || e.type == EntityType::Point || e.construction || freeForm(e.type)) {
             continue;
         }
         const Geo C = geoOf(e);
@@ -360,7 +494,17 @@ std::optional<std::pair<int, double>> Sketch::curveNear(double x, double y, bool
             continue;
         }
         double d = 1e300;
-        if (e.type == EntityType::Line) {
+        if (freeForm(e.type)) {  // distance to the drawn polyline
+            auto pts = curvePoints(id, 32);
+            for (size_t i = 0; i + 1 < pts.size(); ++i) {
+                auto [ax, ay] = pts[i];
+                auto [bx, by] = pts[i + 1];
+                const double dx = bx - ax, dy = by - ay, L2 = dx * dx + dy * dy;
+                const double u = L2 > 0 ? std::clamp(((x - ax) * dx + (y - ay) * dy) / L2, 0.0, 1.0) : 0.0;
+                d = std::min(d, std::hypot(ax + dx * u - x, ay + dy * u - y));
+            }
+        }
+        else if (e.type == EntityType::Line) {
             auto [ax, ay] = pointXY(e.p1);
             auto [bx, by] = pointXY(e.p2);
             const double dx = bx - ax, dy = by - ay, L2 = dx * dx + dy * dy;
@@ -527,7 +671,8 @@ void Sketch::dropUnusedPoint(int pid)
         return;
     }
     for (auto& [id, e] : entities_) {
-        if (e.type != EntityType::Point && (e.p1 == pid || e.p2 == pid || e.center == pid)) {
+        if (e.type != EntityType::Point && (e.p1 == pid || e.p2 == pid || e.center == pid ||
+                                            std::find(e.pts.begin(), e.pts.end(), pid) != e.pts.end())) {
             return;
         }
     }
@@ -555,7 +700,7 @@ int Sketch::attachedPoint(int entityId, double px, double py)
     const int pid = addPoint(px, py, true);
     // the crossing curve(s): every other curve passing through (px, py)
     for (auto& [id, e] : entities_) {
-        if (id == entityId || e.type == EntityType::Point || e.construction || id == pid) {
+        if (id == entityId || e.type == EntityType::Point || e.construction || id == pid || freeForm(e.type)) {
             continue;
         }
         // an existing endpoint there: share it
@@ -575,7 +720,7 @@ int Sketch::attachedPoint(int entityId, double px, double py)
         }
     }
     for (auto& [id, e] : entities_) {
-        if (id == entityId || e.type == EntityType::Point || e.construction || id == pid) {
+        if (id == entityId || e.type == EntityType::Point || e.construction || id == pid || freeForm(e.type)) {
             continue;
         }
         double dist = 1e300;
@@ -825,7 +970,9 @@ bool Sketch::remove(int entityId)
     const SketchEntity e = it->second;
     entities_.erase(it);
     // internal points not used by any other curve go too
-    for (int pid : {e.p1, e.p2, e.center}) {
+    std::vector<int> own {e.p1, e.p2, e.center};
+    own.insert(own.end(), e.pts.begin(), e.pts.end());
+    for (int pid : own) {
         if (!pid) {
             continue;
         }
@@ -835,7 +982,8 @@ bool Sketch::remove(int entityId)
         }
         bool used = false;
         for (auto& [id, o] : entities_) {
-            if (o.p1 == pid || o.p2 == pid || o.center == pid) {
+            if (o.p1 == pid || o.p2 == pid || o.center == pid ||
+                std::find(o.pts.begin(), o.pts.end(), pid) != o.pts.end()) {
                 used = true;
             }
         }
@@ -943,6 +1091,22 @@ SolveReport Sketch::solve(const ParamLookup& lookup)
         }
         a.widthValue = q->value;
     }
+    for (auto& [cid, k] : constraints_) {
+        SketchEntity* el = entity(k.a);
+        if (!el || el->type != EntityType::Ellipse || !k.driving ||
+            (k.type != ConstraintType::Radius && k.type != ConstraintType::Diameter)) {
+            continue;
+        }
+        auto q = evaluate(k.expr, lookup, Dim::len());
+        if (!q || !(q->value > 0)) {
+            SolveReport r;
+            r.state = SolveState::Failed;
+            r.conflicting.push_back(cid);
+            r.message = q ? "An ellipse's minor radius must be larger than zero." : "Ellipse size: " + q.error().message;
+            return r;
+        }
+        el->r = k.type == ConstraintType::Diameter ? q->value / 2 : q->value;
+    }
     return runSolver(lookup, nullptr, 0, 0);
 }
 
@@ -1027,8 +1191,11 @@ SolveReport Sketch::runSolver(const ParamLookup& lookup, const int* dragPoint, d
     }
     // Endpoints of a curve belong to it for the free-geometry report.
     for (auto& [id, e] : entities_) {
-        if (e.type == EntityType::Line || e.type == EntityType::Arc) {
-            for (int pid : {e.p1, e.p2}) {
+        if (e.type == EntityType::Line || e.type == EntityType::Arc || e.type == EntityType::Ellipse ||
+            e.type == EntityType::Spline) {
+            std::vector<int> own {e.p1, e.p2};
+            own.insert(own.end(), e.pts.begin(), e.pts.end());
+            for (int pid : own) {
                 if (pts.count(pid) && entity(pid)->internal) {
                     paramOwner[pts[pid].x] = id;
                     paramOwner[pts[pid].y] = id;
@@ -1244,6 +1411,9 @@ SolveReport Sketch::runSolver(const ParamLookup& lookup, const int* dragPoint, d
                     dia ? sys.addConstraintArcDiameter(arcs[k.a], val, tag)
                         : sys.addConstraintArcRadius(arcs[k.a], val, tag);
                 }
+                else if (entity(k.a) && entity(k.a)->type == EntityType::Ellipse) {
+                    break;  // an ellipse's minor radius is set before solving
+                }
                 else {
                     return fail(cid, "Radius and diameter need a circle or arc.");
                 }
@@ -1346,6 +1516,63 @@ SolveReport Sketch::runSolver(const ParamLookup& lookup, const int* dragPoint, d
             freeIds.insert(it->second);
         }
     }
+    // The solver only reports parameters that some constraint involves; one that nothing
+    // involves (a lone point, a fit point of a smooth curve) is free as well.
+    std::set<double*> touched;
+    auto touchPoint = [&](int pid, bool x, bool y) {
+        if (auto it = pts.find(pid); it != pts.end()) {
+            if (x) {
+                touched.insert(it->second.x);
+            }
+            if (y) {
+                touched.insert(it->second.y);
+            }
+        }
+    };
+    auto touchAll = [&](int id) {
+        touchPoint(id, true, true);
+        if (auto it = lines.find(id); it != lines.end()) {
+            touched.insert({it->second.p1.x, it->second.p1.y, it->second.p2.x, it->second.p2.y});
+        }
+        if (auto it = circles.find(id); it != circles.end()) {
+            touched.insert({it->second.center.x, it->second.center.y, it->second.rad});
+        }
+        if (auto it = arcs.find(id); it != arcs.end()) {
+            const GCS::Arc& a = it->second;
+            touched.insert({a.center.x, a.center.y, a.start.x, a.start.y, a.end.x, a.end.y, a.rad, a.startAngle,
+                            a.endAngle});
+        }
+    };
+    for (auto& [id, a] : arcs) {
+        touchAll(id);
+    }
+    for (auto& [cid, k] : constraints_) {
+        if (!k.driving || std::find(skip.begin(), skip.end(), cid) != skip.end()) {
+            continue;
+        }
+        const bool hz = k.type == ConstraintType::Horizontal || k.type == ConstraintType::DistanceY;
+        const bool vt = k.type == ConstraintType::Vertical || k.type == ConstraintType::DistanceX;
+        if (hz || vt) {
+            for (int id : {k.a, k.b}) {
+                touchPoint(id, vt, hz);
+                if (auto it = lines.find(id); it != lines.end()) {
+                    touched.insert(vt ? it->second.p1.x : it->second.p1.y);
+                    touched.insert(vt ? it->second.p2.x : it->second.p2.y);
+                }
+            }
+            continue;
+        }
+        for (int id : {k.a, k.b, k.c}) {
+            touchAll(id);
+        }
+    }
+    for (double* p : unknowns) {
+        if (!touched.count(p)) {
+            if (auto it = paramOwner.find(p); it != paramOwner.end()) {
+                freeIds.insert(it->second);
+            }
+        }
+    }
     rep.freeEntities.assign(freeIds.begin(), freeIds.end());
 
     if (rep.dof == 0) {
@@ -1374,6 +1601,12 @@ std::vector<GapMarker> Sketch::openEndpoints(double nearTolerance) const
         }
         if (e.type == EntityType::Line || e.type == EntityType::Arc) {
             for (int pid : {e.p1, e.p2}) {
+                auto [x, y] = pointXY(pid);
+                ends.push_back({pid, x, y});
+            }
+        }
+        if (e.type == EntityType::Spline && !e.closed && e.pts.size() >= 2) {
+            for (int pid : {e.pts.front(), e.pts.back()}) {
                 auto [x, y] = pointXY(pid);
                 ends.push_back({pid, x, y});
             }
@@ -1442,6 +1675,17 @@ nlohmann::json Sketch::toJson() const
                 j["r"] = e.r;
                 j["a0"] = e.a0;
                 j["a1"] = e.a1;
+                break;
+            case EntityType::Ellipse:
+                j["center"] = e.center;
+                j["p1"] = e.p1;
+                j["r"] = e.r;
+                break;
+            case EntityType::Spline:
+                j["points"] = e.pts;
+                if (e.closed) {
+                    j["closed"] = true;
+                }
                 break;
         }
         ents.push_back(j);
@@ -1529,6 +1773,8 @@ Result<Sketch> Sketch::fromJson(const nlohmann::json& j)
             e.r = je.value("r", 0.0);
             e.a0 = je.value("a0", 0.0);
             e.a1 = je.value("a1", 0.0);
+            e.pts = je.value("points", std::vector<int> {});
+            e.closed = je.value("closed", false);
             s.entities_[e.id] = e;
         }
         for (auto& jc : j.at("constraints")) {
