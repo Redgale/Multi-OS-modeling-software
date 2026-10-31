@@ -4998,7 +4998,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
     </message>
     <message>
         <location line="+3"/>
-        <source>Type the words, Tab, the size, then press Enter.</source>
+        <source>Type the words (\n starts a new line), Tab, the size, then press Enter.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

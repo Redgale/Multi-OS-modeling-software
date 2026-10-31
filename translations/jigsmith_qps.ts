@@ -4992,8 +4992,8 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
     </message>
     <message>
         <location line="+3" />
-        <source>Type the words, Tab, the size, then press Enter.</source>
-        <translation>[Týpé thé wörds, Táb, thé sîzé, théñ préss Éñtér.~~~~~~~~~~~~]</translation>
+        <source>Type the words (\n starts a new line), Tab, the size, then press Enter.</source>
+        <translation>[Týpé thé wörds (\ñ stárts á ñéw lîñé), Táb, thé sîzé, théñ préss Éñtér.~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <location line="+1" />

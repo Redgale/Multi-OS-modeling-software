@@ -1316,3 +1316,17 @@ TEST(Text, InstalledFontsByFamilyName)
     EXPECT_NEAR(a, b, 1e-6);
     EXPECT_TRUE(byName->status(0).message.find("not available") == std::string::npos) << byName->status(0).message;
 }
+
+TEST(Text, SeveralLinesStackAndCentre)
+{
+    // two lines ("\n" as typed): taller than one, as wide as the wider line, centred
+    auto one = build("sketch id=s1 plane=XY\ntext sketch=s1 at=0,0 text=\"HI\" size=10mm\nextrude id=e1 sketch=s1 distance=1\n");
+    auto two = build("sketch id=s1 plane=XY\ntext sketch=s1 at=0,0 text=\"HI\\nHI\" size=10mm\nextrude id=e1 sketch=s1 distance=1\n");
+    expectAllOk(*two);
+    const auto a = props(*one), b = props(*two);
+    EXPECT_NEAR(b.volume, 2 * a.volume, 1e-6);
+    EXPECT_NEAR(b.xmax - b.xmin, a.xmax - a.xmin, 1e-6);     // same width
+    EXPECT_GT(b.ymax - b.ymin, 1.8 * (a.ymax - a.ymin));    // two lines tall
+    EXPECT_NEAR((b.ymax + b.ymin) / 2, 0, 1e-6);            // centred on the anchor
+    EXPECT_NEAR((b.xmax + b.xmin) / 2, 0, 1e-6);
+}

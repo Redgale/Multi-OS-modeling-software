@@ -516,7 +516,7 @@ QString SketchEditor::toolHint() const
             return first_ ? tr("Click a corner, or type the diameter (Tab: number of sides) and press Enter.")
                           : tr("Click the centre.");
         case Tool::Text:
-            return first_ ? tr("Type the words, Tab, the size, then press Enter.")
+            return first_ ? tr("Type the words (\\n starts a new line), Tab, the size, then press Enter.")
                           : tr("Click where the middle of the text goes.");
         case Tool::Trim:
             return tr("Click the piece of a curve to remove. It is cut where other curves cross it.");

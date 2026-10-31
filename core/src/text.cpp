@@ -462,14 +462,33 @@ Result<TextOutline> textFaces(const SketchText& t, double x, double y, const gp_
     struct Glyph
     {
         std::vector<Contour> contours;
-        double penX;
+        double penX, penY;
+        int line;
     };
     std::vector<Glyph> glyphs;
-    double pen = 0;
-    double xmin = 1e300, xmax = -1e300, ymin = 1e300, ymax = -1e300;
+    double pen = 0, penY = 0;
+    int line = 0;
+    // the font's own line spacing (or 1.2 em when it gives none)
+    const double lineStep = face->height > 0 ? double(face->height) : 1.2 * double(face->units_per_EM);
+    std::vector<std::pair<double, double>> lineX;  // per line: leftmost and rightmost outline point
+    double ymin = 1e300, ymax = -1e300;
     FT_UInt prev = 0;
     const bool kerning = FT_HAS_KERNING(face);
-    for (char32_t cp : utf8(t.text)) {
+    // "\n" (a backslash and n, as typed in a one-line field or a script) starts a new line too
+    std::string text = t.text;
+    for (size_t at = text.find("\\n"); at != std::string::npos; at = text.find("\\n", at)) {
+        text.replace(at, 2, "\n");
+    }
+    lineX.push_back({1e300, -1e300});
+    for (char32_t cp : utf8(text)) {
+        if (cp == U'\n') {
+            pen = 0;
+            penY -= lineStep;
+            ++line;
+            prev = 0;
+            lineX.push_back({1e300, -1e300});
+            continue;
+        }
         const FT_UInt gi = FT_Get_Char_Index(face, FT_ULong(cp));
         if (kerning && prev && gi) {
             FT_Vector k;
@@ -484,7 +503,7 @@ Result<TextOutline> textFaces(const SketchText& t, double x, double y, const gp_
         if (face->glyph->format == FT_GLYPH_FORMAT_OUTLINE) {
             Decomposer d;
             FT_Outline_Decompose(&face->glyph->outline, &funcs, &d);
-            Glyph g {{}, pen};
+            Glyph g {{}, pen, penY, line};
             for (auto& c : d.contours) {
                 if (c.segments.empty()) {
                     continue;
@@ -502,10 +521,10 @@ Result<TextOutline> textFaces(const SketchText& t, double x, double y, const gp_
                     continue;
                 }
                 for (auto& p : c.poly) {
-                    xmin = std::min(xmin, p.X() + pen);
-                    xmax = std::max(xmax, p.X() + pen);
-                    ymin = std::min(ymin, p.Y());
-                    ymax = std::max(ymax, p.Y());
+                    lineX[size_t(line)].first = std::min(lineX[size_t(line)].first, p.X() + pen);
+                    lineX[size_t(line)].second = std::max(lineX[size_t(line)].second, p.X() + pen);
+                    ymin = std::min(ymin, p.Y() + penY);
+                    ymax = std::max(ymax, p.Y() + penY);
                 }
                 g.contours.push_back(std::move(c));
             }
@@ -519,12 +538,16 @@ Result<TextOutline> textFaces(const SketchText& t, double x, double y, const gp_
         return result;  // empty or whitespace-only text: no areas
     }
 
-    // Centre the lettering on the anchor and place it in the sketch plane.
-    const gp_XY centre((xmin + xmax) / 2, (ymin + ymax) / 2);
+    // Centre each line on its own, then the block on the anchor, in the sketch plane.
+    for (Glyph& g : glyphs) {
+        const auto [l0, l1] = lineX[size_t(g.line)];
+        g.penX -= (l0 + l1) / 2;
+    }
+    const gp_XY centre(0, (ymin + ymax) / 2);
     const double ca = std::cos(t.angle), sa = std::sin(t.angle);
-    auto to3d = [&](const gp_XY& fontPt, double penX) {
+    auto to3d = [&](const gp_XY& fontPt, double penX, double pY) {
         const double u = (fontPt.X() + penX - centre.X()) * scale;
-        const double v = (fontPt.Y() - centre.Y()) * scale;
+        const double v = (fontPt.Y() + pY - centre.Y()) * scale;
         const double lx = x + u * ca - v * sa;
         const double ly = y + u * sa + v * ca;
         return gp_Pnt(frame.Location().XYZ() + frame.XDirection().XYZ() * lx + frame.YDirection().XYZ() * ly);
@@ -537,8 +560,8 @@ Result<TextOutline> textFaces(const SketchText& t, double x, double y, const gp_
             for (auto& c : g.contours) {
                 cs.push_back(c.segments);
             }
-            const double penX = g.penX;
-            auto faces = facesFromOutlines(cs, [&](const gp_XY& p) { return to3d(p, penX); }, plane);
+            const double penX = g.penX, pY = g.penY;
+            auto faces = facesFromOutlines(cs, [&](const gp_XY& p) { return to3d(p, penX, pY); }, plane);
             result.faces.insert(result.faces.end(), faces.begin(), faces.end());
         }
         return result;
