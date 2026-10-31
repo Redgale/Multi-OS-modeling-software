@@ -158,7 +158,7 @@ and packaged but its window is not exercised in CI (B-003). Builds are unsigned.
 ## Next three tasks
 
 1. Leftovers: revolve up to a face, construction points, linked sketch patterns.
-2. M7/M8 leftovers: core messages built from values as translatable templates, tooltips audit, more one-click fixes; first real
+2. M7/M8 leftovers: core messages built from values as translatable templates, more one-click fixes; first real
    language once a reviewer is found.
 3. Windows/macOS GUI screenshots in CI (B-003); Windows DLL audit (B-011); B-001 libslvs
    spike where building SolveSpace is allowed.

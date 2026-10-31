@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Command registry: findable by intent (Easy Contract principle 9).
 #include <gtest/gtest.h>
+#include <cctype>
+#include <set>
 
 #include "jig/commands.hpp"
 
@@ -37,11 +39,23 @@ TEST(Commands, EveryCommandIsDescribed)
         EXPECT_FALSE(c.standardName.empty()) << c.id;
         EXPECT_FALSE(c.tooltip.empty()) << c.id;
         EXPECT_LT(c.tooltip.size(), 120u) << c.id << ": tooltips are one line";
+        // tooltips audit (M7): a whole sentence, in our own words
+        EXPECT_TRUE(!c.tooltip.empty() && std::isupper(static_cast<unsigned char>(c.tooltip.front())))
+            << c.id << ": starts with a capital";
+        EXPECT_TRUE(!c.tooltip.empty() && (c.tooltip.back() == '.' || c.tooltip.back() == '?')) << c.id << ": ends a sentence";
+        for (const char* brand : {"Fusion", "Autodesk", "SolidWorks", "Onshape"}) {
+            EXPECT_EQ(c.tooltip.find(brand), std::string::npos) << c.id << ": no other product's name";
+            EXPECT_EQ(c.label.find(brand), std::string::npos) << c.id;
+        }
         if (!c.available) {
             EXPECT_FALSE(c.comingIn.empty() && !c.scripted && c.panel != "FILE" && c.panel != "EDIT")
                 << c.id << " must say when it is coming";
         }
         essential += c.essential;
+    }
+    std::set<std::string> tips;
+    for (auto& c : all) {
+        EXPECT_TRUE(tips.insert(c.tooltip).second || c.id.rfind("constraint.", 0) == 0) << c.id << ": tooltip repeats another";
     }
     // Progressive disclosure: about 25 essential tools (brief principle 8), not counting file/edit/view.
     EXPECT_GE(essential, 20);
