@@ -652,8 +652,8 @@ void MainWindow::buildToolbar()
         sketchBar_->addAction(registryAction(id));
     }
     sketchBar_->addAction(centerRect_);
-    for (const char* id : {"sketch.circle", "sketch.point", "sketch.dimension", "sketch.construction", "sketch.trim",
-                           "sketch.offset"}) {
+    for (const char* id : {"sketch.circle", "sketch.arc", "sketch.slot", "sketch.polygon", "sketch.point",
+                           "sketch.dimension", "sketch.construction", "sketch.trim", "sketch.offset"}) {
         sketchBar_->addAction(registryAction(id));
     }
     sketchBar_->addSeparator();
@@ -1095,9 +1095,10 @@ void MainWindow::runCommand(const QString& id)
         }
         using T = SketchEditor::Tool;
         using CT = jig::ConstraintType;
-        static const std::map<QString, T> tools {{"sketch.line", T::Line},     {"sketch.rectangle", T::Rectangle},
-                                                 {"sketch.circle", T::Circle}, {"sketch.point", T::Point},
-                                                 {"sketch.dimension", T::Dimension}};
+        static const std::map<QString, T> tools {
+            {"sketch.line", T::Line},       {"sketch.rectangle", T::Rectangle}, {"sketch.circle", T::Circle},
+            {"sketch.arc", T::Arc},         {"sketch.slot", T::Slot},           {"sketch.polygon", T::Polygon},
+            {"sketch.point", T::Point},     {"sketch.dimension", T::Dimension}};
         static const std::map<QString, CT> cons {
             {"constraint.coincident", CT::Coincident}, {"constraint.horizontal", CT::Horizontal},
             {"constraint.parallel", CT::Parallel},     {"constraint.perpendicular", CT::Perpendicular},

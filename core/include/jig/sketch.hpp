@@ -110,6 +110,20 @@ public:
     int addCircle(double cx, double cy, double r);
     // Counter-clockwise arc from angle a0 to a1 around (cx, cy).
     int addArc(double cx, double cy, double r, double a0, double a1);
+    // Composite shapes with the constraints that keep them in shape (but no sizes).
+    struct SlotIds
+    {
+        int arc1 = 0, arc2 = 0, side1 = 0, side2 = 0;  // arc1 at (x2, y2), arc2 at (x1, y1)
+    };
+    // Centre-to-centre slot of radius r: two equal arcs joined by tangent lines.
+    SlotIds addSlot(double x1, double y1, double x2, double y2, double r);
+    struct PolygonIds
+    {
+        int circle = 0;              // construction circle through the corners
+        std::vector<int> sides;      // lines, all equal
+    };
+    // Regular polygon with n corners on a circle of radius r; first corner at angle a0.
+    PolygonIds addPolygon(double cx, double cy, double r, int n, double a0);
     bool remove(int entityId);  // also removes dependent constraints and internal points
     void setConstruction(int entityId, bool on);
 

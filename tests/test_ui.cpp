@@ -258,6 +258,62 @@ private slots:
         w.grab().save(shotPath("pen-cup"));
     }
 
+    // Polygon, Slot and Arc: clicks plus typed values, as a person would draw them.
+    void polygonSlotArcTools()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        Viewport* view = w.viewport();
+        QVERIFY(w.createSketchOn("XY"));
+        SketchEditor* sk = w.sketchEditor();
+        QVERIFY(sk);
+        auto click = [&](double x, double y) {
+            const QPoint p = sk->screenOf(x, y);
+            QTest::mouseMove(view, p);
+            QTest::mouseClick(view, Qt::LeftButton, Qt::NoModifier, p);
+        };
+
+        // Hexagon: centre, then type diameter 20 and 6 sides.
+        w.runCommand("sketch.polygon");
+        QCOMPARE(int(sk->tool()), int(SketchEditor::Tool::Polygon));
+        click(0, 0);
+        QTest::mouseMove(view, sk->screenOf(0, 10));
+        sk->typeValues({"20", "6"});
+        // Slot: two centre clicks, then type the width.
+        w.runCommand("sketch.slot");
+        click(30, 0);
+        click(50, 0);
+        QTest::mouseMove(view, sk->screenOf(40, 5));
+        sk->typeValues({"8"});
+        // Arc: centre, start, then type the angle it spans.
+        w.runCommand("sketch.arc");
+        click(0, 40);
+        click(10, 40);
+        QTest::mouseMove(view, sk->screenOf(0, 50));
+        sk->typeValues({"90 deg"});
+
+        int lines = 0, arcs = 0;
+        for (auto& [id, e] : sk->sketch().entities()) {
+            lines += e.type == jig::EntityType::Line && !e.construction;
+            arcs += e.type == jig::EntityType::Arc;
+        }
+        QCOMPARE(lines, 6 + 2);
+        QCOMPARE(arcs, 2 + 1);
+        QVERIFY2(sk->message().isEmpty(), qPrintable(sk->message()));
+        const auto& regions = w.document().state().sketches.begin()->second->profiles.regions;
+        QCOMPARE(int(regions.size()), 2);  // the open arc encloses nothing
+        std::vector<double> areas;
+        for (auto& r : regions) {
+            areas.push_back(r.area);
+        }
+        std::sort(areas.begin(), areas.end());
+        QVERIFY2(std::abs(areas[0] - (20 * 8 + M_PI * 16)) < 1e-3, qPrintable(QString::number(areas[0])));
+        QVERIFY2(std::abs(areas[1] - 3 * std::sqrt(3.0) / 2 * 100) < 1e-3, qPrintable(QString::number(areas[1])));
+        w.grab().save(shotPath("sketch-shapes"));
+    }
+
     // Revolve a ring, drill it from its top face, repeat the hole around the axis,
     // and mirror the result: the M3 panels driven like a person would.
     void ringRevolveHolePatternMirror()

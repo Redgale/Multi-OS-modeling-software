@@ -38,6 +38,9 @@ public:
         Rectangle,
         CenterRectangle,
         Circle,
+        Arc,      // centre, start, end (counter-clockwise)
+        Slot,     // centre, centre, width
+        Polygon,  // centre, corner; sides typed (default 6)
         Point,
         Dimension
     };
@@ -146,6 +149,8 @@ private:
 
     // tool state
     std::optional<Snap> first_;      // first click of a two-click tool
+    std::optional<Snap> second_;     // second click of a three-click tool (arc, slot)
+    QString arcRadiusExpr_;          // typed at the second step (arc radius, slot length)
     int chainStart_ = 0;             // line chains: the first point, clicking it closes
     Snap cursor_;
     bool cursorValid_ = false;

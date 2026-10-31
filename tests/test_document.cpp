@@ -16,7 +16,7 @@ TEST(Document, TransactionErrorLeavesModelUntouched)
     Document doc;
     auto before = doc.toJson();
     auto r = doc.transact("bad", [](Model& m) -> Result<bool> {
-        m.parameters.push_back({"x", "1 mm"});
+        m.parameters.push_back({"x", "1 mm", ParamKind::Length, {}});
         return makeError("test", "no");
     });
     EXPECT_FALSE(r.ok());

@@ -222,3 +222,19 @@ TEST(Mirror, JoinAndNewBody)
     EXPECT_EQ(separate->state().bodies.size(), 2u);
     EXPECT_NEAR(props(*separate).volume, 2000, 1e-3);
 }
+
+TEST(SketchShapes, HexagonAndSlotAreFullyDefined)
+{
+    auto doc = build("sketch id=s1 plane=XY\npolygon sketch=s1 center=0,0 d=20 sides=6\n"
+                     "extrude id=e1 sketch=s1 distance=10\n"
+                     "sketch id=s2 plane=XY\nslot sketch=s2 c1=30,0 c2=50,0 width=8\n"
+                     "extrude id=e2 sketch=s2 distance=10 op=new\n");
+    expectAllOk(*doc);
+    EXPECT_EQ(doc->state().sketches.at("s1")->report.dof, 0);
+    EXPECT_EQ(doc->state().sketches.at("s2")->report.dof, 0);
+    const double hex = 3 * std::sqrt(3.0) / 2 * 100;  // regular hexagon, corner radius 10
+    const double slot = 20 * 8 + pi * 16;
+    EXPECT_NEAR(props(*doc).volume, (hex + slot) * 10, 1e-3);
+    auto p = props(*doc);
+    EXPECT_NEAR(p.ymax, 10, 1e-6);  // a corner points straight up
+}

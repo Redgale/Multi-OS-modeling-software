@@ -79,7 +79,7 @@ CommandRegistry::CommandRegistry()
     add({"sketch.line", "Line", "Line", "SKETCH CREATE", "Draw straight lines; keep clicking to chain them.", "L", {"draw line", "polyline", "segment"}, true, false, true, m1});
     add({"sketch.rectangle", "Rectangle", "Rectangle", "SKETCH CREATE", "Draw a rectangle from corner to corner or from its center.", "R", {"box", "square"}, true, false, true, m1});
     add({"sketch.circle", "Circle", "Circle", "SKETCH CREATE", "Draw a circle from its center and diameter.", "C", {"round", "hole outline", "disc"}, true, false, true, m1});
-    add({"sketch.arc", "Arc", "Arc", "SKETCH CREATE", "Draw part of a circle: 3-point, tangent or center arc.", "", {"curve", "bend"}, false, false, false, m1});
+    add({"sketch.arc", "Arc", "Arc", "SKETCH CREATE", "Draw part of a circle from its center, start and end.", "", {"curve", "bend"}, false, false, false, m1});
     add({"sketch.polygon", "Polygon", "Polygon", "SKETCH CREATE", "Draw a shape with equal sides, like a hex nut.", "", {"hexagon", "nut"}, false, false, false, m1});
     add({"sketch.ellipse", "Ellipse", "Ellipse", "SKETCH CREATE", "Draw an oval from its center and two axes.", "", {"oval"}, false, false, false, m1});
     add({"sketch.slot", "Slot", "Slot", "SKETCH CREATE", "Draw a rounded-end slot, ideal for adjustable screws.", "", {"oblong", "obround"}, false, false, true, m1});
@@ -143,6 +143,7 @@ CommandRegistry::CommandRegistry()
     // shell, revolve, hole, patterns, mirror, parameters). Everything else above keeps its "coming in" note.
     static const std::set<std::string> inApp {
         "sketch.create", "sketch.finish", "sketch.line", "sketch.rectangle", "sketch.circle", "sketch.point",
+        "sketch.arc", "sketch.slot", "sketch.polygon",
         "sketch.dimension", "sketch.construction", "constraint.coincident", "constraint.midpoint", "constraint.fix",
         "constraint.parallel", "constraint.perpendicular", "constraint.horizontal", "constraint.tangent",
         "constraint.symmetric", "constraint.equal", "solid.extrude", "solid.fillet", "solid.chamfer", "solid.shell",
@@ -710,41 +711,13 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
             if (!w || !x1 || !y1 || !x2 || !y2) {
                 return makeError("script.args", "Slot needs c1=x,y c2=x,y width=w with valid values.");
             }
-            double r = w.value() / 2;
-            double ux = x2.value() - x1.value(), uy = y2.value() - y1.value();
-            double L = std::hypot(ux, uy);
-            if (L < 1e-9) {
+            if (std::hypot(x2.value() - x1.value(), y2.value() - y1.value()) < 1e-9) {
                 return makeError("script.args", "The two slot centers must be different points.");
             }
-            ux /= L;
-            uy /= L;
-            double ang = std::atan2(uy, ux);
-            constexpr double h = std::numbers::pi / 2;
-            int a1 = s.addArc(x2.value(), y2.value(), r, ang - h, ang + h);  // far end
-            int a2 = s.addArc(x1.value(), y1.value(), r, ang + h, ang + 3 * h);  // near end
-            const SketchEntity A1 = *s.entity(a1), A2 = *s.entity(a2);
-            auto [sx1, sy1] = s.pointXY(A1.p2);
-            auto [ex1, ey1] = s.pointXY(A2.p1);
-            auto [sx2, sy2] = s.pointXY(A2.p2);
-            auto [ex2, ey2] = s.pointXY(A1.p1);
-            int top = s.addLine(sx1, sy1, ex1, ey1);
-            int bot = s.addLine(sx2, sy2, ex2, ey2);
-            const SketchEntity T = *s.entity(top), Bt = *s.entity(bot);
-            s.addConstraint(ConstraintType::Coincident, T.p1, A1.p2);
-            s.addConstraint(ConstraintType::Coincident, T.p2, A2.p1);
-            s.addConstraint(ConstraintType::Coincident, Bt.p1, A2.p2);
-            s.addConstraint(ConstraintType::Coincident, Bt.p2, A1.p1);
-            // Tangency at a shared endpoint is expressed as "side line perpendicular to the
-            // radius through that endpoint". A distance-style tangent plus coincidence is
-            // rank-deficient at the solution and would be reported as redundant.
-            for (auto [line, arcCenter, endPt] : {std::tuple {top, A1.center, A1.p2}, std::tuple {top, A2.center, A2.p1},
-                                                  std::tuple {bot, A2.center, A2.p2}, std::tuple {bot, A1.center, A1.p1}}) {
-                int radial = s.addLine(arcCenter, endPt);
-                s.setConstruction(radial, true);
-                s.addConstraint(ConstraintType::Perpendicular, line, radial);
-            }
+            const auto ids = s.addSlot(x1.value(), y1.value(), x2.value(), y2.value(), w.value() / 2);
+            const int a1 = ids.arc1;
+            const SketchEntity A1 = *s.entity(ids.arc1), A2 = *s.entity(ids.arc2);
             s.addConstraint(ConstraintType::Radius, a1, 0, 0, "(" + we + ") / 2");
-            s.addConstraint(ConstraintType::Equal, a1, a2);
             s.addConstraint(ConstraintType::DistanceX, A1.center, 0, 0, c2->first);
             s.addConstraint(ConstraintType::DistanceY, A1.center, 0, 0, c2->second);
             s.addConstraint(ConstraintType::DistanceX, A2.center, 0, 0, c1->first);
@@ -818,6 +791,34 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
             names_[sid + "." + a.get("name")] = made;
         }
         return res;
+    }
+    if (a.verb == "polygon") {
+        // polygon center=x,y d=<len> sides=<n>   (d = diameter of the circle through the corners)
+        const std::string sid = a.get("sketch", last_);
+        return editSketch("Polygon", sid, [&](Sketch& s, const Document&) -> Result<bool> {
+            auto pe = parsePairExpr(a.get("center", "0,0"));
+            if (!pe) {
+                return pe.error();
+            }
+            const std::string de = a.get("d");
+            auto d = len(de);
+            auto px = len(pe->first), py = len(pe->second);
+            auto n = evaluate(a.get("sides", "6"), doc.lookup());
+            if (!d || !px || !py) {
+                return makeError("script.args", "Polygon needs center=x,y d=<len> with valid values.");
+            }
+            if (!n || n->value < 3 || n->value > 64) {
+                return makeError("script.args", "A polygon needs 3 to 64 sides.");
+            }
+            const auto ids = s.addPolygon(px.value(), py.value(), d.value() / 2, int(std::lround(n->value)), std::numbers::pi / 2);
+            const int c = s.entity(ids.circle)->center;
+            s.addConstraint(ConstraintType::Diameter, ids.circle, 0, 0, de);
+            s.addConstraint(ConstraintType::DistanceX, c, 0, 0, pe->first);
+            s.addConstraint(ConstraintType::DistanceY, c, 0, 0, pe->second);
+            // first corner straight above the centre: fixes the rotation
+            s.addConstraint(ConstraintType::Vertical, c, s.entity(ids.sides[0])->p1);
+            return true;
+        });
     }
     if (a.verb == "constrain") {
         // constrain sketch=s1 type=parallel a=3 b=4 [c=..] [value="..."]

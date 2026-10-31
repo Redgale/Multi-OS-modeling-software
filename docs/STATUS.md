@@ -10,7 +10,7 @@ timeline editing, parameters)** in the desktop app, an original **icon set** for
 tool, build-from-source support for **Void, Fedora, Arch and openSUSE**, and a publish job
 for downloadable builds, then Chamfer and Shell (part of M3) with the pen cup sample,
 then Revolve, Hole, rectangular and circular Patterns and Mirror with panels, and the
-knob sample (acceptance scenario A2, without the engraved text). 69 tests, including UI
+knob sample (acceptance scenario A2, without the engraved text). 70 tests, including UI
 workflow tests that drive the real window.
 
 ## What works, and how it was verified
@@ -29,7 +29,7 @@ workflow tests that drive the real window.
 | Interchange (A7, half) | STEP export/import (volume to 1e-6, unit detected), binary STL | `Interchange.*` |
 | Command registry | ~80 v0.1 tools described; intent search; brief's default keys | `Commands.*` (4 tests) |
 | Desktop app shell | Window, GL 3.3 viewport, GPU face and edge picking, gizmo, navigation presets, workflow strip, icon + label toolbar from the registry (unbuilt tools disabled with milestone), browser, timeline with icons, status glyphs and rollback marker, palette with icons, open/save/export, undo/redo, themes, welcome, autosave and recovery prompt | Linux under Xvfb + Mesa: screenshots in `docs/images/` |
-| Sketching (M1) | Create sketch by clicking an origin plane or a flat face; look-at; contextual sketch toolbar; Line (chains, close by clicking the start), Rectangle (corner, centre), Circle, Point, Dimension (length, diameter, radius, point-point, point-line); typed values with Tab/Enter; snapping to points and grid; automatic horizontal/vertical (Ctrl suppresses); constraints from the toolbar on the selection; drag with live solve; delete; construction toggle; DOF in words; free/fixed shown by marker shape; constraint glyphs and dimension values (expressions shown); gap rings; shaded profiles; conflicting constraints refused with an explanation | `tests/test_ui.cpp` drives it (plane click, centre rectangle with typed 60 × 40, refusal message); screenshot `docs/images/sketch_mode.png` |
+| Sketching (M1) | Create sketch by clicking an origin plane or a flat face; look-at; contextual sketch toolbar; Line (chains, close by clicking the start), Rectangle (corner, centre), Circle, Arc (centre, start, end; typed radius and angle), Slot (two centres, width), Polygon (centre, corner; typed diameter and number of sides; fully constrained shape), Point, Dimension (length, diameter, radius, point-point, point-line); typed values with Tab/Enter; snapping to points and grid; automatic horizontal/vertical (Ctrl suppresses); constraints from the toolbar on the selection; drag with live solve; delete; construction toggle; DOF in words; free/fixed shown by marker shape; constraint glyphs and dimension values (expressions shown); gap rings; shaded profiles; conflicting constraints refused with an explanation | `tests/test_ui.cpp` drives it (plane click, centre rectangle with typed 60 × 40, refusal message); screenshot `docs/images/sketch_mode.png` |
 | Extrude panel (M2) | Live preview, sketch and profile choice, distance (expressions), through-all, one side/other side/symmetric, Join/Cut/New/Intersect and **Auto** (Cut when the extrusion goes into material), OK/Cancel/Esc/Enter, values remembered for the session | UI test: 24000 mm³, then edit from the timeline to 20 mm → 48000 mm³ |
 | Fillet panel (M2) | Edge picking in the view (GPU, hidden edges rejected), tangent-chain selection, live preview on the rounded body (clicks map back by persistent name), failure message with one-click working radius | UI test: real edge picks, 4 edges, volume matches the analytic value; 30 mm radius refused with "too big" |
 | Timeline editing (M2) | Double-click to edit, right-click: rename, suppress/unsuppress, roll back to here, delete with a dependents warning | `Document.DependentsAreFound`; UI test edits a step |
@@ -61,8 +61,8 @@ Clang 18 as well as GCC 13.
 
 ## What is stubbed or not started
 
-- M1 still missing: Arc, Polygon, Ellipse, Slot and Spline tools in the app (Slot works in
-  scripts), Trim/Extend/Break/Offset/sketch Fillet/Mirror/patterns, selecting and deleting
+- M1 still missing: 3-point and tangent arcs, Ellipse and Spline tools,
+  Trim/Extend/Break/Offset/sketch Fillet/Mirror/patterns, selecting and deleting
   individual constraints, window selection, collinear/concentric, Project/Include.
 - M2 still missing: extrude drag handle on the canvas, two-sides/to-object/taper/thin,
   Browser visibility/isolate/rename, selection filters, Select Other, timeline reorder and
@@ -95,8 +95,8 @@ Clang 18 as well as GCC 13.
 
 ## Next three tasks
 
-1. Finish M1's remaining sketch tools in the app (Arc, Slot, Polygon, Trim, Offset) and
-   constraint selection/deletion; construction planes and axes (M4).
+1. Finish M1's remaining sketch tools (Trim, Offset, 3-point arc) and constraint
+   selection/deletion; construction planes and axes (M4).
 2. **B-001 libslvs spike** in an environment where building SolveSpace is allowed.
 3. Windows/macOS GUI screenshots in CI (B-003); Windows DLL audit (B-011).
 

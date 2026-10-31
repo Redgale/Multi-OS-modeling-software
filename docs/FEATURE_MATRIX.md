@@ -54,10 +54,10 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Line (with drag-to-tangent-arc) | 10 | v0.1 M1 | **app** (chains; tangent-arc drag not yet) | |
 | Rectangle 2-point, 3-point, center | 10 | v0.1 M1 | **app** (corner, centre); 3-point not yet | |
 | Circle center, 2-point, 3-point, 2/3-tangent | 10 | v0.1 M1 (3-tangent v0.2) | **app** (centre) | Brief lists "tangent" |
-| Arc 3-point, tangent, center | 10 | v0.1 M1 | solver supports arcs | |
-| Polygon (inscribed, circumscribed, edge) | 10 | v0.1 M1 | — | |
+| Arc 3-point, tangent, center | 10 | v0.1 M1 | **app**: center arc (typed radius and angle); scripts: `arc`. 3-point and tangent not yet | |
+| Polygon (inscribed, circumscribed, edge) | 10 | v0.1 M1 | **app** + scripts: inscribed (corners on the circle) | |
 | Ellipse | 10 | v0.1 M1 | — | Needs solver ellipse entities |
-| Slot (center-to-center, overall, arc slots) | 10 | v0.1 M1 (arc slots v0.2) | scripts (center-to-center) | |
+| Slot (center-to-center, overall, arc slots) | 10 | v0.1 M1 (arc slots v0.2) | **app** + scripts: center-to-center | |
 | Fit-point spline | 10 | v0.1 M1 | — | |
 | Control-point spline | 10 | v0.2 | — | Not in brief's v0.1 list |
 | Conic curve | 10 | v0.2 | — | Not in brief's v0.1 list |

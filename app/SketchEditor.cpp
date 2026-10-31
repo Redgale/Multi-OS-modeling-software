@@ -330,6 +330,7 @@ void SketchEditor::setTool(Tool t)
 void SketchEditor::resetToolState()
 {
     first_.reset();
+    second_.reset();
     chainStart_ = 0;
     dimFirst_ = dimTarget_ = dimSecond_ = 0;
     hideInput();
@@ -352,6 +353,17 @@ QString SketchEditor::toolHint() const
                           : tr("Click the centre.");
         case Tool::Circle:
             return first_ ? tr("Click a point on the circle, or type the diameter and press Enter.")
+                          : tr("Click the centre.");
+        case Tool::Arc:
+            return second_ ? tr("Click where the arc ends (it runs counter-clockwise), or type the angle it spans.")
+                 : first_  ? tr("Click where the arc starts, or type the radius and press Enter.")
+                           : tr("Click the centre of the arc.");
+        case Tool::Slot:
+            return second_ ? tr("Click to set the width, or type it and press Enter.")
+                 : first_  ? tr("Click the other end's centre, or type the centre-to-centre length.")
+                           : tr("Click the centre of one end.");
+        case Tool::Polygon:
+            return first_ ? tr("Click a corner, or type the diameter (Tab: number of sides) and press Enter.")
                           : tr("Click the centre.");
         case Tool::Point:
             return tr("Click to place a point.");
@@ -456,7 +468,13 @@ void SketchEditor::placeSecond(const Snap& cur, const QStringList& typed)
     if (!first_) {
         return;
     }
-    for (int i = 0; i < typed.size(); ++i) {
+    // the arc's last step takes an angle and the polygon's second field a count;
+    // those are checked where they are used
+    const bool notLengths = tool_ == Tool::Arc && second_;
+    for (int i = 0; i < typed.size() && !notLengths; ++i) {
+        if (tool_ == Tool::Polygon && i == 1) {
+            continue;
+        }
         if (badTyped(i)) {
             return;  // message already set; keep the box open so the user can fix it
         }
@@ -570,6 +588,143 @@ void SketchEditor::placeSecond(const Snap& cur, const QStringList& typed)
                 s.addConstraint(jig::ConstraintType::Diameter, c, 0, 0, typed[0].toStdString());
             }
             if (commit(tr("Circle"), s)) {
+                resetToolState();
+            }
+            break;
+        }
+        case Tool::Arc: {
+            if (!second_) {
+                auto r = typedLen(0);
+                const double L = std::hypot(dir.x(), dir.y());
+                const double R = r ? *r : L;
+                if (R < 1e-9) {
+                    return;
+                }
+                const QPointF u = L > 1e-9 ? dir / L : QPointF(1, 0);
+                second_ = Snap {a + u * R, r ? 0 : cur.point};
+                if (r) {
+                    second_->point = 0;
+                }
+                arcRadiusExpr_ = r ? typed[0] : QString();
+                showInput({tr("Angle")});
+                break;
+            }
+            const QPointF st = second_->local;
+            const double R = QLineF(a, st).length();
+            const double a0 = std::atan2(st.y() - a.y(), st.x() - a.x());
+            double sweep = 0;
+            bool typedSweep = false;
+            if (!typed.isEmpty() && !typed[0].isEmpty()) {
+                auto av = doc_.evalAngle(typed[0].toStdString());
+                if (!av) {
+                    message_ = QString::fromStdString(av.error().message);
+                    return;
+                }
+                sweep = av.value();
+                typedSweep = true;
+            }
+            else {
+                sweep = std::atan2(b.y() - a.y(), b.x() - a.x()) - a0;
+                while (sweep <= 1e-9) {
+                    sweep += 2 * kPi;
+                }
+            }
+            if (sweep <= 1e-6 || sweep >= 2 * kPi - 1e-6) {
+                message_ = tr("An arc must span more than 0° and less than 360°. Use Circle for a full circle.");
+                return;
+            }
+            const int arc = s.addArc(a.x(), a.y(), R, a0, a0 + sweep);
+            const jig::SketchEntity A = *s.entity(arc);
+            if (first_->point) {
+                s.addConstraint(jig::ConstraintType::Coincident, A.center, first_->point);
+            }
+            if (second_->point) {
+                s.addConstraint(jig::ConstraintType::Coincident, A.p1, second_->point);
+            }
+            if (!typedSweep && cur.point && cur.point != second_->point) {
+                s.addConstraint(jig::ConstraintType::Coincident, A.p2, cur.point);
+            }
+            if (!arcRadiusExpr_.isEmpty()) {
+                s.addConstraint(jig::ConstraintType::Radius, arc, 0, 0, arcRadiusExpr_.toStdString());
+            }
+            if (commit(tr("Arc"), s)) {
+                resetToolState();
+            }
+            break;
+        }
+        case Tool::Slot: {
+            if (!second_) {
+                auto len = typedLen(0);
+                const double L = std::hypot(dir.x(), dir.y());
+                const double D = len ? *len : L;
+                if (D < 1e-9) {
+                    return;
+                }
+                const QPointF u = L > 1e-9 ? dir / L : QPointF(1, 0);
+                second_ = Snap {a + u * D, len ? 0 : cur.point};
+                arcRadiusExpr_ = len ? typed[0] : QString();  // centre distance, reused below
+                showInput({tr("Width")});
+                break;
+            }
+            const QPointF c2 = second_->local;
+            auto w = typedLen(0);
+            double W = 0;
+            if (w) {
+                W = *w;
+            }
+            else {
+                // twice the distance from the cursor to the centre line
+                const QLineF axis(a, c2);
+                const QPointF n(-(c2.y() - a.y()) / axis.length(), (c2.x() - a.x()) / axis.length());
+                W = 2 * std::abs(QPointF::dotProduct(b - a, n));
+            }
+            if (W < 1e-9) {
+                return;
+            }
+            const auto ids = s.addSlot(a.x(), a.y(), c2.x(), c2.y(), W / 2);
+            const jig::SketchEntity A1 = *s.entity(ids.arc1), A2 = *s.entity(ids.arc2);
+            if (first_->point) {
+                s.addConstraint(jig::ConstraintType::Coincident, A2.center, first_->point);
+            }
+            if (second_->point) {
+                s.addConstraint(jig::ConstraintType::Coincident, A1.center, second_->point);
+            }
+            if (!arcRadiusExpr_.isEmpty()) {
+                s.addConstraint(jig::ConstraintType::Distance, A2.center, A1.center, 0, arcRadiusExpr_.toStdString());
+            }
+            if (w) {
+                s.addConstraint(jig::ConstraintType::Radius, ids.arc1, 0, 0, "(" + typed[0].toStdString() + ") / 2");
+            }
+            if (commit(tr("Slot"), s)) {
+                resetToolState();
+            }
+            break;
+        }
+        case Tool::Polygon: {
+            auto d = typedLen(0);
+            int n = 6;
+            if (typed.size() > 1 && !typed[1].isEmpty()) {
+                auto nv = jig::evaluate(typed[1].toStdString(), doc_.lookup());
+                if (!nv || !(nv->dim == jig::Dim::none()) || nv->value < 3 || nv->value > 64) {
+                    message_ = tr("A polygon needs 3 to 64 sides.");
+                    return;
+                }
+                n = int(std::lround(nv->value));
+            }
+            const double L = std::hypot(dir.x(), dir.y());
+            const double R = d ? *d / 2 : L;
+            if (R < 1e-9) {
+                return;
+            }
+            const double a0 = L > 1e-9 ? std::atan2(dir.y(), dir.x()) : kPi / 2;
+            const auto ids = s.addPolygon(a.x(), a.y(), R, n, a0);
+            if (first_->point) {
+                s.addConstraint(jig::ConstraintType::Coincident, s.entity(ids.circle)->center, first_->point);
+            }
+            if (d) {
+                s.addConstraint(jig::ConstraintType::Diameter, ids.circle, 0, 0, typed[0].toStdString());
+            }
+            if (commit(tr("Polygon"), s)) {
                 resetToolState();
             }
             break;
@@ -752,10 +907,17 @@ bool SketchEditor::mouseRelease(QMouseEvent* e)
             if (!first_) {
                 first_ = cursor_;
                 const bool two = tool_ != Tool::Circle;
-                showInput(tool_ == Tool::Line     ? QStringList {tr("Length"), tr("Angle")}
-                          : tool_ == Tool::Circle ? QStringList {tr("Diameter")}
-                                                  : QStringList {tr("Width"), tr("Height")});
                 (void)two;
+                if (tool_ == Tool::Polygon) {
+                    showInput({tr("Diameter"), tr("Sides")}, {QString(), "6"});
+                }
+                else {
+                    showInput(tool_ == Tool::Line     ? QStringList {tr("Length"), tr("Angle")}
+                              : tool_ == Tool::Circle ? QStringList {tr("Diameter")}
+                              : tool_ == Tool::Arc    ? QStringList {tr("Radius")}
+                              : tool_ == Tool::Slot   ? QStringList {tr("Length")}
+                                                      : QStringList {tr("Width"), tr("Height")});
+                }
                 inputBox_->move(pos.toPoint() + QPoint(18, 18));
             }
             else {
@@ -1067,11 +1229,47 @@ void SketchEditor::rebuildOverlay()
                     kAccent, false);
         }
         else if (tool_ == Tool::Circle) {
-            jig::SketchEntity c;
-            c.type = jig::EntityType::Circle;
             jig::Sketch tmp;
             const int cid = tmp.addCircle(a.x(), a.y(), std::max(1e-6, QLineF(a, b).length()));
             addPoly(polyline(tmp, *tmp.entity(cid)), kAccent, false);
+        }
+        else if (tool_ == Tool::Arc || tool_ == Tool::Slot || tool_ == Tool::Polygon) {
+            jig::Sketch tmp;
+            if (!second_ && tool_ != Tool::Polygon) {
+                addPoly({a, b}, kAccent, tool_ == Tool::Arc);  // radius / centre line
+            }
+            else if (tool_ == Tool::Arc) {
+                const QPointF st = second_->local;
+                const double R = QLineF(a, st).length();
+                const double a0 = std::atan2(st.y() - a.y(), st.x() - a.x());
+                double a1 = std::atan2(b.y() - a.y(), b.x() - a.x());
+                while (a1 <= a0 + 1e-9) {
+                    a1 += 2 * kPi;
+                }
+                if (R > 1e-9) {
+                    addPoly(polyline(tmp, *tmp.entity(tmp.addArc(a.x(), a.y(), R, a0, a1))), kAccent, false);
+                }
+            }
+            else if (tool_ == Tool::Slot) {
+                const QPointF c2 = second_->local;
+                const QLineF axis(a, c2);
+                if (axis.length() > 1e-9) {
+                    const QPointF n(-(c2.y() - a.y()) / axis.length(), (c2.x() - a.x()) / axis.length());
+                    const double r = std::max(1e-3, std::abs(QPointF::dotProduct(b - a, n)));
+                    tmp.addSlot(a.x(), a.y(), c2.x(), c2.y(), r);
+                }
+            }
+            else {
+                const double R = QLineF(a, b).length();
+                if (R > 1e-9) {
+                    tmp.addPolygon(a.x(), a.y(), R, 6, std::atan2(b.y() - a.y(), b.x() - a.x()));
+                }
+            }
+            for (auto& [id, e] : tmp.entities()) {
+                if (e.type != jig::EntityType::Point && !e.construction) {
+                    addPoly(polyline(tmp, e), kAccent, false);
+                }
+            }
         }
     }
     view_->setOverlay(std::move(ov));
@@ -1226,8 +1424,35 @@ void SketchEditor::paint(QPainter& p)
             else if (tool_ == Tool::CenterRectangle) {
                 label += tr("%1 × %2 mm").arg(fmt(2 * std::abs(d.x()))).arg(fmt(2 * std::abs(d.y())));
             }
-            else if (tool_ == Tool::Circle) {
+            else if (tool_ == Tool::Circle || tool_ == Tool::Polygon) {
                 label += tr("Ø %1 mm").arg(fmt(2 * std::hypot(d.x(), d.y())));
+            }
+            else if (tool_ == Tool::Arc) {
+                if (!second_) {
+                    label += tr("R %1 mm").arg(fmt(std::hypot(d.x(), d.y())));
+                }
+                else {
+                    const QPointF st = second_->local - first_->local;
+                    double sw = std::atan2(d.y(), d.x()) - std::atan2(st.y(), st.x());
+                    while (sw <= 0) {
+                        sw += 2 * kPi;
+                    }
+                    label += tr("%1°").arg(fmt(sw * 180 / kPi));
+                }
+            }
+            else if (tool_ == Tool::Slot) {
+                if (!second_) {
+                    label += tr("%1 mm").arg(fmt(std::hypot(d.x(), d.y())));
+                }
+                else {
+                    const QPointF c2 = second_->local;
+                    const QLineF axis(first_->local, c2);
+                    if (axis.length() > 1e-9) {
+                        const QPointF n(-(c2.y() - first_->local.y()) / axis.length(),
+                                        (c2.x() - first_->local.x()) / axis.length());
+                        label += tr("width %1 mm").arg(fmt(2 * std::abs(QPointF::dotProduct(d, n))));
+                    }
+                }
             }
         }
         if (!label.isEmpty()) {
