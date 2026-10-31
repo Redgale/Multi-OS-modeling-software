@@ -5,7 +5,9 @@
 #include <memory>
 
 #include <QMainWindow>
+#include <QPointer>
 
+#include "Tutorial.hpp"
 #include "jig/document.hpp"
 
 class QAction;
@@ -26,6 +28,7 @@ class Viewport;
 class SketchEditor;
 class FeaturePanel;
 class ToolPanel;
+class TutorialCard;
 class PlanePicker;
 
 enum class Theme
@@ -94,6 +97,16 @@ public:
     void showVersions();
     bool restoreVersion(int number);              // undoable
     bool saveTo(const QString& path);             // save without asking (also used by tests)
+    void startTutorial();
+    TutorialCard* tutorial() const
+    {
+        return tutorial_;
+    }
+    bool exportedSinceStart() const
+    {
+        return exported_;
+    }
+    QAction* commandAction(const QString& id);  // the toolbar/menu action of a command
     bool importSvgFile(const QString& path);
     void openBodyTool(const std::string& tool, const std::string& editId = {});  // combine, split, move
     void openPlane(const std::string& editId = {}, const std::string& kind = "offset");
@@ -152,6 +165,8 @@ private:
     std::map<QString, QAction*> actions_;
     SketchEditor* sketch_ = nullptr;
     ToolPanel* panel_ = nullptr;
+    QPointer<TutorialCard> tutorial_;
+    bool exported_ = false;
     std::unique_ptr<PlanePicker> picker_;
     QToolBar* toolsBar_ = nullptr;
     QToolBar* sketchBar_ = nullptr;

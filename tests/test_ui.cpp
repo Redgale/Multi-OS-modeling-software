@@ -17,6 +17,7 @@
 #include "Icons.hpp"
 #include "MainWindow.hpp"
 #include "SketchEditor.hpp"
+#include "Tutorial.hpp"
 #include "Viewport.hpp"
 #include "jig/commands.hpp"
 #include "jig/io.hpp"
@@ -988,6 +989,56 @@ private slots:
         w.runCommand("edit.undo");  // the restore is one change
         QTRY_VERIFY(std::abs(volume(w) - shortCup) < 1e-6);
         QFile::remove(path);
+    }
+
+    // The first-run tutorial follows real work: each step moves on only when it is done.
+    void tutorialFollowsTheWork()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        Viewport* view = w.viewport();
+        w.runCommand("help.tutorial");
+        TutorialCard* t = w.tutorial();
+        QVERIFY(t);
+        QVERIFY(t->isVisible());
+        QCOMPARE(t->step(), 0);
+        t->check();
+        QCOMPARE(t->step(), 0);  // nothing done yet: no progress
+        QVERIFY(w.createSketchOn("XY"));
+        QTRY_COMPARE(t->step(), 1);
+        SketchEditor* sk = w.sketchEditor();
+        sk->setTool(SketchEditor::Tool::CenterRectangle);
+        QTest::mouseMove(view, sk->screenOf(0, 0));
+        QTest::mouseClick(view, Qt::LeftButton, Qt::NoModifier, sk->screenOf(0, 0));
+        QTest::mouseMove(view, sk->screenOf(10, 8));
+        sk->typeValues({"60", "30"});
+        QTRY_COMPARE(t->step(), 2);
+        w.runCommand("sketch.finish");
+        QTRY_COMPARE(t->step(), 3);
+        w.runCommand("solid.extrude");
+        auto* ex = qobject_cast<ExtrudePanel*>(w.featurePanel());
+        QVERIFY(ex);
+        ex->distance()->setText("5 mm");
+        QTRY_VERIFY(ex->previewOk());
+        QVERIFY(ex->accept());
+        QTRY_COMPARE(t->step(), 4);
+        w.runCommand("solid.fillet");
+        auto* fp = qobject_cast<FilletPanel*>(w.featurePanel());
+        QVERIFY(fp);
+        const std::string body = w.document().state().bodies.begin()->first;
+        const auto& b = *w.document().state().bodies.begin()->second;
+        for (int e : b.edgesOfFace(b.findFaces("e1/end").at(0))) {
+            fp->toggleEdge(body, e);
+        }
+        fp->radius()->setText("2 mm");
+        QTRY_VERIFY(fp->previewOk());
+        QVERIFY(fp->accept());
+        QTRY_COMPARE(t->step(), 5);
+        QVERIFY(!t->finished());  // exporting is the last step
+        QTest::qWait(100);
+        w.grab().save(shotPath("tutorial"));
     }
 
     // Revolve a ring, drill it from its top face, repeat the hole around the axis,

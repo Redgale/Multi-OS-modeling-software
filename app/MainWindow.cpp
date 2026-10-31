@@ -48,6 +48,7 @@
 
 #include "FeaturePanels.hpp"
 #include "InspectPanels.hpp"
+#include "Tutorial.hpp"
 #include "Icons.hpp"
 #include "SketchEditor.hpp"
 #include "Viewport.hpp"
@@ -1126,6 +1127,9 @@ void MainWindow::runCommand(const QString& id)
     else if (id == "file.save") {
         save(false);
     }
+    else if (id == "help.tutorial") {
+        startTutorial();
+    }
     else if (id == "file.save_version") {
         saveVersionInteractive();
     }
@@ -1473,6 +1477,7 @@ void MainWindow::exportAs(const QString& format)
         QMessageBox::warning(this, tr("Could not export"), q(r.error().message));
         return;
     }
+    exported_ = true;
     statusBar()->showMessage(tr("Exported %1 (millimetres)").arg(QDir::toNativeSeparators(p)), 5000);
 }
 
@@ -1558,9 +1563,11 @@ void MainWindow::showWelcome()
                              &d);
     title->setWordWrap(true);
     lay->addWidget(title);
-    auto* tut = new QPushButton(tr("Your first part (15 min)\nComing in milestone M7"), &d);
-    tut->setEnabled(false);
-    tut->setToolTip(tr("A guided tour that builds a phone stand with you. Not built yet."));
+    auto* tut = new QPushButton(tr("Your first part (10 min)\nA guided tour: sketch, 3D, round, print"), &d);
+    connect(tut, &QPushButton::clicked, &d, [&] {
+        d.accept();
+        startTutorial();
+    });
     auto* sample = new QPushButton(tr("Open a sample\nA finished phone stand to look around"), &d);
     auto* blank = new QPushButton(tr("Start blank\nAn empty design with the origin ready"), &d);
     for (auto* b : {tut, sample, blank}) {
@@ -1575,6 +1582,30 @@ void MainWindow::showWelcome()
     sample->setDefault(true);
     d.exec();
     QSettings().setValue("welcomeShown", true);
+}
+
+QAction* MainWindow::commandAction(const QString& id)
+{
+    return actions_.count(id) ? actions_.at(id) : nullptr;
+}
+
+void MainWindow::startTutorial()
+{
+    if (tutorial_) {
+        tutorial_->deleteLater();
+    }
+    if (!doc_->model().features.empty()) {
+        if (!maybeKeepChanges()) {
+            return;
+        }
+        setDocument(blankDocument(), {});
+    }
+    exported_ = false;
+    tutorial_ = new TutorialCard(this, view_);
+    tutorial_->move(12, 12);
+    tutorial_->show();
+    tutorial_->raise();
+    connect(tutorial_, &TutorialCard::closed, this, [this] { tutorial_->deleteLater(); });
 }
 
 std::unique_ptr<jig::Document> MainWindow::blankDocument() const

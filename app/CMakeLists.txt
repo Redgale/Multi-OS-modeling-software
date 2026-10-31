@@ -12,6 +12,7 @@ add_library(jigsmith_ui STATIC
     SketchEditor.cpp SketchEditor.hpp
     FeaturePanels.cpp FeaturePanels.hpp
     InspectPanels.cpp InspectPanels.hpp
+    Tutorial.cpp Tutorial.hpp
     resources.qrc
 )
 target_include_directories(jigsmith_ui PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

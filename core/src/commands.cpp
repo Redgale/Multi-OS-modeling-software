@@ -140,7 +140,7 @@ CommandRegistry::CommandRegistry()
     add({"insert.svg", "Import SVG…", "Insert SVG", "INSERT", "Bring vector artwork into a sketch, e.g. a logo.", "", {"logo", "vector", "artwork"}, false, false, false, m5});
     add({"insert.dxf", "Import DXF…", "Insert DXF", "INSERT", "Bring a 2D drawing or laser-cut file into a sketch.", "", {"laser", "2d drawing"}, false, false, false, m5});
     add({"modify.parameters", "Parameters", "Change Parameters", "MODIFY", "Name sizes like width or wall and use them in any field.", "", {"variables", "named values", "change size"}, true, false, true, m5});
-    add({"help.tutorial", "Your first part (15 min)", "Tutorial", "HELP", "A guided tour that builds a phone stand with you.", "", {"learn", "tutorial", "getting started", "help"}, true, false, false, m7});
+    add({"help.tutorial", "Your first part (10 min)", "Tutorial", "HELP", "A guided tour that builds your first part with you.", "", {"learn", "tutorial", "getting started", "help"}, true, false, false, m7});
     // clang-format on
 
     // Usable from the desktop app as of milestone M1/M2/M3 (sketching, extrude, fillet,
@@ -154,7 +154,7 @@ CommandRegistry::CommandRegistry()
         "solid.revolve", "solid.hole", "solid.mirror", "solid.pattern_rect", "solid.pattern_circ", "modify.parameters",
         "inspect.measure", "inspect.properties", "file.export_3mf", "construct.offset_plane", "construct.angle_plane",
         "construct.midplane", "solid.combine", "solid.split", "solid.move",
-        "inspect.section", "insert.dxf", "insert.svg"};
+        "inspect.section", "insert.dxf", "insert.svg", "help.tutorial"};
     for (auto& c : commands_) {
         if (inApp.count(c.id)) {
             c.available = true;
