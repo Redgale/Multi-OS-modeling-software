@@ -10,9 +10,8 @@ decision or finding). Move items to STATUS.md when started.
   the environment's policy on building external code.
 - ~~B-002 Reorder regression tests~~ done in session 2 (`Document.ReorderStepsSafely`, UI
   `reorderTimeline`). Remaining: name-resolution checks for reorders inside the phone stand.
-- **B-003 Windows and macOS GUI evidence**: macOS screenshot runs work in CI. **Windows
-  crashes** (0xC0000005) with Qt's software OpenGL on the runner: read the debugger stack and
-  fix. Manual check of trackpad pinch on a real Mac.
+- **B-003 Windows and macOS GUI evidence**: macOS screenshot runs work in CI. Windows: the crash
+  (no OpenGL 3.3 on the runner, unchecked) is fixed; confirm the Mesa-rendered screenshot in CI. Manual check of trackpad pinch on a real Mac.
 - **B-004 macOS renderer path**: verify GL 4.1 core on Apple silicon; spike a Qt RHI
   (Metal) backend for `Viewport`.
 - **B-005 Universal macOS binary**: CI builds arm64 and Intel separately; add a

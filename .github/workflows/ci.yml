@@ -185,22 +185,27 @@ jobs:
           Copy-Item LICENSE, THIRD_PARTY_LICENSES.md dist/
           Compress-Archive -Path dist/* -DestinationPath Jigsmith-windows-x64-portable.zip
       - name: GUI smoke test and screenshot (B-003)
-        # the packaged app on the runner's desktop, with Qt's software OpenGL (the runner has
-        # no GPU driver); it renders the phone stand sample, saves a screenshot and quits.
-        # Known to crash here (STATUS, B-003): kept visible but not blocking while it is fixed;
-        # on a crash the debugger prints the stack.
-        continue-on-error: true
+        # The runner has no GPU driver, and Windows' own OpenGL is 1.1, so a copy of the app
+        # gets Mesa's software OpenGL (llvmpipe, from mesa-dist-win; CI only, never shipped).
+        # It renders the phone stand sample, saves a screenshot and must quit cleanly.
         shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          $cdb = "${env:ProgramFiles(x86)}\Windows Kits\10\Debuggers\x64\cdb.exe"
-          if (Test-Path $cdb) {
-            $env:QT_OPENGL = "software"
-            & $cdb -g -G -lines -y "build\app" -c ".ecxr; kn 40; q" dist\jigsmith.exe --sample phone_stand --screenshot "$PWD\screenshot-windows.png" 2>&1 | Select-Object -Last 80
-          }
-          $env:QT_OPENGL = "software"
-          $p = Start-Process -FilePath dist/jigsmith.exe -ArgumentList "--sample", "phone_stand", "--screenshot", "$PWD\screenshot-windows.png" -PassThru
+          New-Item -ItemType Directory -Force gltest, mesa | Out-Null
+          Copy-Item -Recurse dist/* gltest/
+          gh release download -R pal1000/mesa-dist-win --pattern "*release-msvc.7z" -D mesa
+          7z x (Get-ChildItem mesa/*.7z)[0].FullName -omesa/x -y | Out-Null
+          Copy-Item mesa/x/x64/*.dll gltest/
+          $p = Start-Process -FilePath gltest/jigsmith.exe -ArgumentList "--sample", "phone_stand", "--screenshot", "$PWD\screenshot-windows.png" -PassThru
           if (-not $p.WaitForExit(120000)) { $p.Kill(); throw "timed out" }
-          if ($p.ExitCode -ne 0) { throw "exit code $($p.ExitCode)" }
+          if ($p.ExitCode -ne 0) {
+            $cdb = "${env:ProgramFiles(x86)}\Windows Kits\10\Debuggers\x64\cdb.exe"
+            if (Test-Path $cdb) {
+              & $cdb -g -G -lines -y "build\app" -c ".ecxr; kn 40; q" gltest\jigsmith.exe --sample phone_stand --screenshot "$PWD\screenshot-windows.png" 2>&1 | Select-Object -Last 60
+            }
+            throw "exit code $($p.ExitCode)"
+          }
           if ((Get-Item screenshot-windows.png).Length -lt 10000) { throw "screenshot too small" }
       - name: Build the installer (Inno Setup)
         shell: pwsh
