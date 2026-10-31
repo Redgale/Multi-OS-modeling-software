@@ -105,7 +105,13 @@ ounces) is shown in inches. The owner's standing instruction is in `CLAUDE.md`.
 
 ### CI results (GitHub Actions, branch `claude/pensive-mayer-l4r19c`)
 
-Latest full run: [run 41205262154](https://github.com/Redgale/Multi-OS-modeling-software/actions/runs/41205262154)
+Latest full run: [run 41232385913](https://github.com/Redgale/Multi-OS-modeling-software/actions/runs/41232385913)
+on commit 85ee5b6 (2026-10-31, `[full ci]` push): all build and test jobs green on Linux
+(Ubuntu, Fedora, Arch, openSUSE, Void glibc and musl, OCCT from source, ASan + UBSan), macOS
+(Apple silicon and Intel) and Windows, including the GUI screenshots on macOS and Windows
+(Mesa llvmpipe) and the Windows installer test.
+
+Earlier full run: [run 41205262154](https://github.com/Redgale/Multi-OS-modeling-software/actions/runs/41205262154)
 on commit 7e55fed (2026-10-31, dispatched): all 12 build and test jobs green, with the
 Linguist translation build in the Ubuntu job (the publish job runs only for `[full ci]` pushes).
 
