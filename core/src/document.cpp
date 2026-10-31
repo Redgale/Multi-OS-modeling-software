@@ -534,6 +534,25 @@ void Document::recompute()
         prev = it->second.after;
         prevKey = key;
     }
+    // A sketch of open curves is not a problem when a later step builds a wall along them.
+    for (int i = 0; i < n; ++i) {
+        const Feature& f = model_.features[size_t(i)];
+        if (f.kind != FeatureKind::Sketch || statuses_[size_t(i)].level != StatusLevel::Warning ||
+            statuses_[size_t(i)].message.rfind("This sketch has no closed area yet", 0) != 0) {
+            continue;
+        }
+        for (int j = i + 1; j < n; ++j) {
+            const auto& g = model_.features[size_t(j)];
+            const auto prof = g.params.value("profiles", nlohmann::json("all"));
+            if (g.kind == FeatureKind::Extrude && g.params.value("sketch", std::string {}) == f.id &&
+                (prof == nlohmann::json("open") || prof == nlohmann::json::array({"open"})) &&
+                statuses_[size_t(j)].level == StatusLevel::Ok) {
+                statuses_[size_t(i)] = {};
+                statuses_[size_t(i)].message = "Open curves, used as a wall by " + g.name + ".";
+                break;
+            }
+        }
+    }
     std::erase_if(cache_, [&](const auto& kv) { return !live.count(kv.first); });
     lastMs_ = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
 }

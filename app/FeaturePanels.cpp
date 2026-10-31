@@ -640,7 +640,18 @@ void ExtrudePanel::fillProfiles()
             item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
             item->setCheckState(Qt::Checked);
         }
-        if (it->second->profiles.regions.empty()) {
+        // open curves can still be extruded as a wall
+        const bool open = !it->second->solved.openEndpoints().empty();
+        if (open) {
+            auto* item = new QListWidgetItem(tr("Open curves, as a wall (needs a wall thickness)"), profiles_);
+            item->setData(Qt::UserRole, "open");
+            item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+            item->setCheckState(it->second->profiles.regions.empty() ? Qt::Checked : Qt::Unchecked);
+            if (it->second->profiles.regions.empty()) {
+                thinOn_->setChecked(true);
+            }
+        }
+        else if (it->second->profiles.regions.empty()) {
             new QListWidgetItem(tr("(no closed areas: the outline has a gap)"), profiles_);
         }
     }
@@ -712,6 +723,17 @@ jig::Feature ExtrudePanel::draft() const
         }
     }
     p["profiles"] = all ? nlohmann::json("all") : keys;
+    bool openChecked = false;
+    for (int i = 0; i < profiles_->count(); ++i) {
+        openChecked |= profiles_->item(i)->data(Qt::UserRole).toString() == "open" &&
+                       profiles_->item(i)->checkState() == Qt::Checked;
+    }
+    if (openChecked) {
+        p["profiles"] = "open";  // a wall along the open curves (the closed areas are not used)
+        if (!thinOn_->isChecked()) {
+            p["thin"] = thin_->text().isEmpty() ? std::string("2 mm") : thin_->text().toStdString();
+        }
+    }
     p["extent"] = extent_->currentData().toString().toStdString();
     if (p["extent"] == "to") {
         const std::string d = to_->currentData().toString().toStdString();

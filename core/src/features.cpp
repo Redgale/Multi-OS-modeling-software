@@ -501,7 +501,24 @@ FeatureOutcome applyExtrude(const Document& doc, const Feature& f, const std::sh
     }
     const SketchState& sk = *skp;
     std::vector<const Profile*> profiles;
-    if (auto bad = selectProfiles(sk, p, status, "extrude", profiles)) {
+    std::vector<Profile> walls;  // open curves: walls built here, extruded as plain areas
+    const nlohmann::json prof = p.value("profiles", nlohmann::json("all"));
+    const bool openCurves = prof == nlohmann::json("open") || prof == nlohmann::json::array({"open"});
+    if (openCurves) {
+        auto t = doc.evalLength(p.value("thin", std::string("2 mm")));
+        if (!t) {
+            return failed(t.error());
+        }
+        auto w = openChainWalls(sk.solved, sk.frame, t.value());
+        if (!w) {
+            return failed(w.error());
+        }
+        walls = std::move(w.value());
+        for (auto& wp : walls) {
+            profiles.push_back(&wp);
+        }
+    }
+    else if (auto bad = selectProfiles(sk, p, status, "extrude", profiles)) {
         return *bad;
     }
     ExtrudeInput ei;
@@ -527,7 +544,7 @@ FeatureOutcome applyExtrude(const Document& doc, const Feature& f, const std::sh
         }
         ei.taper = t.value();
     }
-    if (p.contains("thin")) {
+    if (p.contains("thin") && !openCurves) {
         auto t = doc.evalLength(p.value("thin", std::string("0 mm")));
         if (!t) {
             return failed(t.error());

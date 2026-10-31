@@ -240,6 +240,11 @@ Result<std::vector<int>> projectEdge(Sketch& sketch, const gp_Ax3& frame, const 
 // positive, sharp corners). Adds the new curves to the sketch and returns their ids.
 Result<std::vector<int>> offsetCurves(Sketch& sketch, const std::vector<int>& curves, double distance);
 
+// Walls along the open chains of a sketch (curves joined end to end that do not close),
+// `thickness` wide and centred on the curves, as flat areas ready to extrude. Keys are
+// "W<first curve id>".
+Result<std::vector<Profile>> openChainWalls(const Sketch& sketch, const gp_Ax3& frame, double thickness);
+
 // Closed outlines made of straight segments (2 points) and quadratic / cubic Béziers
 // (3 / 4 points) turned into flat faces; holes are found by nesting, whatever the winding.
 using OutlineSegment = std::vector<gp_XY>;

@@ -93,7 +93,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Extrude extents: distance, to object, all | 14 | v0.1 M2 | **app** + scripts: distance, all, up to a parallel plane or flat face (with an offset beyond it); up to curved or slanted faces not yet | |
 | Extrude start: profile plane, offset, object | 14 | v0.1 M2 | profile plane | |
 | Extrude taper | 14 | v0.1 M2 | **app** + scripts | |
-| Extrude thin | 14 | v0.1 M2 | **app** + scripts: closed areas (open curves not yet) | |
+| Extrude thin | 14 | v0.1 M2 | **app** + scripts: closed areas (inside/centred/outside) and open curves (lines, arcs, smooth curves; centred walls with square ends and mitred corners) | |
 | Extrude ops: join, cut, new body, intersect | 14 | v0.1 M2 | **app**: all four | |
 | Extrude new component | 14 | v0.2 | — | Components |
 | Auto join/cut from drag direction | 14 | v0.1 M2 | **app** (Auto: from the typed direction; drag handle not yet) | Principle 10 |

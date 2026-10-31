@@ -5,20 +5,29 @@
 #include <map>
 #include <numbers>
 
+#include <BRep_Tool.hxx>
 #include <BRepAdaptor_Curve.hxx>
+#include <BRepAlgoAPI_Fuse.hxx>
 #include <BRepBuilderAPI_MakeEdge.hxx>
 #include <BRepBuilderAPI_MakeFace.hxx>
+#include <BRepBuilderAPI_MakePolygon.hxx>
+#include <BRepBuilderAPI_MakeWire.hxx>
+#include <BRepGProp.hxx>
 #include <BRepOffsetAPI_MakeOffset.hxx>
 #include <BRepTools_WireExplorer.hxx>
-#include <BRep_Tool.hxx>
+#include <gp_Circ.hxx>
+#include <gp_Pln.hxx>
+#include <GProp_GProps.hxx>
 #include <ShapeAnalysis_FreeBounds.hxx>
+#include <ShapeFix_Face.hxx>
+#include <ShapeUpgrade_UnifySameDomain.hxx>
 #include <Standard_Failure.hxx>
 #include <TopExp.hxx>
 #include <TopExp_Explorer.hxx>
-#include <TopTools_HSequenceOfShape.hxx>
 #include <TopoDS.hxx>
 #include <TopoDS_Vertex.hxx>
-#include <gp_Circ.hxx>
+#include <TopoDS_Wire.hxx>
+#include <TopTools_HSequenceOfShape.hxx>
 
 #include "jig/kernel.hpp"
 
@@ -231,6 +240,222 @@ Result<std::vector<int>> projectEdge(Sketch& s, const gp_Ax3& frame, const TopoD
         return made;
     }
     return makeError("project.curve", "Only straight and round edges can be projected yet.");
+}
+
+// ---------------------------------------------------------------- walls along open curves
+
+Result<std::vector<Profile>> openChainWalls(const Sketch& s, const gp_Ax3& frame, double t)
+{
+    if (!(t > 1e-9)) {
+        return makeError("extrude.thin", "A wall along open curves needs a thickness.");
+    }
+    auto to3d = [&](double x, double y) {
+        return gp_Pnt(frame.Location().XYZ() + frame.XDirection().XYZ() * x + frame.YDirection().XYZ() * y);
+    };
+    // curves that can form a wall, and their two ends
+    struct Piece
+    {
+        int id;
+        std::pair<double, double> a, b;
+    };
+    std::vector<Piece> pieces;
+    for (auto& [id, e] : s.entities()) {
+        if (e.construction) {
+            continue;
+        }
+        if (e.type == EntityType::Line || e.type == EntityType::Arc) {
+            pieces.push_back({id, s.pointXY(e.p1), s.pointXY(e.p2)});
+        }
+        else if (e.type == EntityType::Spline && !e.closed && e.pts.size() >= 2) {
+            pieces.push_back({id, s.pointXY(e.pts.front()), s.pointXY(e.pts.back())});
+        }
+    }
+    auto same = [](std::pair<double, double> p, std::pair<double, double> q) {
+        return std::hypot(p.first - q.first, p.second - q.second) < 1e-6;
+    };
+    // group pieces that touch end to end
+    std::vector<int> group(pieces.size(), -1);
+    int groups = 0;
+    for (size_t i = 0; i < pieces.size(); ++i) {
+        if (group[i] >= 0) {
+            continue;
+        }
+        std::vector<size_t> stack {i};
+        group[i] = groups;
+        while (!stack.empty()) {
+            const size_t k = stack.back();
+            stack.pop_back();
+            for (size_t j = 0; j < pieces.size(); ++j) {
+                if (group[j] < 0 && (same(pieces[k].a, pieces[j].a) || same(pieces[k].a, pieces[j].b) ||
+                                     same(pieces[k].b, pieces[j].a) || same(pieces[k].b, pieces[j].b))) {
+                    group[j] = groups;
+                    stack.push_back(j);
+                }
+            }
+        }
+        ++groups;
+    }
+    std::vector<Profile> out;
+    try {
+        for (int g = 0; g < groups; ++g) {
+            std::vector<size_t> members;
+            for (size_t i = 0; i < pieces.size(); ++i) {
+                if (group[i] == g) {
+                    members.push_back(i);
+                }
+            }
+            // open when some end belongs to only one piece
+            bool open = false;
+            for (size_t i : members) {
+                for (auto end : {pieces[i].a, pieces[i].b}) {
+                    int n = 0;
+                    for (size_t j : members) {
+                        n += same(end, pieces[j].a) + same(end, pieces[j].b);
+                    }
+                    open |= n == 1;
+                }
+            }
+            if (!open) {
+                continue;
+            }
+            // The band: a strip along each line, a ring sector along each arc (a smooth curve
+            // as short straight strips), and a mitre fill at every joint, fused into one area.
+            const double h = t / 2;
+            using P2 = std::pair<double, double>;
+            // every part on the sketch plane itself, facing the same way, so the parts merge
+            const gp_Pln pln(frame);
+            auto planarFace = [&](const TopoDS_Wire& w) {
+                TopoDS_Face f = BRepBuilderAPI_MakeFace(pln, w, true).Face();
+                ShapeFix_Face fix(f);  // orients the wire to bound the area, whichever way it runs
+                fix.Perform();
+                return TopoDS_Shape(fix.Face());
+            };
+            auto rectFace = [&](P2 a, P2 b, P2 c, P2 d) {
+                BRepBuilderAPI_MakePolygon poly(to3d(a.first, a.second), to3d(b.first, b.second),
+                                                to3d(c.first, c.second), to3d(d.first, d.second), Standard_True);
+                return planarFace(poly.Wire());
+            };
+            std::vector<TopoDS_Shape> parts;
+            // per joint: the end point and the direction each piece leaves it in
+            std::vector<std::pair<P2, std::pair<double, double>>> ends;
+            auto strip = [&](P2 a, P2 b) {
+                const double L = std::hypot(b.first - a.first, b.second - a.second);
+                if (L < 1e-9) {
+                    return;
+                }
+                const double nx = -(b.second - a.second) / L * h, ny = (b.first - a.first) / L * h;
+                parts.push_back(rectFace({a.first + nx, a.second + ny}, {b.first + nx, b.second + ny},
+                                         {b.first - nx, b.second - ny}, {a.first - nx, a.second - ny}));
+                ends.push_back({a, {(b.first - a.first) / L, (b.second - a.second) / L}});
+                ends.push_back({b, {(a.first - b.first) / L, (a.second - b.second) / L}});
+            };
+            int firstId = 0;
+            for (size_t i : members) {
+                const SketchEntity& e = *s.entity(pieces[i].id);
+                firstId = firstId ? std::min(firstId, e.id) : e.id;
+                if (e.type == EntityType::Line) {
+                    strip(pieces[i].a, pieces[i].b);
+                }
+                else if (e.type == EntityType::Arc) {
+                    if (e.r - h <= 1e-9) {
+                        return makeError("extrude.thin", "The wall is thicker than an arc is round.",
+                                         {"Use a thinner wall or a bigger arc."});
+                    }
+                    auto [cx, cy] = s.pointXY(e.center);
+                    double a0 = e.a0, a1 = e.a1;
+                    while (a1 <= a0) {
+                        a1 += kTau;
+                    }
+                    const gp_Ax2 ax(to3d(cx, cy), frame.Direction(), frame.XDirection());
+                    const TopoDS_Edge outer = BRepBuilderAPI_MakeEdge(gp_Circ(ax, e.r + h), a0, a1).Edge();
+                    const TopoDS_Edge inner = BRepBuilderAPI_MakeEdge(gp_Circ(ax, e.r - h), a0, a1).Edge();
+                    auto at = [&](double r, double a) { return to3d(cx + r * std::cos(a), cy + r * std::sin(a)); };
+                    BRepBuilderAPI_MakeWire w;
+                    w.Add(outer);
+                    w.Add(BRepBuilderAPI_MakeEdge(at(e.r + h, a1), at(e.r - h, a1)).Edge());
+                    w.Add(inner);
+                    w.Add(BRepBuilderAPI_MakeEdge(at(e.r - h, a0), at(e.r + h, a0)).Edge());
+                    parts.push_back(planarFace(w.Wire()));
+                    // leaving each end along the tangent, away from the arc
+                    ends.push_back({pieces[i].a, {std::sin(a0), -std::cos(a0)}});
+                    ends.push_back({pieces[i].b, {-std::sin(a1), std::cos(a1)}});
+                    // (the stored direction points into the arc, as for strips)
+                    ends[ends.size() - 2].second = {-std::sin(a0), std::cos(a0)};
+                    ends[ends.size() - 1].second = {std::sin(a1), -std::cos(a1)};
+                }
+                else {
+                    auto pts = s.curvePoints(e.id, 16);
+                    for (size_t k = 0; k + 1 < pts.size(); ++k) {
+                        strip(pts[k], pts[k + 1]);
+                    }
+                }
+            }
+            // mitre fills where two pieces meet at an angle
+            for (size_t x = 0; x < ends.size(); ++x) {
+                for (size_t y = x + 1; y < ends.size(); ++y) {
+                    if (!same(ends[x].first, ends[y].first)) {
+                        continue;
+                    }
+                    const P2 J = ends[x].first;
+                    const auto [ux, uy] = ends[x].second;  // into piece x
+                    const auto [vx, vy] = ends[y].second;  // into piece y
+                    const double cross = ux * vy - uy * vx;
+                    if (std::abs(cross) < 1e-9) {
+                        continue;  // straight on: nothing to fill
+                    }
+                    for (double side : {1.0, -1.0}) {
+                        // the edge of each strip on this side, as lines through J + n*h along -u, -v
+                        const P2 p1 {J.first - uy * h * side, J.second + ux * h * side};
+                        const P2 p2 {J.first + vy * h * side, J.second - vx * h * side};
+                        // where those two edges meet
+                        const double den = ux * vy - uy * vx;
+                        const double tt = ((p2.first - p1.first) * vy - (p2.second - p1.second) * vx) / den;
+                        const P2 X {p1.first + ux * tt, p1.second + uy * tt};
+                        if (std::hypot(X.first - J.first, X.second - J.second) > 50 * h) {
+                            continue;  // nearly folded back: leave it square
+                        }
+                        parts.push_back(rectFace(J, p1, X, p2));
+                    }
+                }
+            }
+            if (parts.empty()) {
+                continue;
+            }
+            TopoDS_Shape fused = parts[0];
+            for (size_t k = 1; k < parts.size(); ++k) {
+                BRepAlgoAPI_Fuse fu(fused, parts[k]);
+                fu.Build();
+                if (!fu.IsDone()) {
+                    return makeError("extrude.thin", "A wall along these curves could not be built.", {"Try a thinner wall."});
+                }
+                fused = fu.Shape();
+            }
+            ShapeUpgrade_UnifySameDomain unify(fused, Standard_True, Standard_True, Standard_True);
+            unify.Build();
+            TopoDS_Face band;
+            for (TopExp_Explorer fx(unify.Shape(), TopAbs_FACE); fx.More() && band.IsNull(); fx.Next()) {
+                band = TopoDS::Face(fx.Current());
+            }
+            if (band.IsNull()) {
+                return makeError("extrude.thin", "A wall of this thickness does not fit along these curves.");
+            }
+            Profile p;
+            p.key = "W" + std::to_string(firstId);
+            p.face = band;
+            GProp_GProps gp;
+            BRepGProp::SurfaceProperties(band, gp);
+            p.area = gp.Mass();
+            out.push_back(std::move(p));
+        }
+    }
+    catch (const Standard_Failure&) {
+        return makeError("extrude.thin", "A wall along these curves could not be built.", {"Try a thinner wall."});
+    }
+    if (out.empty()) {
+        return makeError("extrude.thin", "This sketch has no open curves to build a wall along.",
+                         {"Draw a line or a chain of lines that does not close."});
+    }
+    return out;
 }
 
 }  // namespace jig

@@ -937,6 +937,31 @@ private slots:
         }
     }
 
+    // A sketch of open lines: Extrude offers them as a wall and makes it.
+    void extrudeOpenCurvesAsWall()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        {
+            jig::ScriptRunner r(w.document());
+            QVERIFY(r.runText("sketch id=s1 plane=XY\nline sketch=s1 p1=0,0 p2=30,0\nline sketch=s1 p1=30,0 p2=30,20\n").ok());
+        }
+        w.runCommand("solid.extrude");
+        auto* ep = qobject_cast<ExtrudePanel*>(w.featurePanel());
+        QVERIFY(ep);
+        QVERIFY(ep->thinWall()->isChecked());  // the open curves are picked, as a wall
+        ep->thickness()->setText("2 mm");
+        ep->distance()->setText("10 mm");
+        QTest::qWait(300);
+        QTRY_VERIFY(ep->previewOk());
+        QVERIFY(ep->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        QVERIFY(std::abs(volume(w) - 1000) < 1e-6);
+        QCOMPARE(int(w.document().status(0).level), int(jig::StatusLevel::Ok));  // the sketch is fine now
+    }
+
     // Browser: untick a body to hide it, isolate one, show all again.
     void browserVisibility()
     {

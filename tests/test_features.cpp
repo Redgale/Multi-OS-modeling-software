@@ -1221,3 +1221,28 @@ TEST(Extrude, UpToAFaceOrPlane)
     r.runText("sketch id=s1 plane=XY\ncircle sketch=s1 center=0,0 d=10\nextrude id=e1 sketch=s1 extent=to to=YZ\n");
     EXPECT_NE(bad->status(1).message.find("parallel"), std::string::npos) << bad->status(1).message;
 }
+
+TEST(Extrude, ThinWallsAlongOpenCurves)
+{
+    // an L of two lines (30 + 20 long), a 2 mm wall 10 high, centred on the lines
+    auto doc = build("sketch id=s1 plane=XY\nline sketch=s1 p1=0,0 p2=30,0\nline sketch=s1 p1=30,0 p2=30,20\n"
+                     "extrude id=e1 sketch=s1 profiles=open thin=2mm distance=10\n");
+    expectAllOk(*doc);
+    // centre line 50 long; the outer corner adds 1x1 and the inner corner takes it back, the
+    // two ends square: area = 50 * 2 exactly
+    EXPECT_NEAR(props(*doc).volume, 50 * 2 * 10, 1e-6);
+    auto mp = props(*doc);
+    EXPECT_NEAR(mp.xmin, 0, 1e-9);  // square ends: no cap beyond the line's end
+    EXPECT_NEAR(mp.ymin, -1, 1e-9);
+    EXPECT_NEAR(mp.xmax, 31, 1e-9);
+    // an arc on its own: a curved wall
+    auto arc = build("sketch id=s1 plane=XY\narc sketch=s1 center=0,0 r=20 from=0deg to=90deg\n"
+                     "extrude id=e1 sketch=s1 profiles=open thin=2mm distance=5\n");
+    expectAllOk(*arc);
+    EXPECT_NEAR(props(*arc).volume, (pi / 4) * (21 * 21 - 19 * 19) * 5, 1e-4);
+    // a closed outline has no open curves: explained
+    auto bad = std::make_unique<Document>();
+    ScriptRunner r(*bad);
+    r.runText("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=10 h=10\nextrude id=e1 sketch=s1 profiles=open thin=2mm\n");
+    EXPECT_NE(bad->status(1).message.find("open curves"), std::string::npos) << bad->status(1).message;
+}
