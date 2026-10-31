@@ -942,6 +942,17 @@ private slots:
         sk->setTool(SketchEditor::Tool::Select);
         click(23, 40);
         QCOMPARE(int(sk->selection().size()), 1);
+        double cx = 0, cy = 0;  // where the copy landed (the Ctrl-click may have snapped)
+        for (auto& [id, e] : sk->sketch().entities()) {
+            if (e.type == jig::EntityType::Circle) {
+                auto [x, y] = sk->sketch().pointXY(e.center);
+                if (std::abs(x - 20) < 1 && std::abs(y - 40) < 1) {
+                    cx = x;
+                    cy = y;
+                }
+            }
+        }
+        QVERIFY(cy > 30);
         w.runCommand("sketch.move");
         click(0, 0);
         sk->typeValues({"0", "0", "90 deg"});
@@ -950,7 +961,7 @@ private slots:
         for (auto& [id, e] : sk->sketch().entities()) {
             if (e.type == jig::EntityType::Circle) {
                 auto [x, y] = sk->sketch().pointXY(e.center);
-                turned = turned || (std::abs(x + 39.9488) < 1e-3 && std::abs(y - 19.9033) < 1e-3);  // (19.90, 39.95) turned
+                turned = turned || (std::abs(x + cy) < 1e-6 && std::abs(y - cx) < 1e-6);  // (x, y) -> (-y, x)
             }
         }
         QVERIFY(turned);
