@@ -56,7 +56,7 @@ timeline edit/rename/suppress/roll back/delete with dependents warning, Paramete
 ## Later v0.1 milestones
 
 - M3 (done in session 2: Fillet, Chamfer, Shell, Hole, Mirror of bodies, Patterns of
-  features): variable fillet, hole clearance table and drill point, pattern of bodies,
+  features; hole clearance table and drill point): variable fillet, pattern of bodies,
   mirror of features, Press Pull.
 - M4 (Revolve and the knob, A2, done in session 2): revolve to object, construction planes
   (offset/angle/midplane), axis, point, Combine, Split, Move/Copy.

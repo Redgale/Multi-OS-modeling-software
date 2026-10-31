@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "FeaturePanels.hpp"
 
+#include "jig/screws.hpp"
+
 #include <cctype>
 #include <map>
 #include <regex>
@@ -1152,6 +1154,21 @@ HolePanel::HolePanel(jig::Document& doc, Viewport* view, std::string editId, QWi
                          {tr("Counterbore (screw head sits below the surface)"), "counterbore"},
                          {tr("Countersink (for flat-head screws)"), "countersink"}});
     extent_ = combo(this, {{tr("Depth"), "distance"}, {tr("Through everything"), "all"}});
+    // screw sizes: the design's own system first
+    const bool usFirst = doc.units() == jig::LengthUnit::Inch || doc.units() == jig::LengthUnit::Foot;
+    size_ = new QComboBox(this);
+    size_->addItem(tr("Custom (type the sizes)"), QString());
+    for (bool inch : {usFirst, !usFirst}) {
+        for (auto& sz : jig::screwSizes()) {
+            if (sz.inch == inch) {
+                size_->addItem(tr("%1 screw").arg(q(sz.name)), q(sz.name));
+            }
+        }
+    }
+    fit_ = combo(this, {{tr("Close (snug, accurate)"), "close"},
+                        {tr("Normal"), "normal"},
+                        {tr("Loose (easy to line up)"), "loose"}});
+    bottom_ = combo(this, {{tr("Flat bottom"), "flat"}, {tr("Drill point (118°)"), "118 deg"}});
     diameter_ = new ExprField(doc, jig::Dim::len(), this);
     depth_ = new ExprField(doc, jig::Dim::len(), this);
     cboreDiameter_ = new ExprField(doc, jig::Dim::len(), this);
@@ -1161,16 +1178,19 @@ HolePanel::HolePanel(jig::Document& doc, Viewport* view, std::string editId, QWi
     addRow(tr("Sketch with hole points"), sketch_);
     form_->addWidget(points_);
     addRow(tr("Type"), type_);
+    addRow(tr("Screw size"), size_);
+    addRow(tr("Fit"), fit_);
     addRow(tr("Diameter"), diameter_);
     addRow(tr("Extent"), extent_);
     addRow(tr("Depth"), depth_);
+    addRow(tr("Bottom"), bottom_);
     addRow(tr("Counterbore diameter"), cboreDiameter_);
     addRow(tr("Counterbore depth"), cboreDepth_);
     addRow(tr("Countersink diameter"), csinkDiameter_);
     addRow(tr("Countersink angle"), csinkAngle_);
-    auto* tip = new QLabel(doc.units() == jig::LengthUnit::Inch || doc.units() == jig::LengthUnit::Foot
-                               ? tr("Clearance for a #4 screw: 0.13 in; for a #6: 0.15 in. Add about 0.01 in for 3D prints.")
-                               : tr("Clearance for an M3 screw: 3.4 mm. Add 0.2–0.4 mm for 3D prints."),
+    auto* tip = new QLabel(tr("Pick a screw size to fill in the clearance hole (and the counterbore or countersink "
+                              "for its head). 3D-printed holes often come out small: use Loose, or Custom and add "
+                              "0.2–0.4 mm."),
                            this);
     tip->setWordWrap(true);
     form_->addWidget(tip);
@@ -1192,14 +1212,19 @@ HolePanel::HolePanel(jig::Document& doc, Viewport* view, std::string editId, QWi
     }
     select(type_, value("type", "simple").toStdString());
     select(extent_, value("extent", "distance").toStdString());
+    select(size_, value("size", "").toStdString());
+    select(fit_, value("fit", "normal").toStdString());
+    select(bottom_, value("tip", "flat").toStdString());
     diameter_->setText(value("diameter", doc_.defaultLength(3.4, 0.13).c_str()));
     depth_->setText(value("depth", doc_.defaultLength(10, 0.375).c_str()));
     cboreDiameter_->setText(value("cbore_diameter", doc_.defaultLength(6.5, 0.25).c_str()));
     cboreDepth_->setText(value("cbore_depth", doc_.defaultLength(3.5, 0.14).c_str()));
     csinkDiameter_->setText(value("csink_diameter", doc_.defaultLength(6.5, 0.25).c_str()));
     csinkAngle_->setText(value("csink_angle", "90 deg"));
-    for (auto* c : {sketch_, type_, extent_}) {
+    fillFromSize();
+    for (auto* c : {sketch_, type_, extent_, size_, fit_, bottom_}) {
         connect(c, &QComboBox::currentIndexChanged, this, [this] {
+            fillFromSize();
             updateVisibility();
             schedulePreview();
         });
@@ -1231,6 +1256,8 @@ void HolePanel::updateVisibility()
         }
     };
     show(depth_, current(extent_) == "distance");
+    show(bottom_, current(extent_) == "distance");
+    show(fit_, !current(size_).empty());
     show(cboreDiameter_, t == "counterbore");
     show(cboreDepth_, t == "counterbore");
     show(csinkDiameter_, t == "countersink");
@@ -1260,8 +1287,16 @@ jig::Feature HolePanel::draft() const
     f.params = {{"sketch", current(sketch_)},
                 {"type", current(type_)},
                 {"extent", current(extent_)},
-                {"diameter", text(diameter_, "3.4 mm")},
                 {"depth", text(depth_, "10 mm")}};
+    if (current(extent_) == "distance" && current(bottom_) != "flat") {
+        f.params["tip"] = current(bottom_);
+    }
+    if (!current(size_).empty()) {  // the table decides the sizes; they are not stored twice
+        f.params["size"] = current(size_);
+        f.params["fit"] = current(fit_);
+        return f;
+    }
+    f.params["diameter"] = text(diameter_, "3.4 mm");
     if (current(type_) == "counterbore") {
         f.params["cbore_diameter"] = text(cboreDiameter_, "6.5 mm");
         f.params["cbore_depth"] = text(cboreDepth_, "3.5 mm");
@@ -1278,9 +1313,36 @@ QString HolePanel::title() const
     return tr("hole");
 }
 
+void HolePanel::fillFromSize()
+{
+    const std::string size = current(size_);
+    const bool custom = size.empty();
+    for (ExprField* e : {diameter_, cboreDiameter_, cboreDepth_, csinkDiameter_, csinkAngle_}) {
+        e->setEnabled(custom);
+    }
+    if (custom) {
+        return;
+    }
+    auto s = jig::screwSize(size);
+    auto fit = jig::holeFitFromString(current(fit_));
+    if (!s || !fit) {
+        return;
+    }
+    auto d = jig::clearanceDiameter(size, *fit);
+    auto shown = [this](double mm) { return QString::fromStdString(doc_.fmtLength(mm)); };
+    diameter_->setText(d ? shown(d.value()) : tr("no %1 fit in the table").arg(fit_->currentText()));
+    cboreDiameter_->setText(shown(s->cboreDiameter));
+    cboreDepth_->setText(shown(s->cboreDepth));
+    csinkDiameter_->setText(shown(s->csinkDiameter));
+    csinkAngle_->setText(QString("%1 deg").arg(s->csinkAngleDeg));
+}
+
 void HolePanel::rememberValues()
 {
     remembered()["hole.type"] = q(current(type_));
+    remembered()["hole.size"] = q(current(size_));
+    remembered()["hole.fit"] = q(current(fit_));
+    remembered()["hole.tip"] = q(current(bottom_));
     remembered()["hole.extent"] = q(current(extent_));
     remembered()["hole.diameter"] = diameter_->text();
     remembered()["hole.depth"] = depth_->text();

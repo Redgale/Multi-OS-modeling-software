@@ -1185,6 +1185,9 @@ Result<NamedShape> makeHoleTool(const std::string& featureId,
     if (spec.type == T::Counterbore && !(spec.cboreDiameter > spec.diameter && spec.cboreDepth > 0 && spec.cboreDepth < depth)) {
         return makeError("hole.counterbore", "The counterbore must be wider than the hole and shallower than it.");
     }
+    if (spec.tipAngle != 0 && !(spec.tipAngle > 0.5 && spec.tipAngle < 3.0)) {
+        return makeError("hole.tip", "A drill point angle must be between 30 and 170 degrees (118° is usual).");
+    }
     if (spec.type == T::Countersink && !(spec.csinkDiameter > spec.diameter && spec.csinkAngle > 0.1 && spec.csinkAngle < 3.0)) {
         return makeError("hole.countersink", "The countersink must be wider than the hole, with an angle between 6 and 170 degrees.");
     }
@@ -1213,6 +1216,10 @@ Result<NamedShape> makeHoleTool(const std::string& featureId,
         }
         else {
             segs = {{0, zTop, rTop, zTop, "top"}, {r, -lift, r, depth, "wall"}, {r, depth, 0, depth, "floor"}};
+        }
+        if (spec.tipAngle > 0 && !spec.through) {
+            // the flat floor becomes a cone; the depth is still measured to the shoulder
+            segs.back() = {r, depth, 0, depth + r / std::tan(spec.tipAngle / 2), "tip"};
         }
         std::vector<NamedShape> tools;
         const gp_Dir down = frame.Direction().Reversed();

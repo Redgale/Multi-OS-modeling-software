@@ -287,6 +287,18 @@ public:
     {
         return type_;
     }
+    QComboBox* size() const
+    {
+        return size_;
+    }
+    QComboBox* fit() const
+    {
+        return fit_;
+    }
+    QComboBox* bottom() const
+    {
+        return bottom_;
+    }
 
 protected:
     jig::Feature draft() const override;
@@ -295,7 +307,8 @@ protected:
 
 private:
     void updateVisibility();
-    QComboBox *sketch_, *type_, *extent_;
+    void fillFromSize();  // a screw size fills (and locks) the sizes it decides
+    QComboBox *sketch_, *type_, *extent_, *size_, *fit_, *bottom_;
     ExprField *diameter_, *depth_, *cboreDiameter_, *cboreDepth_, *csinkDiameter_, *csinkAngle_;
     QLabel* points_;
 };

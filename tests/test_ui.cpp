@@ -1602,8 +1602,21 @@ private slots:
         auto* again = qobject_cast<HolePanel*>(w.featurePanel());
         QVERIFY(again);
         QCOMPARE(again->diameter()->text(), QString("4 mm"));
-        again->cancel();
+        // pick a screw size: the table fills in (and locks) the diameter
+        again->size()->setCurrentIndex(again->size()->findData("M3"));
+        again->fit()->setCurrentIndex(again->fit()->findData("close"));
+        QCOMPARE(again->diameter()->text(), QString("3.2 mm"));
+        QVERIFY(!again->diameter()->isEnabled());
+        again->bottom()->setCurrentIndex(again->bottom()->findData("118 deg"));
+        QVERIFY(!again->bottom()->isVisible());  // through holes have no bottom
+        QTest::qWait(300);
+        QTRY_VERIFY(again->previewOk());
+        QVERIFY(again->accept());
         QTRY_VERIFY(w.featurePanel() == nullptr);
+        const jig::Feature& hf = w.document().model().features[3];
+        QCOMPARE(QString::fromStdString(hf.params.value("size", std::string {})), QString("M3"));
+        QVERIFY(!hf.params.contains("diameter"));
+        QVERIFY(!hf.params.contains("tip"));
     }
 };
 

@@ -7,6 +7,7 @@
 
 #include "helpers.hpp"
 #include "jig/io.hpp"
+#include "jig/screws.hpp"
 
 using namespace jig;
 using namespace jigtest;
@@ -1050,4 +1051,37 @@ TEST(SketchTangent, MeetingAtAnEndIsNotSaidTwice)
     const double dx = x2 - x1, dy = y2 - y1;
     // the radius at the shared end is perpendicular to the line
     EXPECT_NEAR(dx * (cx - x2) + dy * (cy - y2), 0, 1e-6);
+}
+
+TEST(Hole, ScrewSizesAndDrillPoint)
+{
+    // the clearance table: ISO 273 for M3, the drill chart for #6
+    EXPECT_NEAR(clearanceDiameter("M3", HoleFit::Close).value(), 3.2, 1e-12);
+    EXPECT_NEAR(clearanceDiameter("M3", HoleFit::Normal).value(), 3.4, 1e-12);
+    EXPECT_NEAR(clearanceDiameter("m8", HoleFit::Loose).value(), 10.0, 1e-12);
+    EXPECT_NEAR(clearanceDiameter("#6", HoleFit::Close).value(), 0.144 * 25.4, 1e-9);
+    EXPECT_NEAR(clearanceDiameter("1/4", HoleFit::Normal).value(), 0.266 * 25.4, 1e-9);
+    EXPECT_FALSE(clearanceDiameter("#6", HoleFit::Loose).ok());
+    EXPECT_FALSE(clearanceDiameter("M7", HoleFit::Normal).ok());
+    // a through M4 hole at normal fit is 4.5 mm across (two holes in a 10 mm block)
+    auto m4 = build(std::string(kBlock) + "hole id=h1 sketch=s2 size=M4 extent=all\n");
+    expectAllOk(*m4);
+    EXPECT_NEAR(props(*m4).volume, 12000 - 2 * pi * 2.25 * 2.25 * 10, 1e-3);
+    // a typed diameter still wins over the size
+    auto typed = build(std::string(kBlock) + "hole id=h1 sketch=s2 size=M4 diameter=4mm extent=all\n");
+    EXPECT_NEAR(props(*typed).volume, 12000 - 2 * pi * 4 * 10, 1e-3);
+    // a counterbore from the table: M3 socket head (6.5 across, 3.5 deep)
+    auto cb = build(std::string(kBlock) + "hole id=h1 sketch=s2 size=M3 type=counterbore extent=all\n");
+    expectAllOk(*cb);
+    EXPECT_NEAR(props(*cb).volume, 12000 - 2 * (pi * 3.25 * 3.25 * 3.5 + pi * 1.7 * 1.7 * 6.5), 1e-3);
+    // a drill point: 6 deep to the shoulder plus a 118° cone
+    auto tip = build(std::string(kBlock) + "hole id=h1 sketch=s2 diameter=4mm depth=6mm tip=118deg\n");
+    expectAllOk(*tip);
+    const double h = 2 / std::tan(59 * pi / 180);
+    EXPECT_NEAR(props(*tip).volume, 12000 - 2 * (pi * 4 * 6 + pi * 4 * h / 3), 1e-3);
+    EXPECT_EQ(facesStartingWith(*tip, "e1", "h1/tip:p"), 2);
+    auto bad = std::make_unique<Document>();
+    ScriptRunner r(*bad);
+    r.runText(std::string(kBlock) + "hole id=h1 sketch=s2 size=M7 extent=all\n");
+    EXPECT_NE(int(bad->status(int(bad->model().features.size()) - 1).level), int(StatusLevel::Ok));
 }

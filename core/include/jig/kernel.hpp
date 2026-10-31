@@ -314,6 +314,7 @@ struct HoleSpec
     bool through = false;
     double cboreDiameter = 6, cboreDepth = 3;
     double csinkDiameter = 6, csinkAngle = 1.5707963267948966;  // 90 degrees
+    double tipAngle = 0;  // drill point angle of a blind hole (e.g. 118°); 0 = flat bottom
 };
 
 struct HolePoint

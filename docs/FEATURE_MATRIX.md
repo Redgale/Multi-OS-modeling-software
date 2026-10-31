@@ -107,7 +107,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Create Form (T-splines) | 13, 26 | v0.3+ | — | |
 | Create base feature | 13, 24 | v0.3+ | — | |
 | Create PCB | 13 | never | — | Electronics out of scope |
-| Hole: simple, counterbore, countersink; distance/all; drill point | 16 | v0.1 M3 | **app** + scripts: all three types, depth or through; flat bottom (no drill point yet) | |
+| Hole: simple, counterbore, countersink; distance/all; drill point | 16 | v0.1 M3 | **app** + scripts: all three types, depth or through; flat bottom or 118° drill point; screw-size clearance table (ISO 273, US drill chart) with close/normal/loose fit | |
 | Hole from sketch points | 16 | v0.1 M3 | **app** + scripts | |
 | Clearance hole sizes | 16 | v0.1 M3 | — | Hobby tip table |
 | Tapped holes, Thread (modelled/cosmetic) | 16 | v0.2 | — | |

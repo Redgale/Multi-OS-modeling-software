@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cmath>
+#include <cstdio>
 #include <numbers>
 #include <set>
 #include <sstream>
@@ -17,6 +18,7 @@
 #include <gp_Ax2.hxx>
 
 #include "jig/document.hpp"
+#include "jig/screws.hpp"
 
 namespace jig
 {
@@ -739,8 +741,33 @@ FeatureOutcome applyHole(const Document& doc, const Feature& f, const std::share
     spec.type = type == "counterbore" ? HoleSpec::Type::Counterbore
               : type == "countersink" ? HoleSpec::Type::Countersink
                                       : HoleSpec::Type::Simple;
-    auto len = [&](const char* key, const char* def) { return doc.evalLength(p.value(key, std::string(def))); };
-    auto d = len("diameter", "3.4 mm");
+    // A screw size from the clearance table gives the defaults; typed sizes still win.
+    std::optional<ScrewSize> screw;
+    std::string sizeDefault = "3.4 mm", cbD = "6.5 mm", cbH = "3.5 mm", csD = "6.5 mm", csA = "90 deg";
+    if (p.contains("size")) {
+        const std::string size = p.value("size", std::string {});
+        auto fit = holeFitFromString(p.value("fit", std::string("normal")));
+        if (!fit) {
+            return failed("The hole fit must be close, normal or loose.");
+        }
+        auto cd = clearanceDiameter(size, *fit);
+        if (!cd) {
+            return failed(cd.error());
+        }
+        screw = screwSize(size);
+        auto mm = [](double v) {
+            char buf[32];
+            std::snprintf(buf, sizeof buf, "%.6g mm", v);
+            return std::string(buf);
+        };
+        sizeDefault = mm(cd.value());
+        cbD = mm(screw->cboreDiameter);
+        cbH = mm(screw->cboreDepth);
+        csD = mm(screw->csinkDiameter);
+        csA = std::to_string(int(screw->csinkAngleDeg)) + " deg";
+    }
+    auto len = [&](const char* key, const std::string& def) { return doc.evalLength(p.value(key, def)); };
+    auto d = len("diameter", sizeDefault);
     if (!d) {
         return failed(d.error());
     }
@@ -754,7 +781,7 @@ FeatureOutcome applyHole(const Document& doc, const Feature& f, const std::share
         spec.depth = dp.value();
     }
     if (spec.type == HoleSpec::Type::Counterbore) {
-        auto cd = len("cbore_diameter", "6.5 mm"), ch = len("cbore_depth", "3.5 mm");
+        auto cd = len("cbore_diameter", cbD), ch = len("cbore_depth", cbH);
         if (!cd || !ch) {
             return failed(!cd ? cd.error() : ch.error());
         }
@@ -762,13 +789,21 @@ FeatureOutcome applyHole(const Document& doc, const Feature& f, const std::share
         spec.cboreDepth = ch.value();
     }
     if (spec.type == HoleSpec::Type::Countersink) {
-        auto cd = len("csink_diameter", "6.5 mm");
-        auto ca = doc.evalAngle(p.value("csink_angle", std::string("90 deg")));
+        auto cd = len("csink_diameter", csD);
+        auto ca = doc.evalAngle(p.value("csink_angle", csA));
         if (!cd || !ca) {
             return failed(!cd ? cd.error() : ca.error());
         }
         spec.csinkDiameter = cd.value();
         spec.csinkAngle = ca.value();
+    }
+    // a drill point (e.g. 118°) at the bottom of a blind hole; flat when absent
+    if (!spec.through && p.contains("tip") && p.value("tip", std::string {}) != "flat") {
+        auto ta = doc.evalAngle(p.value("tip", std::string {}));
+        if (!ta) {
+            return failed(ta.error());
+        }
+        spec.tipAngle = ta.value();
     }
     Bnd_Box all;
     for (auto& [id, b] : in->bodies) {

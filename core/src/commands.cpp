@@ -1541,7 +1541,7 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
     if (a.verb == "revolve" || a.verb == "hole" || a.verb == "pattern" || a.verb == "mirror") {
         // revolve sketch=s1 axis=X|Y|Z|line:<name> [angle=360deg] [op=new|join|cut|intersect] [profiles=…]
         // hole sketch=s2 diameter=3.4mm (depth=10mm | extent=all) [type=simple|counterbore|countersink]
-        //      [cbore_diameter= cbore_depth= | csink_diameter= csink_angle=]
+        //      [cbore_diameter= cbore_depth= | csink_diameter= csink_angle=] [size=M3|#6|1/4 [fit=close|normal|loose]] [tip=118deg]
         // pattern feature=e2 kind=circular axis=Z count=12 [angle=360deg]
         // pattern feature=h1 kind=rectangular dir1=X count1=3 spacing1=20mm [dir2=Y count2=2 spacing2=15mm]
         // mirror [body=e1] plane=YZ|XZ|XY [op=join|new]
