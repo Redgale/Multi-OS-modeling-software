@@ -757,6 +757,32 @@ void MainWindow::buildDocks()
     bdock->setObjectName("BrowserDock");
     browser_ = new QTreeWidget(bdock);
     browser_->setHeaderHidden(true);
+    browser_->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(browser_, &QTreeWidget::itemChanged, this, [this](QTreeWidgetItem* it, int) {
+        const QString id = it->data(0, Qt::UserRole).toString();
+        if (!id.isEmpty()) {
+            const std::string body = id.toStdString();
+            const bool on = it->checkState(0) == Qt::Checked;
+            QTimer::singleShot(0, this, [this, body, on] { setBodyVisible(body, on); });  // not inside the signal
+        }
+    });
+    connect(browser_, &QTreeWidget::customContextMenuRequested, this, [this](const QPoint& pos) {
+        QTreeWidgetItem* it = browser_->itemAt(pos);
+        const QString id = it ? it->data(0, Qt::UserRole).toString() : QString();
+        if (id.isEmpty()) {
+            return;
+        }
+        const std::string body = id.toStdString();
+        QMenu m(this);
+        m.addAction(bodyVisible(body) ? tr("Hide") : tr("Show"), this,
+                    [this, body] { setBodyVisible(body, !bodyVisible(body)); });
+        m.addAction(tr("Isolate (show only this)"), this, [this, body] { isolateBody(body); });
+        m.addAction(tr("Show all bodies"), this, [this] { showAllBodies(); });
+        if (doc_->feature(body)) {
+            m.addAction(tr("Rename…"), this, [this, body] { renameFeature(body); });
+        }
+        m.exec(browser_->viewport()->mapToGlobal(pos));
+    });
     browser_->setAccessibleName(tr("Design browser"));
     browser_->setWhatsThis(tr("Everything in your design: settings, origin planes, sketches, bodies and "
                               "named parameters."));
@@ -897,6 +923,7 @@ void MainWindow::buildDocks()
 
 void MainWindow::setDocument(std::unique_ptr<jig::Document> doc, const QString& path)
 {
+    hiddenBodies_.clear();  // visibility belongs to the view of one design
     if (panel_) {
         panel_->cancel();
     }
@@ -962,7 +989,9 @@ void MainWindow::refreshAll()
     }
     std::vector<Viewport::BodyInput> bodies;
     for (auto& [id, b] : doc_->state().bodies) {
-        bodies.push_back({id, b});
+        if (!hiddenBodies_.count(id)) {
+            bodies.push_back({id, b});
+        }
     }
     view_->setBodies(std::move(bodies));
     view_->setUnits(doc_->units());
@@ -1019,11 +1048,22 @@ void MainWindow::refreshBrowser()
         new QTreeWidgetItem(sketches, {QString("%1 %2  (%3)").arg(statusGlyph(st.level), q(feats[i].name),
                                                                   extra.isEmpty() ? statusWord(st.level) : extra)});
     }
+    browser_->blockSignals(true);
     for (auto& [id, b] : doc_->state().bodies) {
         auto mp = jig::massProperties(b->shape());
         const jig::Feature* f = doc_->feature(id);
-        new QTreeWidgetItem(bodies, {tr("%1  (%2)").arg(f ? q(f->name) : q(id), q(jig::formatVolume(mp.volume, doc_->units())))});
+        const bool shown = !hiddenBodies_.count(id);
+        // the checkbox shows visibility; "hidden" is also written out (not colour alone)
+        auto* it = new QTreeWidgetItem(bodies, {tr("%1  (%2)%3")
+                                                    .arg(f ? q(f->name) : q(id),
+                                                         q(jig::formatVolume(mp.volume, doc_->units())),
+                                                         shown ? QString() : tr("  hidden"))});
+        it->setData(0, Qt::UserRole, q(id));
+        it->setFlags(it->flags() | Qt::ItemIsUserCheckable);
+        it->setCheckState(0, shown ? Qt::Checked : Qt::Unchecked);
+        it->setToolTip(0, tr("Tick to show, untick to hide. Right-click to isolate or rename."));
     }
+    browser_->blockSignals(false);
     auto* params = new QTreeWidgetItem(browser_, {tr("Parameters")});
     for (auto& p : doc_->model().parameters) {
         auto v = doc_->evalParam(p.name);
@@ -1034,6 +1074,36 @@ void MainWindow::refreshBrowser()
     browser_->expandAll();
     settings->setExpanded(false);
     origin->setExpanded(false);
+}
+
+void MainWindow::setBodyVisible(const std::string& body, bool on)
+{
+    if (on) {
+        hiddenBodies_.erase(body);
+    }
+    else {
+        hiddenBodies_.insert(body);
+    }
+    refreshAll();
+}
+
+void MainWindow::isolateBody(const std::string& body)
+{
+    hiddenBodies_.clear();
+    for (auto& [id, b] : doc_->state().bodies) {
+        if (id != body) {
+            hiddenBodies_.insert(id);
+        }
+    }
+    refreshAll();
+    statusBar()->showMessage(tr("Only this body is shown. Right-click a body and choose Show all to bring the rest back."),
+                             6000);
+}
+
+void MainWindow::showAllBodies()
+{
+    hiddenBodies_.clear();
+    refreshAll();
 }
 
 void MainWindow::refreshTimeline()

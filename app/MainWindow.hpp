@@ -4,6 +4,8 @@
 #include <map>
 #include <memory>
 
+#include <set>
+
 #include <QMainWindow>
 #include <QPointer>
 
@@ -111,6 +113,18 @@ public:
     void openBodyTool(const std::string& tool, const std::string& editId = {});  // combine, split, move
     void openPlane(const std::string& editId = {}, const std::string& kind = "offset");
     void openAxis(const std::string& editId = {});
+    // Browser: which bodies are drawn (a view setting, not part of the design or its undo)
+    void setBodyVisible(const std::string& body, bool on);
+    void isolateBody(const std::string& body);
+    void showAllBodies();
+    bool bodyVisible(const std::string& body) const
+    {
+        return !hiddenBodies_.count(body);
+    }
+    QTreeWidget* browser() const
+    {
+        return browser_;
+    }
     void openPressPull(const std::string& editId = {});
     // Press pull on a face: a flat face opens the press pull panel; a face made by a fillet,
     // chamfer or hole opens that step instead. Returns what happened, for the status bar.
@@ -159,6 +173,7 @@ private:
 
     Viewport* view_ = nullptr;
     QTreeWidget* browser_ = nullptr;
+    std::set<std::string> hiddenBodies_;
     QListWidget* timeline_ = nullptr;
     QSlider* rollback_ = nullptr;
     QTextBrowser* details_ = nullptr;

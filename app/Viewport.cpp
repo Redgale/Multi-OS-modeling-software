@@ -211,6 +211,7 @@ void Viewport::setColors(const ViewColors& c)
 void Viewport::setBodies(std::vector<BodyInput> bodies)
 {
     const int gen = ++generation_;
+    shownBodies_ = int(bodies.size());
     auto& js = jobs(this);
     for (auto& b : bodies) {
         auto shape = b.shape;

@@ -10,6 +10,7 @@
 #include <QLineEdit>
 #include <QSettings>
 #include <QTableWidget>
+#include <QTreeWidget>
 #include <QtTest>
 
 #include "FeaturePanels.hpp"
@@ -904,6 +905,46 @@ private slots:
         click(20, 40, Qt::ControlModifier);
         QVERIFY2(sk->message().isEmpty(), qPrintable(sk->message()));
         QCOMPARE(regions(), 5);
+    }
+
+    // Browser: untick a body to hide it, isolate one, show all again.
+    void browserVisibility()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        {
+            jig::ScriptRunner r(w.document());
+            QVERIFY(r.runText("sketch id=s1 plane=XY\nrect sketch=s1 corner=0,0 w=10 h=10\nextrude id=e1 sketch=s1 distance=10\n"
+                              "pattern id=p1 body=e1 kind=rectangular dir1=X count1=3 spacing1=20mm\n").ok());
+        }
+        w.showAllBodies();  // (also redraws after the script)
+        QTreeWidgetItem* e1 = nullptr;
+        int bodies = 0;
+        for (QTreeWidgetItemIterator it(w.browser()); *it; ++it) {
+            if (!(*it)->data(0, Qt::UserRole).toString().isEmpty()) {
+                ++bodies;
+                if ((*it)->data(0, Qt::UserRole).toString() == "e1") {
+                    e1 = *it;
+                }
+            }
+        }
+        QCOMPARE(bodies, 3);
+        QVERIFY(e1);
+        e1->setCheckState(0, Qt::Unchecked);
+        QTRY_VERIFY(!w.bodyVisible("e1"));
+        QCOMPARE(w.viewport()->bodyCount(), 2);
+        bool saysHidden = false;
+        for (QTreeWidgetItemIterator it(w.browser()); *it; ++it) {
+            saysHidden |= (*it)->data(0, Qt::UserRole).toString() == "e1" && (*it)->text(0).contains("hidden");
+        }
+        QVERIFY(saysHidden);  // written out, not only an unticked box
+        w.isolateBody("p1.1");
+        QCOMPARE(w.viewport()->bodyCount(), 1);
+        w.showAllBodies();
+        QCOMPARE(w.viewport()->bodyCount(), 3);
+        QVERIFY(std::abs(volume(w) - 3000) < 1e-6);  // hiding never changes the design
     }
 
     // Press pull a flat face; on a hole wall it opens the hole instead.

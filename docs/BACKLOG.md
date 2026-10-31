@@ -47,7 +47,8 @@ timeline edit/rename/suppress/roll back/delete with dependents warning, Paramete
 
 - B-015 UI test for the Parameters dialog and timeline context menu.
 - B-017 Extrude drag handle on the canvas; two sides, to object, taper, thin.
-- B-018 (reorder done in session 2) Timeline groups; Browser visibility/isolate/rename/find in timeline.
+- B-018 (reorder; Browser visibility, isolate, rename done) Timeline groups; find in timeline;
+  saving visibility with the design.
 - B-019 (sketch window selection done) Selection filters, Select Other.
 
 - B-020 Text: pick installed fonts by family name (fontconfig / DirectWrite / CoreText),

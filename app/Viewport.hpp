@@ -107,6 +107,11 @@ public:
         std::shared_ptr<const jig::NamedShape> shape;
     };
     void setBodies(std::vector<BodyInput> bodies);
+    // How many bodies the view was last asked to show.
+    int bodyCount() const
+    {
+        return shownBodies_;
+    }
 
     void setNavPreset(NavPreset p)
     {
@@ -276,6 +281,7 @@ private:
     std::optional<PickResult> hover_, selected_;
     std::atomic<int> generation_ {0};
     int pending_ = 0;
+    int shownBodies_ = 0;
 
     Interactor* interactor_ = nullptr;
     PickMode pickMode_ = PickMode::Faces;
