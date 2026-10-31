@@ -99,7 +99,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Auto join/cut from drag direction | 14 | v0.1 M2 | **app** (Auto: from the typed direction; drag handle not yet) | Principle 10 |
 | Extrude from selected face | 14 | v0.1 M3 (via Press Pull) | — | |
 | Press Pull | 14, 17 | v0.1 M3 | — | |
-| Revolve (full, angle, to object) | 15 | v0.1 M4 | **app** + scripts: full and angle, origin axis or sketch line; to object not yet | |
+| Revolve (full, angle, to object) | 15 | v0.1 M4 | **app** + scripts: full and angle, origin axis, sketch line or construction axis; to object not yet | |
 | Sweep, Loft, Rib, Web, Emboss, Coil, Pipe | 15 | v0.2 (Web v0.3+) | — | Brief v0.2 list |
 | Thicken, Boundary fill | 15 | v0.3+ | — | Surface workflows |
 | Derive, Insert into design | 13, 22 | v0.3+ | — | Multi-file projects |
@@ -122,7 +122,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Combine join/cut/intersect, keep tools | 17 | v0.1 M4 | **app** + scripts (`combine`) | |
 | Offset face, replace face, split face, silhouette split | 17 | v0.3+ | — | Direct modelling |
 | Split body (plane) | 17, 18 | v0.1 M4 | **app** + scripts (`split`): origin plane, construction plane or flat face | |
-| Move/Copy bodies (free, translate, rotate, point-to-point) | 17 | v0.1 M4 | **app** + scripts (`move`): typed X/Y/Z shift and turn about an origin axis, copy; free drag and point-to-point not yet | |
+| Move/Copy bodies (free, translate, rotate, point-to-point) | 17 | v0.1 M4 | **app** + scripts (`move`): typed X/Y/Z shift and turn about an origin or construction axis, copy; free drag and point-to-point not yet | |
 | Align | 17 | v0.2 | — | |
 | Delete body/feature | 17 | v0.1 M2 | — | |
 | Compute all | 17 | v0.1 | automatic (incremental recompute) | |
@@ -130,7 +130,8 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Pattern on path | 19 | v0.2 | — | |
 | Pattern compute options (optimised/identical/adjust) | 19 | v0.2 | — | Adjust only in v0.1 |
 | Mirror (features, bodies) | 19 | v0.1 M3 | **app** + scripts: bodies across origin planes; features not yet | |
-| Construct: offset plane, plane at angle, midplane | 20 | v0.1 M4 | **app** + scripts (`plane`): from origin planes, construction planes or flat faces; angle around an origin axis or straight edge | |
+| Construct: offset plane, plane at angle, midplane | 20 | v0.1 M4 | **app** + scripts (`plane`): from origin planes, construction planes or flat faces; angle around an origin or construction axis or straight edge | |
+| Construct: axis (edge, through cylinder, two planes) | 20 | v0.1 M4 | **app** + scripts (`axis`): along a straight edge, through a round edge or face, where two planes meet | |
 | Tangent plane, plane through edges/points, along path | 20 | v0.2 | — | Needed for sweep and pen cup emboss |
 | Axis (through cylinder, two points, perpendicular) | 20 | v0.1 M4 | — | |
 | Point (vertex, edges, planes, center) | 20 | v0.1 M4 | — | |

@@ -59,7 +59,8 @@ enum class FeatureKind
     Plane,  // construction plane (offset, at an angle, midplane)
     Combine,
     Split,
-    Move
+    Move,
+    Axis  // construction axis (along an edge, through a round face, where two planes meet)
 };
 
 const char* toString(FeatureKind k);
@@ -126,6 +127,7 @@ struct ModelState
     std::map<std::string, std::shared_ptr<const SketchState>> sketches;
     std::map<std::string, ToolRecord> tools;
     std::map<std::string, gp_Ax3> planes;  // construction planes by feature id
+    std::map<std::string, gp_Ax1> axes;    // construction axes by feature id
 };
 
 class Document

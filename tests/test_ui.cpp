@@ -906,6 +906,44 @@ private slots:
         QCOMPARE(regions(), 5);
     }
 
+    // Construction axis from a clicked edge; the move panel then offers it to turn around.
+    void constructionAxis()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        {
+            jig::ScriptRunner r(w.document());
+            QVERIFY(r.runText("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=40 h=20\n"
+                              "extrude id=e1 sketch=s1 distance=10\n").ok());
+        }
+        w.runCommand("construct.axis");
+        auto* ap = qobject_cast<AxisPanel*>(w.featurePanel());
+        QVERIFY(ap);
+        QVERIFY(!ap->accept());  // nothing picked yet
+        ap->useFace("e1", "e1/end");  // a flat face: the axis where it meets a second one
+        QCOMPARE(ap->kind()->currentData().toString(), QString("planes"));
+        ap->useEdge("e1", "E[e1/side:5|e1/side:6]");
+        QCOMPARE(ap->kind()->currentData().toString(), QString("through"));
+        QTest::qWait(300);
+        QTRY_VERIFY(ap->previewOk());
+        QVERIFY(ap->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        QCOMPARE(int(w.document().state().axes.size()), 1);
+        const std::string axisId = w.document().state().axes.begin()->first;
+        w.runCommand("solid.move");
+        QComboBox* turn = nullptr;
+        for (auto* c : w.featurePanel()->findChildren<QComboBox*>()) {
+            if (c->findData(QString::fromStdString(axisId)) >= 0) {
+                turn = c;
+            }
+        }
+        QVERIFY(turn);  // the new axis is offered
+        qobject_cast<FeaturePanel*>(w.featurePanel())->cancel();
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+    }
+
     // Tangent arc from a line's end, 2- and 3-point circles, a rectangle at an angle.
     void moreShapes()
     {

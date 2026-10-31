@@ -105,6 +105,72 @@ Result<gp_Ax3> planeFrame(const nlohmann::json& ref, const std::shared_ptr<const
     return makeError("plane.ref", "This step refers to a plane in a way Jigsmith does not understand.");
 }
 
+// An origin axis (X, Y, Z) or a construction axis by its feature id.
+std::optional<gp_Ax1> namedAxis(const std::string& name, const std::shared_ptr<const ModelState>& in)
+{
+    if (name == "X" || name == "Y" || name == "Z") {
+        return gp_Ax1(gp_Pnt(0, 0, 0), name == "X" ? gp_Dir(1, 0, 0) : name == "Y" ? gp_Dir(0, 1, 0) : gp_Dir(0, 0, 1));
+    }
+    if (auto it = in->axes.find(name); it != in->axes.end()) {
+        return it->second;
+    }
+    return std::nullopt;
+}
+
+FeatureOutcome missingAxis(const std::string& name)
+{
+    return failed("The axis '" + name + "' does not exist (or comes later in the timeline).",
+                  {"Pick X, Y, Z or a construction axis made earlier."});
+}
+
+FeatureOutcome applyAxis(const Document&, const Feature& f, const std::shared_ptr<const ModelState>& in)
+{
+    const auto& p = f.params;
+    FeatureStatus status;
+    gp_Ax1 axis;
+    if (p.contains("through")) {
+        // along a straight edge, or through the centre of a round edge or face
+        const auto& t = p["through"];
+        const bool face = t.contains("face");
+        ShapeRef ref = ShapeRef::fromJson(face ? t["face"] : t.value("edge", nlohmann::json::object()));
+        auto bit = in->bodies.find(ref.body);
+        if (bit == in->bodies.end()) {
+            return failed("The body this axis runs through no longer exists.", {"Edit the axis and pick again."});
+        }
+        Resolution r = resolve(*bit->second, ref);
+        if (r.status == ResolveStatus::Missing || r.status == ResolveStatus::Ambiguous) {
+            return failed("The edge or face this axis runs through no longer exists.", {"Edit the axis and pick again."});
+        }
+        const MeasureItem m = measureItem(face ? bit->second->face(r.index) : bit->second->edge(r.index));
+        if (!m.axis) {
+            return failed("An axis can run along a straight edge or through a round edge or face (a hole, a "
+                          "cylinder); this " + m.kind + " has no axis.");
+        }
+        axis = *m.axis;
+    }
+    else {
+        // where two planes or flat faces meet
+        auto a = planeFrame(p.value("base", nlohmann::json("XY")), in, status);
+        auto b = planeFrame(p.value("base2", nlohmann::json("XZ")), in, status);
+        if (!a || !b) {
+            return failed(!a ? a.error() : b.error());
+        }
+        const gp_Vec n1(a->Direction()), n2(b->Direction());
+        const gp_Vec d = n1.Crossed(n2);
+        if (d.Magnitude() < 1e-9) {
+            return failed("The two planes are parallel, so they never meet.", {"Pick two planes that cross."});
+        }
+        // the point on both planes nearest the origin
+        const double h1 = n1.Dot(gp_Vec(a->Location().XYZ())), h2 = n2.Dot(gp_Vec(b->Location().XYZ()));
+        const double n12 = n1.Dot(n2), det = 1 - n12 * n12;
+        const double c1 = (h1 - h2 * n12) / det, c2 = (h2 - h1 * n12) / det;
+        axis = gp_Ax1(gp_Pnt((n1 * c1 + n2 * c2).XYZ()), gp_Dir(d));
+    }
+    auto out = copyState(in);
+    out->axes[f.id] = axis;
+    return {out, status};
+}
+
 FeatureOutcome applyPlane(const Document& doc, const Feature& f, const std::shared_ptr<const ModelState>& in)
 {
     const auto& p = f.params;
@@ -147,7 +213,11 @@ FeatureOutcome applyPlane(const Document& doc, const Feature& f, const std::shar
         }
         else {
             const std::string n = ax.is_string() ? ax.get<std::string>() : "X";
-            axis = gp_Ax1(gp_Pnt(0, 0, 0), n == "Y" ? gp_Dir(0, 1, 0) : n == "Z" ? gp_Dir(0, 0, 1) : gp_Dir(1, 0, 0));
+            auto na = namedAxis(n, in);
+            if (!na) {
+                return missingAxis(n);
+            }
+            axis = *na;
         }
         if (std::abs(axis.Direction().Dot(frame.Direction())) > 1e-6) {
             return failed("The turning axis must lie in the base plane (it is not parallel to it).",
@@ -612,9 +682,12 @@ FeatureOutcome applyMove(const Document& doc, const Feature& f, const std::share
         return failed(ang.error());
     }
     const std::string axis = p.value("axis", std::string("Z"));
+    auto turn = namedAxis(axis, in);
+    if (!turn) {
+        return missingAxis(axis);
+    }
     gp_Trsf rot, move;
-    rot.SetRotation(gp_Ax1(gp_Pnt(0, 0, 0), axis == "X" ? gp_Dir(1, 0, 0) : axis == "Y" ? gp_Dir(0, 1, 0) : gp_Dir(0, 0, 1)),
-                    ang.value());
+    rot.SetRotation(*turn, ang.value());
     move.SetTranslation(gp_Vec(d[0], d[1], d[2]));
     const gp_Trsf t = move * rot;  // turn about the origin axis, then shift
     const bool copy = p.value("copy", false);
@@ -668,8 +741,12 @@ FeatureOutcome applyRevolve(const Document& doc, const Feature& f, const std::sh
         axis = gp_Ax1(a, gp_Dir(gp_Vec(a, b)));
     }
     else {
-        const std::string name = ax.value("origin", std::string("Z"));
-        axis = gp_Ax1(gp_Pnt(0, 0, 0), name == "X" ? gp_Dir(1, 0, 0) : name == "Y" ? gp_Dir(0, 1, 0) : gp_Dir(0, 0, 1));
+        const std::string name = ax.contains("axis") ? ax.value("axis", std::string {}) : ax.value("origin", std::string("Z"));
+        auto na = namedAxis(name, in);
+        if (!na) {
+            return missingAxis(name);
+        }
+        axis = *na;
     }
     // profiles: the axis line itself never forms a region (it is usually construction)
     std::vector<const Profile*> profiles;
@@ -847,7 +924,12 @@ FeatureOutcome applyPattern(const Document& doc, const Feature& f, const std::sh
         const int cnt = int(std::lround(n->value));
         const bool full = std::abs(ang.value() - 2 * std::numbers::pi) < 1e-9;
         const double step = full ? ang.value() / cnt : ang.value() / (cnt - 1);
-        const gp_Ax1 axis(gp_Pnt(0, 0, 0), dirOf(p.value("axis", std::string("Z"))));
+        const std::string axisName = p.value("axis", std::string("Z"));
+        auto na = namedAxis(axisName, in);
+        if (!na) {
+            return missingAxis(axisName);
+        }
+        const gp_Ax1 axis = *na;
         for (int k = 1; k < cnt; ++k) {
             gp_Trsf t;
             t.SetRotation(axis, step * k);
@@ -1155,6 +1237,8 @@ FeatureOutcome applyFeature(const Document& doc, const Feature& f, const std::sh
                 return applySplit(doc, f, in);
             case FeatureKind::Move:
                 return applyMove(doc, f, in);
+            case FeatureKind::Axis:
+                return applyAxis(doc, f, in);
         }
     }
     catch (const std::exception& ex) {

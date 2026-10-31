@@ -58,8 +58,8 @@ timeline edit/rename/suppress/roll back/delete with dependents warning, Paramete
 - M3 (done in session 2: Fillet, Chamfer, Shell, Hole, Mirror of bodies, Patterns of
   features; hole clearance table and drill point): variable fillet, pattern of bodies,
   mirror of features, Press Pull.
-- M4 (Revolve and the knob, A2, done in session 2): revolve to object, construction planes
-  (offset/angle/midplane), axis, point, Combine, Split, Move/Copy.
+- M4 (Revolve, construction planes and axes, Combine, Split, Move/Copy done): revolve to
+  object, construction point.
 - M5 (Parameters, Text, Project, SVG and DXF import done): linked (associative) Project.
 - M6: Measure, Section, Properties with density; 3MF export; local versions; autosave
   preferences; STEP import UI with unit correction; parser fuzzing (SVG, DXF, STEP).

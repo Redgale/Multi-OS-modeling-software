@@ -4,6 +4,7 @@
 #include "jig/screws.hpp"
 
 #include <cctype>
+#include <functional>
 #include <map>
 #include <regex>
 #include <set>
@@ -158,6 +159,19 @@ jig::Feature startDraft(const jig::Document& doc, const std::string& editId, con
 
 const std::vector<std::pair<QString, QString>> kAxes {
     {QObject::tr("Z axis (up)"), "Z"}, {QObject::tr("X axis"), "X"}, {QObject::tr("Y axis"), "Y"}};
+
+// Construction axes made before step `limit`, added to an axis list; `data` turns an
+// axis id into the list's item data.
+void addConstructionAxes(QComboBox* c, const jig::Document& doc, const jig::ModelState& before, int limit,
+                         const std::function<QString(const std::string&)>& data)
+{
+    for (int i = 0; i < limit && i < int(doc.model().features.size()); ++i) {
+        const auto& f = doc.model().features[size_t(i)];
+        if (f.kind == jig::FeatureKind::Axis && before.axes.count(f.id)) {
+            c->addItem(q(f.name), data(f.id));
+        }
+    }
+}
 
 }  // namespace
 
@@ -1065,6 +1079,9 @@ RevolvePanel::RevolvePanel(jig::Document& doc, Viewport* view, std::string editI
         if (ax.contains("line")) {
             select(axis_, "line:" + std::to_string(ax["line"].get<int>()));
         }
+        else if (ax.contains("axis")) {
+            select(axis_, "ax:" + ax.value("axis", std::string {}));
+        }
         else {
             select(axis_, ax.value("origin", std::string("Z")));
         }
@@ -1116,6 +1133,7 @@ void RevolvePanel::fillFromSketch()
     for (auto& [label, d] : kAxes) {
         axis_->addItem(label, d);
     }
+    addConstructionAxes(axis_, doc_, *stateBefore(), insertIndex(), [](const std::string& id) { return q("ax:" + id); });
     axis_->setCurrentIndex(firstConstruction >= 0 ? firstConstruction : axis_->findData("Z"));
     axis_->blockSignals(false);
 }
@@ -1126,6 +1144,7 @@ jig::Feature RevolvePanel::draft() const
     f.kind = jig::FeatureKind::Revolve;
     const std::string ax = current(axis_);
     nlohmann::json axis = ax.rfind("line:", 0) == 0 ? nlohmann::json {{"line", std::stoi(ax.substr(5))}}
+                        : ax.rfind("ax:", 0) == 0   ? nlohmann::json {{"axis", ax.substr(3)}}
                                                     : nlohmann::json {{"origin", ax.empty() ? "Z" : ax}};
     f.params = {{"sketch", current(sketch_)},
                 {"profiles", chosenProfiles(profiles_)},
@@ -1369,6 +1388,7 @@ PatternPanel::PatternPanel(jig::Document& doc, Viewport* view, std::string editI
     auto* cl = new QVBoxLayout(circular_);
     cl->setContentsMargins(0, 0, 0, 0);
     axis_ = combo(circular_, kAxes);
+    addConstructionAxes(axis_, doc_, *stateBefore(), insertIndex(), [](const std::string& id) { return q(id); });
     count_ = new ExprField(doc, jig::Dim::none(), circular_);
     angle_ = new ExprField(doc, jig::Dim::ang(), circular_);
     for (auto [label, w] : {std::pair<QString, QWidget*> {tr("Axis"), axis_},
@@ -1542,6 +1562,8 @@ PlanePanel::PlanePanel(jig::Document& doc, Viewport* view, std::string editId, Q
     base_ = new QComboBox(this);
     base2_ = new QComboBox(this);
     axis_ = combo(this, {{tr("X axis"), "\"X\""}, {tr("Y axis"), "\"Y\""}, {tr("Z axis"), "\"Z\""}});
+    addConstructionAxes(axis_, doc_, *stateBefore(), insertIndex(),
+                        [](const std::string& id) { return q(nlohmann::json(id).dump()); });
     distance_ = new ExprField(doc, jig::Dim::len(), this);
     angle_ = new ExprField(doc, jig::Dim::ang(), this);
     addRow(tr("Kind"), kind_);
@@ -1766,6 +1788,224 @@ void PlanePanel::previewed(const jig::FeatureOutcome& o)
 QString PlanePanel::title() const
 {
     return tr("construction plane");
+}
+
+// ---------------------------------------------------------------- Axis
+
+AxisPanel::AxisPanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent)
+    : FeaturePanel(doc, view, std::move(editId), parent)
+{
+    form_->addWidget(heading(this, tr("Construction axis"),
+                             tr("A straight reference line to revolve, pattern or turn around. Click a straight "
+                                "edge, a round edge or a round face (a hole, a cylinder) in the view.")));
+    kind_ = combo(this, {{tr("Along an edge, or through a round edge or face"), "through"},
+                         {tr("Where two planes meet"), "planes"}});
+    through_ = new QComboBox(this);
+    base_ = new QComboBox(this);
+    base2_ = new QComboBox(this);
+    addRow(tr("Kind"), kind_);
+    addRow(tr("Through"), through_);
+    addRow(tr("Plane"), base_);
+    addRow(tr("And plane"), base2_);
+    for (auto* c : {base_, base2_}) {
+        c->addItem(tr("Floor (XY)"), "\"XY\"");
+        c->addItem(tr("Front (XZ)"), "\"XZ\"");
+        c->addItem(tr("Side (YZ)"), "\"YZ\"");
+    }
+    const auto before = stateBefore();
+    for (int i = 0; i < insertIndex(); ++i) {
+        const auto& f = doc_.model().features[size_t(i)];
+        if (f.kind == jig::FeatureKind::Plane && before->planes.count(f.id)) {
+            for (auto* c : {base_, base2_}) {
+                c->addItem(q(f.name), q(nlohmann::json(f.id).dump()));
+            }
+        }
+    }
+    base2_->setCurrentIndex(1);
+    if (const jig::Feature* edit = editId_.empty() ? nullptr : doc_.feature(editId_)) {
+        const auto& p = edit->params;
+        auto put = [](QComboBox* c, const nlohmann::json& v) {
+            const QString key = q(v.dump());
+            int i = c->findData(key);
+            if (i < 0) {
+                QString label = q(v.is_string() ? v.get<std::string>() : std::string("(picked)"));
+                if (v.is_object() && v.contains("face")) {
+                    label = tr("Face %1").arg(q(v["face"].value("name", std::string {})));
+                }
+                else if (v.is_object() && v.contains("edge")) {
+                    label = tr("Edge %1").arg(q(v["edge"].value("name", std::string {})));
+                }
+                c->addItem(label, key);
+                i = c->count() - 1;
+            }
+            c->setCurrentIndex(i);
+        };
+        select(kind_, p.contains("through") ? "through" : "planes");
+        if (p.contains("through")) {
+            put(through_, p["through"]);
+        }
+        if (p.contains("base")) {
+            put(base_, p["base"]);
+        }
+        if (p.contains("base2")) {
+            put(base2_, p["base2"]);
+        }
+    }
+    for (auto* c : {kind_, through_, base_, base2_}) {
+        connect(c, &QComboBox::currentIndexChanged, this, [this] {
+            updateVisibility();
+            schedulePreview();
+        });
+    }
+    if (view_) {
+        view_->setPickMode(PickMode::Any);
+        connect(view_.data(), &Viewport::faceClicked, this,
+                [this](const QString& b, const QString& n, Qt::KeyboardModifiers) { useFace(b.toStdString(), n.toStdString()); });
+        connect(view_.data(), &Viewport::edgeClicked, this,
+                [this](const QString& b, const QString& n, Qt::KeyboardModifiers) { useEdge(b.toStdString(), n.toStdString()); });
+    }
+    updateVisibility();
+    if (through_->count() == 0 && current(kind_) == "through") {
+        status_->setText(tr("Click an edge or a round face in the view."));
+        ok_->setEnabled(false);
+    }
+    else {
+        schedulePreview();
+    }
+}
+
+AxisPanel::~AxisPanel()
+{
+    if (view_) {
+        view_->setPickMode(PickMode::Faces);
+        view_->setOverlay({});
+    }
+}
+
+void AxisPanel::useFace(const std::string& body, const std::string& name)
+{
+    const auto before = stateBefore();
+    auto it = before->bodies.find(body);
+    if (it == before->bodies.end()) {
+        return;
+    }
+    auto hits = it->second->findFaces(name);
+    if (hits.empty()) {
+        return;
+    }
+    const jig::MeasureItem m = jig::measureItem(it->second->face(hits[0]));
+    nlohmann::json ref {{"face", it->second->faceRef(body, hits[0]).toJson()}};
+    QComboBox* target = through_;
+    if (m.kind == "flat face") {  // flat faces: the axis where two of them meet
+        select(kind_, "planes");
+        target = nextIsSecond_ ? base2_ : base_;
+        nextIsSecond_ = !nextIsSecond_;
+    }
+    else if (!m.axis) {
+        status_->setText("<b>✕ " + tr("That face has no centre line. Click a hole, a cylinder or a cone.") + "</b>");
+        return;
+    }
+    else {
+        select(kind_, "through");
+    }
+    const QString key = q(ref.dump());
+    int i = target->findData(key);
+    if (i < 0) {
+        target->addItem(tr("Face %1").arg(q(name)), key);
+        i = target->count() - 1;
+    }
+    target->setCurrentIndex(i);
+    ok_->setEnabled(true);
+    schedulePreview();
+}
+
+void AxisPanel::useEdge(const std::string& body, const std::string& name)
+{
+    const auto before = stateBefore();
+    auto it = before->bodies.find(body);
+    if (it == before->bodies.end()) {
+        return;
+    }
+    auto hits = it->second->findEdges(name);
+    if (hits.empty()) {
+        return;
+    }
+    if (!jig::measureItem(it->second->edge(hits[0])).axis) {
+        status_->setText("<b>✕ " + tr("Click a straight edge, or a circle or arc.") + "</b>");
+        return;
+    }
+    select(kind_, "through");
+    nlohmann::json ref {{"edge", it->second->edgeRef(body, hits[0]).toJson()}};
+    const QString key = q(ref.dump());
+    int i = through_->findData(key);
+    if (i < 0) {
+        through_->addItem(tr("Edge %1").arg(q(name)), key);
+        i = through_->count() - 1;
+    }
+    through_->setCurrentIndex(i);
+    ok_->setEnabled(true);
+    schedulePreview();
+}
+
+void AxisPanel::updateVisibility()
+{
+    const bool through = current(kind_) == "through";
+    auto show = [this](QWidget* w, bool on) {
+        w->setVisible(on);
+        const int i = form_->indexOf(w);
+        if (i > 0) {
+            if (auto* item = form_->itemAt(i - 1); item && item->widget()) {
+                item->widget()->setVisible(on);
+            }
+        }
+    };
+    show(through_, through);
+    show(base_, !through);
+    show(base2_, !through);
+}
+
+jig::Feature AxisPanel::draft() const
+{
+    jig::Feature f = startDraft(doc_, editId_, "ax", tr("Axis"));
+    f.kind = jig::FeatureKind::Axis;
+    auto json = [](const QComboBox* c) {
+        const std::string d = c->currentData().toString().toStdString();
+        return d.empty() ? nlohmann::json() : nlohmann::json::parse(d, nullptr, false);
+    };
+    if (current(kind_) == "through") {
+        f.params = {{"through", json(through_)}};
+    }
+    else {
+        f.params = {{"base", json(base_)}, {"base2", json(base2_)}};
+    }
+    return f;
+}
+
+void AxisPanel::previewed(const jig::FeatureOutcome& o)
+{
+    if (!view_) {
+        return;
+    }
+    SceneOverlay ov;
+    const jig::Feature f = draft();
+    if (o.after && o.after->axes.count(f.id)) {
+        const gp_Ax1& a = o.after->axes.at(f.id);
+        float s = 30;
+        for (auto& [id, b] : o.after->bodies) {
+            auto mp = jig::massProperties(b->shape());
+            s = std::max({s, float(mp.xmax - mp.xmin) * 0.7f, float(mp.ymax - mp.ymin) * 0.7f, float(mp.zmax - mp.zmin) * 0.7f});
+        }
+        const gp_XYZ p0 = a.Location().XYZ() - a.Direction().XYZ() * s, p1 = a.Location().XYZ() + a.Direction().XYZ() * s;
+        const QColor c(222, 150, 40, 255);
+        ov.lines.push_back({QVector3D(float(p0.X()), float(p0.Y()), float(p0.Z())), c});
+        ov.lines.push_back({QVector3D(float(p1.X()), float(p1.Y()), float(p1.Z())), c});
+    }
+    view_->setOverlay(std::move(ov));
+}
+
+QString AxisPanel::title() const
+{
+    return tr("construction axis");
 }
 
 // ---------------------------------------------------------------- body list helpers
@@ -1993,6 +2233,7 @@ MovePanel::MovePanel(jig::Document& doc, Viewport* view, std::string editId, QWi
         addRow(tr("Move along %1").arg(names[k]), d_[k]);
     }
     axis_ = combo(this, {{tr("Z axis (up)"), "Z"}, {tr("X axis"), "X"}, {tr("Y axis"), "Y"}});
+    addConstructionAxes(axis_, doc_, *stateBefore(), insertIndex(), [](const std::string& id) { return q(id); });
     angle_ = new ExprField(doc, jig::Dim::ang(), this);
     copy_ = new QCheckBox(tr("Copy (keep the original)"), this);
     addRow(tr("Turn around"), axis_);

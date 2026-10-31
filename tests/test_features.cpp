@@ -1085,3 +1085,51 @@ TEST(Hole, ScrewSizesAndDrillPoint)
     r.runText(std::string(kBlock) + "hole id=h1 sketch=s2 size=M7 extent=all\n");
     EXPECT_NE(int(bad->status(int(bad->model().features.size()) - 1).level), int(StatusLevel::Ok));
 }
+
+TEST(Axis, EdgesRoundFacesAndCrossingPlanes)
+{
+    // where two origin planes meet: the Z axis; revolving around it is the same as around Z
+    auto ring = build("axis id=a1 base=XZ base2=YZ\nsketch id=s1 plane=XZ\nrect sketch=s1 corner=10,0 w=10 h=5\n"
+                      "revolve id=r1 sketch=s1 axis=a1\n");
+    expectAllOk(*ring);
+    const gp_Ax1 z = ring->state().axes.at("a1");
+    EXPECT_TRUE(z.Direction().IsParallel(gp_Dir(0, 0, 1), 1e-9));
+    EXPECT_NEAR(z.Location().Distance(gp_Pnt(0, 0, 0)), 0, 1e-9);
+    EXPECT_NEAR(props(*ring).volume, pi * (400 - 100) * 5, 1e-3);
+    // along a block's corner edge; turning the block half a turn about it
+    auto blk = build("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=40 h=20\nextrude id=e1 sketch=s1 distance=10\n"
+                     "axis id=a2 through=edge:E[e1/side:5|e1/side:6]\nmove id=m1 bodies=e1 angle=180deg axis=a2\n");
+    expectAllOk(*blk);
+    const gp_Ax1 c = blk->state().axes.at("a2");
+    EXPECT_TRUE(c.Direction().IsParallel(gp_Dir(0, 0, 1), 1e-9));
+    EXPECT_NEAR(std::abs(c.Location().X()), 20, 1e-9);
+    auto mp = props(*blk);
+    EXPECT_NEAR(mp.xmin, 2 * c.Location().X() - 20, 1e-6);
+    EXPECT_NEAR(mp.ymin, 2 * c.Location().Y() - 10, 1e-6);
+    // through a hole's wall: its centre line; a ring pattern of a hole around another hole
+    auto hole = build(std::string(kBlock) + "hole id=h1 sketch=s2 diameter=4mm extent=all\n");
+    std::string wall;
+    for (auto& [bid, b] : hole->state().bodies) {
+        for (int i = 0; i < b->faceCount(); ++i) {
+            if (b->faceName(i).rfind("h1/wall:", 0) == 0 && wall.empty()) {
+                wall = b->faceName(i);
+            }
+        }
+    }
+    ASSERT_FALSE(wall.empty());
+    run(*hole, "axis id=a3 through=face:" + wall);
+    expectAllOk(*hole);
+    const gp_Ax1 h = hole->state().axes.at("a3");
+    EXPECT_NEAR(std::abs(h.Location().X()), 10, 1e-6);
+    EXPECT_NEAR(h.Location().Y(), 0, 1e-6);
+    // parallel planes never meet; a flat face has no axis
+    auto bad = std::make_unique<Document>();
+    ScriptRunner r(*bad);
+    r.runText("axis id=a1 base=XY base2=XY\n");
+    EXPECT_NE(int(bad->status(0).level), int(StatusLevel::Ok));
+    // an axis that does not exist is explained
+    auto none = std::make_unique<Document>();
+    ScriptRunner r2(*none);
+    r2.runText("sketch id=s1 plane=XZ\nrect sketch=s1 corner=10,0 w=10 h=5\nrevolve id=r1 sketch=s1 axis=a9\n");
+    EXPECT_NE(none->status(1).message.find("a9"), std::string::npos);
+}

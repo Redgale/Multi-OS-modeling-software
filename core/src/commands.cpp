@@ -135,7 +135,7 @@ CommandRegistry::CommandRegistry()
     add({"construct.offset_plane", "Offset plane", "Offset Plane", "CONSTRUCT", "A plane parallel to a face or plane at a set distance.", "", {"parallel plane", "work plane"}, true, false, true, m4});
     add({"construct.angle_plane", "Plane at angle", "Plane at Angle", "CONSTRUCT", "A plane tilted around an edge or axis.", "", {"tilted plane", "slanted"}, false, false, false, m4});
     add({"construct.midplane", "Midplane", "Midplane", "CONSTRUCT", "A plane halfway between two faces or planes.", "", {"middle plane", "center plane"}, false, false, false, m4});
-    add({"construct.axis", "Axis", "Axis", "CONSTRUCT", "A reference axis for revolves and patterns.", "", {"center line", "rotation axis"}, false, false, false, m4});
+    add({"construct.axis", "Axis", "Axis", "CONSTRUCT", "A reference axis for revolves, patterns and turning bodies: along an edge, through a hole or where two planes meet.", "", {"center line", "rotation axis"}, false, false, true, m4});
     add({"construct.point", "Reference point", "Construction Point", "CONSTRUCT", "A reference point in 3D.", "", {"work point"}, false, false, false, m4});
     add({"inspect.measure", "Measure", "Measure", "INSPECT", "Read distances, angles, lengths and areas.", "I", {"distance", "how big", "ruler", "size"}, true, false, false, m6});
     add({"inspect.section", "Section view", "Section Analysis", "INSPECT", "Slice the view to look inside walls and holes.", "", {"cut view", "cross section", "inside"}, false, false, false, m6});
@@ -158,7 +158,7 @@ CommandRegistry::CommandRegistry()
         "constraint.symmetric", "constraint.equal", "solid.extrude", "solid.fillet", "solid.chamfer", "solid.shell",
         "solid.revolve", "solid.hole", "solid.mirror", "solid.pattern_rect", "solid.pattern_circ", "modify.parameters",
         "inspect.measure", "inspect.properties", "file.export_3mf", "construct.offset_plane", "construct.angle_plane",
-        "construct.midplane", "solid.combine", "solid.split", "solid.move",
+        "construct.midplane", "construct.axis", "solid.combine", "solid.split", "solid.move",
         "inspect.section", "insert.dxf", "insert.svg", "help.tutorial"};
     for (auto& c : commands_) {
         if (inApp.count(c.id)) {
@@ -1482,9 +1482,12 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
         }
         return checkFeature(id);
     }
-    if (a.verb == "plane") {
+    if (a.verb == "plane" || a.verb == "axis") {
         // plane id=pl1 [kind=offset|angle|midplane] base=XY|<plane id>|face:<name>
-        //       [distance=<len>] [axis=X|Y|Z|edge:<name> angle=<angle>] [base2=…]
+        //       [distance=<len>] [axis=X|Y|Z|<axis id>|edge:<name> angle=<angle>] [base2=…]
+        // axis id=a1 through=edge:<name>|face:<name>   (along a straight edge, through a round one)
+        // axis id=a1 base=<plane> base2=<plane>       (where two planes or flat faces meet)
+        const bool isAxis = a.verb == "axis";
         const ModelState& st = doc.state();
         auto ref = [&](const std::string& v) -> Result<nlohmann::json> {
             for (const char* pre : {"face:", "edge:"}) {
@@ -1504,8 +1507,8 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
             }
             return nlohmann::json(v);
         };
-        nlohmann::json params {{"kind", a.get("kind", "offset")}};
-        for (const char* key : {"base", "base2", "axis"}) {
+        nlohmann::json params = isAxis ? nlohmann::json::object() : nlohmann::json {{"kind", a.get("kind", "offset")}};
+        for (const char* key : {"base", "base2", "axis", "through"}) {
             if (a.has(key)) {
                 auto r = ref(a.get(key));
                 if (!r) {
@@ -1520,14 +1523,14 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
             }
         }
         std::string id;
-        auto r = doc.transact("Construction plane", [&](Model& m) -> Result<bool> {
+        auto r = doc.transact(isAxis ? "Construction axis" : "Construction plane", [&](Model& m) -> Result<bool> {
             Feature f;
-            f.id = a.get("id", Document::newId(m, "pl"));
+            f.id = a.get("id", Document::newId(m, isAxis ? "ax" : "pl"));
             if (findFeature(m, f.id)) {
                 return makeError("script.args", "The id '" + f.id + "' is already used.");
             }
-            f.name = a.get("name", "Plane " + f.id.substr(2));
-            f.kind = FeatureKind::Plane;
+            f.name = a.get("name", (isAxis ? "Axis " : "Plane ") + f.id.substr(2));
+            f.kind = isAxis ? FeatureKind::Axis : FeatureKind::Plane;
             f.params = params;
             id = f.id;
             insertFeature(m, std::move(f));
@@ -1565,8 +1568,11 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
                 }
                 params["axis"] = {{"line", it->second}};
             }
-            else {
+            else if (ax == "X" || ax == "Y" || ax == "Z") {
                 params["axis"] = {{"origin", ax}};
+            }
+            else {
+                params["axis"] = {{"axis", ax}};  // a construction axis
             }
             params["profiles"] = a.has("profiles") && a.get("profiles") != "all" ? nlohmann::json(split(a.get("profiles"), ';'))
                                                                                   : nlohmann::json("all");

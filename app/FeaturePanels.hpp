@@ -313,6 +313,36 @@ private:
     QLabel* points_;
 };
 
+// Construction axis: along a straight edge, through a round edge or face, or where two
+// planes meet.
+class AxisPanel : public FeaturePanel
+{
+    Q_OBJECT
+public:
+    AxisPanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent = nullptr);
+    ~AxisPanel() override;
+    void useFace(const std::string& body, const std::string& name);  // a click in the view
+    void useEdge(const std::string& body, const std::string& name);
+    QComboBox* kind() const
+    {
+        return kind_;
+    }
+    QComboBox* through() const
+    {
+        return through_;
+    }
+
+protected:
+    jig::Feature draft() const override;
+    QString title() const override;
+    void previewed(const jig::FeatureOutcome& o) override;
+
+private:
+    void updateVisibility();
+    QComboBox *kind_, *through_, *base_, *base2_;
+    bool nextIsSecond_ = false;
+};
+
 // Pattern: repeat an Extrude, Revolve or Hole around an axis or in a grid.
 class PatternPanel : public FeaturePanel
 {

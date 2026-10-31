@@ -136,6 +136,8 @@ QString kindWord(jig::FeatureKind k)
             return MainWindow::tr("Mirror");
         case jig::FeatureKind::Plane:
             return MainWindow::tr("Plane");
+        case jig::FeatureKind::Axis:
+            return MainWindow::tr("Axis");
         case jig::FeatureKind::Combine:
             return MainWindow::tr("Combine");
         case jig::FeatureKind::Split:
@@ -932,6 +934,22 @@ void MainWindow::refreshDatums()
         const jig::Feature* feat = doc_->feature(id);
         labels.emplace_back(feat ? q(feat->name) : q(id), c[3]);
     }
+    // construction axes: dashed amber lines (dashed, so not told apart by colour alone)
+    for (auto& [id, a] : doc_->state().axes) {
+        QColor edge = kDatum;
+        edge.setAlpha(230);
+        const int dashes = 24;
+        for (int k = 0; k < dashes; k += 2) {
+            for (int e = 0; e < 2; ++e) {
+                const double t = -s + 2 * s * (k + e) / dashes;
+                const gp_XYZ p = a.Location().XYZ() + a.Direction().XYZ() * t;
+                ov.lines.push_back({QVector3D(float(p.X()), float(p.Y()), float(p.Z())), edge});
+            }
+        }
+        const gp_XYZ end = a.Location().XYZ() + a.Direction().XYZ() * s;
+        const jig::Feature* feat = doc_->feature(id);
+        labels.emplace_back(feat ? q(feat->name) : q(id), QVector3D(float(end.X()), float(end.Y()), float(end.Z())));
+    }
     view_->setDatums(std::move(ov), std::move(labels));
 }
 
@@ -1227,6 +1245,9 @@ void MainWindow::runCommand(const QString& id)
     }
     else if (id == "construct.offset_plane" || id == "construct.angle_plane" || id == "construct.midplane") {
         openPlane({}, id == "construct.angle_plane" ? "angle" : id == "construct.midplane" ? "midplane" : "offset");
+    }
+    else if (id == "construct.axis") {
+        openAxis();
     }
     else if (id == "inspect.properties") {
         openProperties();
@@ -2052,6 +2073,15 @@ void MainWindow::openPlane(const std::string& editId, const std::string& kind)
     showPanel(new PlanePanel(*doc_, view_, editId, panelHost_, kind));
 }
 
+void MainWindow::openAxis(const std::string& editId)
+{
+    if (sketch_) {
+        exitSketch();
+    }
+    cancelPicker();
+    showPanel(new AxisPanel(*doc_, view_, editId, panelHost_));
+}
+
 void MainWindow::importDxf()
 {
     const QString path = QFileDialog::getOpenFileName(this, tr("Import DXF"), {}, tr("DXF drawings (*.dxf)"));
@@ -2268,6 +2298,9 @@ void MainWindow::editFeature(int index)
             break;
         case jig::FeatureKind::Plane:
             openPlane(f.id);
+            break;
+        case jig::FeatureKind::Axis:
+            openAxis(f.id);
             break;
         case jig::FeatureKind::Combine:
             openBodyTool("solid.combine", f.id);
