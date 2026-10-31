@@ -1,0 +1,26 @@
+# Knob for a 6 mm D-shaft (acceptance scenario A2): a turned profile, a D-shaped
+# bore, twelve finger scallops around the rim, and a rounded top edge.
+param dia = 30 mm
+param height = 16 mm
+param bore = 12 mm
+param scallops = 12 kind=number
+
+# Half of the outline, drawn on the front plane and spun around the vertical axis.
+sketch id=s1 plane=XZ name="Profile"
+polyline sketch=s1 points="0,0; dia/2,0; dia/2,height-3; dia/2-3,height; 0,height" closed=yes dims=yes
+revolve id=r1 sketch=s1 axis=Z name="Body"
+
+# D-shaped bore: a 6 mm circle with a flat 1.5 mm from the centre.
+sketch id=s2 plane=XY name="Bore"
+arc sketch=s2 center=0,0 r=3mm from=-120deg to=120deg chord=yes
+extrude id=e1 sketch=s2 distance=bore op=cut name="Shaft bore"
+
+# One finger scallop, then repeat it around the axis.
+sketch id=s3 plane=XY name="Scallop"
+circle sketch=s3 center=dia/2+2mm,0 d=8mm
+extrude id=e2 sketch=s3 extent=all op=cut name="Scallop"
+pattern id=p1 feature=e2 kind=circular axis=Z count=scallops name="Scallops"
+
+# Round the top edge. The flat top is the face swept by sketch curve 19 (run the
+# `faces` command to list every face name).
+fillet id=f1 edges="face:r1/side:19" radius=1mm name="Top round"

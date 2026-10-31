@@ -25,7 +25,9 @@
 #include <TopTools_IndexedMapOfShape.hxx>
 #include <TopoDS_Face.hxx>
 #include <TopoDS_Shape.hxx>
+#include <gp_Ax1.hxx>
 #include <gp_Ax3.hxx>
+#include <gp_Trsf.hxx>
 #include <nlohmann/json.hpp>
 
 #include "jig/result.hpp"
@@ -209,6 +211,47 @@ struct ExtrudeInput
 
 // Builds the extruded tool body and names its faces.
 Result<NamedShape> makeExtrusion(const ExtrudeInput& in);
+
+// Spins profiles around an axis. angle in radians (2*pi = full turn). Faces are named
+// "<feature>/side:<sketch curve>", plus "start"/"end" caps for partial turns.
+Result<NamedShape> makeRevolution(const std::string& featureId,
+                                  const std::vector<const Profile*>& profiles,
+                                  const gp_Ax1& axis,
+                                  double angle);
+
+struct HoleSpec
+{
+    enum class Type
+    {
+        Simple,
+        Counterbore,
+        Countersink
+    } type = Type::Simple;
+    double diameter = 3;     // mm
+    double depth = 10;       // mm, ignored when through
+    bool through = false;
+    double cboreDiameter = 6, cboreDepth = 3;
+    double csinkDiameter = 6, csinkAngle = 1.5707963267948966;  // 90 degrees
+};
+
+struct HolePoint
+{
+    int id;       // sketch point id (stable): faces are named "<feature>/wall:p<id>" etc.
+    double x, y;  // in the sketch frame
+};
+
+// The cutting tool for holes at sketch points, drilled along -normal of the frame.
+Result<NamedShape> makeHoleTool(const std::string& featureId,
+                                const gp_Ax3& frame,
+                                const std::vector<HolePoint>& points,
+                                const HoleSpec& spec,
+                                double throughDepth);
+
+// A moved/rotated/mirrored copy whose faces are renamed "<prefix><original name>".
+NamedShape transformedCopy(const NamedShape& src, const gp_Trsf& t, const std::string& prefix);
+
+// Several named shapes as one compound (names kept), e.g. pattern copies.
+NamedShape namedCompound(const std::vector<NamedShape>& parts);
 
 // Boolean between a named target and a named tool; names propagate from both.
 Result<NamedShape> booleanOp(const std::string& featureId,

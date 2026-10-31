@@ -30,7 +30,14 @@
 #include <BRepGProp.hxx>
 #include <BRepLProp_SLProps.hxx>
 #include <BRepMesh_IncrementalMesh.hxx>
+#include <BRepBuilderAPI_MakeWire.hxx>
 #include <BRepPrimAPI_MakePrism.hxx>
+#include <BRepPrimAPI_MakeRevol.hxx>
+#include <gp_Lin.hxx>
+#include <BRepBuilderAPI_MakeVertex.hxx>
+#include <BRepExtrema_DistShapeShape.hxx>
+#include <BRep_Builder.hxx>
+#include <TopoDS_Compound.hxx>
 #include <BRep_Tool.hxx>
 #include <Bnd_Box.hxx>
 #include <GCPnts_TangentialDeflection.hxx>
@@ -760,6 +767,272 @@ Result<NamedShape> makeExtrusion(const ExtrudeInput& in)
     catch (const Standard_Failure& f) {
         return makeError("extrude.failed", "This profile could not be extruded.", {}, kernelText(f));
     }
+}
+
+// ---------------------------------------------------------------- revolve
+
+// The face a revolve swept from profile edge `e`, found by geometry: the profile edge
+// lies on the face it sweeps. Used where Generated() reports nothing, which happens
+// for edges that touch the axis (the flat top of a knob, the floor of a hole).
+std::optional<int> sweptFace(const NamedShape& ns, const TopoDS_Edge& e, const gp_Ax1& axis)
+{
+    if (BRep_Tool::Degenerated(e)) {
+        return std::nullopt;
+    }
+    BRepAdaptor_Curve c(e);
+    const gp_Pnt mid = c.Value((c.FirstParameter() + c.LastParameter()) / 2);
+    if (gp_Lin(axis).Distance(mid) < 1e-7) {
+        return std::nullopt;  // lies on the axis: sweeps no face
+    }
+    const TopoDS_Vertex mv = BRepBuilderAPI_MakeVertex(mid);
+    for (int i = 0; i < ns.faceCount(); ++i) {
+        if (!ns.faceName(i).empty()) {
+            continue;
+        }
+        BRepExtrema_DistShapeShape d(mv, ns.face(i));
+        if (d.IsDone() && d.Value() < 1e-6) {
+            return i;
+        }
+    }
+    return std::nullopt;
+}
+
+Result<NamedShape> makeRevolution(const std::string& featureId,
+                                  const std::vector<const Profile*>& profiles,
+                                  const gp_Ax1& axis,
+                                  double angle)
+{
+    if (profiles.empty()) {
+        return makeError("revolve.no_profile", "Pick at least one closed area (profile) to revolve.");
+    }
+    if (!(std::abs(angle) > 1e-9)) {
+        return makeError("revolve.angle", "The revolve angle must not be zero.");
+    }
+    const bool full = std::abs(std::abs(angle) - 2 * std::numbers::pi) < 1e-9;
+    const auto crosses = makeError("revolve.crosses_axis", "The outline crosses the revolve axis, so it would sweep through itself.",
+                                   {"Keep the whole outline on one side of the axis line.",
+                                    "Draw the axis exactly along the edge of the profile, not through it."});
+    try {
+        // An outline with area on both sides of the axis cannot be revolved.
+        for (const Profile* p : profiles) {
+            BRepAdaptor_Surface surf(p->face);
+            if (surf.GetType() != GeomAbs_Plane) {
+                continue;
+            }
+            const gp_Dir n = surf.Plane().Axis().Direction();
+            if (std::abs(n.Dot(axis.Direction())) > 1e-9) {
+                continue;  // the axis is not in the sketch plane
+            }
+            const gp_Vec side = gp_Vec(n).Crossed(gp_Vec(axis.Direction()));
+            bool pos = false, neg = false;
+            for (TopExp_Explorer ee(p->face, TopAbs_EDGE); ee.More(); ee.Next()) {
+                BRepAdaptor_Curve c(TopoDS::Edge(ee.Current()));
+                for (int k = 0; k <= 8; ++k) {
+                    const gp_Pnt q = c.Value(c.FirstParameter() + (c.LastParameter() - c.FirstParameter()) * k / 8);
+                    const double d = gp_Vec(axis.Location(), q).Dot(side);
+                    pos |= d > 1e-7;
+                    neg |= d < -1e-7;
+                }
+            }
+            if (pos && neg) {
+                return crosses;
+            }
+        }
+        std::unique_ptr<NamedShape> acc;
+        const bool multi = profiles.size() > 1;
+        for (const Profile* p : profiles) {
+            BRepPrimAPI_MakeRevol rev(p->face, axis, full ? 2 * std::numbers::pi : angle, false);
+            rev.Build();
+            if (!rev.IsDone()) {
+                return makeError("revolve.failed", "This profile could not be revolved.");
+            }
+            if (!BRepCheck_Analyzer(rev.Shape()).IsValid()) {
+                return crosses;
+            }
+            NamedShape ns(rev.Shape());
+            std::map<int, std::vector<TopoDS_Shape>> sides;
+            for (TopExp_Explorer ee(p->face, TopAbs_EDGE); ee.More(); ee.Next()) {
+                const int ent = p->edgeEntity.IsBound(ee.Current()) ? p->edgeEntity.Find(ee.Current()) : 0;
+                for (auto& g : toVector(rev.Generated(ee.Current()), TopAbs_FACE)) {
+                    sides[ent].push_back(g);
+                }
+            }
+            for (auto& [ent, faces] : sides) {
+                assignNames(ns, faces, featureId + "/side:" + std::to_string(ent));
+            }
+            if (!full) {
+                const std::string sfx = multi ? "[" + p->key + "]" : "";
+                assignNames(ns, {rev.FirstShape()}, featureId + "/start" + sfx);
+                assignNames(ns, {rev.LastShape()}, featureId + "/end" + sfx);
+            }
+            for (TopExp_Explorer ee(p->face, TopAbs_EDGE); ee.More(); ee.Next()) {
+                const int ent = p->edgeEntity.IsBound(ee.Current()) ? p->edgeEntity.Find(ee.Current()) : 0;
+                if (!sides.count(ent)) {
+                    if (auto i = sweptFace(ns, TopoDS::Edge(ee.Current()), axis)) {
+                        assignNames(ns, {ns.face(*i)}, featureId + "/side:" + std::to_string(ent));
+                    }
+                }
+            }
+            nameLeftovers(ns, featureId);
+            if (!acc) {
+                acc = std::make_unique<NamedShape>(std::move(ns));
+            }
+            else {
+                auto fused = booleanOp(featureId, BoolOp::Join, *acc, ns);
+                if (!fused) {
+                    return fused.error();
+                }
+                acc = std::make_unique<NamedShape>(std::move(fused.value()));
+            }
+        }
+        return std::move(*acc);
+    }
+    catch (const Standard_Failure& f) {
+        return makeError("revolve.failed", "This profile could not be revolved.", {}, kernelText(f));
+    }
+}
+
+// ---------------------------------------------------------------- holes
+
+Result<NamedShape> makeHoleTool(const std::string& featureId,
+                                const gp_Ax3& frame,
+                                const std::vector<HolePoint>& points,
+                                const HoleSpec& spec,
+                                double throughDepth)
+{
+    if (points.empty()) {
+        return makeError("hole.no_points", "Place at least one point in the sketch to mark where the hole goes.",
+                         {"Add a Point in the sketch at each hole centre."});
+    }
+    const double r = spec.diameter / 2;
+    if (!(r > 1e-6)) {
+        return makeError("hole.diameter", "The hole diameter must be larger than zero.");
+    }
+    const double depth = spec.through ? throughDepth : spec.depth;
+    if (!(depth > 1e-6)) {
+        return makeError("hole.depth", "The hole depth must be larger than zero.");
+    }
+    using T = HoleSpec::Type;
+    if (spec.type == T::Counterbore && !(spec.cboreDiameter > spec.diameter && spec.cboreDepth > 0 && spec.cboreDepth < depth)) {
+        return makeError("hole.counterbore", "The counterbore must be wider than the hole and shallower than it.");
+    }
+    if (spec.type == T::Countersink && !(spec.csinkDiameter > spec.diameter && spec.csinkAngle > 0.1 && spec.csinkAngle < 3.0)) {
+        return makeError("hole.countersink", "The countersink must be wider than the hole, with an angle between 6 and 170 degrees.");
+    }
+    try {
+        // Half-section in (radius, depth) coordinates; depth runs into the material
+        // (-normal). It starts a little above the face so the cut always opens cleanly.
+        const double lift = std::max(0.05, 0.01 * depth);
+        struct Seg
+        {
+            double r0, z0, r1, z1;
+            const char* role;
+        };
+        std::vector<Seg> segs;
+        double rTop = r, zTop = -lift;
+        if (spec.type == T::Counterbore) {
+            const double R = spec.cboreDiameter / 2, d = spec.cboreDepth;
+            segs = {{0, -lift, R, -lift, "top"}, {R, -lift, R, d, "cbore"}, {R, d, r, d, "cbore_floor"},
+                    {r, d, r, depth, "wall"}, {r, depth, 0, depth, "floor"}};
+        }
+        else if (spec.type == T::Countersink) {
+            const double R = spec.csinkDiameter / 2;
+            const double h = (R - r) / std::tan(spec.csinkAngle / 2);
+            const double Rl = R + lift * std::tan(spec.csinkAngle / 2);
+            segs = {{0, -lift, Rl, -lift, "top"}, {Rl, -lift, r, h, "csink"}, {r, h, r, depth, "wall"},
+                    {r, depth, 0, depth, "floor"}};
+        }
+        else {
+            segs = {{0, zTop, rTop, zTop, "top"}, {r, -lift, r, depth, "wall"}, {r, depth, 0, depth, "floor"}};
+        }
+        std::vector<NamedShape> tools;
+        const gp_Dir down = frame.Direction().Reversed();
+        const gp_Dir radial = frame.XDirection();
+        for (const HolePoint& hp : points) {
+            const gp_Pnt c(frame.Location().XYZ() + frame.XDirection().XYZ() * hp.x + frame.YDirection().XYZ() * hp.y);
+            auto at = [&](double rr, double zz) {
+                return gp_Pnt(c.XYZ() + radial.XYZ() * rr + down.XYZ() * zz);
+            };
+            BRepBuilderAPI_MakeWire wire;
+            std::vector<std::pair<TopoDS_Edge, std::string>> roles;
+            for (auto& sg : segs) {
+                TopoDS_Edge e = BRepBuilderAPI_MakeEdge(at(sg.r0, sg.z0), at(sg.r1, sg.z1)).Edge();
+                wire.Add(e);
+                roles.emplace_back(wire.Edge(), sg.role);
+            }
+            // close along the axis
+            wire.Add(BRepBuilderAPI_MakeEdge(at(0, segs.back().z1), at(0, segs.front().z0)).Edge());
+            TopoDS_Face face = BRepBuilderAPI_MakeFace(wire.Wire(), true).Face();
+            BRepPrimAPI_MakeRevol rev(face, gp_Ax1(c, down), 2 * std::numbers::pi, false);
+            rev.Build();
+            NamedShape ns(rev.Shape());
+            for (TopExp_Explorer ee(face, TopAbs_EDGE); ee.More(); ee.Next()) {
+                std::string role;
+                for (auto& [re, rn] : roles) {
+                    if (re.IsSame(ee.Current())) {
+                        role = rn;
+                    }
+                }
+                if (role.empty()) {
+                    continue;
+                }
+                const std::string name = featureId + "/" + role + ":p" + std::to_string(hp.id);
+                auto gen = toVector(rev.Generated(ee.Current()), TopAbs_FACE);
+                if (gen.empty()) {
+                    if (auto i = sweptFace(ns, TopoDS::Edge(ee.Current()), gp_Ax1(c, down))) {
+                        gen = {ns.face(*i)};
+                    }
+                }
+                assignNames(ns, gen, name);
+            }
+            nameLeftovers(ns, featureId);
+            tools.push_back(std::move(ns));
+        }
+        return namedCompound(tools);
+    }
+    catch (const Standard_Failure& f) {
+        return makeError("hole.failed", "The hole could not be made.", {}, kernelText(f));
+    }
+}
+
+// ---------------------------------------------------------------- copies
+
+NamedShape transformedCopy(const NamedShape& src, const gp_Trsf& t, const std::string& prefix)
+{
+    BRepBuilderAPI_Transform tr(src.shape(), t, true);
+    NamedShape out(tr.Shape());
+    for (int i = 0; i < src.faceCount(); ++i) {
+        assignNames(out, toVector(tr.Modified(src.face(i)), TopAbs_FACE), prefix + src.faceName(i));
+    }
+    // a copy keeps the topology order, so anything the history missed maps by index
+    for (int i = 0; i < out.faceCount() && i < src.faceCount(); ++i) {
+        if (out.faceName(i).empty()) {
+            out.setFaceName(i, prefix + src.faceName(i));
+        }
+    }
+    out.deriveEdgeNames();
+    return out;
+}
+
+NamedShape namedCompound(const std::vector<NamedShape>& parts)
+{
+    TopoDS_Compound c;
+    BRep_Builder b;
+    b.MakeCompound(c);
+    for (auto& p : parts) {
+        b.Add(c, p.shape());
+    }
+    NamedShape out(c);
+    for (auto& p : parts) {
+        for (int i = 0; i < p.faceCount(); ++i) {
+            const int j = out.faceIndex(p.face(i));
+            if (j >= 0) {
+                out.setFaceName(j, p.faceName(i));
+            }
+        }
+    }
+    out.deriveEdgeNames();
+    return out;
 }
 
 // ---------------------------------------------------------------- booleans

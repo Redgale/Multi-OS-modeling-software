@@ -49,7 +49,11 @@ enum class FeatureKind
     Extrude,
     Fillet,
     Chamfer,
-    Shell
+    Shell,
+    Revolve,
+    Hole,
+    Pattern,
+    Mirror
 };
 
 const char* toString(FeatureKind k);
@@ -99,12 +103,21 @@ struct SketchState
     ProfileSet profiles;
 };
 
+// The shape a feature added or removed, so a Pattern can repeat it.
+struct ToolRecord
+{
+    std::shared_ptr<const NamedShape> tool;
+    BoolOp op = BoolOp::Join;
+    std::string target;  // body it was applied to
+};
+
 // Geometry after a feature has been applied. Immutable once built; shared between
 // cache entries.
 struct ModelState
 {
     std::map<std::string, std::shared_ptr<const NamedShape>> bodies;
     std::map<std::string, std::shared_ptr<const SketchState>> sketches;
+    std::map<std::string, ToolRecord> tools;
 };
 
 class Document

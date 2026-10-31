@@ -752,6 +752,73 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
             return true;
         });
     }
+    if (a.verb == "line" || a.verb == "point" || a.verb == "arc") {
+        // line p1=x,y p2=x,y [construction=yes] [name=axis]
+        // point at=x,y [name=..]                       (hole centres)
+        // arc center=x,y r=<len> from=<angle> to=<angle> [chord=yes] [name=..]   (counter-clockwise)
+        const std::string sid = a.get("sketch", last_);
+        int made = 0;
+        auto res = editSketch(a.verb == "line" ? "Line" : a.verb == "point" ? "Point" : "Arc", sid,
+                              [&](Sketch& s, const Document&) -> Result<bool> {
+            auto pos = [&](const std::string& key) -> Result<std::pair<std::pair<double, double>, std::pair<std::string, std::string>>> {
+                auto pe = parsePairExpr(a.get(key, "0,0"));
+                if (!pe) {
+                    return pe.error();
+                }
+                auto x = len(pe->first), y = len(pe->second);
+                if (!x || !y) {
+                    return !x ? x.error() : y.error();
+                }
+                return std::pair {std::pair {x.value(), y.value()}, *pe};
+            };
+            auto fixPoint = [&](int pid, const std::pair<std::string, std::string>& e) {
+                s.addConstraint(ConstraintType::DistanceX, pid, 0, 0, e.first);
+                s.addConstraint(ConstraintType::DistanceY, pid, 0, 0, e.second);
+            };
+            if (a.verb == "point") {
+                auto at = pos("at");
+                if (!at) {
+                    return at.error();
+                }
+                made = s.addPoint(at->first.first, at->first.second);
+                fixPoint(made, at->second);
+            }
+            else if (a.verb == "line") {
+                auto p1 = pos("p1"), p2 = pos("p2");
+                if (!p1 || !p2) {
+                    return !p1 ? p1.error() : p2.error();
+                }
+                made = s.addLine(p1->first.first, p1->first.second, p2->first.first, p2->first.second);
+                fixPoint(s.entity(made)->p1, p1->second);
+                fixPoint(s.entity(made)->p2, p2->second);
+            }
+            else {
+                auto c = pos("center");
+                const std::string re = a.get("r");
+                auto r = len(re);
+                auto a0 = doc.evalAngle(a.get("from", "0 deg")), a1 = doc.evalAngle(a.get("to", "90 deg"));
+                if (!c || !r || !a0 || !a1) {
+                    return makeError("script.args", "Arc needs center=x,y r=<len> from=<angle> to=<angle> with valid values.");
+                }
+                made = s.addArc(c->first.first, c->first.second, r.value(), a0.value(), a1.value());
+                const SketchEntity A = *s.entity(made);
+                fixPoint(A.center, c->second);
+                s.addConstraint(ConstraintType::Radius, made, 0, 0, re);
+                // the end angles stay free (the solver keeps them where they are)
+                if (a.get("chord", "no") == "yes") {
+                    s.addLine(A.p1, A.p2);  // closes the arc into a "D"
+                }
+            }
+            if (a.get("construction", "no") == "yes") {
+                s.setConstruction(made, true);
+            }
+            return true;
+        });
+        if (res && a.has("name")) {
+            names_[sid + "." + a.get("name")] = made;
+        }
+        return res;
+    }
     if (a.verb == "constrain") {
         // constrain sketch=s1 type=parallel a=3 b=4 [c=..] [value="..."]
         const std::string sid = a.get("sketch", last_);
@@ -947,6 +1014,60 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
         }
         return checkFeature(id);
     }
+    if (a.verb == "revolve" || a.verb == "hole" || a.verb == "pattern" || a.verb == "mirror") {
+        // revolve sketch=s1 axis=X|Y|Z|line:<name> [angle=360deg] [op=new|join|cut|intersect] [profiles=…]
+        // hole sketch=s2 diameter=3.4mm (depth=10mm | extent=all) [type=simple|counterbore|countersink]
+        //      [cbore_diameter= cbore_depth= | csink_diameter= csink_angle=]
+        // pattern feature=e2 kind=circular axis=Z count=12 [angle=360deg]
+        // pattern feature=h1 kind=rectangular dir1=X count1=3 spacing1=20mm [dir2=Y count2=2 spacing2=15mm]
+        // mirror [body=e1] plane=YZ|XZ|XY [op=join|new]
+        static const std::map<std::string, std::pair<FeatureKind, std::string>> kinds {
+            {"revolve", {FeatureKind::Revolve, "r"}}, {"hole", {FeatureKind::Hole, "h"}},
+            {"pattern", {FeatureKind::Pattern, "p"}}, {"mirror", {FeatureKind::Mirror, "m"}}};
+        const auto& [kind, prefix] = kinds.at(a.verb);
+        nlohmann::json params = nlohmann::json::object();
+        for (auto& [k, v] : a.kv) {
+            if (k != "id" && k != "name") {
+                params[k] = v;
+            }
+        }
+        if (a.verb == "revolve") {
+            const std::string ax = a.get("axis", "Z");
+            if (ax.rfind("line:", 0) == 0) {
+                auto it = names_.find(a.get("sketch") + "." + ax.substr(5));
+                if (it == names_.end()) {
+                    return makeError("script.args", "No line called '" + ax.substr(5) + "' in sketch '" + a.get("sketch") + "'.",
+                                     {"Name the axis line: line … name=axis"});
+                }
+                params["axis"] = {{"line", it->second}};
+            }
+            else {
+                params["axis"] = {{"origin", ax}};
+            }
+            params["profiles"] = a.has("profiles") && a.get("profiles") != "all" ? nlohmann::json(split(a.get("profiles"), ';'))
+                                                                                  : nlohmann::json("all");
+        }
+        std::string label = a.verb;
+        label[0] = char(std::toupper(label[0]));
+        std::string id;
+        auto r = doc.transact(label, [&](Model& m) -> Result<bool> {
+            Feature f;
+            f.id = a.get("id", Document::newId(m, prefix));
+            if (findFeature(m, f.id)) {
+                return makeError("script.args", "The id '" + f.id + "' is already used.");
+            }
+            f.name = a.get("name", label + " " + f.id.substr(prefix.size()));
+            f.kind = kind;
+            f.params = params;
+            id = f.id;
+            insertFeature(m, std::move(f));
+            return true;
+        });
+        if (!r) {
+            return r;
+        }
+        return checkFeature(id);
+    }
     if (a.verb == "set") {
         // set <feature> key=value ...  (edit feature parameters)
         if (a.positional.empty()) {
@@ -1023,6 +1144,22 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
     }
 
     // ---- output
+    if (a.verb == "faces") {
+        // faces [body=<id>]: prints the body's face names, for writing face:<name> selectors
+        const ModelState& st = doc.state();
+        nlohmann::json out = nlohmann::json::object();
+        for (auto& [id, b] : st.bodies) {
+            if (a.has("body") && a.get("body") != id) {
+                continue;
+            }
+            auto& list = out[id] = nlohmann::json::array();
+            for (int i = 0; i < b->faceCount(); ++i) {
+                list.push_back(b->faceName(i));
+            }
+        }
+        output_.push_back(out.dump(2));
+        return true;
+    }
     if (a.verb == "report") {
         output_.push_back(reportJson(doc).dump(2));
         return true;

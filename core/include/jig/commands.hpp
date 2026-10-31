@@ -91,6 +91,7 @@ private:
     Document& doc_;
     std::vector<std::string> output_;
     std::string last_;
+    std::map<std::string, int> names_;  // "<sketch>.<name>" -> sketch entity id (name= on line/point)
 };
 
 // JSON summary of the document: per-body mass properties and per-feature status.

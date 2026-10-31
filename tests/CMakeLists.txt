@@ -14,6 +14,7 @@ jig_test(test_document   test_document.cpp)
 jig_test(test_geometry   test_geometry.cpp)
 jig_test(test_naming     test_naming.cpp)
 jig_test(test_commands   test_commands.cpp)
+jig_test(test_features   test_features.cpp)
 
 # UI tests: drive the real main window, sketch editor and feature panels. They need
 # a display (CI runs them under Xvfb on Linux) and carry the "ui" label so they can be
