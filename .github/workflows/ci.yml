@@ -163,3 +163,113 @@ jobs:
           path: |
             Jigsmith-windows-x64-portable.zip
             bench-windows.json
+
+  distros:
+    # Builds and tests inside other distributions' official images, using only
+    # scripts/install-deps.sh, so the "build from source" instructions stay true.
+    # No JavaScript actions here: they cannot run in musl containers.
+    name: Linux ${{ matrix.name }}
+    runs-on: ubuntu-24.04
+    container: ${{ matrix.image }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Void (glibc)
+            image: ghcr.io/void-linux/void-glibc-full:latest
+            prep: xbps-install -Syu xbps && xbps-install -Sy git ca-certificates
+          - name: Void (musl)
+            image: ghcr.io/void-linux/void-musl-full:latest
+            prep: xbps-install -Syu xbps && xbps-install -Sy git ca-certificates
+          - name: Fedora
+            image: fedora:latest
+            prep: dnf install -y git
+          - name: Arch
+            image: archlinux:latest
+            prep: pacman -Syu --noconfirm git
+          - name: openSUSE Tumbleweed
+            image: opensuse/tumbleweed:latest
+            prep: zypper --non-interactive install git gzip tar
+    steps:
+      - name: Get git
+        run: ${{ matrix.prep }}
+      - name: Check out (plain git)
+        run: |
+          git init -q src && cd src
+          git remote add origin "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}"
+          git fetch -q --depth 1 origin "${{ github.sha }}"
+          git checkout -q FETCH_HEAD
+      - name: Install dependencies with scripts/install-deps.sh
+        run: cd src && sh scripts/install-deps.sh --yes
+      - name: Configure
+        run: cd src && cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cd src && cmake --build build
+      - name: Test
+        run: cd src && ctest --test-dir build --output-on-failure -j4
+
+  occt-from-source:
+    # For distributions without an OCCT package: scripts/build-occt.sh, then Jigsmith.
+    name: Linux, OCCT built from source
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install everything except OCCT
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ninja-build libeigen3-dev libboost-dev \
+            nlohmann-json3-dev libgtest-dev
+      - name: Cache OCCT build
+        id: occt-cache
+        uses: actions/cache@v4
+        with:
+          path: deps/occt
+          key: occt-src-${{ hashFiles('scripts/build-occt.sh') }}
+      - name: Build OCCT with scripts/build-occt.sh
+        if: steps.occt-cache.outputs.cache-hit != 'true'
+        run: scripts/build-occt.sh
+      - name: Configure, build and test Jigsmith (core + CLI)
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DJIG_BUILD_GUI=OFF -DCMAKE_PREFIX_PATH="$PWD/deps/occt"
+          cmake --build build
+          ctest --test-dir build --output-on-failure -j4
+
+  publish:
+    # Rolling pre-release with the latest green build for every platform, downloadable
+    # without a GitHub account: https://github.com/<owner>/<repo>/releases/tag/continuous
+    name: Publish builds (continuous pre-release)
+    if: github.event_name == 'push'
+    needs: [linux, macos, windows]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    concurrency:
+      group: publish-continuous
+      cancel-in-progress: false
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Collect files
+        run: |
+          mkdir -p upload
+          find artifacts -type f \( -name '*.AppImage' -o -name '*.dmg' -o -name '*.zip' \) -exec cp {} upload/ \;
+          for f in upload/*.AppImage; do mv "$f" upload/Jigsmith-linux-x86_64.AppImage; done
+          cp artifacts/jigsmith-linux/screenshot-linux.png upload/ || true
+          ls -la upload
+      - name: Replace the continuous pre-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release delete continuous --yes --cleanup-tag || true
+          cat > notes.md <<NOTES
+          Development build of Jigsmith from commit ${{ github.sha }} (branch ${{ github.ref_name }}).
+          Pre-v0.1: see docs/STATUS.md for what works. These builds are **unsigned**:
+          - **Linux**: \`chmod +x Jigsmith-linux-x86_64.AppImage\` then run it (x86_64, glibc).
+          - **macOS**: open the .dmg (Apple silicon: \`Jigsmith-macos-15.dmg\`; Intel: \`Jigsmith-macos-15-intel.dmg\`). Gatekeeper will warn: right-click the app, choose Open.
+          - **Windows**: unzip \`Jigsmith-windows-x64-portable.zip\` and run \`jigsmith.exe\`. SmartScreen may warn.
+          Other Linux distributions (Void, Fedora, Arch, openSUSE…): build from source, see README.
+          NOTES
+          gh release create continuous upload/* --prerelease --target "${{ github.sha }}" \
+            --title "Jigsmith development build (continuous)" --notes-file notes.md
