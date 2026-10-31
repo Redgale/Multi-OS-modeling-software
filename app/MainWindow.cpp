@@ -807,7 +807,7 @@ void MainWindow::buildToolbar()
     // other ways to draw the same shape: on a drop-down beside its button
     const std::pair<const char*, std::vector<const char*>> variants[] = {
         {"sketch.rectangle", {"sketch.rect3"}},
-        {"sketch.circle", {"sketch.circle2", "sketch.circle3"}},
+        {"sketch.circle", {"sketch.circle2", "sketch.circle3", "sketch.circle_tangent"}},
         {"sketch.arc", {"sketch.arc_tangent"}}};
     for (const auto& [base, more] : variants) {
         if (auto* b = qobject_cast<QToolButton*>(sketchBar_->widgetForAction(registryAction(base)))) {
@@ -1636,6 +1636,7 @@ void MainWindow::runCommand(const QString& id)
             {"sketch.arc", T::Arc},         {"sketch.arc3", T::Arc3},         {"sketch.slot", T::Slot},           {"sketch.polygon", T::Polygon},
             {"sketch.ellipse", T::Ellipse}, {"sketch.spline", T::Spline},
             {"sketch.arc_tangent", T::TangentArc}, {"sketch.circle2", T::Circle2}, {"sketch.circle3", T::Circle3},
+            {"sketch.circle_tangent", T::CircleTangent},
             {"sketch.rect3", T::Rect3},
             {"sketch.text", T::Text},       {"sketch.trim", T::Trim},
             {"sketch.offset", T::Offset},   {"sketch.fillet", T::Round},

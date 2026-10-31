@@ -51,6 +51,7 @@ const std::map<QString, QString>& icons()
         {"sketch.arc", "M4 17 A12 17 8 180 -180 f O4 17 1.6 O20 17 1.6 O12 17 1.4"},
         {"sketch.arc3", "M4 17 A12 17 8 180 -180 f O4 17 1.6 O20 17 1.6 O12 9 1.6"},
         {"sketch.arc_tangent", "M3 17 L10 17 A10 10 7 270 180 f O10 17 1.6 O10 3 1.6"},
+        {"sketch.circle_tangent", "O13 11 6 a M3 5 L21 5 M3 21 L9 3"},
         {"sketch.circle2", "O12 12 8 d M4 12 L20 12 f O4 12 1.6 O20 12 1.6"},
         {"sketch.circle3", "O12 12 8 f O4 12 1.6 O17.7 6.3 1.6 O14.1 19.7 1.6"},
         {"sketch.rect3", "M4 14 L14 4 L20 10 L10 20 Z f O4 14 1.6 O14 4 1.6 O20 10 1.6"},

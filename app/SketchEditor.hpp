@@ -45,6 +45,7 @@ public:
         TangentArc,  // the loose end of a line or arc, then where the arc ends
         Circle2,  // the two ends of a diameter
         Circle3,  // three points on the circle
+        CircleTangent,  // two lines, then the radius: a circle touching both
         Rect3,    // one side (two corners), then the depth
         Slot,     // centre, centre, width
         Ellipse,  // centre, end of the major axis, then the minor radius
@@ -215,6 +216,8 @@ private:
     std::vector<std::pair<int, QRectF>> glyphBoxes_;     // constraint glyphs as last painted
     std::set<int> selectedConstraints_;
     int editConstraint_ = 0;
+    std::vector<int> tanLines_;  // Tangent circle: the lines it touches
+    QPointF tanClicks_[2];       // where each was clicked: the circle sits in the corner between them
     std::optional<QPointF> roundAt_;                     // Round: the corner clicked                             // dimension being changed (double-click)
     int glyphAt(const QPointF& screen) const;
     QString lastTextHeight_;

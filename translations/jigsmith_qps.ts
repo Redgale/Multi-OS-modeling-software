@@ -274,6 +274,16 @@
     </message>
     <message>
         <location line="+1" />
+        <source>Tangent circle</source>
+        <translation>[Táñgéñt çîrçlé~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Draw a circle that touches two lines: click both, then type its radius.</source>
+        <translation>[Dráw á çîrçlé thát töüçhés twö lîñés: çlîçk böth, théñ týpé îts rádîüs.~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
         <source>2-point circle</source>
         <translation>[2-pöîñt çîrçlé~~~]</translation>
     </message>
@@ -1004,6 +1014,11 @@
         <location line="+1" />
         <source>Continue from the end of a line or arc with an arc that leaves it smoothly.</source>
         <translation>[Çöñtîñüé fröm thé éñd öf á lîñé ör árç wîth áñ árç thát léávés ît smööthlý.~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Draw a circle that touches two lines: click both, then type its radius.</source>
+        <translation>[Dráw á çîrçlé thát töüçhés twö lîñés: çlîçk böth, théñ týpé îts rádîüs.~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <location line="+1" />
@@ -4126,13 +4141,13 @@
         <location line="+9" />
         <location line="+652" />
         <location line="+654" />
-        <location line="+833" />
+        <location line="+834" />
         <location line="+26" />
         <source>Sketch</source>
         <translation>[Skétçh~~]</translation>
     </message>
     <message>
-        <location line="-2163" />
+        <location line="-2164" />
         <source>Extrude</source>
         <translation>[Éxtrüdé~~]</translation>
     </message>
@@ -4364,12 +4379,12 @@
     </message>
     <message>
         <location line="+2" />
-        <location line="+1426" />
+        <location line="+1427" />
         <source>Mouse and trackpad</source>
         <translation>[Möüsé áñd tráçkpád~~~~~]</translation>
     </message>
     <message>
-        <location line="-1424" />
+        <location line="-1425" />
         <source>Default (middle-drag pans, Shift+middle orbits)</source>
         <translation>[Défáült (mîddlé-drág páñs, Shîft+mîddlé örbîts)~~~~~~~~~~~~]</translation>
     </message>
@@ -4390,30 +4405,30 @@
     </message>
     <message>
         <location line="+11" />
-        <location line="+1399" />
+        <location line="+1400" />
         <source>Theme</source>
         <translation>[Thémé~]</translation>
     </message>
     <message>
-        <location line="-1397" />
-        <location line="+1352" />
+        <location line="-1398" />
+        <location line="+1353" />
         <source>Light</source>
         <translation>[Lîght~]</translation>
     </message>
     <message>
-        <location line="-1352" />
-        <location line="+1351" />
+        <location line="-1353" />
+        <location line="+1352" />
         <source>Dark</source>
         <translation>[Dárk~]</translation>
     </message>
     <message>
-        <location line="-1350" />
-        <location line="+1352" />
+        <location line="-1351" />
+        <location line="+1353" />
         <source>High contrast</source>
         <translation>[Hîgh çöñtrást~~~~]</translation>
     </message>
     <message>
-        <location line="-1344" />
+        <location line="-1345" />
         <source>&amp;Help</source>
         <translation>[&amp;Hélp~]</translation>
     </message>
@@ -4530,12 +4545,12 @@
     </message>
     <message>
         <location line="+2" />
-        <location line="+1946" />
+        <location line="+1947" />
         <source>Rename…</source>
         <translation>[Réñámé…~~]</translation>
     </message>
     <message>
-        <location line="-1942" />
+        <location line="-1943" />
         <source>Design browser</source>
         <translation>[Désîgñ bröwsér~~~~]</translation>
     </message>
@@ -4546,13 +4561,13 @@
     </message>
     <message>
         <location line="+5" />
-        <location line="+1411" />
+        <location line="+1412" />
         <location line="+58" />
         <source>Properties</source>
         <translation>[Pröpértîés~~~]</translation>
     </message>
     <message>
-        <location line="-1463" />
+        <location line="-1464" />
         <source>Properties and help</source>
         <translation>[Pröpértîés áñd hélp~~~~~]</translation>
     </message>
@@ -4638,12 +4653,12 @@
     </message>
     <message>
         <location line="+18" />
-        <location line="+1834" />
+        <location line="+1835" />
         <source>Move rollback marker</source>
         <translation>[Mövé röllbáçk márkér~~~~~~]</translation>
     </message>
     <message>
-        <location line="-1730" />
+        <location line="-1731" />
         <source>Start here: every part begins as a flat sketch.
 Click Sketch on the toolbar, then click a plane.
 Or open the phone stand sample (File ▸ Open a sample).</source>
@@ -4838,12 +4853,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+0" />
-        <location line="+336" />
+        <location line="+337" />
         <source>Jigsmith designs (*.jig)</source>
         <translation>[Jîgsmîth désîgñs (*.jîg)~~~~~~]</translation>
     </message>
     <message>
-        <location line="-289" />
+        <location line="-290" />
         <source>Save view</source>
         <translation>[Sávé vîéw~~]</translation>
     </message>
@@ -4878,7 +4893,7 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
         <translation>[Öpéñ á skétçh fîrst: çlîçk Skétçh, théñ á pláñé.~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+41" />
+        <location line="+42" />
         <source>That tool is not available yet.</source>
         <translation>[Thát tööl îs ñöt áváîláblé ýét.~~~~~~~~]</translation>
     </message>
@@ -6696,7 +6711,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
 <context>
     <name>jigapp::SketchEditor</name>
     <message>
-        <location filename="../app/SketchEditor.cpp" line="+147" />
+        <location filename="../app/SketchEditor.cpp" line="+148" />
         <location line="+2" />
         <source>Font</source>
         <translation>[Föñt~]</translation>
@@ -6713,12 +6728,12 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
     </message>
     <message>
         <location line="+0" />
-        <location line="+677" />
+        <location line="+729" />
         <source>Spacing</source>
         <translation>[Spáçîñg~~]</translation>
     </message>
     <message>
-        <location line="-613" />
+        <location line="-664" />
         <source>Click to select, drag to move what is still free. Delete removes the selection.</source>
         <translation>[Çlîçk tö séléçt, drág tö mövé whát îs stîll fréé. Délété rémövés thé séléçtîöñ.~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -6962,6 +6977,12 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
     </message>
     <message>
         <location line="+3" />
+        <source>Click the first line the circle touches.</source>
+        <translation>[Çlîçk thé fîrst lîñé thé çîrçlé töüçhés.~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+2" />
+        <location line="+2" />
         <source>Type the radius and press Enter.</source>
         <translation>[Týpé thé rádîüs áñd préss Éñtér.~~~~~~~~]</translation>
     </message>
@@ -7031,6 +7052,21 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
         <translation>[Ártwörk sîzé~~~]</translation>
     </message>
     <message>
+        <location line="+13" />
+        <source>The radius must be larger than zero.</source>
+        <translation>[Thé rádîüs müst bé lárgér tháñ zérö.~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+22" />
+        <source>The two lines are parallel: use a circle between them instead (its diameter is the gap).</source>
+        <translation>[Thé twö lîñés áré párállél: üsé á çîrçlé bétwééñ thém îñstéád (îts dîámétér îs thé gáp).~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+12" />
+        <source>Tangent circle</source>
+        <translation>[Táñgéñt çîrçlé~~~~]</translation>
+    </message>
+    <message>
         <location line="+24" />
         <source>Round corner</source>
         <translation>[Röüñd çörñér~~~]</translation>
@@ -7093,12 +7129,12 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
     </message>
     <message>
         <location line="+16" />
-        <location line="+827" />
+        <location line="+853" />
         <source>Minor radius</source>
         <translation>[Mîñör rádîüs~~~]</translation>
     </message>
     <message>
-        <location line="-806" />
+        <location line="-832" />
         <source>Ellipse</source>
         <translation>[Éllîpsé~~]</translation>
     </message>
@@ -7135,7 +7171,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
     <message>
         <location line="-260" />
         <location line="+271" />
-        <location line="+651" />
+        <location line="+677" />
         <location line="+101" />
         <location line="+27" />
         <location line="+3" />
@@ -7144,15 +7180,20 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
         <translation>[Léñgth~~]</translation>
     </message>
     <message>
-        <location line="-1491" />
+        <location line="-1568" />
         <source>Click the end, or type a length (Tab: angle) and press Enter. Drag from the last point for a tangent arc. Click the first point to close. Esc ends.</source>
         <translation>[Çlîçk thé éñd, ör týpé á léñgth (Táb: áñglé) áñd préss Éñtér. Drág fröm thé lást pöîñt för á táñgéñt árç. Çlîçk thé fîrst pöîñt tö çlösé. Ésç éñds.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+423" />
+        <location line="+87" />
+        <source>Click the second line. The circle goes in the corner between the parts you clicked.</source>
+        <translation>[Çlîçk thé séçöñd lîñé. Thé çîrçlé göés îñ thé çörñér bétwééñ thé párts ýöü çlîçkéd.~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+387" />
         <location line="+271" />
         <location line="+77" />
-        <location line="+684" />
+        <location line="+710" />
         <location line="+18" />
         <location line="+18" />
         <location line="+100" />
@@ -7160,7 +7201,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
         <translation>[Áñglé~]</translation>
     </message>
     <message>
-        <location line="-857" />
+        <location line="-883" />
         <source>Center rectangle</source>
         <translation>[Çéñtér réçtáñglé~~~~~]</translation>
     </message>
@@ -7196,13 +7237,13 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
     </message>
     <message>
         <location line="+16" />
-        <location line="+606" />
+        <location line="+632" />
         <location line="+130" />
         <source>Width</source>
         <translation>[Wîdth~]</translation>
     </message>
     <message>
-        <location line="-704" />
+        <location line="-730" />
         <source>Slot</source>
         <translation>[Slöt~]</translation>
     </message>
@@ -7213,13 +7254,13 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
     </message>
     <message>
         <location line="+7" />
-        <location line="+542" />
+        <location line="+568" />
         <location line="+160" />
         <source>Text</source>
         <translation>[Téxt~]</translation>
     </message>
     <message>
-        <location line="-689" />
+        <location line="-715" />
         <source>A polygon needs 3 to 64 sides.</source>
         <translation>[Á pölýgöñ ñééds 3 tö 64 sîdés.~~~~~~]</translation>
     </message>
@@ -7244,7 +7285,18 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
         <translation>[Pröjéçt~~]</translation>
     </message>
     <message>
-        <location line="+9" />
+        <location line="+11" />
+        <source>Click a straight line.</source>
+        <translation>[Çlîçk á stráîght lîñé.~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+4" />
+        <source>Click a different line.</source>
+        <translation>[Çlîçk á dîfféréñt lîñé.~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+7" />
+        <location line="+13" />
         <location line="+158" />
         <location line="+113" />
         <source>Radius</source>

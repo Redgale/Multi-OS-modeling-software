@@ -1740,6 +1740,51 @@ private slots:
         QTRY_VERIFY(w.featurePanel() == nullptr);
     }
 
+    // Tangent circle: two lines, a click on the side, a typed radius.
+    void tangentCircle()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        {
+            jig::ScriptRunner r(w.document());
+            QVERIFY(r.runText("sketch id=s1 plane=XY\nline sketch=s1 p1=0,0 p2=40,0\nline sketch=s1 p1=0,0 p2=20,30\n").ok());
+        }
+        w.editFeature(0);
+        QTRY_VERIFY(w.sketchEditor() != nullptr);
+        SketchEditor* sk = w.sketchEditor();
+        Viewport* view = w.viewport();
+        auto click = [&](double x, double y) {
+            QTest::mouseMove(view, sk->screenOf(x, y));
+            QTest::mouseClick(view, Qt::LeftButton, Qt::NoModifier, sk->screenOf(x, y));
+        };
+        w.runCommand("sketch.circle_tangent");
+        QCOMPARE(int(sk->tool()), int(SketchEditor::Tool::CircleTangent));
+        click(30, 0);   // the floor line
+        click(10, 15);  // the slanted line (it runs through (10, 15)), the circle goes between them
+        sk->typeValues({"4 mm"});
+        QVERIFY2(sk->message().isEmpty(), qPrintable(sk->message()));
+        const jig::SketchEntity* c = nullptr;
+        for (auto& [id, e] : sk->sketch().entities()) {
+            if (e.type == jig::EntityType::Circle) {
+                c = &e;
+            }
+        }
+        QVERIFY(c);
+        QVERIFY(std::abs(c->r - 4) < 1e-6);
+        auto [cx, cy] = sk->sketch().pointXY(c->center);
+        QVERIFY(std::abs(cy - 4) < 1e-6);  // 4 above the floor line
+        // and 4 from the slanted line through the origin with direction (2, 3)
+        const double dist = std::abs(3 * cx - 2 * cy) / std::sqrt(13.0);
+        QVERIFY2(std::abs(dist - 4) < 1e-6, qPrintable(QString::number(dist)));
+        QVERIFY(cx > 0);  // inside the corner, between the lines
+        // a click that is not on a line is explained
+        w.runCommand("sketch.circle_tangent");
+        click(30, 30);
+        QVERIFY(!sk->message().isEmpty());
+    }
+
     // Line tool: press on the chain's end and drag to draw a tangent arc, then lines go on.
     void lineDragToTangentArc()
     {

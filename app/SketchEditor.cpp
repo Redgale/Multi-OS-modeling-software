@@ -134,7 +134,8 @@ SketchEditor::SketchEditor(Viewport* view, jig::Document& doc, std::string featu
                 startAtTyped(x.value(), y.value());
                 return;
             }
-            if (dimTarget_ || editText_ || editArtwork_ || editConstraint_ || roundAt_ || !offsetChain_.empty()) {
+            if (dimTarget_ || editText_ || editArtwork_ || editConstraint_ || roundAt_ || !offsetChain_.empty() ||
+                tanLines_.size() == 2) {
                 placeSecond(cursor_, inputValues());
                 return;
             }
@@ -474,6 +475,7 @@ void SketchEditor::resetToolState()
     editConstraint_ = 0;
     editArtwork_ = 0;
     roundAt_.reset();
+    tanLines_.clear();
     trimHover_.reset();
     gridCols_ = 0;
     gridDx_ = 0;
@@ -581,6 +583,10 @@ QString SketchEditor::toolHint() const
         case Tool::Project:
             return tr("Click an edge of a body (or a face, for its whole outline) to bring it into the sketch. "
                       "The copy is fixed in place; it does not follow later changes yet.");
+        case Tool::CircleTangent:
+            return tanLines_.empty()      ? tr("Click the first line the circle touches.")
+                   : tanLines_.size() == 1 ? tr("Click the second line. The circle goes in the corner between the parts you clicked.")
+                                           : tr("Type the radius and press Enter.");
         case Tool::Round:
             return roundAt_ ? tr("Type the radius and press Enter.")
                             : tr("Click the corner where two lines meet to round it.");
@@ -775,6 +781,53 @@ void SketchEditor::placeSecond(const Snap& cur, const QStringList& rawTyped)
             art->widthValue = w.value();
         }
         if (commit(tr("Artwork size"), s)) {
+            resetToolState();
+        }
+        rebuildOverlay();
+        emit stateChanged();
+        return;
+    }
+    if (tool_ == Tool::CircleTangent && tanLines_.size() == 2) {
+        if (typed.isEmpty() || typed[0].isEmpty()) {
+            return;
+        }
+        auto r = doc_.evalLength(typed[0].toStdString());
+        if (!r || !(r.value() > 0)) {
+            message_ = !r ? coreText(r.error().message) : tr("The radius must be larger than zero.");
+            emit stateChanged();
+            return;
+        }
+        // the centre is the radius away from both lines, in the corner between the two parts
+        // that were clicked: each click says which side of the other line the circle is on
+        QPointF P[2], N[2];
+        for (int k = 0; k < 2; ++k) {
+            const jig::SketchEntity* L = work_.entity(tanLines_[size_t(k)]);
+            auto [x1, y1] = work_.pointXY(L->p1);
+            auto [x2, y2] = work_.pointXY(L->p2);
+            const QPointF d(x2 - x1, y2 - y1);
+            const double len = std::hypot(d.x(), d.y());
+            P[k] = QPointF(x1, y1);
+            N[k] = QPointF(-d.y() / len, d.x() / len);
+            const QPointF v = tanClicks_[1 - k] - P[k];
+            if (v.x() * N[k].x() + v.y() * N[k].y() < 0) {
+                N[k] = -N[k];
+            }
+        }
+        const double det = N[0].x() * N[1].y() - N[0].y() * N[1].x();
+        if (std::abs(det) < 1e-9) {
+            message_ = tr("The two lines are parallel: use a circle between them instead (its diameter is the gap).");
+            emit stateChanged();
+            return;
+        }
+        const double c0 = N[0].x() * P[0].x() + N[0].y() * P[0].y() + r.value();
+        const double c1 = N[1].x() * P[1].x() + N[1].y() * P[1].y() + r.value();
+        const double cx = (c0 * N[1].y() - c1 * N[0].y()) / det, cy = (N[0].x() * c1 - N[1].x() * c0) / det;
+        jig::Sketch s = work_;
+        const int c = s.addCircle(cx, cy, r.value());
+        s.addConstraint(jig::ConstraintType::Tangent, tanLines_[0], c);
+        s.addConstraint(jig::ConstraintType::Tangent, tanLines_[1], c);
+        s.addConstraint(jig::ConstraintType::Radius, c, 0, 0, typed[0].toStdString());
+        if (commit(tr("Tangent circle"), s)) {
             resetToolState();
         }
         rebuildOverlay();
@@ -1694,6 +1747,32 @@ bool SketchEditor::mouseRelease(QMouseEvent* e)
             commit(tr("Project"), s);
             break;
         }
+        case Tool::CircleTangent: {
+            auto loc = toLocal(pos);
+            if (!loc || tanLines_.size() >= 2) {
+                break;
+            }
+            auto near = work_.curveNear(loc->x(), loc->y(), true);
+            const jig::SketchEntity* L = near ? work_.entity(near->first) : nullptr;
+            if (!L || L->type != jig::EntityType::Line || near->second > 8 * view_->worldPerPixel()) {
+                message_ = tr("Click a straight line.");
+                break;
+            }
+            if (!tanLines_.empty() && tanLines_[0] == near->first) {
+                message_ = tr("Click a different line.");
+                break;
+            }
+            message_.clear();
+            tanClicks_[tanLines_.size()] = *loc;
+            tanLines_.push_back(near->first);
+            if (tanLines_.size() == 2) {
+                showInput({tr("Radius")}, {QString::fromStdString(doc_.defaultLength(5, 0.25))});
+                inputFields_[0]->selectAll();
+                inputFields_[0]->setFocus();
+                inputBox_->move(pos.toPoint() + QPoint(18, 18));
+            }
+            break;
+        }
         case Tool::Round: {
             auto loc = toLocal(pos);
             if (!loc) {
@@ -2227,7 +2306,7 @@ bool SketchEditor::key(QKeyEvent* e)
     }
     if (e->key() == Qt::Key_Escape) {
         if (first_ || dimFirst_ || dimTarget_ || editConstraint_ || editText_ || editArtwork_ || roundAt_ ||
-            !offsetChain_.empty()) {
+            !offsetChain_.empty() || !tanLines_.empty()) {
             resetToolState();
         }
         else if (tool_ != Tool::Select) {
