@@ -17,6 +17,13 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING "" FORCE)
 endif()
 
+# Linux: write the library search path as RPATH rather than RUNPATH, so it also applies to
+# the libraries' own dependencies. An OCCT built into a private prefix (scripts/build-occt.sh)
+# has no runpath of its own, and libTKFeat must still find libTKBool beside it.
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    add_link_options("LINKER:--disable-new-dtags")
+endif()
+
 include(cmake/Dependencies.cmake)
 include(cmake/Warnings.cmake)
 
