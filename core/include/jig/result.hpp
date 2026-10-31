@@ -13,12 +13,22 @@
 namespace jig
 {
 
+// A one-click repair: set a step's parameter to a value ("size" = the step's main size,
+// renamed to the real parameter by the step that reports it).
+struct Fix
+{
+    std::string label;  // "Use 1.8 mm"
+    std::string param;  // "radius", "thickness", "op", …
+    std::string value;  // "1.8 mm", "new", …
+};
+
 struct Error
 {
     std::string code;                      // stable machine id, e.g. "fillet.radius_too_large"
     std::string message;                   // one plain-language sentence
     std::vector<std::string> suggestions;  // short actionable repairs
     std::string detail;                    // technical detail for logs / "more info"
+    std::vector<Fix> fixes;                // one-click repairs, when there is a sure one
 };
 
 template<typename T>
@@ -74,7 +84,7 @@ inline Error makeError(std::string code,
                        std::vector<std::string> suggestions = {},
                        std::string detail = {})
 {
-    return Error {std::move(code), std::move(message), std::move(suggestions), std::move(detail)};
+    return Error {std::move(code), std::move(message), std::move(suggestions), std::move(detail), {}};
 }
 
 }  // namespace jig

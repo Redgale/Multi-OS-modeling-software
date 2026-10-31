@@ -9,6 +9,7 @@
 #include <QCheckBox>
 #include <QListWidget>
 #include <QLineEdit>
+#include <QPushButton>
 #include <QSettings>
 #include <QTableWidget>
 #include <QToolButton>
@@ -940,6 +941,40 @@ private slots:
         for (auto& [id, b] : st.bodies) {
             QVERIFY(std::abs(jig::massProperties(b->shape()).zmax - 12) < 1e-9);
         }
+    }
+
+    // A join that misses the body: the panel offers "Make it a new body", which fixes it.
+    void oneClickFixNewBody()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        {
+            jig::ScriptRunner r(w.document());
+            QVERIFY(r.runText("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=10 h=10\nextrude id=e1 sketch=s1 distance=10\n"
+                              "sketch id=s2 plane=XY\nrect sketch=s2 center=50,0 w=10 h=10\n").ok());
+        }
+        w.runCommand("solid.extrude");
+        auto* ep = qobject_cast<ExtrudePanel*>(w.featurePanel());
+        QVERIFY(ep);
+        ep->operation()->setCurrentIndex(ep->operation()->findData("join"));
+        QTest::qWait(300);
+        QPushButton* fix = nullptr;
+        QTRY_VERIFY([&] {
+            for (auto* b : ep->findChildren<QPushButton*>()) {
+                if (b->text().contains("new body")) {
+                    fix = b;
+                }
+            }
+            return fix != nullptr;
+        }());
+        QVERIFY(!ep->previewOk());
+        fix->click();
+        QCOMPARE(ep->operation()->currentData().toString(), QString("new"));
+        QTRY_VERIFY(ep->previewOk());
+        QVERIFY(ep->accept());
+        QTRY_COMPARE(int(w.document().state().bodies.size()), 2);
     }
 
     // Translations: in the pseudo-language every menu entry and toolbar button is translated

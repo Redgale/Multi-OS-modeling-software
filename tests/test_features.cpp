@@ -1246,3 +1246,39 @@ TEST(Extrude, ThinWallsAlongOpenCurves)
     r.runText("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=10 h=10\nextrude id=e1 sketch=s1 profiles=open thin=2mm\n");
     EXPECT_NE(bad->status(1).message.find("open curves"), std::string::npos) << bad->status(1).message;
 }
+
+TEST(Fixes, StepsOfferOneClickRepairs)
+{
+    auto fixOf = [](const Document& d, int i, const std::string& param) -> std::string {
+        for (auto& f : d.status(i).fixes) {
+            if (f.param == param) {
+                return f.value;
+            }
+        }
+        return {};
+    };
+    // a fillet far too big for a 10 mm block: a smaller radius to use
+    auto fil = std::make_unique<Document>();
+    ScriptRunner r1(*fil);
+    r1.runText("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=40 h=30\nextrude id=e1 sketch=s1 distance=10\n"
+               "fillet id=f1 edges=face:e1/end radius=30mm body=e1\n");
+    const std::string r = fixOf(*fil, 2, "radius");
+    ASSERT_FALSE(r.empty()) << fil->status(2).message;
+    // and it works when applied
+    auto ok = build("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=40 h=30\nextrude id=e1 sketch=s1 distance=10\n"
+                    "fillet id=f1 edges=face:e1/end radius=" + r + " body=e1\n");
+    expectAllOk(*ok);
+    // a join that does not touch: make it a new body
+    auto apart = std::make_unique<Document>();
+    ScriptRunner r2(*apart);
+    r2.runText("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=10 h=10\nextrude id=e1 sketch=s1 distance=10\n"
+               "sketch id=s2 plane=XY\nrect sketch=s2 center=50,0 w=10 h=10\nextrude id=e2 sketch=s2 distance=10 op=join\n");
+    EXPECT_EQ(fixOf(*apart, 3, "op"), "new");
+    // a taper too steep: half the angle
+    auto steep = std::make_unique<Document>();
+    ScriptRunner r3(*steep);
+    r3.runText("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=10 h=10\nextrude id=e1 sketch=s1 distance=50 taper=40deg\n");
+    if (steep->status(1).level == StatusLevel::Error) {
+        EXPECT_FALSE(fixOf(*steep, 1, "taper").empty());
+    }
+}

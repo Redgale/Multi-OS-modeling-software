@@ -103,6 +103,11 @@ protected:
     virtual void previewed(const jig::FeatureOutcome&) {}
     void schedulePreview();
     void addRow(const QString& label, QWidget* w);
+    // Which field holds a step parameter, so a one-click fix can set it.
+    void bindParam(const std::string& param, QWidget* field)
+    {
+        paramFields_[param] = field;
+    }
     int insertIndex() const;
     std::shared_ptr<const jig::ModelState> stateBefore() const;
 
@@ -112,6 +117,7 @@ protected:
     QVBoxLayout* form_;
     QLabel* status_;
     QWidget* fixes_;
+    std::map<std::string, QWidget*> paramFields_;
     QPushButton* ok_;
     QTimer* timer_;
     bool previewOk_ = false;

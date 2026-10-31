@@ -1364,10 +1364,12 @@ Result<NamedShape> booleanOp(const std::string& featureId,
             ++before;
         }
         if (op == BoolOp::Join && solids > before) {
-            return makeError("boolean.not_touching",
-                             "The new shape does not touch the body, so it cannot be joined.",
-                             {"Use 'New body' if you want a separate part.",
-                              "Change the distance or sketch position so the shapes touch."});
+            Error err = makeError("boolean.not_touching",
+                                  "The new shape does not touch the body, so it cannot be joined.",
+                                  {"Use 'New body' if you want a separate part.",
+                                   "Change the distance or sketch position so the shapes touch."});
+            err.fixes.push_back({"Make it a new body", "op", "new"});
+            return err;
         }
         // Merge coplanar / co-cylindrical pieces the boolean left behind (otherwise a
         // fused base and back would keep a seam across the bottom face that a fillet
@@ -1575,10 +1577,12 @@ Result<NamedShape> edgeTreatment(const std::string& featureId,
             }
         }
         std::vector<std::string> sug;
+        double fixSize = 0;
         if (ok > 0) {
             double s = std::floor(ok * 0.95 * 10) / 10;
             if (s > 0) {
                 sug.push_back("Try " + fmtMm(s) + " or less.");
+                fixSize = s;
             }
         }
         sug.push_back(chamfer ? "Bevel fewer edges at once, or chamfer the longer edges first."
@@ -1593,7 +1597,11 @@ Result<NamedShape> edgeTreatment(const std::string& featureId,
                           : "The rounded surfaces for a " + fmtMm(radius)
                                 + " fillet could not be joined where these edges meet.";
         }
-        return makeError(what + ".failed", msg, sug, why);
+        Error err = makeError(what + ".failed", msg, sug, why);
+        if (fixSize > 0) {
+            err.fixes.push_back({"Use " + fmtMm(fixSize), "size", fmtMm(fixSize)});
+        }
+        return err;
     }
     NamedShape out(*res);
     propagateFaceNames(*mk, {&body}, out);
@@ -1782,17 +1790,23 @@ Result<NamedShape> shellSolid(const std::string& featureId,
             }
         }
         std::vector<std::string> sug;
+        double fixSize = 0;
         if (ok > 0) {
             double s = std::floor(ok * 0.95 * 10) / 10;
             if (s > 0) {
                 sug.push_back("Try " + fmtMm(s) + " or less.");
+                fixSize = s;
             }
         }
         sug.push_back("Add fillets to sharp inside corners first, or remove a different face.");
-        return makeError("shell.failed",
-                         "A " + fmtMm(thickness) + " wall does not fit inside this shape: some part of it is "
-                             "thinner than twice the wall.",
-                         sug, why);
+        Error err = makeError("shell.failed",
+                              "A " + fmtMm(thickness) + " wall does not fit inside this shape: some part of it is "
+                                  "thinner than twice the wall.",
+                              sug, why);
+        if (fixSize > 0) {
+            err.fixes.push_back({"Use " + fmtMm(fixSize), "size", fmtMm(fixSize)});
+        }
+        return err;
     }
     NamedShape out(*res);
     propagateFaceNames(*mk, {&body}, out);

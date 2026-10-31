@@ -423,26 +423,35 @@ void FeaturePanel::runPreview()
     else {
         QString t = "<b>✕ " + q(o.status.message).toHtmlEscaped() + "</b>";
         status_->setText(t);
+        // sure repairs as buttons; the rest as advice
+        for (const auto& fx : o.status.fixes) {
+            auto it = paramFields_.find(fx.param);
+            if (it == paramFields_.end()) {
+                continue;
+            }
+            auto* b = new QPushButton(fx.param == "op" && fx.value == "new" ? tr("Make it a new body")
+                                                                            : tr("Use %1").arg(q(fx.value)),
+                                      fixes_);
+            b->setToolTip(tr("Changes this step's setting and shows the result."));
+            QWidget* field = it->second;
+            const QString value = q(fx.value);
+            connect(b, &QPushButton::clicked, this, [field, value] {
+                if (auto* e = qobject_cast<ExprField*>(field)) {
+                    e->setText(value);
+                }
+                else if (auto* c = qobject_cast<QComboBox*>(field)) {
+                    c->setCurrentIndex(std::max(0, c->findData(value)));
+                }
+                else if (auto* cb = qobject_cast<QCheckBox*>(field)) {
+                    cb->setChecked(value == "yes");
+                }
+            });
+            fixes_->layout()->addWidget(b);
+        }
         for (auto& sgg : o.status.suggestions) {
-            // "Try 1.8 mm or less." becomes a one-click fix
-            std::smatch m;
-            const std::string s = sgg;
-            if (std::regex_search(s, m, std::regex("^Try ([0-9.]+ ?mm)"))) {
-                auto* b = new QPushButton(tr("Use %1").arg(q(m[1].str())), fixes_);
-                const QString value = q(m[1].str());
-                connect(b, &QPushButton::clicked, this, [this, value] {
-                    for (auto* f : findChildren<ExprField*>()) {
-                        f->setText(value);  // the panel's main size field
-                        break;
-                    }
-                });
-                fixes_->layout()->addWidget(b);
-            }
-            else {
-                auto* l = new QLabel("• " + q(s), fixes_);
-                l->setWordWrap(true);
-                fixes_->layout()->addWidget(l);
-            }
+            auto* l = new QLabel("• " + q(sgg), fixes_);
+            l->setWordWrap(true);
+            fixes_->layout()->addWidget(l);
         }
     }
     ok_->setEnabled(previewOk_);
@@ -558,6 +567,10 @@ ExtrudePanel::ExtrudePanel(jig::Document& doc, Viewport* view, std::string editI
     addRow(tr("Wall thickness"), thin_);
     addRow(tr("Wall position"), thinSide_);
     addRow(tr("Operation"), op_);
+    for (auto [param, field] : std::initializer_list<std::pair<const char*, QWidget*>> {
+        {"distance", distance_}, {"taper", taper_}, {"thin", thin_}, {"op", op_}}) {
+        bindParam(param, field);
+    }
 
     // sketches available before the insertion point
     const auto before = stateBefore();
@@ -881,6 +894,7 @@ FilletPanel::FilletPanel(jig::Document& doc, Viewport* view, std::string editId,
     flip_ = new QCheckBox(chamfer ? tr("Swap the two sides") : tr("Swap the start and end"), this);
     addRow(tr("Type"), type_);
     addRow(chamfer ? tr("Distance") : tr("Radius"), radius_);
+    bindParam(chamfer ? "distance" : "radius", radius_);
     addRow(chamfer ? tr("Second distance") : tr("Radius at the other end"), second_);
     addRow(tr("Angle from the first face"), angle_);
     form_->addWidget(flip_);
@@ -1092,6 +1106,7 @@ ShellPanel::ShellPanel(jig::Document& doc, Viewport* view, std::string editId, Q
     addRow(tr("Open faces"), count_);
     form_->addWidget(clear);
     addRow(tr("Wall thickness"), thickness_);
+    bindParam("thickness", thickness_);
     auto* tip = new QLabel(tr("For 3D prints, use at least two nozzle widths (0.8 mm for a 0.4 mm nozzle)."), this);
     tip->setWordWrap(true);
     form_->addWidget(tip);
@@ -1229,6 +1244,7 @@ RevolvePanel::RevolvePanel(jig::Document& doc, Viewport* view, std::string editI
     addRow(tr("Axis"), axis_);
     addRow(tr("Angle"), angle_);
     addRow(tr("Operation"), op_);
+    bindParam("op", op_);
     const auto before = stateBefore();
     fillSketches(sketch_, doc_, insertIndex(), *before);
     const jig::Feature* edit = editId_.empty() ? nullptr : doc_.feature(editId_);
@@ -1369,10 +1385,12 @@ HolePanel::HolePanel(jig::Document& doc, Viewport* view, std::string editId, QWi
     addRow(tr("Screw size"), size_);
     addRow(tr("Fit"), fit_);
     addRow(tr("Diameter"), diameter_);
+    bindParam("diameter", diameter_);
     addRow(tr("Extent"), extent_);
     addRow(tr("Depth"), depth_);
     addRow(tr("Bottom"), bottom_);
     addRow(tr("Counterbore diameter"), cboreDiameter_);
+    bindParam("cbore_diameter", cboreDiameter_);
     addRow(tr("Counterbore depth"), cboreDepth_);
     addRow(tr("Countersink diameter"), csinkDiameter_);
     addRow(tr("Countersink angle"), csinkAngle_);

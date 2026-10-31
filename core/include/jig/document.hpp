@@ -102,6 +102,7 @@ struct FeatureStatus
     std::string message;
     std::vector<std::string> suggestions;
     std::string detail;
+    std::vector<Fix> fixes;  // one-click repairs (set a parameter of this step)
 };
 
 struct SketchState

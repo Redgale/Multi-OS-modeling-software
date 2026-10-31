@@ -40,7 +40,20 @@ FeatureOutcome failed(std::string message, std::vector<std::string> suggestions 
 
 FeatureOutcome failed(const Error& e)
 {
-    return failed(e.message, e.suggestions, e.detail);
+    FeatureOutcome o = failed(e.message, e.suggestions, e.detail);
+    o.status.fixes = e.fixes;
+    return o;
+}
+
+// The same, with the kernel's generic "size" fix pointed at this step's own parameter.
+FeatureOutcome failed(Error e, const std::string& sizeParam)
+{
+    for (auto& f : e.fixes) {
+        if (f.param == "size") {
+            f.param = sizeParam;
+        }
+    }
+    return failed(e);
 }
 
 std::shared_ptr<ModelState> copyState(const std::shared_ptr<const ModelState>& in)
@@ -606,7 +619,18 @@ FeatureOutcome applyExtrude(const Document& doc, const Feature& f, const std::sh
     }
     auto tool = makeExtrusion(ei);
     if (!tool) {
-        return failed(tool.error());
+        Error e = tool.error();
+        if (e.code == "extrude.taper" && std::abs(ei.taper) > 1e-9) {
+            char buf[32];
+            std::snprintf(buf, sizeof buf, "%.3g deg", ei.taper * 90 / std::numbers::pi);  // half the angle
+            e.fixes.push_back({std::string("Use ") + buf, "taper", buf});
+        }
+        if (e.code == "extrude.thin" && ei.thin > 1e-9) {
+            char buf[32];
+            std::snprintf(buf, sizeof buf, "%.3g mm", ei.thin / 2);
+            e.fixes.push_back({std::string("Use ") + buf, "thin", buf});
+        }
+        return failed(e);
     }
     return applyTool(f, *op, std::move(tool.value()), in, status);
 }
@@ -1315,7 +1339,7 @@ FeatureOutcome applyFillet(const Document& doc, const Feature& f, const std::sha
     auto res = chamfer ? chamferEdges(f.id, *in->bodies.at(bodyId), edges, r.value(), opt)
                        : filletEdges(f.id, *in->bodies.at(bodyId), edges, r.value(), opt);
     if (!res) {
-        return failed(res.error());
+        return failed(res.error(), chamfer ? "distance" : "radius");
     }
     if (rebound) {
         status.level = StatusLevel::Warning;
@@ -1375,7 +1399,7 @@ FeatureOutcome applyShell(const Document& doc, const Feature& f, const std::shar
     }
     auto res = shellSolid(f.id, *bit->second, faces, t.value());
     if (!res) {
-        return failed(res.error());
+        return failed(res.error(), "thickness");
     }
     if (rebound) {
         status.level = StatusLevel::Warning;
