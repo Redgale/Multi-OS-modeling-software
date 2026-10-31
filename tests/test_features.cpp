@@ -1283,6 +1283,34 @@ TEST(Fixes, StepsOfferOneClickRepairs)
     if (steep->status(1).level == StatusLevel::Error) {
         EXPECT_FALSE(fixOf(*steep, 1, "taper").empty());
     }
+    // a counterbore narrower than its hole: a width in proportion, which then works
+    auto cb = std::make_unique<Document>();
+    ScriptRunner r4(*cb);
+    r4.runText(std::string(kBlock) + "hole id=h1 sketch=s2 diameter=4mm depth=8mm type=counterbore cbore_diameter=3mm cbore_depth=2mm\n");
+    const std::string w = fixOf(*cb, 3, "cbore_diameter");
+    ASSERT_FALSE(w.empty()) << cb->status(3).message;
+    expectAllOk(*build(std::string(kBlock) + "hole id=h1 sketch=s2 diameter=4mm depth=8mm type=counterbore cbore_diameter=" + w +
+                       " cbore_depth=2mm\n"));
+    // a counterbore deeper than the hole: a depth that fits
+    auto deep = std::make_unique<Document>();
+    ScriptRunner r5(*deep);
+    r5.runText(std::string(kBlock) + "hole id=h1 sketch=s2 diameter=4mm depth=6mm type=counterbore cbore_diameter=7mm cbore_depth=9mm\n");
+    const std::string h = fixOf(*deep, 3, "cbore_depth");
+    ASSERT_FALSE(h.empty());
+    expectAllOk(*build(std::string(kBlock) + "hole id=h1 sketch=s2 diameter=4mm depth=6mm type=counterbore cbore_diameter=7mm cbore_depth=" + h + "\n"));
+    // a drill point that is not a drill point: 118 deg or flat
+    auto tip = std::make_unique<Document>();
+    ScriptRunner r6(*tip);
+    r6.runText(std::string(kBlock) + "hole id=h1 sketch=s2 diameter=4mm depth=6mm tip=10deg\n");
+    EXPECT_EQ(fixOf(*tip, 3, "tip"), "118 deg");
+    // a countersink narrower than its hole
+    auto cs = std::make_unique<Document>();
+    ScriptRunner r7(*cs);
+    r7.runText(std::string(kBlock) + "hole id=h1 sketch=s2 diameter=4mm extent=all type=countersink csink_diameter=3mm csink_angle=90deg\n");
+    const std::string cw = fixOf(*cs, 3, "csink_diameter");
+    ASSERT_FALSE(cw.empty());
+    expectAllOk(*build(std::string(kBlock) + "hole id=h1 sketch=s2 diameter=4mm extent=all type=countersink csink_diameter=" + cw +
+                       " csink_angle=90deg\n"));
 }
 
 TEST(Text, InstalledFontsByFamilyName)

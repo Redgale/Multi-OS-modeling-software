@@ -1780,7 +1780,7 @@
 <context>
     <name>jigapp::AxisPanel</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="+2236" />
+        <location filename="../app/FeaturePanels.cpp" line="+2252" />
         <source>Construction axis</source>
         <translation>[Çöñstrüçtîöñ áxîs~~~~~]</translation>
     </message>
@@ -1997,7 +1997,7 @@
 <context>
     <name>jigapp::ExprField</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="-2743" />
+        <location filename="../app/FeaturePanels.cpp" line="-2759" />
         <source>e.g. 45 deg</source>
         <translation>[é.g. 45 dég~]</translation>
     </message>
@@ -2010,7 +2010,7 @@
 <context>
     <name>jigapp::ExtrudePanel</name>
     <message>
-        <location line="+384" />
+        <location line="+396" />
         <source>Extrude</source>
         <translation>[Éxtrüdé~~]</translation>
     </message>
@@ -2231,7 +2231,7 @@
 <context>
     <name>jigapp::FeaturePanel</name>
     <message>
-        <location line="-731" />
+        <location line="-743" />
         <source>OK</source>
         <translation>[ÖK~]</translation>
     </message>
@@ -2251,22 +2251,27 @@
         <translation>[Çlösé wîthöüt çháñgîñg áñýthîñg (Ésç).~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+152" />
+        <location line="+157" />
         <source>Preview</source>
         <translation>[Prévîéw~~]</translation>
     </message>
     <message>
-        <location line="+15" />
+        <location line="+16" />
         <source>Make it a new body</source>
         <translation>[Máké ît á ñéw bödý~~~~]</translation>
     </message>
     <message>
-        <location line="+1" />
+        <location line="+0" />
         <source>Use %1</source>
         <translation>[Üsé %1~]</translation>
     </message>
     <message>
-        <location line="+2" />
+        <location line="+5" />
+        <source>%1: use %2</source>
+        <translation>[%1: üsé %2~]</translation>
+    </message>
+    <message>
+        <location line="+4" />
         <source>Changes this step's setting and shows the result.</source>
         <translation>[Çháñgés thîs stép's séttîñg áñd shöws thé résült.~~~~~~~~~~~~~]</translation>
     </message>
@@ -2434,12 +2439,12 @@
     <name>jigapp::HolePanel</name>
     <message>
         <location line="+349" />
-        <location line="+139" />
+        <location line="+143" />
         <source>Hole</source>
         <translation>[Hölé~]</translation>
     </message>
     <message>
-        <location line="-138" />
+        <location line="-142" />
         <source>Drill a hole at every point of a sketch. Sketch on the face to drill, place a Point at each hole centre, then pick the sketch here.</source>
         <translation>[Drîll á hölé át évérý pöîñt öf á skétçh. Skétçh öñ thé fáçé tö drîll, pláçé á Pöîñt át éáçh hölé çéñtré, théñ pîçk thé skétçh héré.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -2540,7 +2545,7 @@
         <translation>[Böttöm~~]</translation>
     </message>
     <message>
-        <location line="+1" />
+        <location line="+2" />
         <source>Counterbore diameter</source>
         <translation>[Çöüñtérböré dîámétér~~~~~~]</translation>
     </message>
@@ -2550,17 +2555,17 @@
         <translation>[Çöüñtérböré dépth~~~~~]</translation>
     </message>
     <message>
-        <location line="+1" />
+        <location line="+2" />
         <source>Countersink diameter</source>
         <translation>[Çöüñtérsîñk dîámétér~~~~~~]</translation>
     </message>
     <message>
-        <location line="+1" />
+        <location line="+2" />
         <source>Countersink angle</source>
         <translation>[Çöüñtérsîñk áñglé~~~~~]</translation>
     </message>
     <message>
-        <location line="+1" />
+        <location line="+2" />
         <source>Pick a screw size to fill in the clearance hole (and the counterbore or countersink for its head). 3D-printed holes often come out small: use Loose, or Custom and add 0.2–0.4 mm.</source>
         <translation>[Pîçk á sçréw sîzé tö fîll îñ thé çléáráñçé hölé (áñd thé çöüñtérböré ör çöüñtérsîñk för îts héád). 3D-prîñtéd hölés öftéñ çömé öüt smáll: üsé Löösé, ör Çüstöm áñd ádd 0.2–0.4 mm.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -4819,7 +4824,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
 <context>
     <name>jigapp::RevolvePanel</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="-1002" />
+        <location filename="../app/FeaturePanels.cpp" line="-1006" />
         <location line="+174" />
         <source>Revolve</source>
         <translation>[Révölvé~~]</translation>
@@ -5925,7 +5930,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
 <context>
     <name>jigapp::SplitPanel</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="+1567" />
+        <location filename="../app/FeaturePanels.cpp" line="+1571" />
         <source>Split body</source>
         <translation>[Splît bödý~~~]</translation>
     </message>

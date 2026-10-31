@@ -55,6 +55,10 @@ private slots:
         QSettings().clear();
         QSettings().setValue("welcomeShown", true);
     }
+    void init()
+    {
+        forgetRememberedValues();  // each test starts with the panels' first-use values
+    }
 
     void everyCommandHasAnIcon()
     {
@@ -1222,6 +1226,42 @@ private slots:
         QTRY_VERIFY(ep->previewOk());
         QVERIFY(ep->accept());
         QTRY_COMPARE(int(w.document().state().bodies.size()), 2);
+    }
+
+    // A counterbore narrower than its hole: the Hole panel offers a width that works.
+    void oneClickFixCounterbore()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        {
+            jig::ScriptRunner r(w.document());
+            QVERIFY(r.runText("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=40 h=30\nextrude id=e1 sketch=s1 distance=10\n"
+                              "sketch id=s2 on=e1/end\npoint sketch=s2 at=0,0\n").ok());
+        }
+        w.runCommand("solid.hole");
+        auto* hp = qobject_cast<HolePanel*>(w.featurePanel());
+        QVERIFY(hp);
+        hp->type()->setCurrentIndex(hp->type()->findData("counterbore"));
+        hp->diameter()->setText("4 mm");
+        hp->cboreDiameter()->setText("3 mm");
+        QTest::qWait(300);
+        QPushButton* fix = nullptr;
+        QTRY_VERIFY([&] {
+            for (auto* b : hp->findChildren<QPushButton*>()) {
+                if (b->isVisible() && b->text().startsWith("Use ")) {
+                    fix = b;
+                }
+            }
+            return fix != nullptr;
+        }());
+        QVERIFY(!hp->previewOk());
+        fix->click();
+        QVERIFY(hp->cboreDiameter()->value() > 4);
+        QTRY_VERIFY(hp->previewOk());
+        QVERIFY(hp->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
     }
 
     // Translations: in the pseudo-language every menu entry and toolbar button is translated

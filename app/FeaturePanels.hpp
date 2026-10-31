@@ -65,6 +65,10 @@ private:
 // that names it as its buddy) as its accessible name, so screen readers say what it is.
 void nameInputsFromLabels(QWidget* root);
 
+// Panels remember the values last used in this session (a fillet radius, a hole type);
+// this forgets them (each UI test starts fresh).
+void forgetRememberedValues();
+
 // Anything shown in the side dock while a tool runs (feature panels, Measure).
 class ToolPanel : public QWidget
 {
@@ -343,6 +347,10 @@ public:
     QComboBox* bottom() const
     {
         return bottom_;
+    }
+    ExprField* cboreDiameter() const
+    {
+        return cboreDiameter_;
     }
 
 protected:

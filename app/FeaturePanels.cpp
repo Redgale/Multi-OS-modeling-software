@@ -304,6 +304,11 @@ void FeaturePanel::keyPressEvent(QKeyEvent* e)
     ToolPanel::keyPressEvent(e);
 }
 
+void forgetRememberedValues()
+{
+    remembered().clear();
+}
+
 void nameInputsFromLabels(QWidget* root)
 {
     auto plain = [](const QLabel* l) { return QTextDocumentFragment::fromHtml(l->text()).toPlainText().trimmed(); };
@@ -432,9 +437,16 @@ void FeaturePanel::runPreview()
             if (it == paramFields_.end()) {
                 continue;
             }
-            auto* b = new QPushButton(fx.param == "op" && fx.value == "new" ? tr("Make it a new body")
-                                                                            : tr("Use %1").arg(q(fx.value)),
-                                      fixes_);
+            // name the field when there is more than one way to fix it ("Counterbore depth: use 2 mm")
+            QString text = fx.param == "op" && fx.value == "new" ? tr("Make it a new body") : tr("Use %1").arg(q(fx.value));
+            if (o.status.fixes.size() > 1 && fx.param != "op") {
+                const int i = form_->indexOf(it->second);
+                auto* item = i > 0 ? form_->itemAt(i - 1) : nullptr;
+                if (auto* label = item ? qobject_cast<QLabel*>(item->widget()) : nullptr) {
+                    text = tr("%1: use %2").arg(label->text(), q(fx.value));
+                }
+            }
+            auto* b = new QPushButton(text, fixes_);
             b->setToolTip(tr("Changes this step's setting and shows the result."));
             QWidget* field = it->second;
             const QString value = q(fx.value);
@@ -1634,11 +1646,15 @@ HolePanel::HolePanel(jig::Document& doc, Viewport* view, std::string editId, QWi
     addRow(tr("Extent"), extent_);
     addRow(tr("Depth"), depth_);
     addRow(tr("Bottom"), bottom_);
+    bindParam("tip", bottom_);
     addRow(tr("Counterbore diameter"), cboreDiameter_);
     bindParam("cbore_diameter", cboreDiameter_);
     addRow(tr("Counterbore depth"), cboreDepth_);
+    bindParam("cbore_depth", cboreDepth_);
     addRow(tr("Countersink diameter"), csinkDiameter_);
+    bindParam("csink_diameter", csinkDiameter_);
     addRow(tr("Countersink angle"), csinkAngle_);
+    bindParam("csink_angle", csinkAngle_);
     auto* tip = new QLabel(tr("Pick a screw size to fill in the clearance hole (and the counterbore or countersink "
                               "for its head). 3D-printed holes often come out small: use Loose, or Custom and add "
                               "0.2–0.4 mm."),

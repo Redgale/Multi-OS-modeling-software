@@ -1781,7 +1781,7 @@
 <context>
     <name>jigapp::AxisPanel</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="+2236"/>
+        <location filename="../app/FeaturePanels.cpp" line="+2252"/>
         <source>Construction axis</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1998,7 +1998,7 @@
 <context>
     <name>jigapp::ExprField</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="-2743"/>
+        <location filename="../app/FeaturePanels.cpp" line="-2759"/>
         <source>e.g. 45 deg</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2011,7 +2011,7 @@
 <context>
     <name>jigapp::ExtrudePanel</name>
     <message>
-        <location line="+384"/>
+        <location line="+396"/>
         <source>Extrude</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2232,7 +2232,7 @@
 <context>
     <name>jigapp::FeaturePanel</name>
     <message>
-        <location line="-731"/>
+        <location line="-743"/>
         <source>OK</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2252,22 +2252,27 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+152"/>
+        <location line="+157"/>
         <source>Preview</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+15"/>
+        <location line="+16"/>
         <source>Make it a new body</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
+        <location line="+0"/>
         <source>Use %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+2"/>
+        <location line="+5"/>
+        <source>%1: use %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
         <source>Changes this step&apos;s setting and shows the result.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2437,12 +2442,12 @@
     <name>jigapp::HolePanel</name>
     <message>
         <location line="+349"/>
-        <location line="+139"/>
+        <location line="+143"/>
         <source>Hole</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-138"/>
+        <location line="-142"/>
         <source>Drill a hole at every point of a sketch. Sketch on the face to drill, place a Point at each hole centre, then pick the sketch here.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2543,7 +2548,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
+        <location line="+2"/>
         <source>Counterbore diameter</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2553,17 +2558,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
+        <location line="+2"/>
         <source>Countersink diameter</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
+        <location line="+2"/>
         <source>Countersink angle</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
+        <location line="+2"/>
         <source>Pick a screw size to fill in the clearance hole (and the counterbore or countersink for its head). 3D-printed holes often come out small: use Loose, or Custom and add 0.2–0.4 mm.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4823,7 +4828,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::RevolvePanel</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="-1002"/>
+        <location filename="../app/FeaturePanels.cpp" line="-1006"/>
         <location line="+174"/>
         <source>Revolve</source>
         <translation type="unfinished"></translation>
@@ -5935,7 +5940,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::SplitPanel</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="+1567"/>
+        <location filename="../app/FeaturePanels.cpp" line="+1571"/>
         <source>Split body</source>
         <translation type="unfinished"></translation>
     </message>

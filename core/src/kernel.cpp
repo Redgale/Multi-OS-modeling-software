@@ -1183,14 +1183,38 @@ Result<NamedShape> makeHoleTool(const std::string& featureId,
         return makeError("hole.depth", "The hole depth must be larger than zero.");
     }
     using T = HoleSpec::Type;
+    // one-click fixes: sizes in proportion to the hole (a counterbore about 1.8 times as wide)
+    auto rounded = [](double v) { return std::round(v * 10) / 10; };
     if (spec.type == T::Counterbore && !(spec.cboreDiameter > spec.diameter && spec.cboreDepth > 0 && spec.cboreDepth < depth)) {
-        return makeError("hole.counterbore", "The counterbore must be wider than the hole and shallower than it.");
+        Error err = makeError("hole.counterbore", "The counterbore must be wider than the hole and shallower than it.");
+        if (!(spec.cboreDiameter > spec.diameter)) {
+            const double w = rounded(spec.diameter * 1.8);
+            err.fixes.push_back({"Make the counterbore " + fmtMm(w) + " wide", "cbore_diameter", fmtMm(w)});
+        }
+        if (!(spec.cboreDepth > 0 && spec.cboreDepth < depth)) {
+            const double h = rounded(std::min(depth / 2, spec.diameter));
+            if (h > 0) {
+                err.fixes.push_back({"Make the counterbore " + fmtMm(h) + " deep", "cbore_depth", fmtMm(h)});
+            }
+        }
+        return err;
     }
     if (spec.tipAngle != 0 && !(spec.tipAngle > 0.5 && spec.tipAngle < 3.0)) {
-        return makeError("hole.tip", "A drill point angle must be between 30 and 170 degrees (118° is usual).");
+        Error err = makeError("hole.tip", "A drill point angle must be between 30 and 170 degrees (118° is usual).");
+        err.fixes.push_back({"Use 118 deg", "tip", "118 deg"});
+        err.fixes.push_back({"Use a flat bottom", "tip", "flat"});
+        return err;
     }
     if (spec.type == T::Countersink && !(spec.csinkDiameter > spec.diameter && spec.csinkAngle > 0.1 && spec.csinkAngle < 3.0)) {
-        return makeError("hole.countersink", "The countersink must be wider than the hole, with an angle between 6 and 170 degrees.");
+        Error err = makeError("hole.countersink", "The countersink must be wider than the hole, with an angle between 6 and 170 degrees.");
+        if (!(spec.csinkDiameter > spec.diameter)) {
+            const double w = rounded(spec.diameter * 2);
+            err.fixes.push_back({"Make the countersink " + fmtMm(w) + " wide", "csink_diameter", fmtMm(w)});
+        }
+        if (!(spec.csinkAngle > 0.1 && spec.csinkAngle < 3.0)) {
+            err.fixes.push_back({"Use 90 deg", "csink_angle", "90 deg"});
+        }
+        return err;
     }
     try {
         // Half-section in (radius, depth) coordinates; depth runs into the material
