@@ -178,9 +178,20 @@ struct Profile
 struct ProfileSet
 {
     std::vector<Profile> regions;
+    std::vector<std::string> notes;  // e.g. a missing font was replaced
 };
 
-// Finds every closed region of the sketch's non-construction curves.
+// Glyph outlines of a sketch text as flat faces in the sketch plane, centred on (x, y).
+struct TextOutline
+{
+    std::vector<TopoDS_Face> faces;
+    std::string note;  // set when the requested font was not available
+};
+Result<TextOutline> textFaces(const SketchText& t, double x, double y, const gp_Ax3& frame);
+
+// Finds every closed region of the sketch's non-construction curves. Each glyph
+// outline of a sketch text is a closed region too (key "T<text id>.<n>"); text is
+// not split by the other curves.
 Result<ProfileSet> buildProfiles(const Sketch& sketch, const gp_Ax3& frame);
 
 // ---------------------------------------------------------------- features

@@ -9,6 +9,7 @@ dependencies:
   - eigen
   - libboost-headers
   - nlohmann_json
+  - freetype
   - gtest
   - cmake
   - ninja

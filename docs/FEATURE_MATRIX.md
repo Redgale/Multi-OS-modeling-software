@@ -62,7 +62,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Control-point spline | 10 | v0.2 | — | Not in brief's v0.1 list |
 | Conic curve | 10 | v0.2 | — | Not in brief's v0.1 list |
 | Point | 10 | v0.1 M1 | **app** | |
-| Text (font, height, alignment) | 10 | v0.1 M5 | — | Fonts spike (5.4f) |
+| Text (font, height, alignment) | 10 | v0.1 M5 | **app** + scripts: built-in Inter or a font file, size as an expression, angle, centred on a draggable point; edit by double-click (D-014). Installed fonts by name, bold/italic, multi-line not yet (B-020) | Fonts spike (5.4f) |
 | Text on path | 10 | v0.2 | — | |
 | Sketch mirror, circular and rectangular pattern | 10 | v0.1 M1 | — | |
 | Project / Include, Intersect | 10 | v0.1 M5 (Project); Intersect v0.2 | — | Brief lists Project/Include |
@@ -182,8 +182,8 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 |---|---|---|---|
 | 1. Phone stand | v0.1 (A1, A4, A7) | sketch, rectangle, polyline, slot, extrude join/cut/symmetric, sketch on face, fillet, export | **Builds headlessly** (`samples/phone_stand.jigs`); golden test passes; edit-early regression passes |
 | 2. Hinged box | v0.2 | components, shell, project/offset, patterns, revolute joint, interference | — |
-| 3. Knob | v0.1 (A2) | revolve, arc, trim, axis, circular pattern, cut, fillet, text | **builds** (`samples/knob.jigs`: revolve, D-bore from an arc, 12 scallops, top round; golden and parameter tests); text waits for M5 |
-| 4. Pen cup | v0.1 (A3) | parameters, circle, extrude, shell, fillets, text + cut | **builds** (`samples/pen_cup.jigs`, golden test, parameter changes); engraved text waits for Text (M5) |
+| 3. Knob | v0.1 (A2) | revolve, arc, trim, axis, circular pattern, cut, fillet, text | **builds completely** (`samples/knob.jigs`: revolve, D-bore from an arc, 12 scallops, top round, engraved "VOL"; golden and parameter tests) |
+| 4. Pen cup | v0.1 (A3) | parameters, circle, extrude, shell, fillets, text + cut | **builds completely** (`samples/pen_cup.jigs`: maker's mark cut into the underside, sized from `dia`; golden test, parameter changes). Text wrapped around the wall needs Emboss (v0.2) |
 
 ## Shortcuts (PDF ch. 45)
 

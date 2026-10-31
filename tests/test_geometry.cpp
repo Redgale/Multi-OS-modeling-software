@@ -210,7 +210,12 @@ TEST(Golden, PenCupWithParameters)
     const double shell = M_PI * 40 * 40 * 95 - M_PI * 37.6 * 37.6 * (95 - 2.4);
     const double rounds = (4 - M_PI) * 4 / 4 * 2 * M_PI * 40 * 1.0          // base: (1 - pi/4) r^2 L, r = 2
                           + (1 - M_PI / 4) * 1 * (2 * M_PI * 40 + 2 * M_PI * 37.6);  // rim, r = 1
-    EXPECT_NEAR(p.volume, shell - rounds, 5.0);
+    double mark = 0;  // the maker's mark cut 0.6 mm into the underside
+    for (auto& r : doc->state().sketches.at("s2")->profiles.regions) {
+        mark += r.area * 0.6;
+    }
+    EXPECT_EQ(doc->state().sketches.at("s2")->profiles.regions.size(), 8u);  // J I G S M I T H
+    EXPECT_NEAR(p.volume, shell - rounds - mark, 5.0);
     EXPECT_NEAR(p.zmax, 95, 1e-6);
     // a mini version, as the guide suggests
     run(*doc, "param height = 60 mm");
@@ -224,6 +229,7 @@ TEST(Golden, PenCupWithParameters)
     // thicker walls also work
     run(*doc, "param wall = 3 mm");
     expectAllOk(*doc);
+    EXPECT_EQ(props(*doc).solids, 1);
 }
 
 TEST(Chamfer, BevelsAndExplains)

@@ -49,6 +49,9 @@ timeline edit/rename/suppress/roll back/delete with dependents warning, Paramete
 - B-018 Timeline reorder (validated) and groups; Browser visibility/isolate/rename/find in timeline.
 - B-019 Selection filters, window selection, Select Other.
 
+- B-020 Text: pick installed fonts by family name (fontconfig / DirectWrite / CoreText),
+  bold/italic, multi-line, HarfBuzz shaping for complex scripts, text along a path.
+
 ## Later v0.1 milestones
 
 - M3 (done in session 2: Fillet, Chamfer, Shell, Hole, Mirror of bodies, Patterns of
@@ -56,8 +59,8 @@ timeline edit/rename/suppress/roll back/delete with dependents warning, Paramete
   mirror of features, Press Pull.
 - M4 (Revolve and the knob, A2, done in session 2): revolve to object, construction planes
   (offset/angle/midplane), axis, point, Combine, Split, Move/Copy.
-- M5: Parameters table UI, Project/Include, Text (FreeType/HarfBuzz spike, 5.4f), SVG and
-  DXF import with unit detection. Pen cup acceptance (A3).
+- M5 (Parameters dialog and Text done in session 2, D-014): Project/Include, SVG and DXF
+  import with unit detection.
 - M6: Measure, Section, Properties with density; 3MF export; local versions; autosave
   preferences; STEP import UI with unit correction; parser fuzzing (SVG, DXF, STEP).
 - M7: tutorial, tooltips audit, error-explanation actions, marking menu, navigation

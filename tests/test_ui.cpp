@@ -314,6 +314,39 @@ private slots:
         w.grab().save(shotPath("sketch-shapes"));
     }
 
+    // Text: click, type the words and a size; double-click the anchor to change them.
+    void textToolPlaceAndEdit()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        Viewport* view = w.viewport();
+        QVERIFY(w.createSketchOn("XY"));
+        SketchEditor* sk = w.sketchEditor();
+        QVERIFY(sk);
+        w.runCommand("sketch.text");
+        QCOMPARE(int(sk->tool()), int(SketchEditor::Tool::Text));
+        const QPoint at = sk->screenOf(0, 0);
+        QTest::mouseMove(view, at);
+        QTest::mouseClick(view, Qt::LeftButton, Qt::NoModifier, at);
+        sk->typeValues({"Hi", "10 mm"});
+        QVERIFY2(sk->message().isEmpty(), qPrintable(sk->message()));
+        auto regions = [&] { return int(w.document().state().sketches.begin()->second->profiles.regions.size()); };
+        QCOMPARE(regions(), 3);  // H, i stem, i dot
+        QCOMPARE(int(sk->sketch().texts().size()), 1);
+        const int anchor = sk->sketch().texts().begin()->second.anchor;
+        sk->setTool(SketchEditor::Tool::Select);
+        QVERIFY(sk->editTextAt(anchor));
+        sk->typeValues({"Hello", "12 mm"});
+        QCOMPARE(regions(), 5);  // H e l l o
+        QCOMPARE(QString::fromStdString(sk->sketch().texts().begin()->second.height), QString("12 mm"));
+        w.grab().save(shotPath("sketch-text"));
+        // Undo brings back the first words.
+        w.runCommand("edit.undo");
+        QTRY_COMPARE(regions(), 3);
+    }
+
     // Revolve a ring, drill it from its top face, repeat the hole around the axis,
     // and mirror the result: the M3 panels driven like a person would.
     void ringRevolveHolePatternMirror()

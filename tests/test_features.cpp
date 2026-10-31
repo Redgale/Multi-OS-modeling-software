@@ -5,6 +5,7 @@
 #include <numbers>
 
 #include "helpers.hpp"
+#include "jig/io.hpp"
 
 using namespace jig;
 using namespace jigtest;
@@ -57,6 +58,14 @@ int facesStartingWith(const Document& doc, const std::string& body, const std::s
         n += b.faceName(i).rfind(prefix, 0) == 0;
     }
     return n;
+}
+double regionArea(const Document& doc, const std::string& sketch)
+{
+    double a = 0;
+    for (auto& r : doc.state().sketches.at(sketch)->profiles.regions) {
+        a += r.area;
+    }
+    return a;
 }
 }  // namespace
 
@@ -116,12 +125,15 @@ TEST(Golden, Knob)
     auto p = props(*doc);
     ASSERT_TRUE(p.valid);
     EXPECT_EQ(p.solids, 1);
-    // Before the top round: turned body - D bore - 12 scallops.
+    // Without the top round: turned body - D bore - 12 scallops - the 0.5 mm deep label.
+    const double label = regionArea(*doc, "s4") * 0.5;
+    EXPECT_GT(label, 5);
     run(*doc, "suppress f1");
-    EXPECT_NEAR(props(*doc).volume, kTurned - kBore - 12 * scallop(), 0.05);
+    EXPECT_NEAR(props(*doc).volume, kTurned - kBore - 12 * scallop() - label, 0.05);
     run(*doc, "unsuppress f1");
-    // Golden value recorded 2026-10-31 (OCCT 7.6.3): the 1 mm round removes ~1.6 mm^3.
-    EXPECT_NEAR(props(*doc).volume, 9150.280, 9150.280 * 1e-4);
+    // Golden value recorded 2026-10-31 (OCCT 7.6.3, FreeType 2.13): the 1 mm round
+    // removes ~1.6 mm^3.
+    EXPECT_NEAR(props(*doc).volume, 9143.107, 9143.107 * 1e-4);
     EXPECT_NEAR(p.zmin, 0, 1e-6);
     EXPECT_NEAR(p.zmax, 16, 1e-6);
     // every scallop copy has a stable name
@@ -135,10 +147,12 @@ TEST(Golden, KnobFollowsItsParameters)
     auto doc = buildSample("knob.jigs");
     run(*doc, "suppress f1");
     run(*doc, "param scallops = 8");
-    for (int i = 0; i < 7; ++i) {  // every step up to the (suppressed) round
-        EXPECT_EQ(int(doc->status(i).level), int(StatusLevel::Ok)) << doc->status(i).message;
+    for (int i = 0; i < int(doc->model().features.size()); ++i) {
+        if (doc->model().features[size_t(i)].id != "f1") {
+            EXPECT_EQ(int(doc->status(i).level), int(StatusLevel::Ok)) << doc->status(i).message;
+        }
     }
-    EXPECT_NEAR(props(*doc).volume, kTurned - kBore - 8 * scallop(), 0.05);
+    EXPECT_NEAR(props(*doc).volume, kTurned - kBore - 8 * scallop() - regionArea(*doc, "s4") * 0.5, 0.05);
 }
 
 namespace
@@ -237,4 +251,68 @@ TEST(SketchShapes, HexagonAndSlotAreFullyDefined)
     EXPECT_NEAR(props(*doc).volume, (hex + slot) * 10, 1e-3);
     auto p = props(*doc);
     EXPECT_NEAR(p.ymax, 10, 1e-6);  // a corner points straight up
+}
+
+
+TEST(Text, GlyphsBecomeClosedAreasCentredOnTheAnchor)
+{
+    auto doc = build("sketch id=s1 plane=XY\ntext sketch=s1 center=20,10 height=10mm text=\"Jig 8\"\n"
+                     "extrude id=e1 sketch=s1 distance=2 op=new\n");
+    expectAllOk(*doc);
+    const auto& regions = doc->state().sketches.at("s1")->profiles.regions;
+    ASSERT_EQ(regions.size(), 5u);  // J, i stem, i dot, g, 8 (the holes of g and 8 stay holes)
+    EXPECT_EQ(regions.front().key, "T2.1");
+    auto p = props(*doc);
+    EXPECT_TRUE(p.valid);
+    EXPECT_EQ(p.solids, 5);
+    EXPECT_NEAR(p.volume, regionArea(*doc, "s1") * 2, 1e-6);
+    EXPECT_NEAR((p.xmin + p.xmax) / 2, 20, 1e-6);
+    EXPECT_NEAR((p.ymin + p.ymax) / 2, 10, 1e-6);
+    // Inter at a 10 mm size: the outlines are about 22 x 9.7 mm
+    EXPECT_NEAR(p.xmax - p.xmin, 22.18, 0.05);
+    EXPECT_NEAR(p.ymax - p.ymin, 9.67, 0.05);
+}
+
+TEST(Text, CutLetteringFollowsAParameterAndSurvivesSaving)
+{
+    auto doc = build("param size = 8 mm\n"
+                     "sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=60 h=20\nextrude id=e1 sketch=s1 distance=5\n"
+                     "sketch id=s2 on=e1/end\ntext sketch=s2 center=0,0 height=size text=\"ABC\"\n"
+                     "extrude id=e2 sketch=s2 distance=-1mm op=cut\n");
+    expectAllOk(*doc);
+    const double a8 = regionArea(*doc, "s2");
+    EXPECT_NEAR(props(*doc).volume, 6000 - a8, 1e-6);
+    run(*doc, "param size = 12 mm");
+    expectAllOk(*doc);
+    const double a12 = regionArea(*doc, "s2");
+    EXPECT_NEAR(a12, a8 * 12 * 12 / 64, a8 * 1e-6);  // area scales with the square of the size
+    const double v = props(*doc).volume;
+    const auto path = (tempDir() / "text.jig").string();
+    ASSERT_TRUE(saveDocument(*doc, path).ok());
+    auto back = loadDocument(path);
+    ASSERT_TRUE(back.ok()) << back.error().message;
+    EXPECT_EQ((*back)->toJson(), doc->toJson());
+    EXPECT_NEAR(props(**back).volume, v, 1e-6);
+}
+
+TEST(Text, MissingFontFallsBackAndSaysSo)
+{
+    auto doc = build("sketch id=s1 plane=XY\ntext sketch=s1 center=0,0 height=5mm text=\"Hi\" font=\"No Such Font\"\n");
+    const auto& st = doc->status(0);
+    EXPECT_EQ(int(st.level), int(StatusLevel::Warning));
+    EXPECT_NE(st.message.find("built-in font"), std::string::npos) << st.message;
+    EXPECT_EQ(doc->state().sketches.at("s1")->profiles.regions.size(), 3u);  // H, i stem, i dot
+}
+
+TEST(Text, AnchorIsNotAHoleCentre)
+{
+    auto doc = std::make_unique<Document>();
+    ScriptRunner r(*doc);
+    r.strict = false;
+    ASSERT_TRUE(r.runText("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=40 h=20\nextrude id=e1 sketch=s1 distance=5\n"
+                          "sketch id=s2 on=e1/end\ntext sketch=s2 center=0,0 height=5mm text=\"X\"\n"
+                          "hole id=h1 sketch=s2 diameter=3mm depth=2mm\n")
+                    .ok());
+    EXPECT_EQ(int(doc->status(3).level), int(StatusLevel::Error));
+    EXPECT_NE(doc->status(3).message.find("no points"), std::string::npos) << doc->status(3).message;
 }

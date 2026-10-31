@@ -74,7 +74,7 @@ scripts/install-deps.sh
 For example, on **Void Linux** it runs:
 
 ```bash
-sudo xbps-install -Sy base-devel cmake ninja pkg-config occt-devel qt6-base-devel eigen boost-headers json-c++ gtest-devel tbb-devel MesaLib-devel
+sudo xbps-install -Sy base-devel cmake ninja pkg-config occt-devel qt6-base-devel eigen boost-headers json-c++ gtest-devel tbb-devel freetype-devel MesaLib-devel
 ```
 
 Then build, test and run (same on every distribution):
@@ -110,7 +110,7 @@ files, Eigen 3, Boost headers, nlohmann/json, GoogleTest and OpenGL headers.
 ### macOS (Apple silicon or Intel, Homebrew)
 
 ```bash
-brew install cmake ninja opencascade qt eigen boost nlohmann-json googletest
+brew install cmake ninja opencascade qt eigen boost nlohmann-json googletest freetype
 ```
 
 ```bash

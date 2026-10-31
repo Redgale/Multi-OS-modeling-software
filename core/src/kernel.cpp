@@ -615,7 +615,36 @@ Result<ProfileSet> buildProfiles(const Sketch& sketch, const gp_Ax3& frame)
             origEntity.Bind(edge, id);
         }
         ProfileSet set;
+        auto addText = [&]() -> Result<bool> {
+            for (auto& [tid, t] : sketch.texts()) {
+                auto [ax, ay] = sketch.pointXY(t.anchor);
+                auto out = textFaces(t, ax, ay, frame);
+                if (!out) {
+                    return out.error();
+                }
+                if (!out->note.empty()) {
+                    set.notes.push_back(out->note);
+                }
+                int k = 0;
+                for (auto& f : out->faces) {
+                    Profile p;
+                    p.key = "T" + std::to_string(tid) + "." + std::to_string(++k);
+                    p.face = f;
+                    for (TopExp_Explorer ee(f, TopAbs_EDGE); ee.More(); ee.Next()) {
+                        p.edgeEntity.Bind(ee.Current(), tid);
+                    }
+                    GProp_GProps g;
+                    BRepGProp::SurfaceProperties(f, g);
+                    p.area = g.Mass();
+                    set.regions.push_back(std::move(p));
+                }
+            }
+            return true;
+        };
         if (tools.IsEmpty()) {
+            if (auto r = addText(); !r) {
+                return r.error();
+            }
             return set;
         }
         double m = ext * 2 + 10;
@@ -684,6 +713,9 @@ Result<ProfileSet> buildProfiles(const Sketch& sketch, const gp_Ax3& frame)
         }
         std::sort(set.regions.begin(), set.regions.end(),
                   [](const Profile& a, const Profile& b) { return a.key < b.key; });
+        if (auto r = addText(); !r) {
+            return r.error();
+        }
         return set;
     }
     catch (const Standard_Failure& f) {
@@ -756,6 +788,11 @@ Result<NamedShape> makeExtrusion(const ExtrudeInput& in)
             }
             else {
                 auto fused = booleanOp(in.featureId, BoolOp::Join, *acc, ns);
+                if (!fused && fused.error().code == "boolean.not_touching") {
+                    // separate areas (letters, two islands) stay separate pieces of one tool
+                    acc = std::make_unique<NamedShape>(namedCompound({*acc, ns}));
+                    continue;
+                }
                 if (!fused) {
                     return fused.error();
                 }
@@ -879,6 +916,11 @@ Result<NamedShape> makeRevolution(const std::string& featureId,
             }
             else {
                 auto fused = booleanOp(featureId, BoolOp::Join, *acc, ns);
+                if (!fused && fused.error().code == "boolean.not_touching") {
+                    // separate areas (letters, two islands) stay separate pieces of one tool
+                    acc = std::make_unique<NamedShape>(namedCompound({*acc, ns}));
+                    continue;
+                }
                 if (!fused) {
                     return fused.error();
                 }

@@ -143,7 +143,7 @@ CommandRegistry::CommandRegistry()
     // shell, revolve, hole, patterns, mirror, parameters). Everything else above keeps its "coming in" note.
     static const std::set<std::string> inApp {
         "sketch.create", "sketch.finish", "sketch.line", "sketch.rectangle", "sketch.circle", "sketch.point",
-        "sketch.arc", "sketch.slot", "sketch.polygon",
+        "sketch.arc", "sketch.slot", "sketch.polygon", "sketch.text",
         "sketch.dimension", "sketch.construction", "constraint.coincident", "constraint.midpoint", "constraint.fix",
         "constraint.parallel", "constraint.perpendicular", "constraint.horizontal", "constraint.tangent",
         "constraint.symmetric", "constraint.equal", "solid.extrude", "solid.fillet", "solid.chamfer", "solid.shell",
@@ -791,6 +791,31 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
             names_[sid + "." + a.get("name")] = made;
         }
         return res;
+    }
+    if (a.verb == "text") {
+        // text center=x,y height=<len> text="ABC" [font=<file or name>] [angle=<angle>]
+        const std::string sid = a.get("sketch", last_);
+        return editSketch("Text", sid, [&](Sketch& s, const Document&) -> Result<bool> {
+            auto pe = parsePairExpr(a.get("center", "0,0"));
+            if (!pe) {
+                return pe.error();
+            }
+            auto px = len(pe->first), py = len(pe->second);
+            const std::string he = a.get("height", "5 mm");
+            auto h = len(he);
+            auto ang = doc.evalAngle(a.get("angle", "0 deg"));
+            if (!px || !py || !h || !ang) {
+                return makeError("script.args", "Text needs center=x,y height=<len> text=\"…\" with valid values.");
+            }
+            if (a.get("text").empty()) {
+                return makeError("script.args", "Say what the text reads: text=\"…\".");
+            }
+            const int id = s.addText(px.value(), py.value(), a.get("text"), he, h.value(), a.get("font"), ang.value());
+            const int anchor = s.texts().at(id).anchor;
+            s.addConstraint(ConstraintType::DistanceX, anchor, 0, 0, pe->first);
+            s.addConstraint(ConstraintType::DistanceY, anchor, 0, 0, pe->second);
+            return true;
+        });
     }
     if (a.verb == "polygon") {
         // polygon center=x,y d=<len> sides=<n>   (d = diameter of the circle through the corners)

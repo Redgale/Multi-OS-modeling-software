@@ -26,7 +26,8 @@ for d in data["dependencies"]:
 
 conda = (root / "packaging/windows/environment.yml").read_text()
 conda_map = {"occt": "opencascade", "eigen": "eigen3", "libboost-headers": "boost",
-             "nlohmann_json": "nlohmann-json", "gtest": "gtest", "cmake": None, "ninja": None}
+             "nlohmann_json": "nlohmann-json", "gtest": "gtest", "freetype": "freetype", "cmake": None,
+             "ninja": None}
 for m in re.finditer(r"^\s*-\s*([A-Za-z0-9_.-]+)", conda.split("dependencies:", 1)[1], re.M):
     name = m.group(1)
     if name not in conda_map:
@@ -37,7 +38,7 @@ for m in re.finditer(r"^\s*-\s*([A-Za-z0-9_.-]+)", conda.split("dependencies:", 
 cmake = (root / "cmake/Dependencies.cmake").read_text()
 cmake_map = {"OpenCASCADE": "opencascade", "Eigen3": "eigen3", "Boost": "boost",
              "nlohmann_json": "nlohmann-json", "miniz": "miniz", "googletest": "gtest",
-             "GTest": "gtest", "Qt6": "qt6"}
+             "GTest": "gtest", "Qt6": "qt6", "Freetype": "freetype"}
 for m in re.finditer(r"(?:find_package|FetchContent_Declare)\(\s*(\w+)", cmake):
     name = m.group(1)
     if cmake_map.get(name) not in deps:

@@ -1,5 +1,5 @@
 # Knob for a 6 mm D-shaft (acceptance scenario A2): a turned profile, a D-shaped
-# bore, twelve finger scallops around the rim, and a rounded top edge.
+# bore, twelve finger scallops around the rim, a rounded top edge and an engraved label.
 param dia = 30 mm
 param height = 16 mm
 param bore = 12 mm
@@ -24,3 +24,8 @@ pattern id=p1 feature=e2 kind=circular axis=Z count=scallops name="Scallops"
 # Round the top edge. The flat top is the face swept by sketch curve 19 (run the
 # `faces` command to list every face name).
 fillet id=f1 edges="face:r1/side:19" radius=1mm name="Top round"
+
+# Engrave a label 0.5 mm deep into the flat top.
+sketch id=s4 on=r1/side:19 name="Label"
+text sketch=s4 center=0,0 height=6mm text="VOL"
+extrude id=e3 sketch=s4 distance=-0.5mm op=cut name="Label cut"

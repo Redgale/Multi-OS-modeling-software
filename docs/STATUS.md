@@ -9,9 +9,10 @@ Session 2 delivered the core of **M1 (interactive sketching)** and **M2 (Extrude
 timeline editing, parameters)** in the desktop app, an original **icon set** for every
 tool, build-from-source support for **Void, Fedora, Arch and openSUSE**, and a publish job
 for downloadable builds, then Chamfer and Shell (part of M3) with the pen cup sample,
-then Revolve, Hole, rectangular and circular Patterns and Mirror with panels, and the
-knob sample (acceptance scenario A2, without the engraved text). 70 tests, including UI
-workflow tests that drive the real window.
+then Revolve, Hole, rectangular and circular Patterns and Mirror with panels, Arc/Slot/
+Polygon sketch tools, and **Text** (FreeType outlines, built-in Inter font, D-014), which
+completes the knob (A2) and pen cup (A3) samples including their lettering. 74 tests,
+including UI workflow tests that drive the real window.
 
 ## What works, and how it was verified
 
@@ -35,6 +36,7 @@ workflow tests that drive the real window.
 | Timeline editing (M2) | Double-click to edit, right-click: rename, suppress/unsuppress, roll back to here, delete with a dependents warning | `Document.DependentsAreFound`; UI test edits a step |
 | Chamfer and Shell (M3 part) | Chamfer panel (edge picking, distance), Shell panel (click faces to leave open; none = closed hollow), failure explanations with a working value; inner walls get stable names (`sh1/inner:<outer face>`) | `Golden.PenCupWithParameters` (A3 without text), `Chamfer.*`, `Shell.*` (closed hollow found and fixed an OCCT behaviour: no open face returns only the offset solid); UI test builds a pen cup by clicking the top face |
 | Revolve, Hole, Pattern, Mirror (M3/M4 part) | Revolve around an origin axis or a sketch line, full or partial (outlines crossing the axis refused with an explanation); Hole (simple, counterbore, countersink; depth or through) at every free point of a sketch; Ring copy and Grid copy of an Extrude, Revolve or Hole; Mirror a body across an origin plane (join or new body). Panels with live preview; edit from the timeline. Faces named by role (`h1/wall:p5`, `p1/3:e2/side:2`) | `tests/test_features.cpp` (11 tests, volumes against hand calculations: revolve, D-bore, lens-shaped scallops, counterbore and countersink cones, grid of holes); `Golden.Knob` and `Golden.KnobFollowsItsParameters` (A2 without text); UI test `ringRevolveHolePatternMirror` revolves a ring, drills it from its top face, rings the hole six times and mirrors it |
+| Text (M5 part) | Sketch text centred on a draggable, dimensionable point; size as an expression; built-in Inter (embedded) or a font file; each letter outline is a closed area for extrude/cut; double-click to edit; missing fonts fall back with a warning | `Text.*` (4 tests: outline areas and solids, cut volume = area × depth, scaling with a parameter, save/load, fallback); cross-checked against OCCT's own text builder (identical area); UI test places and edits text, then undoes |
 | Parameters (M5 part) | Table dialog: name, value with units/expressions, kind, live result, comment; refuses invalid names, duplicates, cycles | exercised manually under Xvfb only (no automated UI test yet: B-015) |
 | Performance | All headless budgets met | `jigsmith-bench`, numbers in PHASE1_REPORT.md |
 
@@ -71,8 +73,9 @@ Clang 18 as well as GCC 13.
   of bodies, mirror of features or across a face, pattern along a path.
 - M4 still missing: construction planes/axes/points, Combine, Split, Move/Copy; revolve
   "to object".
+- Text: installed fonts by name, bold/italic, multi-line, complex-script shaping (B-020).
 - Not built yet:
-  Measure, Section, Text, SVG/DXF import, 3MF, local versions, tutorial, marking menu.
+  Measure, Section, SVG/DXF import, 3MF, local versions, tutorial, marking menu.
 - Reorder of timeline steps (model supports it; no command or tests yet, B-002).
 - libslvs comparison (B-001).
 

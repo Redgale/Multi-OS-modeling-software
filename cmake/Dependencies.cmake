@@ -38,6 +38,9 @@ if(NOT Boost_FOUND)
     message(STATUS "Boost headers (no CMake package) at ${JIG_BOOST_INCLUDE}")
 endif()
 
+# --- FreeType (FTL, BSD-style), glyph outlines for sketch text (D-014) ---------------
+find_package(Freetype 2.8 REQUIRED)
+
 # --- nlohmann/json (MIT) -----------------------------------------------------------
 find_package(nlohmann_json 3.10 QUIET CONFIG)
 if(NOT nlohmann_json_FOUND)

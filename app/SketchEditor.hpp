@@ -41,6 +41,7 @@ public:
         Arc,      // centre, start, end (counter-clockwise)
         Slot,     // centre, centre, width
         Polygon,  // centre, corner; sides typed (default 6)
+        Text,     // click the centre, type the words and the size
         Point,
         Dimension
     };
@@ -96,6 +97,7 @@ public:
     // ---- for UI tests: drive the editor in sketch coordinates
     QPoint screenOf(double x, double y) const;
     void typeValues(const QStringList& values);  // as if typed into the value box + Enter
+    bool editTextAt(int anchorPoint);            // opens the value box on an existing text
 
     // Interactor
     bool mousePress(QMouseEvent* e) override;
@@ -151,6 +153,9 @@ private:
     std::optional<Snap> first_;      // first click of a two-click tool
     std::optional<Snap> second_;     // second click of a three-click tool (arc, slot)
     QString arcRadiusExpr_;          // typed at the second step (arc radius, slot length)
+    int editText_ = 0;
+    QString lastTextHeight_ = "5 mm";               // text being changed (double-click on its anchor)
+    std::vector<std::vector<QVector3D>> textEdges_;  // glyph outlines, for drawing
     int chainStart_ = 0;             // line chains: the first point, clicking it closes
     Snap cursor_;
     bool cursorValid_ = false;

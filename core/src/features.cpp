@@ -134,6 +134,10 @@ FeatureOutcome applySketch(const Document& doc, const Feature& f, const std::sha
         return failed(prof.error());
     }
     st->profiles = std::move(prof.value());
+    if (!st->profiles.notes.empty() && status.level == StatusLevel::Ok) {
+        status.level = StatusLevel::Warning;
+        status.message = st->profiles.notes.front();
+    }
 
     if (st->report.state == SolveState::OverConstrained && status.level == StatusLevel::Ok) {
         status.level = StatusLevel::Warning;
@@ -422,6 +426,9 @@ FeatureOutcome applyHole(const Document& doc, const Feature& f, const std::share
         if (e.type != EntityType::Point) {
             used.insert({e.p1, e.p2, e.center});
         }
+    }
+    for (auto& [id, t] : sk.solved.texts()) {
+        used.insert(t.anchor);  // a text's anchor is not a hole centre
     }
     std::set<int> wanted;
     if (p.contains("points") && p["points"].is_array()) {

@@ -16,4 +16,8 @@ shell id=sh1 faces="face:e1/end" thickness=wall name="Hollow"
 fillet id=f1 edges="name:E[e1/side:2|e1/start]" radius=2mm name="Base round"
 fillet id=f2 edges="face:e1/end" radius=1mm name="Rim round"
 
-# Engraved name: Text arrives in milestone M5.
+# A maker's mark cut 0.6 mm into the underside; it scales with the cup.
+# (Lettering wrapped around the curved wall needs Emboss, planned for v0.2.)
+sketch id=s2 on=e1/start name="Mark"
+text sketch=s2 center=0,0 height=dia/10 text="JIGSMITH"
+extrude id=e2 sketch=s2 distance=-0.6mm op=cut name="Mark cut"

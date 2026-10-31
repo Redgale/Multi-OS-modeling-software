@@ -4,6 +4,9 @@
 #include <cmath>
 #include <numbers>
 
+#include <BRepAdaptor_Curve.hxx>
+#include <TopExp_Explorer.hxx>
+#include <TopoDS.hxx>
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QKeyEvent>
@@ -63,7 +66,7 @@ SketchEditor::SketchEditor(Viewport* view, jig::Document& doc, std::string featu
         inputLabels_.push_back(l);
         inputFields_.push_back(f);
         connect(f, &QLineEdit::returnPressed, this, [this] {
-            if (dimTarget_) {
+            if (dimTarget_ || editText_) {
                 placeSecond(cursor_, inputValues());
                 return;
             }
@@ -119,8 +122,20 @@ bool SketchEditor::refreshFromDocument()
     }
     std::erase_if(selection_, [&](int id) { return !work_.entity(id); });
     profileTris_.clear();
+    textEdges_.clear();
     if (it != doc_.state().sketches.end()) {
         for (auto& r : it->second->profiles.regions) {
+            if (!r.key.empty() && r.key[0] == 'T') {
+                for (TopExp_Explorer ee(r.face, TopAbs_EDGE); ee.More(); ee.Next()) {
+                    BRepAdaptor_Curve c(TopoDS::Edge(ee.Current()));
+                    std::vector<QVector3D> pts;
+                    for (int k = 0; k <= 12; ++k) {
+                        const gp_Pnt q = c.Value(c.FirstParameter() + (c.LastParameter() - c.FirstParameter()) * k / 12);
+                        pts.emplace_back(float(q.X()), float(q.Y()), float(q.Z()));
+                    }
+                    textEdges_.push_back(std::move(pts));
+                }
+            }
             jig::DisplayMesh m = jig::tessellate(r.face, 0.1);
             std::vector<QVector3D> tris;
             for (uint32_t idx : m.indices) {
@@ -331,6 +346,7 @@ void SketchEditor::resetToolState()
 {
     first_.reset();
     second_.reset();
+    editText_ = 0;
     chainStart_ = 0;
     dimFirst_ = dimTarget_ = dimSecond_ = 0;
     hideInput();
@@ -365,6 +381,9 @@ QString SketchEditor::toolHint() const
         case Tool::Polygon:
             return first_ ? tr("Click a corner, or type the diameter (Tab: number of sides) and press Enter.")
                           : tr("Click the centre.");
+        case Tool::Text:
+            return first_ ? tr("Type the words, Tab, the size, then press Enter.")
+                          : tr("Click where the middle of the text goes.");
         case Tool::Point:
             return tr("Click to place a point.");
         case Tool::Dimension:
@@ -465,6 +484,28 @@ void SketchEditor::placeSecond(const Snap& cur, const QStringList& typed)
         emit stateChanged();
         return;
     }
+    if (editText_) {
+        jig::Sketch s = work_;
+        jig::SketchText* t = s.text(editText_);
+        if (!t || typed.isEmpty() || typed[0].trimmed().isEmpty()) {
+            message_ = tr("Type the words for the text.");
+            emit stateChanged();
+            return;
+        }
+        if (typed.size() > 1 && !typed[1].isEmpty() && !typedLen(1)) {
+            return;
+        }
+        t->text = typed[0].toStdString();
+        if (typed.size() > 1 && !typed[1].isEmpty()) {
+            t->height = typed[1].toStdString();
+        }
+        if (commit(tr("Edit text"), s)) {
+            resetToolState();
+        }
+        rebuildOverlay();
+        emit stateChanged();
+        return;
+    }
     if (!first_) {
         return;
     }
@@ -472,7 +513,7 @@ void SketchEditor::placeSecond(const Snap& cur, const QStringList& typed)
     // those are checked where they are used
     const bool notLengths = tool_ == Tool::Arc && second_;
     for (int i = 0; i < typed.size() && !notLengths; ++i) {
-        if (tool_ == Tool::Polygon && i == 1) {
+        if ((tool_ == Tool::Polygon && i == 1) || (tool_ == Tool::Text && i == 0)) {
             continue;
         }
         if (badTyped(i)) {
@@ -700,6 +741,27 @@ void SketchEditor::placeSecond(const Snap& cur, const QStringList& typed)
             }
             break;
         }
+        case Tool::Text: {
+            if (typed.isEmpty() || typed[0].trimmed().isEmpty()) {
+                message_ = tr("Type the words for the text.");
+                return;
+            }
+            const QString hExpr = typed.size() > 1 && !typed[1].isEmpty() ? typed[1] : QString("5 mm");
+            auto h = doc_.evalLength(hExpr.toStdString());
+            if (!h || !(h.value() > 0)) {
+                message_ = h ? tr("Text size must be larger than zero.") : QString::fromStdString(h.error().message);
+                return;
+            }
+            const int id = s.addText(a.x(), a.y(), typed[0].toStdString(), hExpr.toStdString(), h.value());
+            if (first_->point) {
+                s.addConstraint(jig::ConstraintType::Coincident, s.texts().at(id).anchor, first_->point);
+            }
+            if (commit(tr("Text"), s)) {
+                lastTextHeight_ = hExpr;
+                resetToolState();
+            }
+            break;
+        }
         case Tool::Polygon: {
             auto d = typedLen(0);
             int n = 6;
@@ -911,6 +973,10 @@ bool SketchEditor::mouseRelease(QMouseEvent* e)
                 if (tool_ == Tool::Polygon) {
                     showInput({tr("Diameter"), tr("Sides")}, {QString(), "6"});
                 }
+                else if (tool_ == Tool::Text) {
+                    showInput({tr("Text"), tr("Size")}, {QString(), lastTextHeight_});
+                    inputFields_[0]->setFocus();
+                }
                 else {
                     showInput(tool_ == Tool::Line     ? QStringList {tr("Length"), tr("Angle")}
                               : tool_ == Tool::Circle ? QStringList {tr("Diameter")}
@@ -931,8 +997,29 @@ bool SketchEditor::mouseRelease(QMouseEvent* e)
     return true;
 }
 
-bool SketchEditor::mouseDoubleClick(QMouseEvent*)
+bool SketchEditor::editTextAt(int anchorPoint)
 {
+    for (auto& [id, t] : work_.texts()) {
+        if (t.anchor == anchorPoint) {
+            resetToolState();
+            editText_ = id;
+            showInput({tr("Text"), tr("Size")}, {QString::fromStdString(t.text), QString::fromStdString(t.height)});
+            auto [x, y] = work_.pointXY(t.anchor);
+            inputBox_->move(screenOf(x, y) + QPoint(18, 18));
+            inputFields_[0]->selectAll();
+            inputFields_[0]->setFocus();
+            emit stateChanged();
+            return true;
+        }
+    }
+    return false;
+}
+
+bool SketchEditor::mouseDoubleClick(QMouseEvent* e)
+{
+    if (tool_ == Tool::Select && editTextAt(entityNear(e->position()))) {
+        return true;
+    }
     if (tool_ == Tool::Line) {
         resetToolState();  // double-click ends a chain of lines
         emit stateChanged();
@@ -1204,6 +1291,12 @@ void SketchEditor::rebuildOverlay()
             c = vc.hover;
         }
         addPoly(polyline(s, e), c, e.construction);
+    }
+    for (auto& pts : textEdges_) {
+        for (size_t i = 0; i + 1 < pts.size(); ++i) {
+            ov.lines.push_back({pts[i], vc.text});
+            ov.lines.push_back({pts[i + 1], vc.text});
+        }
     }
     if (options.showProfiles && !dragging_) {
         QColor pc = kAccent;
