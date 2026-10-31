@@ -300,13 +300,24 @@ private slots:
         QTest::mouseMove(view, sk->screenOf(0, 50));
         sk->typeValues({"90 deg"});
 
+        // 3-point arc: start (30,30), end (50,30), through (40,35): radius 12.5 by hand
+        w.runCommand("sketch.arc3");
+        click(30, 30);
+        click(50, 30);
+        click(40, 35);
+        bool r125 = false;
+        for (auto& [id, e] : sk->sketch().entities()) {
+            r125 = r125 || (e.type == jig::EntityType::Arc && std::abs(e.r - 12.5) < 1e-6);
+        }
+        QVERIFY(r125);
+
         int lines = 0, arcs = 0;
         for (auto& [id, e] : sk->sketch().entities()) {
             lines += e.type == jig::EntityType::Line && !e.construction;
             arcs += e.type == jig::EntityType::Arc;
         }
         QCOMPARE(lines, 6 + 2);
-        QCOMPARE(arcs, 2 + 1);
+        QCOMPARE(arcs, 2 + 1 + 1);
         QVERIFY2(sk->message().isEmpty(), qPrintable(sk->message()));
         const auto& regions = w.document().state().sketches.begin()->second->profiles.regions;
         QCOMPARE(int(regions.size()), 2);  // the open arc encloses nothing

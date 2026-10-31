@@ -710,7 +710,7 @@ void MainWindow::buildToolbar()
         sketchBar_->addAction(registryAction(id));
     }
     sketchBar_->addAction(centerRect_);
-    for (const char* id : {"sketch.circle", "sketch.arc", "sketch.slot", "sketch.polygon", "sketch.text",
+    for (const char* id : {"sketch.circle", "sketch.arc", "sketch.arc3", "sketch.slot", "sketch.polygon", "sketch.text",
                            "sketch.point", "sketch.dimension", "sketch.construction", "sketch.trim", "sketch.offset",
                            "sketch.fillet"}) {
         sketchBar_->addAction(registryAction(id));
@@ -1214,7 +1214,7 @@ void MainWindow::runCommand(const QString& id)
         using CT = jig::ConstraintType;
         static const std::map<QString, T> tools {
             {"sketch.line", T::Line},       {"sketch.rectangle", T::Rectangle}, {"sketch.circle", T::Circle},
-            {"sketch.arc", T::Arc},         {"sketch.slot", T::Slot},           {"sketch.polygon", T::Polygon},
+            {"sketch.arc", T::Arc},         {"sketch.arc3", T::Arc3},         {"sketch.slot", T::Slot},           {"sketch.polygon", T::Polygon},
             {"sketch.text", T::Text},       {"sketch.trim", T::Trim},
             {"sketch.offset", T::Offset},   {"sketch.fillet", T::Round},
             {"sketch.point", T::Point},     {"sketch.dimension", T::Dimension}};

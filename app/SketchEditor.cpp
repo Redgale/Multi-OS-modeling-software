@@ -391,6 +391,10 @@ QString SketchEditor::toolHint() const
             return second_ ? tr("Click where the arc ends (it runs counter-clockwise), or type the angle it spans.")
                  : first_  ? tr("Click where the arc starts, or type the radius and press Enter.")
                            : tr("Click the centre of the arc.");
+        case Tool::Arc3:
+            return second_ ? tr("Click a point the arc passes through (this sets how much it bends).")
+                 : first_  ? tr("Click where the arc ends.")
+                           : tr("Click where the arc starts.");
         case Tool::Slot:
             return second_ ? tr("Click to set the width, or type it and press Enter.")
                  : first_  ? tr("Click the other end's centre, or type the centre-to-centre length.")
@@ -805,6 +809,49 @@ void SketchEditor::placeSecond(const Snap& cur, const QStringList& rawTyped)
             }
             break;
         }
+        case Tool::Arc3: {
+            if (!second_) {
+                if (QLineF(a, b).length() < 1e-9) {
+                    return;
+                }
+                second_ = cur;
+                break;
+            }
+            // the circle through start, end and the clicked point
+            const QPointF e = second_->local, m = b;
+            const double d = 2 * (a.x() * (e.y() - m.y()) + e.x() * (m.y() - a.y()) + m.x() * (a.y() - e.y()));
+            if (std::abs(d) < 1e-9) {
+                message_ = tr("The three points are in a straight line: click to one side to make it bend.");
+                return;
+            }
+            const double a2 = a.x() * a.x() + a.y() * a.y(), e2 = e.x() * e.x() + e.y() * e.y(),
+                         m2 = m.x() * m.x() + m.y() * m.y();
+            const double cx = (a2 * (e.y() - m.y()) + e2 * (m.y() - a.y()) + m2 * (a.y() - e.y())) / d;
+            const double cy = (a2 * (m.x() - e.x()) + e2 * (a.x() - m.x()) + m2 * (e.x() - a.x())) / d;
+            const double R = std::hypot(a.x() - cx, a.y() - cy);
+            auto ang = [&](QPointF q) { return std::atan2(q.y() - cy, q.x() - cx); };
+            auto ccwFrom = [](double from, double to) {
+                double v = std::fmod(to - from, 2 * kPi);
+                return v < 0 ? v + 2 * kPi : v;
+            };
+            // counter-clockwise from start to end if the third point lies on that way round
+            const bool startFirst = ccwFrom(ang(a), ang(m)) < ccwFrom(ang(a), ang(e));
+            const double s0 = startFirst ? ang(a) : ang(e);
+            const double sweep = startFirst ? ccwFrom(ang(a), ang(e)) : ccwFrom(ang(e), ang(a));
+            const int arc = s.addArc(cx, cy, R, s0, s0 + sweep);
+            const jig::SketchEntity A = *s.entity(arc);
+            const int startPt = startFirst ? A.p1 : A.p2, endPt = startFirst ? A.p2 : A.p1;
+            if (first_->point) {
+                s.addConstraint(jig::ConstraintType::Coincident, startPt, first_->point);
+            }
+            if (second_->point) {
+                s.addConstraint(jig::ConstraintType::Coincident, endPt, second_->point);
+            }
+            if (commit(tr("3-point arc"), s)) {
+                resetToolState();
+            }
+            break;
+        }
         case Tool::Slot: {
             if (!second_) {
                 auto len = typedLen(0);
@@ -1153,6 +1200,9 @@ bool SketchEditor::mouseRelease(QMouseEvent* e)
                 (void)two;
                 if (tool_ == Tool::Polygon) {
                     showInput({tr("Diameter"), tr("Sides")}, {QString(), "6"});
+                }
+                else if (tool_ == Tool::Arc3) {
+                    hideInput();  // three clicks, nothing to type
                 }
                 else if (tool_ == Tool::Text) {
                     showInput({tr("Text"), tr("Size")},
@@ -1615,6 +1665,36 @@ void SketchEditor::rebuildOverlay()
             jig::Sketch tmp;
             const int cid = tmp.addCircle(a.x(), a.y(), std::max(1e-6, QLineF(a, b).length()));
             addPoly(polyline(tmp, *tmp.entity(cid)), kAccent, false);
+        }
+        else if (tool_ == Tool::Arc3) {
+            if (!second_) {
+                addPoly({a, b}, kAccent, true);
+            }
+            else {
+                const QPointF e = second_->local, m = b;
+                const double d = 2 * (a.x() * (e.y() - m.y()) + e.x() * (m.y() - a.y()) + m.x() * (a.y() - e.y()));
+                if (std::abs(d) > 1e-9) {
+                    const double a2 = a.x() * a.x() + a.y() * a.y(), e2 = e.x() * e.x() + e.y() * e.y(),
+                                 m2 = m.x() * m.x() + m.y() * m.y();
+                    const double cx = (a2 * (e.y() - m.y()) + e2 * (m.y() - a.y()) + m2 * (a.y() - e.y())) / d;
+                    const double cy = (a2 * (m.x() - e.x()) + e2 * (a.x() - m.x()) + m2 * (e.x() - a.x())) / d;
+                    const double R = std::hypot(a.x() - cx, a.y() - cy);
+                    auto ang = [&](QPointF q) { return std::atan2(q.y() - cy, q.x() - cx); };
+                    auto ccwFrom = [](double from, double to) {
+                        double v = std::fmod(to - from, 2 * kPi);
+                        return v < 0 ? v + 2 * kPi : v;
+                    };
+                    const bool startFirst = ccwFrom(ang(a), ang(m)) < ccwFrom(ang(a), ang(e));
+                    const double s0 = startFirst ? ang(a) : ang(e);
+                    const double sw = startFirst ? ccwFrom(ang(a), ang(e)) : ccwFrom(ang(e), ang(a));
+                    std::vector<QPointF> pts;
+                    for (int k = 0; k <= 48; ++k) {
+                        const double t = s0 + sw * k / 48;
+                        pts.emplace_back(cx + R * std::cos(t), cy + R * std::sin(t));
+                    }
+                    addPoly(pts, kAccent, false);
+                }
+            }
         }
         else if (tool_ == Tool::Arc || tool_ == Tool::Slot || tool_ == Tool::Polygon) {
             jig::Sketch tmp;

@@ -86,7 +86,7 @@ and packaged but its window is not exercised in CI (B-003). Builds are unsigned.
 
 ## What is stubbed or not started
 
-- M1 still missing: 3-point and tangent arcs, Ellipse and Spline tools,
+- M1 still missing: tangent arcs, Ellipse and Spline tools,
   Extend/Break/sketch Mirror/patterns, associative offset, window selection, collinear/concentric, Project/Include.
 - M2 still missing: extrude drag handle on the canvas, extrude to object, thin walls from
   open curves,
@@ -118,7 +118,7 @@ and packaged but its window is not exercised in CI (B-003). Builds are unsigned.
 
 ## Next three tasks
 
-1. Finish M1's remaining sketch tools (3-point arc, Ellipse, Spline, Extend,
+1. Finish M1's remaining sketch tools (tangent arc, Ellipse, Spline, Extend,
    Break, sketch Mirror and patterns).
 2. **B-001 libslvs spike** in an environment where building SolveSpace is allowed.
 3. Windows/macOS GUI screenshots in CI (B-003); Windows DLL audit (B-011).

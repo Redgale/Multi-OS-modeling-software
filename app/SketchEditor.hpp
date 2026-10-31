@@ -40,6 +40,7 @@ public:
         CenterRectangle,
         Circle,
         Arc,      // centre, start, end (counter-clockwise)
+        Arc3,     // start, end, then a point the arc passes through
         Slot,     // centre, centre, width
         Polygon,  // centre, corner; sides typed (default 6)
         Text,     // click the centre, type the words and the size

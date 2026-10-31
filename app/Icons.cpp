@@ -47,6 +47,7 @@ const std::map<QString, QString>& icons()
         {"sketch.rectangle", "M5 7 L19 7 L19 17 L5 17 Z f O5 7 1.6 O19 17 1.6"},
         {"sketch.circle", "O12 12 8 f O12 12 1.6"},
         {"sketch.arc", "M4 17 A12 17 8 180 -180 f O4 17 1.6 O20 17 1.6 O12 17 1.4"},
+        {"sketch.arc3", "M4 17 A12 17 8 180 -180 f O4 17 1.6 O20 17 1.6 O12 9 1.6"},
         {"sketch.polygon", "M12 3 L19.8 7.5 L19.8 16.5 L12 21 L4.2 16.5 L4.2 7.5 Z f O12 12 1.4"},
         {"sketch.ellipse", "E12 12 9 5.5 f O12 12 1.4"},
         {"sketch.slot", "M8 8 L16 8 A16 12 4 90 -180 L8 16 A8 12 4 270 -180 Z f O8 12 1.3 O16 12 1.3"},

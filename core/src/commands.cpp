@@ -80,6 +80,7 @@ CommandRegistry::CommandRegistry()
     add({"sketch.rectangle", "Rectangle", "Rectangle", "SKETCH CREATE", "Draw a rectangle from corner to corner or from its center.", "R", {"box", "square"}, true, false, true, m1});
     add({"sketch.circle", "Circle", "Circle", "SKETCH CREATE", "Draw a circle from its center and diameter.", "C", {"round", "hole outline", "disc"}, true, false, true, m1});
     add({"sketch.arc", "Arc", "Arc", "SKETCH CREATE", "Draw part of a circle from its center, start and end.", "", {"curve", "bend"}, false, false, false, m1});
+    add({"sketch.arc3", "3-point arc", "3-Point Arc", "SKETCH CREATE", "Draw an arc through its two ends and one point on it.", "", {"curve through points", "bend"}, false, false, false, m1});
     add({"sketch.polygon", "Polygon", "Polygon", "SKETCH CREATE", "Draw a shape with equal sides, like a hex nut.", "", {"hexagon", "nut"}, false, false, false, m1});
     add({"sketch.ellipse", "Ellipse", "Ellipse", "SKETCH CREATE", "Draw an oval from its center and two axes.", "", {"oval"}, false, false, false, m1});
     add({"sketch.slot", "Slot", "Slot", "SKETCH CREATE", "Draw a rounded-end slot, ideal for adjustable screws.", "", {"oblong", "obround"}, false, false, true, m1});
@@ -143,7 +144,7 @@ CommandRegistry::CommandRegistry()
     // shell, revolve, hole, patterns, mirror, parameters). Everything else above keeps its "coming in" note.
     static const std::set<std::string> inApp {
         "sketch.create", "sketch.finish", "sketch.line", "sketch.rectangle", "sketch.circle", "sketch.point",
-        "sketch.arc", "sketch.slot", "sketch.polygon", "sketch.text", "sketch.trim", "sketch.offset", "sketch.fillet",
+        "sketch.arc", "sketch.arc3", "sketch.slot", "sketch.polygon", "sketch.text", "sketch.trim", "sketch.offset", "sketch.fillet",
         "sketch.dimension", "sketch.construction", "constraint.coincident", "constraint.midpoint", "constraint.fix",
         "constraint.parallel", "constraint.perpendicular", "constraint.horizontal", "constraint.tangent",
         "constraint.symmetric", "constraint.equal", "solid.extrude", "solid.fillet", "solid.chamfer", "solid.shell",
