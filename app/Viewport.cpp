@@ -986,8 +986,8 @@ void Viewport::drawGizmo(QPainter& p)
 
 void Viewport::orbit(const QPoint& d)
 {
-    yaw_ -= d.x() * 0.4f;
-    pitch_ = std::clamp(pitch_ + d.y() * 0.4f, -89.9f, 89.9f);
+    yaw_ -= d.x() * 0.4f * orbitSpeed_;
+    pitch_ = std::clamp(pitch_ + d.y() * 0.4f * orbitSpeed_, -89.9f, 89.9f);
     update();
 }
 
@@ -1212,7 +1212,7 @@ void Viewport::wheelEvent(QWheelEvent* e)
         }
         return;
     }
-    const double steps = e->angleDelta().y() / 120.0;
+    const double steps = e->angleDelta().y() / 120.0 * (zoomInverted_ ? -1 : 1);
     zoomAt(std::pow(0.85, steps), e->position().toPoint());
 }
 
@@ -1221,7 +1221,7 @@ bool Viewport::event(QEvent* e)
     if (e->type() == QEvent::NativeGesture) {
         auto* g = static_cast<QNativeGestureEvent*>(e);
         if (g->gestureType() == Qt::ZoomNativeGesture) {
-            zoomAt(1.0 / (1.0 + g->value()), g->position().toPoint());
+            zoomAt(zoomInverted_ ? 1.0 + g->value() : 1.0 / (1.0 + g->value()), g->position().toPoint());
             return true;
         }
     }

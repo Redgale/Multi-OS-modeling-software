@@ -939,6 +939,35 @@ private slots:
         }
     }
 
+    // Navigation settings: preset, zoom direction and orbit speed apply and are remembered.
+    void navigationSettings()
+    {
+        {
+            MainWindow w;
+            w.show();
+            QVERIFY(QTest::qWaitForWindowExposed(&w));
+            Viewport* view = w.viewport();
+            w.setNavigation(NavPreset::Blender, true, 2.0f);
+            QCOMPARE(int(view->navPreset()), int(NavPreset::Blender));
+            QVERIFY(view->zoomInverted());
+            // a right drag of 10 px turns twice as far at speed 2
+            const float yaw0 = view->yaw();
+            const QPoint at(400, 300);
+            QTest::mousePress(view, Qt::RightButton, Qt::NoModifier, at);
+            QMouseEvent mv(QEvent::MouseMove, QPointF(at + QPoint(10, 0)), view->mapToGlobal(QPointF(at + QPoint(10, 0))),
+                           Qt::NoButton, Qt::RightButton, Qt::NoModifier);
+            QApplication::sendEvent(view, &mv);
+            QTest::mouseRelease(view, Qt::RightButton, Qt::NoModifier, at + QPoint(10, 0));
+            QVERIFY(std::abs((yaw0 - view->yaw()) - 8.0f) < 1e-4);
+        }
+        {
+            MainWindow again;  // a new window starts with the saved choices
+            QCOMPARE(int(again.viewport()->navPreset()), int(NavPreset::Blender));
+            QVERIFY(again.viewport()->zoomInverted());
+            again.setNavigation(NavPreset::Default, false, 1.0f);
+        }
+    }
+
     // Marking menu: a right click (no drag) opens eight commands around the cursor.
     void markingMenu()
     {

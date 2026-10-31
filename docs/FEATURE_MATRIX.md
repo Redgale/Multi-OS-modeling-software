@@ -27,7 +27,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Data panel, hubs, projects (cloud) | 3 | never | — | Local-first; replaced by files + local versions |
 | Version history and restore | 3 | v0.1 M6 | **app**: named versions inside the .jig, list, restore (undoable) | Local snapshots (PREFLIGHT A-6) |
 | Home start page | 3 | v0.1 | welcome dialog | First-run requirement |
-| Navigation: pan, orbit, zoom to cursor, fit | 5 | v0.1 | yes, four presets | Principle 12 |
+| Navigation: pan, orbit, zoom to cursor, fit | 5 | v0.1 | yes, four presets; Settings page with a plain description of each, zoom direction and orbit speed | Principle 12 |
 | ViewCube (faces, edges, corners, home, drag) | 5 | v0.1 | axis gizmo: 6 views + Home + Fit | Original design, not a cube clone |
 | Visual styles (shaded, edges, wireframe variants) | 5 | v0.1 (two styles) M8 | shaded with edges | |
 | Environment effects (shadows, AO) | 5 | v0.2 | — | Rendering is v0.2 |

@@ -23,10 +23,12 @@ class QTextBrowser;
 class QTimer;
 class QTreeWidget;
 class QComboBox;
+class QActionGroup;
 
 namespace jigapp
 {
 class MarkingMenu;
+enum class NavPreset;
 
 class Viewport;
 class SketchEditor;
@@ -121,6 +123,8 @@ public:
     void setSelectFilter(const QString& what);
     QString selectFilter() const;
     QString detailsText() const;
+    // Mouse and trackpad settings (saved, and shown in the View menu and Settings).
+    void setNavigation(NavPreset preset, bool zoomInverted, float orbitSpeed);
     // The marking menu for the view's current context, opened at a view position.
     MarkingMenu* openMarkingMenu(const QPoint& viewPos);
     void isolateBody(const std::string& body);
@@ -183,6 +187,7 @@ private:
     QTreeWidget* browser_ = nullptr;
     std::set<std::string> hiddenBodies_;
     QPointer<QComboBox> selectFilter_;  // (a QPointer: panels may be destroyed after it on exit)
+    QActionGroup* navGroup_ = nullptr;
     QListWidget* timeline_ = nullptr;
     QSlider* rollback_ = nullptr;
     QTextBrowser* details_ = nullptr;

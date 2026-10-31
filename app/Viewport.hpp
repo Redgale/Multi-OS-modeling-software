@@ -6,6 +6,8 @@
 // GL path later without touching the rest of the app.
 #pragma once
 
+#include <algorithm>
+
 #include <atomic>
 #include <memory>
 #include <optional>
@@ -116,6 +118,27 @@ public:
     void setNavPreset(NavPreset p)
     {
         nav_ = p;
+    }
+    // Wheel and pinch zoom the other way round; orbit speed as a factor (1 = normal).
+    void setZoomInverted(bool on)
+    {
+        zoomInverted_ = on;
+    }
+    bool zoomInverted() const
+    {
+        return zoomInverted_;
+    }
+    void setOrbitSpeed(float f)
+    {
+        orbitSpeed_ = std::clamp(f, 0.25f, 4.0f);
+    }
+    float orbitSpeed() const
+    {
+        return orbitSpeed_;
+    }
+    float yaw() const
+    {
+        return yaw_;
     }
     NavPreset navPreset() const
     {
@@ -284,6 +307,8 @@ private:
     std::atomic<int> generation_ {0};
     int pending_ = 0;
     int shownBodies_ = 0;
+    bool zoomInverted_ = false;
+    float orbitSpeed_ = 1.0f;
     QPoint rightPress_;      // where the right button went down
     bool rightMoved_ = false;  // it dragged (orbit) rather than clicked
 

@@ -538,6 +538,8 @@ MainWindow::MainWindow()
     // every first start, so it does not tell us what anyone actually chose.
     theme_ = Theme(st.value("appearance/theme", int(Theme::Dark)).toInt());
     view_->setNavPreset(NavPreset(st.value("navigation", int(NavPreset::Default)).toInt()));
+    view_->setZoomInverted(st.value("navigation/zoom_inverted", false).toBool());
+    view_->setOrbitSpeed(st.value("navigation/orbit_speed", 1.0).toFloat());
     setTheme(theme_);
     restoreGeometry(st.value("geometry").toByteArray());
 
@@ -648,16 +650,15 @@ void MainWindow::buildMenus()
         {NavPreset::Blender, tr("Blender-like (middle-drag orbits)")},
         {NavPreset::SolidWorks, tr("SolidWorks-like (middle-drag orbits, Ctrl pans)")},
         {NavPreset::Trackpad, tr("Trackpad (two fingers orbit, Shift pans, pinch zooms)")}};
-    auto* navGroup = new QActionGroup(this);
+    navGroup_ = new QActionGroup(this);
     for (auto& [p, label] : presets) {
         auto* a = nav->addAction(label);
         a->setCheckable(true);
+        a->setData(int(p));
         a->setChecked(view_->navPreset() == p);
-        navGroup->addAction(a);
-        connect(a, &QAction::triggered, this, [this, p = p] {
-            view_->setNavPreset(p);
-            QSettings().setValue("navigation", int(p));
-        });
+        navGroup_->addAction(a);
+        connect(a, &QAction::triggered, this,
+                [this, p = p] { setNavigation(p, view_->zoomInverted(), view_->orbitSpeed()); });
     }
     auto* themes = view->addMenu(tr("Theme"));
     auto* themeGroup = new QActionGroup(this);
@@ -1871,9 +1872,44 @@ void MainWindow::openSettings()
     }
     design->setCurrentIndex(design->findData(q(jig::unitSymbol(doc_->units()))));
     fresh->setCurrentIndex(std::max(0, fresh->findData(QSettings().value("units/new", "mm").toString())));
+    auto* navCombo = new QComboBox(&d);
+    navCombo->addItem(tr("Default"), int(NavPreset::Default));
+    navCombo->addItem(tr("Blender-like"), int(NavPreset::Blender));
+    navCombo->addItem(tr("SolidWorks-like"), int(NavPreset::SolidWorks));
+    navCombo->addItem(tr("Trackpad"), int(NavPreset::Trackpad));
+    navCombo->setCurrentIndex(navCombo->findData(int(view_->navPreset())));
+    auto* navHelp = new QLabel(&d);
+    navHelp->setWordWrap(true);
+    auto describe = [navCombo, navHelp] {
+        static const QString always =
+            tr(" Everywhere: right-drag orbits, Shift+right-drag pans, right-click opens the marking menu, the wheel "
+               "zooms where the cursor is.");
+        switch (NavPreset(navCombo->currentData().toInt())) {
+            case NavPreset::Default: navHelp->setText(tr("Middle-drag pans; Shift+middle-drag orbits.") + always); break;
+            case NavPreset::Blender: navHelp->setText(tr("Middle-drag orbits; Shift+middle-drag pans.") + always); break;
+            case NavPreset::SolidWorks: navHelp->setText(tr("Middle-drag orbits; Ctrl+middle-drag pans.") + always); break;
+            case NavPreset::Trackpad:
+                navHelp->setText(tr("Two-finger scroll orbits, Shift+scroll pans, pinch zooms; Alt+drag also orbits.") +
+                                 always);
+                break;
+        }
+    };
+    describe();
+    connect(navCombo, &QComboBox::currentIndexChanged, &d, describe);
+    auto* invert = new QCheckBox(tr("Zoom the other way round (wheel and pinch)"), &d);
+    invert->setChecked(view_->zoomInverted());
+    auto* speed = new QComboBox(&d);
+    for (auto [label, f] : {std::pair {tr("Slow"), 0.5f}, std::pair {tr("Normal"), 1.0f}, std::pair {tr("Fast"), 2.0f}}) {
+        speed->addItem(label, f);
+    }
+    speed->setCurrentIndex(std::max(0, speed->findData(view_->orbitSpeed())));
     form->addRow(tr("Theme"), theme);
     form->addRow(tr("Units of this design"), design);
     form->addRow(tr("Units for new designs"), fresh);
+    form->addRow(tr("Mouse and trackpad"), navCombo);
+    form->addRow(QString(), navHelp);
+    form->addRow(QString(), invert);
+    form->addRow(tr("Orbit speed"), speed);
     auto* note = new QLabel(tr("Changing units never resizes anything: it changes how sizes are shown, and what a "
                                "plain number typed into a size field means. You can always type a unit, e.g. "
                                "<i>2 in</i> or <i>50 mm</i>, in any design."),
@@ -1892,8 +1928,25 @@ void MainWindow::openSettings()
         return;
     }
     QSettings().setValue("units/new", fresh->currentData().toString());
+    setNavigation(NavPreset(navCombo->currentData().toInt()), invert->isChecked(), speed->currentData().toFloat());
     if (auto u = jig::lengthUnitFromString(design->currentData().toString().toStdString())) {
         setDesignUnits(*u);
+    }
+}
+
+void MainWindow::setNavigation(NavPreset preset, bool zoomInverted, float orbitSpeed)
+{
+    view_->setNavPreset(preset);
+    view_->setZoomInverted(zoomInverted);
+    view_->setOrbitSpeed(orbitSpeed);
+    QSettings st;
+    st.setValue("navigation", int(preset));
+    st.setValue("navigation/zoom_inverted", zoomInverted);
+    st.setValue("navigation/orbit_speed", orbitSpeed);
+    if (navGroup_) {
+        for (QAction* a : navGroup_->actions()) {
+            a->setChecked(a->data().toInt() == int(preset));
+        }
     }
 }
 
