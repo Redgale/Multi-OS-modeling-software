@@ -1126,6 +1126,7 @@ bool SketchEditor::mousePress(QMouseEvent* e)
     pressed_ = true;
     pressScreen_ = e->position();
     dragging_ = false;
+    boxing_ = false;
     dragPoint_ = dragPoint2_ = 0;
     if (tool_ != Tool::Select) {
         return true;
@@ -1173,6 +1174,14 @@ bool SketchEditor::mouseMove(QMouseEvent* e)
             emit stateChanged();
         }
         return true;
+    }
+    if (pressed_ && tool_ == Tool::Select && !dragPoint_ && !glyphAt(pressScreen_)) {
+        if (boxing_ || QLineF(pos, pressScreen_).length() >= 4) {
+            boxing_ = true;
+            boxEnd_ = pos;
+            rebuildOverlay();
+            return true;
+        }
     }
     cursor_ = snapAt(pos, tool_ == Tool::Line || tool_ == Tool::Rectangle, e->modifiers());
     cursorValid_ = toLocal(pos).has_value();
@@ -1226,6 +1235,20 @@ bool SketchEditor::mouseRelease(QMouseEvent* e)
         if (!commit(tr("Drag"), dragSketch_)) {
             refreshFromDocument();
         }
+        return true;
+    }
+    if (boxing_) {
+        boxing_ = false;
+        // left to right: what is wholly inside; right to left: anything the box touches
+        const bool crossing = pos.x() < pressScreen_.x();
+        const auto inBox = entitiesInBox(QRectF(pressScreen_, pos).normalized(), crossing);
+        if (!(e->modifiers() & (Qt::ShiftModifier | Qt::ControlModifier | Qt::MetaModifier))) {
+            selection_.clear();
+            selectedConstraints_.clear();
+        }
+        selection_.insert(inBox.begin(), inBox.end());
+        rebuildOverlay();
+        emit stateChanged();
         return true;
     }
     cursor_ = snapAt(pos, tool_ == Tool::Line || tool_ == Tool::Rectangle, e->modifiers());
@@ -1531,6 +1554,47 @@ std::optional<QPointF> SketchEditor::glyphCenter(int constraintId) const
         }
     }
     return std::nullopt;
+}
+
+std::set<int> SketchEditor::entitiesInBox(const QRectF& box, bool crossing) const
+{
+    std::set<int> out;
+    for (auto& [id, e] : work_.entities()) {
+        std::vector<QPointF> samples;
+        if (e.type == jig::EntityType::Point) {
+            if (e.internal) {
+                continue;
+            }
+            samples.push_back(screenOf(e.x, e.y));
+        }
+        else if (e.type == jig::EntityType::Line) {
+            auto [ax, ay] = work_.pointXY(e.p1);
+            auto [bx, by] = work_.pointXY(e.p2);
+            for (int i = 0; i <= 16; ++i) {
+                const double u = i / 16.0;
+                samples.push_back(screenOf(ax + (bx - ax) * u, ay + (by - ay) * u));
+            }
+        }
+        else {
+            auto [cx, cy] = work_.pointXY(e.center);
+            double a0 = 0, span = 2 * kPi;
+            if (e.type == jig::EntityType::Arc) {
+                a0 = e.a0;
+                span = std::fmod(e.a1 - e.a0 + 4 * kPi, 2 * kPi);
+            }
+            for (int i = 0; i <= 48; ++i) {
+                const double t = a0 + span * i / 48.0;
+                samples.push_back(screenOf(cx + e.r * std::cos(t), cy + e.r * std::sin(t)));
+            }
+        }
+        const auto inside = [&](const QPointF& q) { return box.contains(q); };
+        const bool hit = crossing ? std::any_of(samples.begin(), samples.end(), inside)
+                                  : std::all_of(samples.begin(), samples.end(), inside);
+        if (hit && !samples.empty()) {
+            out.insert(id);
+        }
+    }
+    return out;
 }
 
 void SketchEditor::selectConstraint(int constraintId, bool add)
@@ -2214,6 +2278,19 @@ void SketchEditor::paint(QPainter& p)
                 p.drawText(c + QPointF(10, -8), tr("gap %1").arg(len(g.gap)));
             }
         }
+    }
+
+    // Selection box: solid for "wholly inside", dashed for "anything it touches"
+    if (boxing_) {
+        const bool crossing = boxEnd_.x() < pressScreen_.x();
+        const QRectF r = QRectF(pressScreen_, boxEnd_).normalized();
+        p.setPen(QPen(kAccent, 1.2, crossing ? Qt::DashLine : Qt::SolidLine));
+        QColor fill = kAccent;
+        fill.setAlpha(28);
+        p.setBrush(fill);
+        p.drawRect(r);
+        p.setPen(vc.text);
+        p.drawText(r.bottomLeft() + QPointF(4, 14), crossing ? tr("touching") : tr("inside"));
     }
 
     // Cursor feedback: snap marker, inferred constraint, live measurement.

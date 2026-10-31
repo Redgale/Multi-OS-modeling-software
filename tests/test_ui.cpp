@@ -906,6 +906,55 @@ private slots:
         QCOMPARE(regions(), 5);
     }
 
+    // Drag a box in Select: left to right takes what is inside, right to left what it touches.
+    void windowSelection()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        Viewport* view = w.viewport();
+        QVERIFY(w.createSketchOn("XY"));
+        SketchEditor* sk = w.sketchEditor();
+        auto click = [&](double x, double y) {
+            QTest::mouseMove(view, sk->screenOf(x, y));
+            QTest::mouseClick(view, Qt::LeftButton, Qt::NoModifier, sk->screenOf(x, y));
+        };
+        auto box = [&](double x0, double y0, double x1, double y1) {
+            QTest::mouseMove(view, sk->screenOf(x0, y0));
+            QTest::mousePress(view, Qt::LeftButton, Qt::NoModifier, sk->screenOf(x0, y0));
+            for (int i = 1; i <= 5; ++i) {
+                const double u = i / 5.0;
+                QMouseEvent mv(QEvent::MouseMove, QPointF(sk->screenOf(x0 + (x1 - x0) * u, y0 + (y1 - y0) * u)),
+                               view->mapToGlobal(QPointF(sk->screenOf(x0 + (x1 - x0) * u, y0 + (y1 - y0) * u))),
+                               Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+                QApplication::sendEvent(view, &mv);
+            }
+            QTest::mouseRelease(view, Qt::LeftButton, Qt::NoModifier, sk->screenOf(x1, y1));
+        };
+        auto curves = [&] {
+            int n = 0;
+            for (int id : sk->selection()) {
+                n += sk->sketch().entity(id)->type != jig::EntityType::Point;
+            }
+            return n;
+        };
+        sk->setTool(SketchEditor::Tool::Circle);
+        click(0, 0);
+        QTest::mouseMove(view, sk->screenOf(5, 0));
+        sk->typeValues({"10 mm"});
+        click(30, 0);
+        QTest::mouseMove(view, sk->screenOf(35, 0));
+        sk->typeValues({"10 mm"});
+        sk->setTool(SketchEditor::Tool::Select);
+        box(-10, -10, 10, 10);  // left to right round the first circle only
+        QCOMPARE(curves(), 1);
+        box(28, -10, -10, 10);  // right to left, ending part-way over the second: touches both
+        QCOMPARE(curves(), 2);
+        box(3, -10, 20, 10);    // left to right, cutting through the first: nothing wholly inside
+        QCOMPARE(curves(), 0);
+    }
+
     // Project: click a face of an earlier body; its outline comes into the sketch, fixed.
     void projectTool()
     {

@@ -36,7 +36,7 @@ conflict refusal, gap rings, profiles, construction toggle, delete.
 
 - B-013 Arc (3-point, tangent, centre), Polygon, Ellipse, Slot, Fit-point spline tools.
 - B-014 (Trim, Extend, Break, Offset, sketch Fillet, Mirror, Move/Copy, Grid/Ring copy done) linked sketch
-  patterns, rotate in the Move tool, window selection.
+  patterns, rotate in the Move tool.
 - B-016 Select and delete individual constraints (click a glyph); window selection; collinear,
   concentric; point-on-curve snapping while drawing; endpoint tangency via angle-via-point.
 
@@ -48,7 +48,7 @@ timeline edit/rename/suppress/roll back/delete with dependents warning, Paramete
 - B-015 UI test for the Parameters dialog and timeline context menu.
 - B-017 Extrude drag handle on the canvas; two sides, to object, taper, thin.
 - B-018 (reorder done in session 2) Timeline groups; Browser visibility/isolate/rename/find in timeline.
-- B-019 Selection filters, window selection, Select Other.
+- B-019 (sketch window selection done) Selection filters, Select Other.
 
 - B-020 Text: pick installed fonts by family name (fontconfig / DirectWrite / CoreText),
   bold/italic, multi-line, HarfBuzz shaping for complex scripts, text along a path.

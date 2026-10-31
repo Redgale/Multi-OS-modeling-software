@@ -112,6 +112,8 @@ public:
 
     // ---- for UI tests: drive the editor in sketch coordinates
     QPoint screenOf(double x, double y) const;
+    // Curves and points in a screen box: wholly inside, or (crossing) any part inside.
+    std::set<int> entitiesInBox(const QRectF& box, bool crossing) const;
     void typeValues(const QStringList& values);  // as if typed into the value box + Enter
     bool editTextAt(int anchorPoint);            // opens the value box on an existing text
     bool editArtworkAt(int anchorPoint);         // … or on imported artwork (its width)
@@ -204,6 +206,8 @@ private:
     // dragging
     bool pressed_ = false, dragging_ = false;
     QPointF pressScreen_;
+    bool boxing_ = false;  // Select: dragging a selection box from empty space
+    QPointF boxEnd_;
     int dragPoint_ = 0, dragPoint2_ = 0;
     QPointF dragOffset2_;
     QPointF dragStartLocal_;
