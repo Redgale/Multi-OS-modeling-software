@@ -222,3 +222,42 @@ TEST(Document, InchDesignsReadPlainNumbersAsInches)
     run(*doc, "units in");
     EXPECT_EQ(doc->defaultLength(10, 0.5), "0.5 in");
 }
+
+TEST(Document, ReorderStepsSafely)
+{
+    auto doc = build("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=40 h=20\nextrude id=e1 sketch=s1 distance=10\n"
+                     "sketch id=s2 plane=XY\ncircle sketch=s2 center=0,0 d=6\nextrude id=e2 sketch=s2 extent=all op=cut\n"
+                     "fillet id=f1 edges=\"name:E[e1/end|e1/side:5]\" radius=1mm\n");
+    expectAllOk(*doc);
+    const double v = props(*doc).volume;
+    auto order = [&] {
+        std::string o;
+        for (auto& f : doc->model().features) {
+            o += f.id + " ";
+        }
+        return o;
+    };
+    // a step cannot move before what it uses
+    auto bad = doc->moveFeature("e1", 0);
+    ASSERT_FALSE(bad.ok());
+    EXPECT_NE(bad.error().message.find("uses"), std::string::npos) << bad.error().message;
+    EXPECT_EQ(order(), "s1 e1 s2 e2 f1 ");
+    // an independent sketch can move to the front; the fillet can go before the cut
+    ASSERT_TRUE(doc->moveFeature("s2", 0).ok());
+    ASSERT_TRUE(doc->moveFeature("f1", 3).ok());
+    EXPECT_EQ(order(), "s2 s1 e1 f1 e2 ");
+    expectAllOk(*doc);
+    EXPECT_NEAR(props(*doc).volume, v, 1e-6);
+    // the cut uses no name of the block, but before the block there is nothing to cut:
+    // the move is refused and the timeline stays as it was
+    auto breaks = doc->moveFeature("e2", 1);
+    ASSERT_FALSE(breaks.ok());
+    EXPECT_NE(breaks.error().message.find("stop"), std::string::npos) << breaks.error().message;
+    EXPECT_EQ(order(), "s2 s1 e1 f1 e2 ");
+    expectAllOk(*doc);
+    // moves are undoable
+    ASSERT_TRUE(doc->undo());
+    EXPECT_EQ(order(), "s2 s1 e1 e2 f1 ");  // the last successful move is taken back
+    ScriptRunner r(*doc);
+    ASSERT_TRUE(r.runLine("reorder s2 after=e1").ok());
+}

@@ -85,6 +85,7 @@ Profile keys are the sorted ids of the sketch curves around a closed area, e.g. 
 | `set <feature id> key=value …` | Change a feature's values, e.g. `set f2 radius=1mm` |
 | `suppress <id>` / `unsuppress <id>` | Skip or restore a step |
 | `rollback before=<id>` · `rollback <n>` · `rollback end` | Move the rollback marker; new steps are inserted at the marker |
+| `reorder <id> before=<id>\|after=<id>\|to=<n>` | Move a step in the timeline (refused when it would break something) |
 | `undo [n]` / `redo [n]` | Undo or redo whole commands |
 
 ## Import

@@ -1341,6 +1341,30 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
         }
         return checkFeature(id);
     }
+    if (a.verb == "reorder") {
+        // reorder <id> before=<id> | after=<id> | to=<index>
+        if (a.positional.empty()) {
+            return makeError("script.args", "Use: reorder <id> before=<id> | after=<id>");
+        }
+        const std::string id = a.positional[0];
+        int to = -1;
+        const int from = doc.featureIndex(id);
+        if (a.has("before")) {
+            const int k = doc.featureIndex(a.get("before"));
+            to = k < 0 ? -1 : (from < k ? k - 1 : k);
+        }
+        else if (a.has("after")) {
+            const int k = doc.featureIndex(a.get("after"));
+            to = k < 0 ? -1 : (from < k ? k : k + 1);
+        }
+        else if (a.has("to")) {
+            to = std::stoi(a.get("to"));
+        }
+        if (from < 0 || to < 0) {
+            return makeError("script.args", "Unknown step in reorder.");
+        }
+        return doc.moveFeature(id, to);
+    }
     if (a.verb == "set") {
         // set <feature> key=value ...  (edit feature parameters)
         if (a.positional.empty()) {

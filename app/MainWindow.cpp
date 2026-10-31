@@ -818,6 +818,18 @@ void MainWindow::buildDocks()
     connect(timeline_, &QListWidget::currentRowChanged, this, &MainWindow::showFeatureDetails);
     timeline_->setIconSize(QSize(20, 20));
     timeline_->setContextMenuPolicy(Qt::CustomContextMenu);
+    // drag a step to a new place in the history (checked: it must not break anything)
+    timeline_->setDragDropMode(QAbstractItemView::InternalMove);
+    timeline_->setDefaultDropAction(Qt::MoveAction);
+    connect(timeline_->model(), &QAbstractItemModel::rowsMoved, this,
+            [this](const QModelIndex&, int start, int, const QModelIndex&, int row) {
+                if (!doc_ || start < 0 || start >= int(doc_->model().features.size())) {
+                    return;
+                }
+                const std::string id = doc_->model().features[size_t(start)].id;
+                const int to = row > start ? row - 1 : row;  // Qt counts the destination before removal
+                QTimer::singleShot(0, this, [this, id, to] { moveStep(id, to); });  // after the view settles
+            });
     connect(timeline_, &QListWidget::customContextMenuRequested, this, &MainWindow::timelineMenu);
     connect(timeline_, &QListWidget::itemDoubleClicked, this,
             [this](QListWidgetItem* it) { editFeature(timeline_->row(it)); });
@@ -2113,6 +2125,11 @@ void MainWindow::timelineMenu(const QPoint& pos)
                                    });
                     refreshAll();
                 });
+    const int count = int(doc_->model().features.size());
+    auto* earlier = m.addAction(tr("Move earlier"), this, [this, id = f.id, row] { moveStep(id, row - 1); });
+    earlier->setEnabled(row > 0);
+    auto* later = m.addAction(tr("Move later"), this, [this, id = f.id, row] { moveStep(id, row + 1); });
+    later->setEnabled(row + 1 < count);
     m.addAction(tr("Roll back to before this step"), this, [this, row] {
         doc_->transact(tr("Move rollback marker").toStdString(), [row](jig::Model& mm) -> jig::Result<bool> {
             mm.rollback = row;
@@ -2124,6 +2141,17 @@ void MainWindow::timelineMenu(const QPoint& pos)
     m.addAction(toolIcon("sketch.trim", palette().color(QPalette::WindowText), accentFor(palette())), tr("Delete…"),
                 this, [this, id = f.id] { deleteFeature(id); });
     m.exec(timeline_->viewport()->mapToGlobal(pos));
+}
+
+bool MainWindow::moveStep(const std::string& id, int to)
+{
+    auto r = doc_->moveFeature(id, to);
+    if (!r) {
+        QMessageBox::information(this, tr("Cannot move this step there"), q(r.error().message) +
+                                     (r.error().suggestions.empty() ? QString() : "\n\n" + q(r.error().suggestions.front())));
+    }
+    refreshAll();  // also puts a refused drag back where it was
+    return r.ok();
 }
 
 void MainWindow::renameFeature(const std::string& id)

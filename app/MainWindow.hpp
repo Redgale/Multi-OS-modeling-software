@@ -95,6 +95,7 @@ public:
     void openProperties();
     void openParameters();
     void editFeature(int index);
+    bool moveStep(const std::string& id, int to);  // timeline reorder (checked; explains a refusal)
     void runCommand(const QString& id);
 
 protected:

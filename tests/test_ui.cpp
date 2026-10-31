@@ -925,6 +925,40 @@ private slots:
         QVERIFY2(std::abs(total() - natural / 4) < 1e-6, qPrintable(QString::number(total())));
     }
 
+    // Timeline reorder: drag a step (through the list's own model, as a drop does).
+    void reorderTimeline()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        QVERIFY(w.openSample("pen_cup"));
+        const double v = volume(w);
+        auto order = [&] {
+            QStringList o;
+            for (auto& f : w.document().model().features) {
+                o << QString::fromStdString(f.id);
+            }
+            return o.join(" ");
+        };
+        QCOMPARE(order(), QString("s1 e1 sh1 f1 f2 s2 e2"));
+        QListWidget* timeline = nullptr;
+        for (auto* l : w.findChildren<QListWidget*>()) {
+            if (l->accessibleName() == "Timeline of steps") {
+                timeline = l;
+            }
+        }
+        QVERIFY(timeline);
+        // drag the rim round (f2) in front of the base round (f1)
+        QVERIFY(timeline->model()->moveRow(QModelIndex(), 4, QModelIndex(), 3));
+        QTRY_COMPARE(order(), QString("s1 e1 sh1 f2 f1 s2 e2"));
+        QVERIFY(std::abs(volume(w) - v) < 1e-6);
+        QCOMPARE(timeline->count(), 7);
+        // the menu's "Move later" path, back again
+        QVERIFY(w.moveStep("f2", 4));
+        QCOMPARE(order(), QString("s1 e1 sh1 f1 f2 s2 e2"));
+    }
+
     // Revolve a ring, drill it from its top face, repeat the hole around the axis,
     // and mirror the result: the M3 panels driven like a person would.
     void ringRevolveHolePatternMirror()

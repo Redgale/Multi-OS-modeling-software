@@ -193,6 +193,10 @@ public:
     // Ids of later features that refer to `id` (by sketch id, body id or face names
     // made by it). Used to warn before deleting or reordering.
     std::vector<std::string> dependents(const std::string& id) const;
+    // Moves a step to position `to` in the timeline (as one undoable change). Refused,
+    // with an explanation, when the step would come before something it uses, after
+    // something that uses it, or when any step that worked would stop working.
+    Result<bool> moveFeature(const std::string& id, int to);
 
     // ---- recompute --------------------------------------------------------
     void recompute();

@@ -297,6 +297,21 @@ Feature* Document::findFeature(Model& m, const std::string& id)
     return nullptr;
 }
 
+namespace
+{
+// True when a feature's parameters refer to `id`: by id, or through names of faces and
+// edges it made ("e1/end", "E[e1/end|…]", "f1/fillet:…").
+bool mentions(const Feature& f, const std::string& id)
+{
+    const std::string d = f.params.dump();
+    const std::string quoted = "\"" + id + "\"", prefix = "\"" + id + "/", inName = "|" + id + "/",
+                      inEdge = "[" + id + "/", inFillet = ":" + id + "/";
+    return d.find(quoted) != std::string::npos || d.find(prefix) != std::string::npos ||
+           d.find(inName) != std::string::npos || d.find(inEdge) != std::string::npos ||
+           d.find(inFillet) != std::string::npos;
+}
+}  // namespace
+
 std::vector<std::string> Document::dependents(const std::string& id) const
 {
     std::vector<std::string> out;
@@ -304,17 +319,80 @@ std::vector<std::string> Document::dependents(const std::string& id) const
     if (i < 0) {
         return out;
     }
-    const std::string quoted = "\"" + id + "\"", prefix = "\"" + id + "/", inName = "|" + id + "/",
-                      inEdge = "[" + id + "/", inFillet = ":" + id + "/";
     for (size_t k = size_t(i) + 1; k < model_.features.size(); ++k) {
-        const std::string d = model_.features[k].params.dump();
-        if (d.find(quoted) != std::string::npos || d.find(prefix) != std::string::npos
-            || d.find(inName) != std::string::npos || d.find(inEdge) != std::string::npos
-            || d.find(inFillet) != std::string::npos) {
+        if (mentions(model_.features[k], id)) {
             out.push_back(model_.features[k].id);
         }
     }
     return out;
+}
+
+Result<bool> Document::moveFeature(const std::string& id, int to)
+{
+    const int from = featureIndex(id);
+    const int n = int(model_.features.size());
+    if (from < 0) {
+        return makeError("move.missing", "That step no longer exists.");
+    }
+    to = std::clamp(to, 0, n - 1);
+    if (to == from) {
+        return true;
+    }
+    const Feature& f = model_.features[size_t(from)];
+    if (to < from) {
+        for (int k = to; k < from; ++k) {
+            const Feature& other = model_.features[size_t(k)];
+            if (mentions(f, other.id)) {
+                return makeError("move.order", "“" + f.name + "” uses “" + other.name + "”, so it must stay after it.",
+                                 {"Move it to a place after “" + other.name + "”."});
+            }
+        }
+    }
+    else {
+        for (int k = from + 1; k <= to; ++k) {
+            const Feature& other = model_.features[size_t(k)];
+            if (mentions(other, f.id)) {
+                return makeError("move.order", "“" + other.name + "” uses “" + f.name + "”, so “" + f.name +
+                                                   "” must stay before it.",
+                                 {"Move it to a place before “" + other.name + "”."});
+            }
+        }
+    }
+    // remember which steps work now, so a move that breaks one can be refused
+    std::set<std::string> okBefore;
+    for (int k = 0; k < n; ++k) {
+        if (status(k).level != StatusLevel::Error) {
+            okBefore.insert(model_.features[size_t(k)].id);
+        }
+    }
+    const std::string name = f.name;
+    auto r = transact("Move " + name, [&](Model& m) -> Result<bool> {
+        Feature moved = m.features[size_t(from)];
+        m.features.erase(m.features.begin() + from);
+        m.features.insert(m.features.begin() + to, std::move(moved));
+        return true;
+    });
+    if (!r) {
+        return r;
+    }
+    std::vector<std::string> broken;
+    for (int k = 0; k < n; ++k) {
+        const Feature& g = model_.features[size_t(k)];
+        if (status(k).level == StatusLevel::Error && okBefore.count(g.id)) {
+            broken.push_back(g.name);
+        }
+    }
+    if (!broken.empty()) {
+        undo();
+        redo_.clear();  // the refused move is not something to redo
+        std::string list;
+        for (auto& b : broken) {
+            list += (list.empty() ? "“" : ", “") + b + "”";
+        }
+        return makeError("move.breaks", "Moving “" + name + "” there would stop " + list + " from working.",
+                         {"Try another place in the timeline."});
+    }
+    return true;
 }
 
 Result<bool> Document::transact(const std::string& label, const Edit& edit)
