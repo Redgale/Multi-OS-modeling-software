@@ -4,6 +4,10 @@
 #include <cmath>
 #include <numbers>
 
+#include <BRepGProp.hxx>
+#include <GProp_GProps.hxx>
+#include <gp_Pln.hxx>
+
 #include <QCheckBox>
 #include <QComboBox>
 #include <QDialogButtonBox>
@@ -208,7 +212,7 @@ SectionPanel::SectionPanel(jig::Document& doc, Viewport* view, QWidget* parent)
     auto* lay = new QVBoxLayout(this);
     auto* head = new QLabel("<h3>" + tr("Section view") + "</h3><p>" +
                                 tr("Slice the view to look inside walls and holes. Only the view changes, not the "
-                                   "design. Surfaces seen from inside the material are shown in red-brown.") + "</p>",
+                                   "design. The cut faces are filled in.") + "</p>",
                             this);
     head->setWordWrap(true);
     plane_ = new QComboBox(this);
@@ -251,6 +255,7 @@ SectionPanel::~SectionPanel()
 {
     if (view_) {
         view_->setSection(std::nullopt);
+        view_->setOverlay({});
     }
 }
 
@@ -281,7 +286,39 @@ void SectionPanel::apply()
     const gp_Pnt p0 = frame.Location().Translated(gp_Vec(frame.Direction()) * shift);
     const QVector3D N(float(n.X()), float(n.Y()), float(n.Z()));
     view_->setSection(QVector4D(N, float(N.x() * p0.X() + N.y() * p0.Y() + N.z() * p0.Z())));
-    note_->setText(tr("Cut faces are shown open (not filled) in this version."));
+    // fill the cut: the cross-section of every body, drawn a hair on the kept side of the
+    // plane so the clipping keeps it, with its outline traced (filled + outlined, not
+    // only a colour)
+    SceneOverlay ov;
+    const QColor fill(196, 160, 112), edge(70, 52, 30);
+    const gp_Vec back = gp_Vec(n) * -0.02;
+    auto put = [&](const float* xyz) {
+        return QVector3D(float(xyz[0] + back.X()), float(xyz[1] + back.Y()), float(xyz[2] + back.Z()));
+    };
+    capArea_ = 0;
+    for (auto& [id, b] : doc_.state().bodies) {
+        auto cap = jig::sectionFaces(b->shape(), gp_Pln(p0, n));
+        if (!cap || cap.value().IsNull()) {
+            continue;
+        }
+        GProp_GProps g;
+        BRepGProp::SurfaceProperties(cap.value(), g);
+        capArea_ += g.Mass();
+        const jig::DisplayMesh m = jig::tessellate(cap.value(), 0.05);
+        for (size_t k = 0; k + 2 < m.indices.size(); k += 3) {
+            for (int c = 0; c < 3; ++c) {
+                ov.tris.push_back({put(&m.positions[3 * size_t(m.indices[k + size_t(c)])]), fill});
+            }
+        }
+        for (size_t k = 0; k + 5 < m.edgeLines.size(); k += 6) {
+            ov.lines.push_back({put(&m.edgeLines[k]), edge});
+            ov.lines.push_back({put(&m.edgeLines[k + 3]), edge});
+        }
+    }
+    view_->setOverlay(std::move(ov));
+    note_->setText(capArea_ > 0 ? tr("Cut faces are filled in (solid tan; holes stay open). Cut area: %1.")
+                                      .arg(QString::fromStdString(jig::formatArea(capArea_, doc_.units())))
+                                : tr("The cut does not pass through the part here."));
 }
 
 // ---------------------------------------------------------------- Properties

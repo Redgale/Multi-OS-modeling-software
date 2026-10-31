@@ -440,6 +440,10 @@ struct DisplayMesh
 // Thread-safe for distinct shapes; used off the UI thread.
 DisplayMesh tessellate(const TopoDS_Shape& s, double linearDeflection = 0.05);
 
+// Where a plane cuts a solid: the flat cross-section (holes kept as holes), for capping a
+// section view and for measuring wall thickness. Empty when the plane misses the solid.
+Result<TopoDS_Shape> sectionFaces(const TopoDS_Shape& solid, const gp_Pln& plane);
+
 // ---------------------------------------------------------------- interchange
 
 Result<bool> exportStl(const TopoDS_Shape& s, const std::string& path, double deflection = 0.02);

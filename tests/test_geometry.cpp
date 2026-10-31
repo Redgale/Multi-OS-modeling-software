@@ -5,6 +5,14 @@
 #include <filesystem>
 
 #include <gtest/gtest.h>
+#include <map>
+
+#include <BRepAlgoAPI_Cut.hxx>
+#include <BRepGProp.hxx>
+#include <BRepPrimAPI_MakeBox.hxx>
+#include <BRepPrimAPI_MakeCylinder.hxx>
+#include <GProp_GProps.hxx>
+#include <gp_Pln.hxx>
 
 #include <map>
 
@@ -332,4 +340,23 @@ TEST(Shell, ClosedHollowKeepsOuterNames)
     EXPECT_EQ(body.findFaces("e1/start").size(), 1u);
     EXPECT_EQ(body.findFaces("sh1/inner:e1/end").size(), 1u);
     EXPECT_NEAR(props(*doc).volume, 60 * 40 * 20 - 56 * 36 * 16, 1e-3);
+}
+
+TEST(Section, CapsKeepHoles)
+{
+    // a 40 x 30 x 10 block with a 10 mm hole through it, cut at half height: 1200 - 25 pi
+    BRepPrimAPI_MakeBox box(gp_Pnt(-20, -15, 0), 40, 30, 10);
+    BRepPrimAPI_MakeCylinder cyl(gp_Ax2(gp_Pnt(0, 0, -1), gp_Dir(0, 0, 1)), 5, 12);
+    BRepAlgoAPI_Cut cut(box.Shape(), cyl.Shape());
+    auto cap = jig::sectionFaces(cut.Shape(), gp_Pln(gp_Pnt(0, 0, 5), gp_Dir(0, 0, 1)));
+    ASSERT_TRUE(cap.ok());
+    GProp_GProps g;
+    BRepGProp::SurfaceProperties(cap.value(), g);
+    EXPECT_NEAR(g.Mass(), 1200 - 25 * M_PI, 1e-6);
+    // a plane that misses the part gives nothing
+    auto miss = jig::sectionFaces(cut.Shape(), gp_Pln(gp_Pnt(0, 0, 50), gp_Dir(0, 0, 1)));
+    ASSERT_TRUE(miss.ok());
+    GProp_GProps g2;
+    BRepGProp::SurfaceProperties(miss.value(), g2);
+    EXPECT_NEAR(g2.Mass(), 0, 1e-9);
 }

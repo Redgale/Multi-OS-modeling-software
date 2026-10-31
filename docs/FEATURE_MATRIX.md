@@ -136,7 +136,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Point (vertex, edges, planes, center) | 20 | v0.1 M4 | — | |
 | Pattern construction geometry, user coordinate system | 20 | v0.3+ | — | |
 | Measure | 21 | v0.1 M6 | **app** + scripts: size of a face/edge, distance, angle, centre-to-centre, X/Y/Z offsets | |
-| Section analysis | 21 | v0.1 M6 | **app**: view-only cut along origin or construction planes, movable, flippable; inside shown in a distinct colour; cut faces not capped yet | |
+| Section analysis | 21 | v0.1 M6 | **app**: view-only cut along origin or construction planes, movable, flippable; cut faces filled in (capped) with the cut area shown | |
 | Properties: volume, area, mass, center of mass | 21 | v0.1 M6 | **app**: volume, weight by material or density, filament length, area, size, centre of mass; CLI `report` | |
 | Interference | 21 | v0.2 | — | Needs parts |
 | Curvature comb, zebra, draft, curvature map, isocurve, accessibility, min radius | 21 | v0.3+ | — | Surface-quality tools |

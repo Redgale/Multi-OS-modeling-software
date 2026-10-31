@@ -40,6 +40,7 @@
 #include <BRepPrimAPI_MakePrism.hxx>
 #include <BRepPrimAPI_MakeRevol.hxx>
 #include <BRepTools_History.hxx>
+#include <ElSLib.hxx>
 #include <GCPnts_TangentialDeflection.hxx>
 #include <Geom_BSplineCurve.hxx>
 #include <gp_Circ.hxx>
@@ -2239,6 +2240,36 @@ Result<ImportedShape> importStep(const std::string& path)
     catch (const Standard_Failure& f) {
         return makeError("import.step", "This STEP file could not be read. It may be damaged.", {},
                          kernelText(f));
+    }
+}
+
+// ---------------------------------------------------------------- section caps
+
+Result<TopoDS_Shape> sectionFaces(const TopoDS_Shape& solid, const gp_Pln& plane)
+{
+    try {
+        Bnd_Box box;
+        BRepBndLib::Add(solid, box);
+        if (box.IsVoid()) {
+            return TopoDS_Shape();
+        }
+        const double m = std::sqrt(box.SquareExtent()) + 10;
+        // a square of the plane, centred where the box's centre projects onto it
+        double x0, y0, z0, x1, y1, z1;
+        box.Get(x0, y0, z0, x1, y1, z1);
+        const gp_Pnt c((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
+        double u, v;
+        ElSLib::Parameters(plane, c, u, v);
+        TopoDS_Face sheet = BRepBuilderAPI_MakeFace(plane, u - m, u + m, v - m, v + m).Face();
+        BRepAlgoAPI_Common common(solid, sheet);
+        common.Build();
+        if (!common.IsDone()) {
+            return makeError("section.failed", "The cut could not be worked out for this shape.");
+        }
+        return common.Shape();
+    }
+    catch (const Standard_Failure& f) {
+        return makeError("section.failed", "The cut could not be worked out for this shape.", {}, kernelText(f));
     }
 }
 

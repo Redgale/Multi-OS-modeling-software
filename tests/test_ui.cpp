@@ -624,9 +624,9 @@ private slots:
         QVERIFY(view->section().has_value());
         QTest::qWait(200);
         const QColor after = pixel();
-        // the front half is gone; we look at the inside of the back half (brick red)
-        QVERIFY2(after.red() > after.green() + 40, qPrintable(after.name()));
-        QVERIFY2(!(before.red() > before.green() + 40), qPrintable(before.name()));
+        // the front half is gone and the cut is filled in (tan: warm, not the part's colour)
+        QVERIFY(sp->capArea() > 0);
+        QVERIFY2(after.red() > after.blue() + 60 && after != before, qPrintable(after.name() + " " + before.name()));
         w.grab().save(shotPath("section"));
         // the design itself is untouched, and closing restores the full view
         QCOMPARE(int(w.document().model().features.size()), 10);
