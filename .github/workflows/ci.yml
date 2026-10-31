@@ -120,6 +120,17 @@ jobs:
         run: ctest --test-dir build --output-on-failure -j3 -LE ui
       - name: Benchmarks
         run: ./build/bench/jigsmith-bench | tee bench-macos.json
+      - name: GUI smoke test and screenshot (B-003)
+        # the real window, opened on the runner's desktop session; it renders the phone stand
+        # sample, saves a screenshot and quits
+        run: |
+          ./build/app/jigsmith.app/Contents/MacOS/jigsmith --sample phone_stand \
+            --screenshot "screenshot-${{ matrix.os }}.png" &
+          pid=$!
+          for i in $(seq 1 120); do kill -0 $pid 2>/dev/null || break; sleep 1; done
+          if kill -0 $pid 2>/dev/null; then kill $pid; echo "timed out"; exit 1; fi
+          wait $pid
+          test -s "screenshot-${{ matrix.os }}.png"
       - name: Package .dmg (unsigned)
         run: |
           "$(brew --prefix qt)/bin/macdeployqt" build/app/jigsmith.app -dmg
@@ -129,6 +140,7 @@ jobs:
           name: jigsmith-${{ matrix.os }}
           path: |
             Jigsmith-*.dmg
+            screenshot-*.png
             bench-macos.json
 
   windows:
@@ -171,6 +183,16 @@ jobs:
           windeployqt --release --no-translations dist/jigsmith.exe
           Copy-Item LICENSE, THIRD_PARTY_LICENSES.md dist/
           Compress-Archive -Path dist/* -DestinationPath Jigsmith-windows-x64-portable.zip
+      - name: GUI smoke test and screenshot (B-003)
+        # the packaged app on the runner's desktop, with Qt's software OpenGL (the runner has
+        # no GPU driver); it renders the phone stand sample, saves a screenshot and quits
+        shell: pwsh
+        run: |
+          $env:QT_OPENGL = "software"
+          $p = Start-Process -FilePath dist/jigsmith.exe -ArgumentList "--sample", "phone_stand", "--screenshot", "$PWD\screenshot-windows.png" -PassThru
+          if (-not $p.WaitForExit(120000)) { $p.Kill(); throw "timed out" }
+          if ($p.ExitCode -ne 0) { throw "exit code $($p.ExitCode)" }
+          if ((Get-Item screenshot-windows.png).Length -lt 10000) { throw "screenshot too small" }
       - name: Build the installer (Inno Setup)
         shell: pwsh
         run: |
@@ -200,6 +222,7 @@ jobs:
           path: |
             Jigsmith-windows-x64-portable.zip
             Jigsmith-windows-x64-setup.exe
+            screenshot-windows.png
             bench-windows.json
 
   distros:
