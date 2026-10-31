@@ -23,7 +23,9 @@ decision or finding). Move items to STATUS.md when started.
 - **B-012 OCCT 8 deprecations**: `TopTools_*`/`TColStd_*` typedef headers are deprecated in
   8.0 (warnings on Windows). Switch to `NCollection_*` types once 7.6 support is dropped, or
   wrap them in one compatibility header.
-- **B-011 Windows package DLL audit**: ship only the DLLs Jigsmith loads; list each licence.
+- **B-011 Windows package DLL audit**: `packaging/windows/trim-dlls.ps1` (CI) keeps only DLLs reachable
+  from the programs and Qt plugins and writes THIRD_PARTY_DLLS.txt (conda package + licence). Review
+  that list before the first release.
 - **B-009 Recompute off the UI thread** for long timelines with a progress indicator
   (5.3.6), once any real design exceeds 100 ms.
 

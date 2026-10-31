@@ -182,6 +182,9 @@ jobs:
           # OCCT and its runtime dependencies from the conda environment
           Copy-Item "$env:CONDA_PREFIX/Library/bin/*.dll" dist/
           windeployqt --release --no-translations dist/jigsmith.exe
+          # B-011: only the DLLs something loads, each conda-forge one listed with its licence
+          pwsh packaging/windows/trim-dlls.ps1 -Dist dist -CondaPrefix $env:CONDA_PREFIX
+          Get-Content dist/THIRD_PARTY_DLLS.txt
           Copy-Item LICENSE, THIRD_PARTY_LICENSES.md dist/
           Compress-Archive -Path dist/* -DestinationPath Jigsmith-windows-x64-portable.zip
       - name: GUI smoke test and screenshot (B-003)
