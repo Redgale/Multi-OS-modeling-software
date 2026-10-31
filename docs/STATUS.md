@@ -14,7 +14,7 @@ Polygon sketch tools, and **Text** (FreeType outlines, built-in Inter font, D-01
 completes the knob (A2) and pen cup (A3) samples including their lettering, and the
 Inspect tools **Measure** and **Properties**, **3MF** export, **construction planes**
 (offset, at an angle, midplane), **Combine, Split body and Move/Copy**, and **Section view**.
-80 tests, including UI workflow tests that drive the real window; the whole suite, UI tests
+79 test entries (78 core tests plus the UI workflow suite, which drives the real window in 11 scenarios); all of them, UI tests
 included, also passes under AddressSanitizer + UBSan (leak checking on for the core).
 
 ## What works, and how it was verified
