@@ -408,6 +408,9 @@ QString SketchEditor::toolHint() const
                           : tr("Click where the middle of the text goes.");
         case Tool::Trim:
             return tr("Click the piece of a curve to remove. It is cut where other curves cross it.");
+        case Tool::Project:
+            return tr("Click an edge of a body (or a face, for its whole outline) to bring it into the sketch. "
+                      "The copy is fixed in place; it does not follow later changes yet.");
         case Tool::Round:
             return roundAt_ ? tr("Type the radius and press Enter.")
                             : tr("Click the corner where two lines meet to round it.");
@@ -1047,6 +1050,14 @@ bool SketchEditor::mouseMove(QMouseEvent* e)
             }
         }
     }
+    if (tool_ == Tool::Project && view_) {
+        if (auto h = view_->pickEdgeAt(pos.toPoint())) {
+            view_->setEdgeHighlight(h->body, {h->edge});
+        }
+        else {
+            view_->setEdgeHighlight({}, {});
+        }
+    }
     if (tool_ == Tool::Trim) {
         trimHover_.reset();
         if (auto loc = toLocal(pos)) {
@@ -1105,6 +1116,48 @@ bool SketchEditor::mouseRelease(QMouseEvent* e)
                     selection_.insert(hit);
                 }
             }
+            break;
+        }
+        case Tool::Project: {
+            // the bodies as they were before this sketch (a sketch cannot project its own result)
+            const jig::ModelState before = doc_.stateBefore(doc_.featureIndex(id_));
+            std::vector<TopoDS_Shape> edges;
+            if (auto h = view_->pickEdgeAt(pos.toPoint())) {
+                auto it = before.bodies.find(h->body);
+                // the view shows the current bodies: map the edge over by its name
+                auto cur = doc_.state().bodies.find(h->body);
+                if (it != before.bodies.end() && cur != doc_.state().bodies.end()) {
+                    for (int e : it->second->findEdges(cur->second->edgeName(h->edge))) {
+                        edges.push_back(it->second->edge(e));
+                    }
+                }
+            }
+            else if (auto f = view_->pickFaceAt(pos.toPoint())) {
+                auto it = before.bodies.find(f->body);
+                auto cur = doc_.state().bodies.find(f->body);
+                if (it != before.bodies.end() && cur != doc_.state().bodies.end()) {
+                    for (int fi : it->second->findFaces(cur->second->faceName(f->face))) {
+                        for (int e : it->second->edgesOfFace(fi)) {
+                            edges.push_back(it->second->edge(e));
+                        }
+                    }
+                }
+            }
+            if (edges.empty()) {
+                message_ = tr("Click an edge or face of a body made before this sketch.");
+                break;
+            }
+            jig::Sketch s = work_;
+            for (auto& edge : edges) {
+                auto r = jig::projectEdge(s, frame_, edge);
+                if (!r) {
+                    message_ = QString::fromStdString(r.error().message);
+                    if (edges.size() == 1) {
+                        break;
+                    }
+                }
+            }
+            commit(tr("Project"), s);
             break;
         }
         case Tool::Round: {

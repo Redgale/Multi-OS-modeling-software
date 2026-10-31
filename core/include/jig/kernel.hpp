@@ -230,6 +230,11 @@ Result<DxfDrawing> readDxf(const std::string& path);
 // that meet share a point, so outlines close. Returns the number of curves added.
 int addDxfToSketch(Sketch& s, const DxfDrawing& d, double scale, double dx = 0, double dy = 0);
 
+// Projects a body edge onto a sketch plane and adds it as fixed sketch geometry (lines,
+// circles and arcs; a circle seen at a slant would be an ellipse and is refused). Ends
+// meeting points already in the sketch share them. Returns the new curve ids.
+Result<std::vector<int>> projectEdge(Sketch& sketch, const gp_Ax3& frame, const TopoDS_Shape& edge);
+
 // Offset copy of sketch curves: a single line (to its left for a positive distance), a
 // single circle or arc (bigger radius for positive), or one closed outline (outward for
 // positive, sharp corners). Adds the new curves to the sketch and returns their ids.

@@ -93,7 +93,7 @@ CommandRegistry::CommandRegistry()
     add({"sketch.mirror", "Mirror (sketch)", "Sketch Mirror", "SKETCH CREATE", "Copy sketch shapes across a line to make them symmetric.", "", {"symmetric copy", "flip"}, false, false, false, m1});
     add({"sketch.pattern_rect", "Grid copy (sketch)", "Sketch Rectangular Pattern", "SKETCH CREATE", "Repeat sketch shapes in rows and columns.", "", {"array", "grid", "repeat"}, false, false, false, m1});
     add({"sketch.pattern_circ", "Ring copy (sketch)", "Sketch Circular Pattern", "SKETCH CREATE", "Repeat sketch shapes around a center, e.g. a bolt circle.", "", {"array", "bolt circle", "repeat around"}, false, false, false, m1});
-    add({"sketch.project", "Project / include", "Project", "SKETCH CREATE", "Bring edges of a body into this sketch as linked references.", "P", {"reference", "copy edges", "include"}, false, false, false, m5});
+    add({"sketch.project", "Project / include", "Project", "SKETCH CREATE", "Bring edges of a body into this sketch as fixed references.", "P", {"reference", "copy edges", "include"}, false, false, false, m5});
     add({"sketch.dimension", "Dimension", "Sketch Dimension", "SKETCH CREATE", "Set an exact size: click a line, circle or two items, then type.", "D", {"measure", "size", "length", "distance"}, true, false, true, m1});
     add({"sketch.trim", "Trim", "Trim", "SKETCH MODIFY", "Delete the piece of a curve between its nearest crossings.", "T", {"cut line", "delete part", "clean up"}, true, false, false, m1});
     add({"sketch.extend", "Extend", "Extend", "SKETCH MODIFY", "Lengthen a curve until it meets the next one.", "", {"lengthen", "stretch"}, false, false, false, m1});
@@ -147,7 +147,7 @@ CommandRegistry::CommandRegistry()
     // shell, revolve, hole, patterns, mirror, parameters). Everything else above keeps its "coming in" note.
     static const std::set<std::string> inApp {
         "sketch.create", "sketch.finish", "sketch.line", "sketch.rectangle", "sketch.circle", "sketch.point",
-        "sketch.arc", "sketch.arc3", "sketch.slot", "sketch.polygon", "sketch.text", "sketch.trim", "sketch.offset", "sketch.fillet",
+        "sketch.arc", "sketch.arc3", "sketch.slot", "sketch.polygon", "sketch.text", "sketch.trim", "sketch.offset", "sketch.fillet", "sketch.project",
         "sketch.dimension", "sketch.construction", "constraint.coincident", "constraint.collinear", "constraint.concentric",
         "constraint.midpoint", "constraint.fix",
         "constraint.parallel", "constraint.perpendicular", "constraint.horizontal", "constraint.tangent",
@@ -913,6 +913,47 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
             auto arc = s.filletCorner(px.value(), py.value(), r.value(), re);
             if (!arc) {
                 return arc.error();
+            }
+            return true;
+        });
+    }
+    if (a.verb == "project") {
+        // project [sketch=s1] edge:<name> | face:<name>   (a face brings in its whole outline)
+        if (a.positional.empty()) {
+            return makeError("script.args", "Use: project edge:<name> | face:<name> [sketch=s1]");
+        }
+        const std::string what = a.positional[0];
+        const ModelState& st = doc.state();
+        std::vector<TopoDS_Shape> edges;
+        for (auto& [bid, body] : st.bodies) {
+            if (what.rfind("edge:", 0) == 0) {
+                for (int i : body->findEdges(what.substr(5))) {
+                    edges.push_back(body->edge(i));
+                }
+            }
+            else if (what.rfind("face:", 0) == 0) {
+                for (int f : body->findFaces(what.substr(5))) {
+                    for (int e : body->edgesOfFace(f)) {
+                        edges.push_back(body->edge(e));
+                    }
+                }
+            }
+        }
+        if (edges.empty()) {
+            return makeError("script.args", "Nothing called '" + what + "' to project.");
+        }
+        const std::string sid = a.get("sketch", last_);
+        auto sst = st.sketches.find(sid);
+        if (sst == st.sketches.end()) {
+            return makeError("script.args", "The sketch '" + sid + "' is not available to project into.");
+        }
+        const gp_Ax3 frame = sst->second->frame;
+        return editSketch("Project", sid, [&](Sketch& s, const Document&) -> Result<bool> {
+            for (auto& e : edges) {
+                auto r = projectEdge(s, frame, e);
+                if (!r) {
+                    return r.error();
+                }
             }
             return true;
         });

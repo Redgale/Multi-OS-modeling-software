@@ -765,6 +765,50 @@ private slots:
         QCOMPARE(arcsNow, 1);
     }
 
+    // Project: click a face of an earlier body; its outline comes into the sketch, fixed.
+    void projectTool()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        Viewport* view = w.viewport();
+        QVERIFY(w.createSketchOn("XY"));
+        SketchEditor* sk = w.sketchEditor();
+        sk->setTool(SketchEditor::Tool::CenterRectangle);
+        QTest::mouseMove(view, sk->screenOf(0, 0));
+        QTest::mouseClick(view, Qt::LeftButton, Qt::NoModifier, sk->screenOf(0, 0));
+        QTest::mouseMove(view, sk->screenOf(10, 8));
+        sk->typeValues({"60 mm", "40 mm"});
+        w.runCommand("sketch.finish");
+        w.runCommand("solid.extrude");
+        auto* ex = qobject_cast<ExtrudePanel*>(w.featurePanel());
+        QVERIFY(ex);
+        ex->distance()->setText("10 mm");
+        QTRY_VERIFY(ex->previewOk());
+        QVERIFY(ex->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+
+        QVERIFY(w.createSketchOn("XY"));
+        sk = w.sketchEditor();
+        QTRY_VERIFY(view->meshesReady());
+        w.runCommand("sketch.project");
+        QCOMPARE(int(sk->tool()), int(SketchEditor::Tool::Project));
+        const QPoint at = sk->screenOf(5, 5);  // the block's top face, seen from above
+        QTest::mouseMove(view, at);
+        QTest::mouseClick(view, Qt::LeftButton, Qt::NoModifier, at);
+        QVERIFY2(sk->message().isEmpty(), qPrintable(sk->message()));
+        int lines = 0;
+        for (auto& [id, e] : sk->sketch().entities()) {
+            lines += e.type == jig::EntityType::Line && !e.construction;
+        }
+        QCOMPARE(lines, 4);
+        QCOMPARE(sk->report().dof, 0);
+        auto& regs = w.document().state().sketches.rbegin()->second->profiles.regions;
+        QCOMPARE(int(regs.size()), 1);
+        QVERIFY(std::abs(regs.front().area - 2400) < 1e-6);
+    }
+
     // Constraints and dimensions: click a glyph to select it, Delete removes it;
     // double-click a dimension to change its value.
     void selectDeleteAndEditConstraints()

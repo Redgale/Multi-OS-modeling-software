@@ -161,4 +161,76 @@ Result<std::vector<int>> offsetCurves(Sketch& s, const std::vector<int>& curves,
     }
 }
 
+Result<std::vector<int>> projectEdge(Sketch& s, const gp_Ax3& frame, const TopoDS_Shape& shape)
+{
+    if (shape.IsNull() || shape.ShapeType() != TopAbs_EDGE) {
+        return makeError("project.kind", "Pick an edge to project.");
+    }
+    const TopoDS_Edge& edge = TopoDS::Edge(shape);
+    BRepAdaptor_Curve c(edge);
+    auto local = [&](const gp_Pnt& p) {
+        const gp_Vec v(frame.Location(), p);
+        return std::pair {v.Dot(gp_Vec(frame.XDirection())), v.Dot(gp_Vec(frame.YDirection()))};
+    };
+    // an existing sketch point at the same place is reused, so outlines stay closed
+    auto pointAt = [&](double x, double y) {
+        for (auto& [id, e] : s.entities()) {
+            if (e.type == EntityType::Point) {
+                auto [px, py] = s.pointXY(id);
+                if (std::hypot(px - x, py - y) < 1e-6) {
+                    return id;
+                }
+            }
+        }
+        const int id = s.addPoint(x, y, true);
+        s.addConstraint(ConstraintType::Fix, id);
+        return id;
+    };
+    std::vector<int> made;
+    const gp_Pnt a = BRep_Tool::Pnt(TopExp::FirstVertex(edge, true)), b = BRep_Tool::Pnt(TopExp::LastVertex(edge, true));
+    if (c.GetType() == GeomAbs_Line) {
+        auto [ax, ay] = local(a);
+        auto [bx, by] = local(b);
+        if (std::hypot(bx - ax, by - ay) < 1e-7) {
+            return makeError("project.point", "This edge points straight at the sketch, so it projects to a point.");
+        }
+        made.push_back(s.addLine(pointAt(ax, ay), pointAt(bx, by)));
+        return made;
+    }
+    if (c.GetType() == GeomAbs_Circle) {
+        const gp_Circ circ = c.Circle();
+        if (!circ.Axis().Direction().IsParallel(frame.Direction(), 1e-6)) {
+            return makeError("project.slant", "This round edge is tilted to the sketch, so it would project to an "
+                                              "ellipse, which sketches cannot hold yet.",
+                             {"Project it in a sketch parallel to the edge's face."});
+        }
+        auto [cx, cy] = local(circ.Location());
+        const double r = circ.Radius();
+        const bool closed = BRep_Tool::IsClosed(edge) || a.Distance(b) < 1e-7;
+        if (closed) {
+            const int id = s.addCircle(cx, cy, r);
+            s.addConstraint(ConstraintType::Fix, s.entity(id)->center);
+            s.addConstraint(ConstraintType::Radius, id, 0, 0, std::to_string(r) + " mm");
+            made.push_back(id);
+            return made;
+        }
+        // an arc: counter-clockwise in the sketch, from whichever end that makes it
+        auto [ax, ay] = local(a);
+        auto [bx, by] = local(b);
+        const gp_Pnt m = c.Value(0.5 * (c.FirstParameter() + c.LastParameter()));
+        auto [mx, my] = local(m);
+        auto ang = [&](double x, double y) { return std::atan2(y - cy, x - cx); };
+        const bool aToB = ccw(ang(ax, ay), ang(mx, my)) < ccw(ang(ax, ay), ang(bx, by));
+        const double a0 = aToB ? ang(ax, ay) : ang(bx, by);
+        const double sweep = aToB ? ccw(ang(ax, ay), ang(bx, by)) : ccw(ang(bx, by), ang(ax, ay));
+        const int center = s.addPoint(cx, cy, true);
+        s.addConstraint(ConstraintType::Fix, center);
+        const int p1 = aToB ? pointAt(ax, ay) : pointAt(bx, by);
+        const int p2 = aToB ? pointAt(bx, by) : pointAt(ax, ay);
+        made.push_back(s.addArcOn(center, p1, p2, r, a0, a0 + sweep));
+        return made;
+    }
+    return makeError("project.curve", "Only straight and round edges can be projected yet.");
+}
+
 }  // namespace jig

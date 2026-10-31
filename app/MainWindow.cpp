@@ -714,7 +714,7 @@ void MainWindow::buildToolbar()
     sketchBar_->addAction(centerRect_);
     for (const char* id : {"sketch.circle", "sketch.arc", "sketch.arc3", "sketch.slot", "sketch.polygon", "sketch.text",
                            "sketch.point", "sketch.dimension", "sketch.construction", "sketch.trim", "sketch.offset",
-                           "sketch.fillet"}) {
+                           "sketch.fillet", "sketch.project"}) {
         sketchBar_->addAction(registryAction(id));
     }
     sketchBar_->addSeparator();
@@ -1247,6 +1247,7 @@ void MainWindow::runCommand(const QString& id)
             {"sketch.arc", T::Arc},         {"sketch.arc3", T::Arc3},         {"sketch.slot", T::Slot},           {"sketch.polygon", T::Polygon},
             {"sketch.text", T::Text},       {"sketch.trim", T::Trim},
             {"sketch.offset", T::Offset},   {"sketch.fillet", T::Round},
+            {"sketch.project", T::Project},
             {"sketch.point", T::Point},     {"sketch.dimension", T::Dimension}};
         static const std::map<QString, CT> cons {
             {"constraint.coincident", CT::Coincident}, {"constraint.horizontal", CT::Horizontal},

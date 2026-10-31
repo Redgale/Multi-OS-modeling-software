@@ -47,6 +47,7 @@ public:
         Trim,     // click the piece of a curve to remove (between its crossings)
         Offset,   // click a curve (or a closed outline), type the distance
         Round,    // click a corner where two lines meet, type the radius
+        Project,  // click a body edge (or a face for its outline) to bring it into the sketch
         Point,
         Dimension
     };

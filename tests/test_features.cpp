@@ -768,3 +768,27 @@ TEST(EdgeOptions, ChamferTwoDistancesAngleAndVariableFillet)
     EXPECT_GT(v, (1 - pi / 4) * 1 * 40);
     EXPECT_LT(v, (1 - pi / 4) * 9 * 40);
 }
+
+TEST(SketchProject, FaceOutlinesAndRoundEdges)
+{
+    // a block with a round hole; project its top outline into a sketch 20 mm above
+    auto doc = build("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=40 h=20\nextrude id=e1 sketch=s1 distance=10\n"
+                     "sketch id=s3 on=e1/end\ncircle sketch=s3 center=5,0 d=8\nextrude id=h sketch=s3 extent=all op=cut\n"
+                     "sketch id=s2 plane=XY offset=20mm\nproject face:e1/end sketch=s2\n"
+                     "extrude id=e2 sketch=s2 distance=3 op=new\n");
+    const auto& sk = *doc->state().sketches.at("s2");
+    EXPECT_EQ(sk.report.dof, 0);  // projected geometry is fixed
+    double total = 0;
+    for (auto& r : sk.profiles.regions) {
+        total += r.area;
+    }
+    EXPECT_NEAR(total, 800, 1e-6);  // the plate area plus the hole's disc
+    EXPECT_EQ(sk.profiles.regions.size(), 2u);
+    // an edge seen edge-on projects to a point and is refused politely
+    auto bad = std::make_unique<Document>();
+    ScriptRunner r(*bad);
+    auto res = r.runText("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=40 h=20\nextrude id=e1 sketch=s1 distance=10\n"
+                         "sketch id=s2 plane=XY offset=20mm\nproject edge:E[e1/side:5|e1/side:6] sketch=s2\n");
+    ASSERT_FALSE(res.ok());
+    EXPECT_NE(res.error().message.find("point"), std::string::npos) << res.error().message;
+}
