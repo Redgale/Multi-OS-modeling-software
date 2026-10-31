@@ -402,3 +402,54 @@ TEST(Plane, ImpossiblePlanesAreExplained)
     EXPECT_EQ(int(doc->status(3).level), int(StatusLevel::Error));
     EXPECT_NE(doc->status(3).message.find("axis"), std::string::npos) << doc->status(3).message;
 }
+
+TEST(Bodies, CombineSplitMoveAndCopy)
+{
+    const std::string two = "sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=40 h=20\nextrude id=e1 sketch=s1 distance=10\n"
+                            "sketch id=s2 plane=XY\ncircle sketch=s2 center=20,0 d=10\n"
+                            "extrude id=e2 sketch=s2 distance=30 op=new\n";
+    {
+        auto doc = build(two + "combine id=cb1 target=e1 tools=e2 op=cut\n");
+        expectAllOk(*doc);
+        EXPECT_EQ(doc->state().bodies.size(), 1u);  // the tool body is used up
+        EXPECT_NEAR(props(*doc).volume, 8000 - pi * 25 * 10 / 2, 1e-6);  // half the post was inside
+    }
+    {
+        auto doc = build(two + "combine id=cb1 target=e1 tools=e2 op=join keep=yes\n");
+        expectAllOk(*doc);
+        EXPECT_EQ(doc->state().bodies.size(), 2u);
+        EXPECT_NEAR(massProperties(doc->state().bodies.at("e1")->shape()).volume, 8000 + pi * 25 * 30 - pi * 25 * 10 / 2, 1e-6);
+    }
+    {
+        // split the block by the side plane: two equal halves, the cut faces named
+        auto doc = build(two + "split id=sp1 body=e1 plane=YZ\n");
+        expectAllOk(*doc);
+        const double a = massProperties(doc->state().bodies.at("e1")->shape()).volume;
+        const double b = massProperties(doc->state().bodies.at("sp1")->shape()).volume;
+        EXPECT_NEAR(a, 4000, 1e-6);
+        EXPECT_NEAR(b, 4000, 1e-6);
+        EXPECT_EQ(doc->state().bodies.at("e1")->findFaces("sp1/split").size(), 1u);
+        EXPECT_GT(massProperties(doc->state().bodies.at("e1")->shape()).xmin, -1e-6);  // e1 keeps the +X side
+    }
+    {
+        auto doc = build(two + "move id=mv1 bodies=e2 dx=10mm dz=5mm\nmove id=mv2 bodies=e1 copy=yes axis=Z angle=90deg\n");
+        expectAllOk(*doc);
+        auto post = massProperties(doc->state().bodies.at("e2")->shape());
+        EXPECT_NEAR(post.xmin, 25, 1e-6);
+        EXPECT_NEAR(post.zmin, 5, 1e-6);
+        auto turned = massProperties(doc->state().bodies.at("mv2")->shape());
+        EXPECT_NEAR(turned.xmax - turned.xmin, 20, 1e-6);  // the copy is turned a quarter
+        EXPECT_NEAR(turned.ymax - turned.ymin, 40, 1e-6);
+        EXPECT_EQ(doc->state().bodies.size(), 3u);
+        // moved faces keep their names, so later steps still find them
+        EXPECT_EQ(doc->state().bodies.at("e2")->findFaces("e2/end").size(), 1u);
+    }
+    {
+        auto doc = std::make_unique<Document>();
+        ScriptRunner r(*doc);
+        r.strict = false;
+        ASSERT_TRUE(r.runText(two + "plane id=pl1 base=YZ distance=100mm\nsplit id=sp1 body=e1 plane=pl1\n").ok());
+        EXPECT_EQ(int(doc->status(5).level), int(StatusLevel::Error));
+        EXPECT_NE(doc->status(5).message.find("does not cross"), std::string::npos) << doc->status(5).message;
+    }
+}

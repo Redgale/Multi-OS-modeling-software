@@ -56,7 +56,10 @@ enum class FeatureKind
     Hole,
     Pattern,
     Mirror,
-    Plane  // construction plane (offset, at an angle, midplane)
+    Plane,  // construction plane (offset, at an angle, midplane)
+    Combine,
+    Split,
+    Move
 };
 
 const char* toString(FeatureKind k);

@@ -81,6 +81,7 @@ public:
     void openPattern(const std::string& editId = {}, bool circular = true);
     void openMirror(const std::string& editId = {});
     void openMeasure();
+    void openBodyTool(const std::string& tool, const std::string& editId = {});  // combine, split, move
     void openPlane(const std::string& editId = {}, const std::string& kind = "offset");
     void openProperties();
     void openParameters();

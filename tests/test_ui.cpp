@@ -5,6 +5,8 @@
 #include <BRepGProp.hxx>
 #include <GProp_GProps.hxx>
 #include <QComboBox>
+#include <QCheckBox>
+#include <QListWidget>
 #include <QTableWidget>
 #include <QtTest>
 
@@ -490,6 +492,89 @@ private slots:
             }
         }
         QVERIFY2(std::abs(z - 10) < 1e-9, qPrintable(QString::number(z)));
+    }
+
+    // Move/copy, Combine and Split, each through its panel.
+    void moveCombineSplit()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        Viewport* view = w.viewport();
+        QVERIFY(w.createSketchOn("XY"));
+        SketchEditor* sk = w.sketchEditor();
+        sk->setTool(SketchEditor::Tool::CenterRectangle);
+        QTest::mouseMove(view, sk->screenOf(0, 0));
+        QTest::mouseClick(view, Qt::LeftButton, Qt::NoModifier, sk->screenOf(0, 0));
+        QTest::mouseMove(view, sk->screenOf(10, 8));
+        sk->typeValues({"60", "40"});
+        w.runCommand("sketch.finish");
+        w.runCommand("solid.extrude");
+        auto* ex = qobject_cast<ExtrudePanel*>(w.featurePanel());
+        QVERIFY(ex);
+        ex->distance()->setText("20 mm");
+        QTRY_VERIFY(ex->previewOk());
+        QVERIFY(ex->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        auto bodyVolume = [&] {
+            double v = 0;
+            for (auto& [id, b] : w.document().state().bodies) {
+                v += jig::massProperties(b->shape()).volume;
+            }
+            return v;
+        };
+
+        // A copy shifted 30 mm along X (the only body is ticked already).
+        w.runCommand("solid.move");
+        auto* mv = qobject_cast<MovePanel*>(w.featurePanel());
+        QVERIFY(mv);
+        QCOMPARE(mv->bodies()->item(0)->checkState(), Qt::Checked);
+        mv->dx()->setText("30 mm");
+        mv->copy()->setChecked(true);
+        QTest::qWait(300);
+        QTRY_VERIFY2(mv->previewOk(), qPrintable(mv->statusText()));
+        QVERIFY(mv->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        QCOMPARE(int(w.document().state().bodies.size()), 2);
+        QVERIFY(std::abs(bodyVolume() - 2 * 48000) < 1e-6);
+
+        // Join them: 90 x 40 x 20.
+        w.runCommand("solid.combine");
+        auto* cb = qobject_cast<CombinePanel*>(w.featurePanel());
+        QVERIFY(cb);
+        QTest::qWait(300);
+        QTRY_VERIFY2(cb->previewOk(), qPrintable(cb->statusText()));
+        QVERIFY(cb->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        QCOMPARE(int(w.document().state().bodies.size()), 1);
+        QVERIFY(std::abs(bodyVolume() - 90 * 40 * 20) < 1e-6);
+
+        // Split along the side plane: 30 mm on the -X side, 60 mm on the +X side.
+        w.runCommand("solid.split");
+        auto* sp = qobject_cast<SplitPanel*>(w.featurePanel());
+        QVERIFY(sp);
+        QCOMPARE(sp->plane()->currentData().toString(), QString("\"YZ\""));
+        QTest::qWait(300);
+        QTRY_VERIFY2(sp->previewOk(), qPrintable(sp->statusText()));
+        QVERIFY(sp->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        std::vector<double> vols;
+        for (auto& [id, b] : w.document().state().bodies) {
+            vols.push_back(jig::massProperties(b->shape()).volume);
+        }
+        std::sort(vols.begin(), vols.end());
+        QCOMPARE(int(vols.size()), 2);
+        QVERIFY(std::abs(vols[0] - 30 * 40 * 20) < 1e-6);
+        QVERIFY(std::abs(vols[1] - 60 * 40 * 20) < 1e-6);
+        // editing the move from the timeline brings back its values
+        w.editFeature(2);
+        auto* again = qobject_cast<MovePanel*>(w.featurePanel());
+        QVERIFY(again);
+        QCOMPARE(again->dx()->text(), QString("30 mm"));
+        QVERIFY(again->copy()->isChecked());
+        again->cancel();
+        QTRY_VERIFY(w.featurePanel() == nullptr);
     }
 
     // Revolve a ring, drill it from its top face, repeat the hole around the axis,

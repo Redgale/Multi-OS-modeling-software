@@ -352,6 +352,100 @@ private:
     bool nextIsSecond_ = false;  // midplane: the next clicked face fills the second plane
 };
 
+// Combine: join, cut or intersect bodies into a target body.
+class CombinePanel : public FeaturePanel
+{
+    Q_OBJECT
+public:
+    CombinePanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent = nullptr);
+    QComboBox* target() const
+    {
+        return target_;
+    }
+    QListWidget* tools() const
+    {
+        return tools_;
+    }
+    QComboBox* operation() const
+    {
+        return op_;
+    }
+
+protected:
+    jig::Feature draft() const override;
+    QString title() const override;
+
+private:
+    void fillTools();
+    QComboBox *target_, *op_;
+    QListWidget* tools_;
+    QCheckBox* keep_;
+};
+
+// Split body: cut a body in two with a plane (origin, construction plane or flat face).
+class SplitPanel : public FeaturePanel
+{
+    Q_OBJECT
+public:
+    SplitPanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent = nullptr);
+    ~SplitPanel() override;
+    void useFace(const std::string& body, const std::string& name);
+    QComboBox* plane() const
+    {
+        return plane_;
+    }
+
+protected:
+    jig::Feature draft() const override;
+    QString title() const override;
+
+private:
+    QComboBox *body_, *plane_;
+};
+
+// Move / copy bodies: shift along X, Y, Z and turn around an origin axis.
+class MovePanel : public FeaturePanel
+{
+    Q_OBJECT
+public:
+    MovePanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent = nullptr);
+    QListWidget* bodies() const
+    {
+        return bodies_;
+    }
+    ExprField* dx() const
+    {
+        return d_[0];
+    }
+    ExprField* dy() const
+    {
+        return d_[1];
+    }
+    ExprField* dz() const
+    {
+        return d_[2];
+    }
+    ExprField* angle() const
+    {
+        return angle_;
+    }
+    QCheckBox* copy() const
+    {
+        return copy_;
+    }
+
+protected:
+    jig::Feature draft() const override;
+    QString title() const override;
+
+private:
+    QListWidget* bodies_;
+    ExprField* d_[3];
+    QComboBox* axis_;
+    ExprField* angle_;
+    QCheckBox* copy_;
+};
+
 // Modify ▸ Parameters: the named values (width, wall, clearance) that drive the design.
 class ParametersDialog : public QDialog
 {

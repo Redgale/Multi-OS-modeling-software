@@ -1581,6 +1581,288 @@ QString PlanePanel::title() const
     return tr("construction plane");
 }
 
+// ---------------------------------------------------------------- body list helpers
+
+namespace
+{
+QString bodyLabel(const jig::Document& doc, const std::string& id)
+{
+    const jig::Feature* f = doc.feature(id);
+    return f ? q(f->name) : q(id);
+}
+
+void fillBodyList(QListWidget* list, const jig::Document& doc, const jig::ModelState& st, const std::set<std::string>& checked,
+                  const std::string& exclude = {})
+{
+    list->blockSignals(true);
+    list->clear();
+    for (auto& [id, b] : st.bodies) {
+        if (id == exclude) {
+            continue;
+        }
+        auto* it = new QListWidgetItem(bodyLabel(doc, id), list);
+        it->setData(Qt::UserRole, q(id));
+        it->setFlags(it->flags() | Qt::ItemIsUserCheckable);
+        it->setCheckState(checked.count(id) ? Qt::Checked : Qt::Unchecked);
+    }
+    list->blockSignals(false);
+}
+
+nlohmann::json checkedBodies(const QListWidget* list)
+{
+    nlohmann::json out = nlohmann::json::array();
+    for (int i = 0; i < list->count(); ++i) {
+        if (list->item(i)->checkState() == Qt::Checked) {
+            out.push_back(list->item(i)->data(Qt::UserRole).toString().toStdString());
+        }
+    }
+    return out;
+}
+
+std::set<std::string> toSet(const nlohmann::json& v)
+{
+    std::set<std::string> out;
+    if (v.is_array()) {
+        for (auto& x : v) {
+            out.insert(x.get<std::string>());
+        }
+    }
+    return out;
+}
+}  // namespace
+
+// ---------------------------------------------------------------- Combine
+
+CombinePanel::CombinePanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent)
+    : FeaturePanel(doc, view, std::move(editId), parent)
+{
+    form_->addWidget(heading(this, tr("Combine"),
+                             tr("Join bodies together, cut one out of another, or keep only where they overlap.")));
+    target_ = new QComboBox(this);
+    tools_ = new QListWidget(this);
+    tools_->setMaximumHeight(120);
+    op_ = combo(this, {{tr("Join: add them together"), "join"},
+                       {tr("Cut: remove the others from it"), "cut"},
+                       {tr("Intersect: keep only the overlap"), "intersect"}});
+    keep_ = new QCheckBox(tr("Keep the other bodies too"), this);
+    addRow(tr("Body to change"), target_);
+    addRow(tr("With"), tools_);
+    addRow(tr("Operation"), op_);
+    form_->addWidget(keep_);
+    const auto before = stateBefore();
+    for (auto& [id, b] : before->bodies) {
+        target_->addItem(bodyLabel(doc_, id), q(id));
+    }
+    const jig::Feature* edit = editId_.empty() ? nullptr : doc_.feature(editId_);
+    if (edit) {
+        select(target_, edit->params.value("target", std::string {}));
+        select(op_, edit->params.value("op", std::string("join")));
+        keep_->setChecked(edit->params.value("keep_tools", false));
+    }
+    fillTools();
+    if (edit) {
+        fillBodyList(tools_, doc_, *before, toSet(edit->params.value("tools", nlohmann::json::array())), current(target_));
+    }
+    connect(target_, &QComboBox::currentIndexChanged, this, [this] {
+        fillTools();
+        schedulePreview();
+    });
+    connect(op_, &QComboBox::currentIndexChanged, this, [this] { schedulePreview(); });
+    connect(tools_, &QListWidget::itemChanged, this, [this] { schedulePreview(); });
+    connect(keep_, &QCheckBox::toggled, this, [this] { schedulePreview(); });
+    if (before->bodies.size() < 2) {
+        status_->setText("<b>✕ " + tr("Combine needs at least two bodies.") + "</b>");
+        ok_->setEnabled(false);
+    }
+    else {
+        schedulePreview();
+    }
+}
+
+void CombinePanel::fillTools()
+{
+    // by default every other body is ticked
+    std::set<std::string> all;
+    const auto before = stateBefore();  // keep it alive while iterating
+    for (auto& [id, b] : before->bodies) {
+        all.insert(id);
+    }
+    fillBodyList(tools_, doc_, *before, all, current(target_));
+}
+
+jig::Feature CombinePanel::draft() const
+{
+    jig::Feature f = startDraft(doc_, editId_, "cb", tr("Combine"));
+    f.kind = jig::FeatureKind::Combine;
+    f.params = {{"target", current(target_)}, {"tools", checkedBodies(tools_)}, {"op", current(op_)},
+                {"keep_tools", keep_->isChecked()}};
+    return f;
+}
+
+QString CombinePanel::title() const
+{
+    return tr("combine");
+}
+
+// ---------------------------------------------------------------- Split
+
+SplitPanel::SplitPanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent)
+    : FeaturePanel(doc, view, std::move(editId), parent)
+{
+    form_->addWidget(heading(this, tr("Split body"),
+                             tr("Cut a body in two with a plane, for example to print a big part in pieces. Pick "
+                                "a plane or click a flat face.")));
+    body_ = new QComboBox(this);
+    plane_ = new QComboBox(this);
+    plane_->addItem(tr("Side (YZ)"), "\"YZ\"");
+    plane_->addItem(tr("Front (XZ)"), "\"XZ\"");
+    plane_->addItem(tr("Floor (XY)"), "\"XY\"");
+    addRow(tr("Body"), body_);
+    addRow(tr("Split with"), plane_);
+    const auto before = stateBefore();
+    for (auto& [id, b] : before->bodies) {
+        body_->addItem(bodyLabel(doc_, id), q(id));
+    }
+    for (int i = 0; i < insertIndex(); ++i) {
+        const auto& f = doc_.model().features[size_t(i)];
+        if (f.kind == jig::FeatureKind::Plane && before->planes.count(f.id)) {
+            plane_->addItem(q(f.name), q(nlohmann::json(f.id).dump()));
+        }
+    }
+    if (const jig::Feature* edit = editId_.empty() ? nullptr : doc_.feature(editId_)) {
+        select(body_, edit->params.value("body", std::string {}));
+        const QString key = q(edit->params.value("plane", nlohmann::json("YZ")).dump());
+        if (plane_->findData(key) < 0) {
+            plane_->addItem(tr("Picked face"), key);
+        }
+        plane_->setCurrentIndex(plane_->findData(key));
+    }
+    for (auto* c : {body_, plane_}) {
+        connect(c, &QComboBox::currentIndexChanged, this, [this] { schedulePreview(); });
+    }
+    if (view_) {
+        view_->setPickMode(PickMode::Faces);
+        connect(view_.data(), &Viewport::faceClicked, this,
+                [this](const QString& b, const QString& n, Qt::KeyboardModifiers) { useFace(b.toStdString(), n.toStdString()); });
+    }
+    if (body_->count() == 0) {
+        status_->setText("<b>✕ " + tr("There is no body to split yet.") + "</b>");
+        ok_->setEnabled(false);
+    }
+    else {
+        schedulePreview();
+    }
+}
+
+SplitPanel::~SplitPanel() = default;
+
+void SplitPanel::useFace(const std::string& body, const std::string& name)
+{
+    auto before = stateBefore();
+    auto it = before->bodies.find(body);
+    if (it == before->bodies.end()) {
+        return;
+    }
+    auto hits = it->second->findFaces(name);
+    if (hits.empty() || jig::measureItem(it->second->face(hits[0])).kind != "flat face") {
+        status_->setText("<b>✕ " + tr("Click a flat face to split along it.") + "</b>");
+        return;
+    }
+    const QString key = q(nlohmann::json {{"face", it->second->faceRef(body, hits[0]).toJson()}}.dump());
+    if (plane_->findData(key) < 0) {
+        plane_->addItem(tr("Face %1").arg(q(name)), key);
+    }
+    plane_->setCurrentIndex(plane_->findData(key));
+}
+
+jig::Feature SplitPanel::draft() const
+{
+    jig::Feature f = startDraft(doc_, editId_, "sp", tr("Split"));
+    f.kind = jig::FeatureKind::Split;
+    const std::string d = plane_->currentData().toString().toStdString();
+    f.params = {{"body", current(body_)}, {"plane", d.empty() ? nlohmann::json("YZ") : nlohmann::json::parse(d, nullptr, false)}};
+    return f;
+}
+
+QString SplitPanel::title() const
+{
+    return tr("split");
+}
+
+// ---------------------------------------------------------------- Move
+
+MovePanel::MovePanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent)
+    : FeaturePanel(doc, view, std::move(editId), parent)
+{
+    form_->addWidget(heading(this, tr("Move / copy"),
+                             tr("Shift bodies along X, Y and Z and turn them around an axis through the origin. "
+                                "Tick Copy to keep the original where it is.")));
+    bodies_ = new QListWidget(this);
+    bodies_->setMaximumHeight(120);
+    const char* names[3] = {"X", "Y", "Z"};
+    addRow(tr("Bodies"), bodies_);
+    for (int k = 0; k < 3; ++k) {
+        d_[k] = new ExprField(doc, jig::Dim::len(), this);
+        addRow(tr("Move along %1").arg(names[k]), d_[k]);
+    }
+    axis_ = combo(this, {{tr("Z axis (up)"), "Z"}, {tr("X axis"), "X"}, {tr("Y axis"), "Y"}});
+    angle_ = new ExprField(doc, jig::Dim::ang(), this);
+    copy_ = new QCheckBox(tr("Copy (keep the original)"), this);
+    addRow(tr("Turn around"), axis_);
+    addRow(tr("Angle"), angle_);
+    form_->addWidget(copy_);
+    const auto before = stateBefore();
+    const jig::Feature* edit = editId_.empty() ? nullptr : doc_.feature(editId_);
+    std::set<std::string> chosen;
+    if (edit) {
+        chosen = toSet(edit->params.value("bodies", nlohmann::json::array()));
+    }
+    else if (before->bodies.size() == 1) {
+        chosen.insert(before->bodies.begin()->first);
+    }
+    fillBodyList(bodies_, doc_, *before, chosen);
+    const char* keys[3] = {"dx", "dy", "dz"};
+    for (int k = 0; k < 3; ++k) {
+        d_[k]->setText(q(edit ? edit->params.value(keys[k], std::string("0 mm")) : std::string("0 mm")));
+        connect(d_[k], &ExprField::changed, this, [this] { schedulePreview(); });
+    }
+    angle_->setText(q(edit ? edit->params.value("angle", std::string("0 deg")) : std::string("0 deg")));
+    if (edit) {
+        select(axis_, edit->params.value("axis", std::string("Z")));
+        copy_->setChecked(edit->params.value("copy", false));
+    }
+    connect(angle_, &ExprField::changed, this, [this] { schedulePreview(); });
+    connect(axis_, &QComboBox::currentIndexChanged, this, [this] { schedulePreview(); });
+    connect(bodies_, &QListWidget::itemChanged, this, [this] { schedulePreview(); });
+    connect(copy_, &QCheckBox::toggled, this, [this] { schedulePreview(); });
+    if (before->bodies.empty()) {
+        status_->setText("<b>✕ " + tr("There is no body to move yet.") + "</b>");
+        ok_->setEnabled(false);
+    }
+    else {
+        schedulePreview();
+    }
+}
+
+jig::Feature MovePanel::draft() const
+{
+    jig::Feature f = startDraft(doc_, editId_, "mv", tr("Move"));
+    f.kind = jig::FeatureKind::Move;
+    f.params = {{"bodies", checkedBodies(bodies_)},
+                {"dx", text(d_[0], "0 mm")},
+                {"dy", text(d_[1], "0 mm")},
+                {"dz", text(d_[2], "0 mm")},
+                {"axis", current(axis_)},
+                {"angle", text(angle_, "0 deg")},
+                {"copy", copy_->isChecked()}};
+    return f;
+}
+
+QString MovePanel::title() const
+{
+    return tr("move");
+}
+
 // ---------------------------------------------------------------- Parameters
 
 ParametersDialog::ParametersDialog(jig::Document& doc, QWidget* parent)

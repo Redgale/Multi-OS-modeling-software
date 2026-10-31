@@ -131,6 +131,12 @@ QString kindWord(jig::FeatureKind k)
             return MainWindow::tr("Mirror");
         case jig::FeatureKind::Plane:
             return MainWindow::tr("Plane");
+        case jig::FeatureKind::Combine:
+            return MainWindow::tr("Combine");
+        case jig::FeatureKind::Split:
+            return MainWindow::tr("Split");
+        case jig::FeatureKind::Move:
+            return MainWindow::tr("Move");
     }
     return {};
 }
@@ -1160,6 +1166,9 @@ void MainWindow::runCommand(const QString& id)
     else if (id == "inspect.measure") {
         openMeasure();
     }
+    else if (id == "solid.combine" || id == "solid.split" || id == "solid.move") {
+        openBodyTool(id.toStdString());
+    }
     else if (id == "construct.offset_plane" || id == "construct.angle_plane" || id == "construct.midplane") {
         openPlane({}, id == "construct.angle_plane" ? "angle" : id == "construct.midplane" ? "midplane" : "offset");
     }
@@ -1715,6 +1724,27 @@ void MainWindow::openMirror(const std::string& editId)
     showPanel(new MirrorPanel(*doc_, view_, editId, panelHost_));
 }
 
+void MainWindow::openBodyTool(const std::string& tool, const std::string& editId)
+{
+    if (sketch_) {
+        exitSketch();
+    }
+    cancelPicker();
+    if (doc_->stateBefore(editId.empty() ? doc_->activeCount() : doc_->featureIndex(editId)).bodies.empty()) {
+        statusBar()->showMessage(tr("There is no 3D body yet: sketch and extrude first."), 5000);
+        return;
+    }
+    if (tool == "solid.combine") {
+        showPanel(new CombinePanel(*doc_, view_, editId, panelHost_));
+    }
+    else if (tool == "solid.split") {
+        showPanel(new SplitPanel(*doc_, view_, editId, panelHost_));
+    }
+    else {
+        showPanel(new MovePanel(*doc_, view_, editId, panelHost_));
+    }
+}
+
 void MainWindow::openPlane(const std::string& editId, const std::string& kind)
 {
     if (sketch_) {
@@ -1811,6 +1841,15 @@ void MainWindow::editFeature(int index)
             break;
         case jig::FeatureKind::Plane:
             openPlane(f.id);
+            break;
+        case jig::FeatureKind::Combine:
+            openBodyTool("solid.combine", f.id);
+            break;
+        case jig::FeatureKind::Split:
+            openBodyTool("solid.split", f.id);
+            break;
+        case jig::FeatureKind::Move:
+            openBodyTool("solid.move", f.id);
             break;
     }
 }

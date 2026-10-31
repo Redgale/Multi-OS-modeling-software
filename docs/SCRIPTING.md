@@ -59,6 +59,9 @@ nothing is committed.
 | `plane id=pl1 base=XY\|<plane id>\|face:<name> distance=<len>` | Construction plane parallel to a plane or flat face |
 | `plane id=pl2 kind=angle base=… axis=X\|Y\|Z\|edge:<name> angle=<angle>` | Plane turned around an axis or straight edge lying in the base plane |
 | `plane id=pl3 kind=midplane base=… base2=…` | Plane halfway between two parallel planes or faces |
+| `combine id=cb1 target=<body> tools="<body>;…" [op=join\|cut\|intersect] [keep=yes]` | Combine bodies into the target; the tools are used up unless `keep=yes` |
+| `split id=sp1 body=<body> plane=XY\|XZ\|YZ\|<plane id>\|face:<name>` | Cut a body in two; the part on the plane's back side becomes body `sp1` |
+| `move id=mv1 bodies="<body>;…" [dx= dy= dz=] [axis=X\|Y\|Z angle=<angle>] [copy=yes]` | Turn about an origin axis, then shift. `copy=yes` keeps the original |
 | `mirror id=m1 [body=<id>] plane=YZ\|XZ\|XY [op=join\|new]` | Mirror a body across an origin plane, joined to the original or as a new body |
 
 Profile keys are the sorted ids of the sketch curves around a closed area, e.g. `3,4,5,6`.

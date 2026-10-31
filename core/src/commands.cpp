@@ -149,7 +149,7 @@ CommandRegistry::CommandRegistry()
         "constraint.symmetric", "constraint.equal", "solid.extrude", "solid.fillet", "solid.chamfer", "solid.shell",
         "solid.revolve", "solid.hole", "solid.mirror", "solid.pattern_rect", "solid.pattern_circ", "modify.parameters",
         "inspect.measure", "inspect.properties", "file.export_3mf", "construct.offset_plane", "construct.angle_plane",
-        "construct.midplane"};
+        "construct.midplane", "solid.combine", "solid.split", "solid.move"};
     for (auto& c : commands_) {
         if (inApp.count(c.id)) {
             c.available = true;
@@ -1033,6 +1033,67 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
             f.name = a.get("name", "Shell " + f.id.substr(2));
             f.kind = FeatureKind::Shell;
             f.params = {{"faces", refs}, {"thickness", a.get("thickness", "2 mm")}, {"body", bodyId}};
+            id = f.id;
+            insertFeature(m, std::move(f));
+            return true;
+        });
+        if (!r) {
+            return r;
+        }
+        return checkFeature(id);
+    }
+    if (a.verb == "combine" || a.verb == "split" || a.verb == "move") {
+        // combine target=<body> tools="<body>;<body>" [op=join|cut|intersect] [keep=yes]
+        // split body=<body> plane=XY|XZ|YZ|<plane id>|face:<name>
+        // move bodies="<body>;…" [dx= dy= dz=] [axis=X|Y|Z angle=<angle>] [copy=yes]
+        nlohmann::json params = nlohmann::json::object();
+        FeatureKind kind = FeatureKind::Combine;
+        std::string prefix = "cb";
+        if (a.verb == "combine") {
+            params = {{"target", a.get("target")}, {"tools", split(a.get("tools"), ';')}, {"op", a.get("op", "join")},
+                      {"keep_tools", a.get("keep", "no") == "yes"}};
+        }
+        else if (a.verb == "split") {
+            kind = FeatureKind::Split;
+            prefix = "sp";
+            const std::string pl = a.get("plane", "YZ");
+            nlohmann::json ref = pl;
+            if (pl.rfind("face:", 0) == 0) {
+                ref = nullptr;
+                for (auto& [bid, body] : doc.state().bodies) {
+                    auto hits = body->findFaces(pl.substr(5));
+                    if (hits.size() == 1) {
+                        ref = {{"face", body->faceRef(bid, hits[0]).toJson()}};
+                    }
+                }
+                if (ref.is_null()) {
+                    return makeError("script.args", "There is no single face called '" + pl.substr(5) + "'.");
+                }
+            }
+            params = {{"body", a.get("body")}, {"plane", ref}};
+        }
+        else {
+            kind = FeatureKind::Move;
+            prefix = "mv";
+            params = {{"bodies", split(a.get("bodies"), ';')}, {"copy", a.get("copy", "no") == "yes"}};
+            for (const char* key : {"dx", "dy", "dz", "axis", "angle"}) {
+                if (a.has(key)) {
+                    params[key] = a.get(key);
+                }
+            }
+        }
+        std::string label = a.verb;
+        label[0] = char(std::toupper(label[0]));
+        std::string id;
+        auto r = doc.transact(label, [&](Model& m) -> Result<bool> {
+            Feature f;
+            f.id = a.get("id", Document::newId(m, prefix));
+            if (findFeature(m, f.id)) {
+                return makeError("script.args", "The id '" + f.id + "' is already used.");
+            }
+            f.name = a.get("name", label + " " + f.id.substr(prefix.size()));
+            f.kind = kind;
+            f.params = params;
             id = f.id;
             insertFeature(m, std::move(f));
             return true;

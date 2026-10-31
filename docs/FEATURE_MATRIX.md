@@ -119,10 +119,10 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Shell (inside/outside, openings) | 18 | v0.1 M3 | **app**: inside, openings or closed hollow; outside not yet | |
 | Draft | 18 | v0.2 | — | |
 | Scale | 17, 18 | v0.2 | — | |
-| Combine join/cut/intersect, keep tools | 17 | v0.1 M4 | kernel booleans exist | |
+| Combine join/cut/intersect, keep tools | 17 | v0.1 M4 | **app** + scripts (`combine`) | |
 | Offset face, replace face, split face, silhouette split | 17 | v0.3+ | — | Direct modelling |
-| Split body (plane) | 17, 18 | v0.1 M4 | — | |
-| Move/Copy bodies (free, translate, rotate, point-to-point) | 17 | v0.1 M4 | — | |
+| Split body (plane) | 17, 18 | v0.1 M4 | **app** + scripts (`split`): origin plane, construction plane or flat face | |
+| Move/Copy bodies (free, translate, rotate, point-to-point) | 17 | v0.1 M4 | **app** + scripts (`move`): typed X/Y/Z shift and turn about an origin axis, copy; free drag and point-to-point not yet | |
 | Align | 17 | v0.2 | — | |
 | Delete body/feature | 17 | v0.1 M2 | — | |
 | Compute all | 17 | v0.1 | automatic (incremental recompute) | |

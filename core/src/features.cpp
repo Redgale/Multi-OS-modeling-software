@@ -12,6 +12,8 @@
 
 #include <BRepBndLib.hxx>
 #include <Bnd_Box.hxx>
+#include <gp_Trsf.hxx>
+#include <BRepPrimAPI_MakeBox.hxx>
 #include <gp_Ax2.hxx>
 
 #include "jig/document.hpp"
@@ -468,6 +470,146 @@ FeatureOutcome applyExtrude(const Document& doc, const Feature& f, const std::sh
     return applyTool(f, *op, std::move(tool.value()), in, status);
 }
 
+// ---------------------------------------------------------------- combine, split, move
+
+std::vector<std::string> bodyList(const nlohmann::json& v)
+{
+    std::vector<std::string> out;
+    if (v.is_string()) {
+        out.push_back(v.get<std::string>());
+    }
+    else if (v.is_array()) {
+        for (auto& x : v) {
+            out.push_back(x.get<std::string>());
+        }
+    }
+    return out;
+}
+
+FeatureOutcome applyCombine(const Document&, const Feature& f, const std::shared_ptr<const ModelState>& in)
+{
+    const auto& p = f.params;
+    FeatureStatus status;
+    const std::string target = p.value("target", std::string {});
+    auto tit = in->bodies.find(target);
+    if (tit == in->bodies.end()) {
+        return failed("The body to combine into no longer exists.", {"Edit the step and choose a body."});
+    }
+    auto op = opFromString(p.value("op", std::string("join")));
+    if (!op || *op == BoolOp::NewBody) {
+        return failed("Combine joins, cuts or intersects; choose one of those.");
+    }
+    const auto tools = bodyList(p.value("tools", nlohmann::json::array()));
+    if (tools.empty()) {
+        return failed("Pick at least one body to combine with.");
+    }
+    NamedShape acc = *tit->second;
+    auto out = copyState(in);
+    for (const std::string& t : tools) {
+        auto it = in->bodies.find(t);
+        if (it == in->bodies.end() || t == target) {
+            return failed("A body this combine uses no longer exists.", {"Edit the step and pick the bodies again."});
+        }
+        auto r = booleanOp(f.id, *op, acc, *it->second);
+        if (!r) {
+            return failed(r.error());
+        }
+        acc = std::move(r.value());
+        if (!p.value("keep_tools", false)) {
+            out->bodies.erase(t);
+        }
+    }
+    out->bodies[target] = std::make_shared<NamedShape>(std::move(acc));
+    return {out, status};
+}
+
+FeatureOutcome applySplit(const Document&, const Feature& f, const std::shared_ptr<const ModelState>& in)
+{
+    const auto& p = f.params;
+    FeatureStatus status;
+    const std::string bodyId = p.value("body", std::string {});
+    auto bit = in->bodies.find(bodyId);
+    if (bit == in->bodies.end()) {
+        return failed("The body to split no longer exists.", {"Edit the step and choose a body."});
+    }
+    auto fr = planeFrame(p.value("plane", nlohmann::json("YZ")), in, status);
+    if (!fr) {
+        return failed(fr.error());
+    }
+    // Two big boxes, one on each side of the plane; each piece is the body minus the
+    // other side. The new faces are named <split id>/split.
+    Bnd_Box bb = boxOf(bit->second->shape());
+    const double L = std::sqrt(bb.SquareExtent()) * 2 + gp_Vec(gp_Pnt(0, 0, 0), fr->Location()).Magnitude() + 10;
+    auto halfBox = [&](double side) {
+        const gp_Ax3& a = fr.value();
+        gp_Pnt corner(a.Location().XYZ() - a.XDirection().XYZ() * L - a.YDirection().XYZ() * L
+                      + (side < 0 ? a.Direction().XYZ() * (-L) : gp_XYZ(0, 0, 0)));
+        TopoDS_Shape box = BRepPrimAPI_MakeBox(gp_Ax2(corner, a.Direction(), a.XDirection()), 2 * L, 2 * L, L).Shape();
+        NamedShape ns(box);
+        for (int i = 0; i < ns.faceCount(); ++i) {
+            ns.setFaceName(i, f.id + "/split");
+        }
+        ns.deriveEdgeNames();
+        return ns;
+    };
+    auto above = booleanOp(f.id, BoolOp::Cut, *bit->second, halfBox(-1));
+    auto below = booleanOp(f.id, BoolOp::Cut, *bit->second, halfBox(+1));
+    if (!above || !below) {
+        return failed("The split plane does not cross this body, so there is nothing to split.",
+                      {"Pick a plane that passes through the body.", "Use an offset plane to move it."});
+    }
+    auto out = copyState(in);
+    out->bodies[bodyId] = std::make_shared<NamedShape>(std::move(above.value()));
+    out->bodies[f.id] = std::make_shared<NamedShape>(std::move(below.value()));
+    return {out, status};
+}
+
+FeatureOutcome applyMove(const Document& doc, const Feature& f, const std::shared_ptr<const ModelState>& in)
+{
+    const auto& p = f.params;
+    FeatureStatus status;
+    std::vector<std::string> bodies = bodyList(p.value("bodies", nlohmann::json::array()));
+    if (bodies.empty()) {
+        return failed("Pick at least one body to move.");
+    }
+    double d[3] = {0, 0, 0};
+    const char* keys[3] = {"dx", "dy", "dz"};
+    for (int k = 0; k < 3; ++k) {
+        auto v = doc.evalLength(p.value(keys[k], std::string("0 mm")));
+        if (!v) {
+            return failed(v.error());
+        }
+        d[k] = v.value();
+    }
+    auto ang = doc.evalAngle(p.value("angle", std::string("0 deg")));
+    if (!ang) {
+        return failed(ang.error());
+    }
+    const std::string axis = p.value("axis", std::string("Z"));
+    gp_Trsf rot, move;
+    rot.SetRotation(gp_Ax1(gp_Pnt(0, 0, 0), axis == "X" ? gp_Dir(1, 0, 0) : axis == "Y" ? gp_Dir(0, 1, 0) : gp_Dir(0, 0, 1)),
+                    ang.value());
+    move.SetTranslation(gp_Vec(d[0], d[1], d[2]));
+    const gp_Trsf t = move * rot;  // turn about the origin axis, then shift
+    const bool copy = p.value("copy", false);
+    auto out = copyState(in);
+    int k = 0;
+    for (const std::string& b : bodies) {
+        auto it = in->bodies.find(b);
+        if (it == in->bodies.end()) {
+            return failed("A body this step moves no longer exists.", {"Edit the step and pick the bodies again."});
+        }
+        if (copy) {
+            const std::string id = bodies.size() == 1 ? f.id : f.id + "." + std::to_string(++k);
+            out->bodies[id] = std::make_shared<NamedShape>(transformedCopy(*it->second, t, f.id + "/copy:"));
+        }
+        else {
+            out->bodies[b] = std::make_shared<NamedShape>(transformedCopy(*it->second, t, ""));
+        }
+    }
+    return {out, status};
+}
+
 // ---------------------------------------------------------------- revolve
 
 FeatureOutcome applyRevolve(const Document& doc, const Feature& f, const std::shared_ptr<const ModelState>& in)
@@ -918,6 +1060,12 @@ FeatureOutcome applyFeature(const Document& doc, const Feature& f, const std::sh
                 return applyMirror(doc, f, in);
             case FeatureKind::Plane:
                 return applyPlane(doc, f, in);
+            case FeatureKind::Combine:
+                return applyCombine(doc, f, in);
+            case FeatureKind::Split:
+                return applySplit(doc, f, in);
+            case FeatureKind::Move:
+                return applyMove(doc, f, in);
         }
     }
     catch (const std::exception& ex) {
