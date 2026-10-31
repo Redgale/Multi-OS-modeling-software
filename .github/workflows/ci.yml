@@ -171,11 +171,35 @@ jobs:
           windeployqt --release --no-translations dist/jigsmith.exe
           Copy-Item LICENSE, THIRD_PARTY_LICENSES.md dist/
           Compress-Archive -Path dist/* -DestinationPath Jigsmith-windows-x64-portable.zip
+      - name: Build the installer (Inno Setup)
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress; }
+          $version = (& build/cli/jigsmith-cli.exe --version).Trim()
+          & $iscc /Q "/DAppVersion=$version" "/DSourceDir=$PWD\dist" packaging/windows/jigsmith.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Get-Item Jigsmith-windows-x64-setup.exe
+      - name: Install silently and run the installed copy
+        shell: pwsh
+        run: |
+          $dir = "$env:RUNNER_TEMP\jigsmith-installed"
+          $p = Start-Process -FilePath .\Jigsmith-windows-x64-setup.exe -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/CURRENTUSER", "/DIR=$dir", "/TASKS=associate" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "installer exit code $($p.ExitCode)" }
+          & "$dir\jigsmith-cli.exe" --run samples/phone_stand.jigs --report -
+          if ($LASTEXITCODE -ne 0) { throw "installed jigsmith-cli failed" }
+          if (-not (Test-Path "$dir\jigsmith.exe")) { throw "jigsmith.exe missing" }
+          $assoc = (Get-ItemProperty "HKCU:\Software\Classes\.jig")."(default)"
+          if ($assoc -ne "Jigsmith.Design") { throw ".jig association missing" }
+          $u = Start-Process -FilePath "$dir\unins000.exe" -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES" -Wait -PassThru
+          Start-Sleep -Seconds 3
+          if (Test-Path "$dir\jigsmith.exe") { throw "uninstall left the program behind" }
       - uses: actions/upload-artifact@v4
         with:
           name: jigsmith-windows
           path: |
             Jigsmith-windows-x64-portable.zip
+            Jigsmith-windows-x64-setup.exe
             bench-windows.json
 
   distros:
@@ -270,7 +294,7 @@ jobs:
       - name: Collect files
         run: |
           mkdir -p upload
-          find artifacts -type f \( -name '*.AppImage' -o -name '*.dmg' -o -name '*.zip' \) -exec cp {} upload/ \;
+          find artifacts -type f \( -name '*.AppImage' -o -name '*.dmg' -o -name '*.zip' -o -name '*-setup.exe' \) -exec cp {} upload/ \;
           for f in upload/*.AppImage; do mv "$f" upload/Jigsmith-linux-x86_64.AppImage; done
           cp artifacts/jigsmith-linux/screenshot-linux.png upload/ || true
           ls -la upload
@@ -285,7 +309,7 @@ jobs:
           Pre-v0.1: see docs/STATUS.md for what works. These builds are **unsigned**:
           - **Linux**: \`chmod +x Jigsmith-linux-x86_64.AppImage\` then run it (x86_64, glibc).
           - **macOS**: open the .dmg (Apple silicon: \`Jigsmith-macos-15.dmg\`; Intel: \`Jigsmith-macos-15-intel.dmg\`). Gatekeeper will warn: right-click the app, choose Open.
-          - **Windows**: unzip \`Jigsmith-windows-x64-portable.zip\` and run \`jigsmith.exe\`. SmartScreen may warn.
+          - **Windows**: run \`Jigsmith-windows-x64-setup.exe\` (installs for you only, no administrator rights needed), or unzip \`Jigsmith-windows-x64-portable.zip\` and run \`jigsmith.exe\`. SmartScreen may warn.
           Other Linux distributions (Void, Fedora, Arch, openSUSE…): build from source, see README.
           NOTES
           gh release create continuous upload/* --prerelease --target "${{ github.sha }}" \

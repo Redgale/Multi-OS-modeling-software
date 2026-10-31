@@ -96,6 +96,13 @@ FTL). **Before the first release** the Windows package must ship only the DLLs J
 actually loads, each listed here with its licence (BACKLOG B-011). Until then the CI zip is a
 development artifact, not a release.
 
+## Inno Setup (Windows installer only)
+
+`Jigsmith-windows-x64-setup.exe` is made with Inno Setup 6 (Jordan Russell and Martijn
+Laan), whose licence allows using it and distributing the installers it makes, including
+commercially. The installer's own setup program comes from Inno Setup; nothing of it is
+linked into Jigsmith. https://jrsoftware.org/files/is/license.txt
+
 ## Assets
 
 The application icon (`packaging/linux/jigsmith.svg`) is an original placeholder

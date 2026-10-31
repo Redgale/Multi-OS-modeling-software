@@ -17,7 +17,8 @@ decision or finding). Move items to STATUS.md when started.
   (Metal) backend for `Viewport`.
 - **B-005 Universal macOS binary**: CI builds arm64 and Intel separately; add a
   `lipo`-merged universal .dmg and document signing/notarisation (secrets never in repo).
-- **B-006 Windows installer** (brief: installer + portable zip): WiX or Inno Setup.
+- ~~B-006 Windows installer~~ done (Inno Setup, tested in CI by silent install, run, uninstall); try
+  on a clean machine by hand.
 - **B-007 Flatpak manifest** (brief: AppImage and Flatpak).
 - ~~B-008 Endpoint tangency~~ done (angle via the shared point); collinear/concentric done.
 - **B-012 OCCT 8 deprecations**: `TopTools_*`/`TColStd_*` typedef headers are deprecated in
