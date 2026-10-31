@@ -42,5 +42,7 @@ When commands change in `core/src/commands.cpp`, refresh their strings (a test c
 ```bash
 python3 tools/extract_registry_strings.py core/src/commands.cpp app/registry_strings.h
 python3 tools/extract_core_messages.py core/src app/core_strings.h
+# or all of it, including the template and the pseudo-translation:
+scripts/refresh-strings.sh
 python3 tools/pseudo_translate.py translations/jigsmith.ts translations/jigsmith_qps.ts
 ```

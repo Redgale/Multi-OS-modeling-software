@@ -40,6 +40,7 @@ Settings); US units (inches, feet) are fully supported alongside metric.
 scripts/install-deps.sh          # once, per distribution
 cmake -S . -B build -G Ninja && cmake --build build
 xvfb-run -a ctest --test-dir build -j8
+scripts/refresh-strings.sh       # after changing commands or core messages (a ctest checks it)
 ```
 
 A push runs the Linux CI jobs; put `[full ci]` in the commit message (or dispatch the
