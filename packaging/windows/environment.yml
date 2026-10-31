@@ -1,0 +1,14 @@
+# Windows build dependencies from conda-forge (prebuilt; installs in about two minutes).
+# Qt comes from the official LGPL binaries (Qt online installer or install-qt-action),
+# MSVC from Visual Studio 2022. See README "Windows" and docs/DECISIONS.md D-011.
+name: jigsmith
+channels:
+  - conda-forge
+dependencies:
+  - occt=8.0.*=novtk*
+  - eigen
+  - libboost-headers
+  - nlohmann_json
+  - gtest
+  - cmake
+  - ninja

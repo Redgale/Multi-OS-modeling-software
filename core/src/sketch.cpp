@@ -1,0 +1,863 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+#include "jig/sketch.hpp"
+
+#include <algorithm>
+#include <chrono>
+#include <cmath>
+#include <memory>
+#include <numbers>
+#include <set>
+
+#include <planegcs/GCS.h>
+
+namespace jig
+{
+namespace
+{
+
+struct TypeName
+{
+    ConstraintType t;
+    const char* n;
+};
+constexpr TypeName kTypeNames[] = {
+    {ConstraintType::Coincident, "coincident"},
+    {ConstraintType::PointOnCurve, "point_on_curve"},
+    {ConstraintType::Horizontal, "horizontal"},
+    {ConstraintType::Vertical, "vertical"},
+    {ConstraintType::Parallel, "parallel"},
+    {ConstraintType::Perpendicular, "perpendicular"},
+    {ConstraintType::Equal, "equal"},
+    {ConstraintType::Tangent, "tangent"},
+    {ConstraintType::Midpoint, "midpoint"},
+    {ConstraintType::Symmetric, "symmetric"},
+    {ConstraintType::Fix, "fix"},
+    {ConstraintType::Distance, "distance"},
+    {ConstraintType::DistanceX, "distance_x"},
+    {ConstraintType::DistanceY, "distance_y"},
+    {ConstraintType::Radius, "radius"},
+    {ConstraintType::Diameter, "diameter"},
+    {ConstraintType::Angle, "angle"},
+};
+
+const char* entityTypeName(EntityType t)
+{
+    switch (t) {
+        case EntityType::Point:
+            return "point";
+        case EntityType::Line:
+            return "line";
+        case EntityType::Circle:
+            return "circle";
+        case EntityType::Arc:
+            return "arc";
+    }
+    return "point";
+}
+
+std::optional<EntityType> entityTypeFromString(std::string_view s)
+{
+    if (s == "point") {
+        return EntityType::Point;
+    }
+    if (s == "line") {
+        return EntityType::Line;
+    }
+    if (s == "circle") {
+        return EntityType::Circle;
+    }
+    if (s == "arc") {
+        return EntityType::Arc;
+    }
+    return std::nullopt;
+}
+
+bool isDimensional(ConstraintType t)
+{
+    switch (t) {
+        case ConstraintType::Distance:
+        case ConstraintType::DistanceX:
+        case ConstraintType::DistanceY:
+        case ConstraintType::Radius:
+        case ConstraintType::Diameter:
+        case ConstraintType::Angle:
+            return true;
+        default:
+            return false;
+    }
+}
+
+}  // namespace
+
+const char* toString(ConstraintType t)
+{
+    for (const auto& tn : kTypeNames) {
+        if (tn.t == t) {
+            return tn.n;
+        }
+    }
+    return "unknown";
+}
+
+std::optional<ConstraintType> constraintTypeFromString(std::string_view s)
+{
+    for (const auto& tn : kTypeNames) {
+        if (s == tn.n) {
+            return tn.t;
+        }
+    }
+    return std::nullopt;
+}
+
+// ---------------------------------------------------------------- geometry
+
+int Sketch::addPoint(double x, double y, bool internal)
+{
+    SketchEntity e;
+    e.id = nextId_++;
+    e.type = EntityType::Point;
+    e.x = x;
+    e.y = y;
+    e.internal = internal;
+    entities_[e.id] = e;
+    return e.id;
+}
+
+int Sketch::addLine(int p1, int p2)
+{
+    SketchEntity e;
+    e.id = nextId_++;
+    e.type = EntityType::Line;
+    e.p1 = p1;
+    e.p2 = p2;
+    entities_[e.id] = e;
+    return e.id;
+}
+
+int Sketch::addLine(double x1, double y1, double x2, double y2)
+{
+    int a = addPoint(x1, y1, true);
+    int b = addPoint(x2, y2, true);
+    return addLine(a, b);
+}
+
+int Sketch::addCircle(double cx, double cy, double r)
+{
+    int c = addPoint(cx, cy, true);
+    SketchEntity e;
+    e.id = nextId_++;
+    e.type = EntityType::Circle;
+    e.center = c;
+    e.r = r;
+    entities_[e.id] = e;
+    return e.id;
+}
+
+int Sketch::addArc(double cx, double cy, double r, double a0, double a1)
+{
+    int c = addPoint(cx, cy, true);
+    int s = addPoint(cx + r * std::cos(a0), cy + r * std::sin(a0), true);
+    int t = addPoint(cx + r * std::cos(a1), cy + r * std::sin(a1), true);
+    SketchEntity e;
+    e.id = nextId_++;
+    e.type = EntityType::Arc;
+    e.center = c;
+    e.p1 = s;
+    e.p2 = t;
+    e.r = r;
+    e.a0 = a0;
+    e.a1 = a1;
+    entities_[e.id] = e;
+    return e.id;
+}
+
+bool Sketch::remove(int entityId)
+{
+    auto it = entities_.find(entityId);
+    if (it == entities_.end()) {
+        return false;
+    }
+    std::set<int> gone {entityId};
+    const SketchEntity e = it->second;
+    entities_.erase(it);
+    // internal points not used by any other curve go too
+    for (int pid : {e.p1, e.p2, e.center}) {
+        if (!pid) {
+            continue;
+        }
+        auto* p = entity(pid);
+        if (!p || !p->internal) {
+            continue;
+        }
+        bool used = false;
+        for (auto& [id, o] : entities_) {
+            if (o.p1 == pid || o.p2 == pid || o.center == pid) {
+                used = true;
+            }
+        }
+        if (!used) {
+            entities_.erase(pid);
+            gone.insert(pid);
+        }
+    }
+    std::erase_if(constraints_, [&](const auto& kv) {
+        const auto& c = kv.second;
+        return gone.count(c.a) || gone.count(c.b) || gone.count(c.c);
+    });
+    return true;
+}
+
+void Sketch::setConstruction(int entityId, bool on)
+{
+    if (auto* e = entity(entityId)) {
+        e->construction = on;
+    }
+}
+
+int Sketch::addConstraint(ConstraintType type, int a, int b, int c, std::string expr)
+{
+    SketchConstraint k;
+    k.id = nextId_++;
+    k.type = type;
+    k.a = a;
+    k.b = b;
+    k.c = c;
+    k.expr = std::move(expr);
+    if (type == ConstraintType::Fix) {
+        auto [x, y] = pointXY(a);
+        k.fx = x;
+        k.fy = y;
+    }
+    constraints_[k.id] = k;
+    return k.id;
+}
+
+bool Sketch::removeConstraint(int constraintId)
+{
+    return constraints_.erase(constraintId) > 0;
+}
+
+const SketchEntity* Sketch::entity(int id) const
+{
+    auto it = entities_.find(id);
+    return it == entities_.end() ? nullptr : &it->second;
+}
+
+SketchEntity* Sketch::entity(int id)
+{
+    auto it = entities_.find(id);
+    return it == entities_.end() ? nullptr : &it->second;
+}
+
+std::pair<double, double> Sketch::pointXY(int pointId) const
+{
+    const auto* p = entity(pointId);
+    return p ? std::pair {p->x, p->y} : std::pair {0.0, 0.0};
+}
+
+void Sketch::syncCurvePoints()
+{
+    for (auto& [id, e] : entities_) {
+        if (e.type == EntityType::Arc) {
+            auto [cx, cy] = pointXY(e.center);
+            if (auto* s = entity(e.p1)) {
+                s->x = cx + e.r * std::cos(e.a0);
+                s->y = cy + e.r * std::sin(e.a0);
+            }
+            if (auto* t = entity(e.p2)) {
+                t->x = cx + e.r * std::cos(e.a1);
+                t->y = cy + e.r * std::sin(e.a1);
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------- solving
+
+SolveReport Sketch::solve(const ParamLookup& lookup)
+{
+    return runSolver(lookup, nullptr, 0, 0);
+}
+
+SolveReport Sketch::drag(int pointId, double x, double y, const ParamLookup& lookup)
+{
+    return runSolver(lookup, &pointId, x, y);
+}
+
+SolveReport Sketch::runSolver(const ParamLookup& lookup, const int* dragPoint, double dx, double dy,
+                              const std::vector<int>& skip)
+{
+    auto t0 = std::chrono::steady_clock::now();
+    SolveReport rep;
+
+    // Parameter storage must not reallocate: planegcs keeps raw pointers.
+    size_t need = 2 + 2 * constraints_.size() + 4;
+    for (auto& [id, e] : entities_) {
+        need += e.type == EntityType::Point ? 2 : e.type == EntityType::Arc ? 3 : 1;
+    }
+    auto store = std::make_unique<std::vector<double>>();
+    store->reserve(need);
+    auto slot = [&](double v) -> double* {
+        store->push_back(v);
+        return &store->back();
+    };
+
+    std::map<int, GCS::Point> pts;
+    std::map<int, GCS::Line> lines;
+    std::map<int, GCS::Circle> circles;
+    std::map<int, GCS::Arc> arcs;
+    std::map<double*, int> paramOwner;  // parameter -> entity id (for free-geometry report)
+    GCS::VEC_pD unknowns;
+
+    for (auto& [id, e] : entities_) {
+        if (e.type == EntityType::Point) {
+            GCS::Point p;
+            p.x = slot(e.x);
+            p.y = slot(e.y);
+            pts[id] = p;
+            unknowns.push_back(p.x);
+            unknowns.push_back(p.y);
+            paramOwner[p.x] = id;
+            paramOwner[p.y] = id;
+        }
+    }
+    for (auto& [id, e] : entities_) {
+        switch (e.type) {
+            case EntityType::Line: {
+                GCS::Line l;
+                l.p1 = pts[e.p1];
+                l.p2 = pts[e.p2];
+                lines[id] = l;
+                break;
+            }
+            case EntityType::Circle: {
+                GCS::Circle c;
+                c.center = pts[e.center];
+                c.rad = slot(e.r);
+                unknowns.push_back(c.rad);
+                paramOwner[c.rad] = id;
+                circles[id] = c;
+                break;
+            }
+            case EntityType::Arc: {
+                GCS::Arc a;
+                a.center = pts[e.center];
+                a.start = pts[e.p1];
+                a.end = pts[e.p2];
+                a.rad = slot(e.r);
+                a.startAngle = slot(e.a0);
+                a.endAngle = slot(e.a1);
+                for (double* p : {a.rad, a.startAngle, a.endAngle}) {
+                    unknowns.push_back(p);
+                    paramOwner[p] = id;
+                }
+                arcs[id] = a;
+                break;
+            }
+            default:
+                break;
+        }
+    }
+    // Endpoints of a curve belong to it for the free-geometry report.
+    for (auto& [id, e] : entities_) {
+        if (e.type == EntityType::Line || e.type == EntityType::Arc) {
+            for (int pid : {e.p1, e.p2}) {
+                if (pts.count(pid) && entity(pid)->internal) {
+                    paramOwner[pts[pid].x] = id;
+                    paramOwner[pts[pid].y] = id;
+                }
+            }
+        }
+    }
+
+    GCS::System sys;
+    for (auto& [id, a] : arcs) {
+        sys.addConstraintArcRules(a, 0);
+    }
+
+    auto fail = [&](int cid, std::string msg) {
+        rep.state = SolveState::Failed;
+        rep.conflicting.push_back(cid);
+        rep.message = std::move(msg);
+        return rep;
+    };
+    auto isLine = [&](int id) { return lines.count(id) > 0; };
+    auto isCircle = [&](int id) { return circles.count(id) > 0; };
+    auto isArc = [&](int id) { return arcs.count(id) > 0; };
+    auto isPoint = [&](int id) { return pts.count(id) > 0; };
+
+    for (auto& [cid, k] : constraints_) {
+        if (!k.driving || std::find(skip.begin(), skip.end(), cid) != skip.end()) {
+            continue;  // driven dimensions only measure; skipped = known redundant
+        }
+        double* val = nullptr;
+        if (isDimensional(k.type)) {
+            Dim want = k.type == ConstraintType::Angle ? Dim::ang() : Dim::len();
+            auto q = evaluate(k.expr, lookup, want);
+            if (!q) {
+                return fail(cid, q.error().message);
+            }
+            double v = q->value;
+            if (k.type == ConstraintType::DistanceX || k.type == ConstraintType::DistanceY) {
+                val = slot(v);
+            }
+            else {
+                if (v <= 0 && k.type != ConstraintType::Angle) {
+                    return fail(cid, "A dimension must be larger than zero (got "
+                                         + formatQuantity(*q) + ").");
+                }
+                val = slot(v);
+            }
+        }
+        const int tag = cid;
+        switch (k.type) {
+            case ConstraintType::Coincident:
+                if (!isPoint(k.a) || !isPoint(k.b)) {
+                    return fail(cid, "Coincident needs two points.");
+                }
+                sys.addConstraintP2PCoincident(pts[k.a], pts[k.b], tag);
+                break;
+            case ConstraintType::PointOnCurve:
+                if (isLine(k.b)) {
+                    sys.addConstraintPointOnLine(pts[k.a], lines[k.b], tag);
+                }
+                else if (isCircle(k.b)) {
+                    sys.addConstraintPointOnCircle(pts[k.a], circles[k.b], tag);
+                }
+                else if (isArc(k.b)) {
+                    sys.addConstraintPointOnArc(pts[k.a], arcs[k.b], tag);
+                }
+                else {
+                    return fail(cid, "Point-on-curve needs a point and a curve.");
+                }
+                break;
+            case ConstraintType::Horizontal:
+                if (isLine(k.a)) {
+                    sys.addConstraintHorizontal(lines[k.a], tag);
+                }
+                else if (isPoint(k.a) && isPoint(k.b)) {
+                    sys.addConstraintHorizontal(pts[k.a], pts[k.b], tag);
+                }
+                else {
+                    return fail(cid, "Horizontal needs a line or two points.");
+                }
+                break;
+            case ConstraintType::Vertical:
+                if (isLine(k.a)) {
+                    sys.addConstraintVertical(lines[k.a], tag);
+                }
+                else if (isPoint(k.a) && isPoint(k.b)) {
+                    sys.addConstraintVertical(pts[k.a], pts[k.b], tag);
+                }
+                else {
+                    return fail(cid, "Vertical needs a line or two points.");
+                }
+                break;
+            case ConstraintType::Parallel:
+                if (!isLine(k.a) || !isLine(k.b)) {
+                    return fail(cid, "Parallel needs two lines.");
+                }
+                sys.addConstraintParallel(lines[k.a], lines[k.b], tag);
+                break;
+            case ConstraintType::Perpendicular:
+                if (!isLine(k.a) || !isLine(k.b)) {
+                    return fail(cid, "Perpendicular needs two lines.");
+                }
+                sys.addConstraintPerpendicular(lines[k.a], lines[k.b], tag);
+                break;
+            case ConstraintType::Equal:
+                if (isLine(k.a) && isLine(k.b)) {
+                    sys.addConstraintEqualLength(lines[k.a], lines[k.b], tag);
+                }
+                else if (isCircle(k.a) && isCircle(k.b)) {
+                    sys.addConstraintEqualRadius(circles[k.a], circles[k.b], tag);
+                }
+                else if (isCircle(k.a) && isArc(k.b)) {
+                    sys.addConstraintEqualRadius(circles[k.a], arcs[k.b], tag);
+                }
+                else if (isArc(k.a) && isCircle(k.b)) {
+                    sys.addConstraintEqualRadius(circles[k.b], arcs[k.a], tag);
+                }
+                else if (isArc(k.a) && isArc(k.b)) {
+                    sys.addConstraintEqualRadius(arcs[k.a], arcs[k.b], tag);
+                }
+                else {
+                    return fail(cid, "Equal needs two lines or two round curves.");
+                }
+                break;
+            case ConstraintType::Tangent: {
+                auto leftOf = [&](GCS::Line& l, GCS::Point& c) {
+                    double ax = *l.p2.x - *l.p1.x, ay = *l.p2.y - *l.p1.y;
+                    return ax * (*c.y - *l.p1.y) - ay * (*c.x - *l.p1.x) >= 0;
+                };
+                if (isLine(k.a) && isCircle(k.b)) {
+                    sys.addConstraintTangent(lines[k.a], circles[k.b],
+                                             leftOf(lines[k.a], circles[k.b].center), tag);
+                }
+                else if (isLine(k.a) && isArc(k.b)) {
+                    sys.addConstraintTangent(lines[k.a], arcs[k.b],
+                                             leftOf(lines[k.a], arcs[k.b].center), tag);
+                }
+                else if (isCircle(k.a) && isCircle(k.b)) {
+                    sys.addConstraintTangent(circles[k.a], circles[k.b], tag);
+                }
+                else if (isArc(k.a) && isArc(k.b)) {
+                    sys.addConstraintTangent(arcs[k.a], arcs[k.b], tag);
+                }
+                else if (isCircle(k.a) && isArc(k.b)) {
+                    sys.addConstraintTangent(circles[k.a], arcs[k.b], tag);
+                }
+                else {
+                    return fail(cid, "Tangent needs a line or curve and a round curve.");
+                }
+                break;
+            }
+            case ConstraintType::Midpoint:
+                if (!isPoint(k.a) || !isLine(k.b)) {
+                    return fail(cid, "Midpoint needs a point and a line.");
+                }
+                sys.addConstraintPointOnLine(pts[k.a], lines[k.b], tag);
+                sys.addConstraintPointOnPerpBisector(pts[k.a], lines[k.b], tag);
+                break;
+            case ConstraintType::Symmetric:
+                if (!isPoint(k.a) || !isPoint(k.b) || !isLine(k.c)) {
+                    return fail(cid, "Symmetry needs two points and a line.");
+                }
+                sys.addConstraintP2PSymmetric(pts[k.a], pts[k.b], lines[k.c], tag);
+                break;
+            case ConstraintType::Fix:
+                if (!isPoint(k.a)) {
+                    return fail(cid, "Fix needs a point.");
+                }
+                sys.addConstraintCoordinateX(pts[k.a], slot(k.fx), tag);
+                sys.addConstraintCoordinateY(pts[k.a], slot(k.fy), tag);
+                break;
+            case ConstraintType::Distance:
+                if (isLine(k.a) && !k.b) {
+                    sys.addConstraintP2PDistance(lines[k.a].p1, lines[k.a].p2, val, tag);
+                }
+                else if (isPoint(k.a) && isPoint(k.b)) {
+                    sys.addConstraintP2PDistance(pts[k.a], pts[k.b], val, tag);
+                }
+                else if (isPoint(k.a) && isLine(k.b)) {
+                    GCS::Line& l = lines[k.b];
+                    double ax = *l.p2.x - *l.p1.x, ay = *l.p2.y - *l.p1.y;
+                    bool ccw = ax * (*pts[k.a].y - *l.p1.y) - ay * (*pts[k.a].x - *l.p1.x) >= 0;
+                    sys.addConstraintP2LDistance(pts[k.a], l, val, ccw, tag);
+                }
+                else {
+                    return fail(cid, "Distance needs a line, two points, or a point and a line.");
+                }
+                break;
+            case ConstraintType::DistanceX:
+            case ConstraintType::DistanceY: {
+                bool isX = k.type == ConstraintType::DistanceX;
+                if (!isPoint(k.a) || (k.b && !isPoint(k.b))) {
+                    return fail(cid, "Horizontal/vertical distance needs points.");
+                }
+                if (!k.b) {
+                    isX ? sys.addConstraintCoordinateX(pts[k.a], val, tag)
+                        : sys.addConstraintCoordinateY(pts[k.a], val, tag);
+                }
+                else {
+                    double* pa = isX ? pts[k.a].x : pts[k.a].y;
+                    double* pb = isX ? pts[k.b].x : pts[k.b].y;
+                    sys.addConstraintDifference(pa, pb, val, tag);
+                }
+                break;
+            }
+            case ConstraintType::Radius:
+            case ConstraintType::Diameter: {
+                bool dia = k.type == ConstraintType::Diameter;
+                if (isCircle(k.a)) {
+                    dia ? sys.addConstraintCircleDiameter(circles[k.a], val, tag)
+                        : sys.addConstraintCircleRadius(circles[k.a], val, tag);
+                }
+                else if (isArc(k.a)) {
+                    dia ? sys.addConstraintArcDiameter(arcs[k.a], val, tag)
+                        : sys.addConstraintArcRadius(arcs[k.a], val, tag);
+                }
+                else {
+                    return fail(cid, "Radius and diameter need a circle or arc.");
+                }
+                break;
+            }
+            case ConstraintType::Angle:
+                if (!isLine(k.a) || !isLine(k.b)) {
+                    return fail(cid, "Angle needs two lines.");
+                }
+                sys.addConstraintL2LAngle(lines[k.a], lines[k.b], val, tag);
+                break;
+        }
+    }
+
+    GCS::Point target;
+    if (dragPoint) {
+        if (!isPoint(*dragPoint)) {
+            return fail(0, "That point does not exist.");
+        }
+        target.x = slot(dx);
+        target.y = slot(dy);
+        sys.addConstraintP2PCoincident(pts[*dragPoint], target, GCS::DefaultTemporaryConstraint);
+    }
+
+    sys.declareUnknowns(unknowns);
+    sys.initSolution(GCS::DogLeg);
+    rep.dof = sys.dofsNumber();
+    GCS::VEC_I conflicting, redundant;
+    sys.getConflicting(conflicting);
+    sys.getRedundant(redundant);
+    std::set<int> cset(conflicting.begin(), conflicting.end());
+    std::set<int> rset(redundant.begin(), redundant.end());
+    cset.erase(0);
+    rset.erase(0);
+    rep.conflicting.assign(cset.begin(), cset.end());
+    rep.redundant.assign(rset.begin(), rset.end());
+
+    auto finish = [&] {
+        rep.solveMs =
+            std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
+        return rep;
+    };
+
+    if (!rep.conflicting.empty()) {
+        rep.state = SolveState::OverConstrained;
+        rep.message = "Some constraints contradict each other. Remove one of the highlighted "
+                      "constraints, or turn a dimension into a reference (driven) dimension.";
+        return finish();
+    }
+
+    if (!rep.redundant.empty() && skip.empty()) {
+        // Redundant constraints say nothing new, so solve without them (the rest still
+        // satisfies them) and report them so the user can remove the duplicates.
+        SolveReport again = runSolver(lookup, dragPoint, dx, dy, rep.redundant);
+        if (again.state != SolveState::Failed) {
+            again.redundant = rep.redundant;
+            again.state = SolveState::OverConstrained;
+            again.message = "Some constraints say the same thing twice. Remove one of the "
+                            "highlighted constraints.";
+        }
+        return again;
+    }
+    GCS::SolveStatus st = sys.solve(GCS::DogLeg);
+    if (st != GCS::SolveStatus::Success) {
+        // Second chance with a different algorithm before reporting failure.
+        sys.undoSolution();
+        st = sys.solve(GCS::LevenbergMarquardt);
+    }
+    if (st != GCS::SolveStatus::Success) {
+        sys.undoSolution();
+        rep.state = SolveState::Failed;
+        rep.message = "These constraints can't all be met with this geometry. Undo the last "
+                      "change, or drag the geometry closer to the shape you want first.";
+        return finish();
+    }
+    sys.applySolution();
+
+    // Write the solution back.
+    for (auto& [id, p] : pts) {
+        entities_[id].x = *p.x;
+        entities_[id].y = *p.y;
+    }
+    for (auto& [id, c] : circles) {
+        entities_[id].r = *c.rad;
+    }
+    for (auto& [id, a] : arcs) {
+        auto& e = entities_[id];
+        e.r = *a.rad;
+        e.a0 = *a.startAngle;
+        e.a1 = *a.endAngle;
+    }
+    syncCurvePoints();
+
+    GCS::VEC_pD dependent;
+    sys.getDependentParams(dependent);
+    std::set<int> freeIds;
+    for (double* p : dependent) {
+        auto it = paramOwner.find(p);
+        if (it != paramOwner.end()) {
+            freeIds.insert(it->second);
+        }
+    }
+    rep.freeEntities.assign(freeIds.begin(), freeIds.end());
+
+    if (rep.dof == 0) {
+        rep.state = SolveState::FullyConstrained;
+        rep.message = "Fully defined: nothing can move.";
+    }
+    else {
+        rep.state = SolveState::UnderConstrained;
+        rep.message = std::to_string(rep.dof) + " degree" + (rep.dof == 1 ? "" : "s")
+                    + " of freedom left: some geometry can still move.";
+    }
+    return finish();
+}
+
+std::vector<GapMarker> Sketch::openEndpoints(double nearTolerance) const
+{
+    struct End
+    {
+        int pid;
+        double x, y;
+    };
+    std::vector<End> ends;
+    for (auto& [id, e] : entities_) {
+        if (e.construction) {
+            continue;
+        }
+        if (e.type == EntityType::Line || e.type == EntityType::Arc) {
+            for (int pid : {e.p1, e.p2}) {
+                auto [x, y] = pointXY(pid);
+                ends.push_back({pid, x, y});
+            }
+        }
+    }
+    constexpr double kSame = 1e-6;
+    std::vector<GapMarker> open;
+    for (size_t i = 0; i < ends.size(); ++i) {
+        int count = 0;
+        for (size_t j = 0; j < ends.size(); ++j) {
+            if (std::hypot(ends[i].x - ends[j].x, ends[i].y - ends[j].y) < kSame) {
+                ++count;
+            }
+        }
+        if (count == 1) {
+            open.push_back({ends[i].pid, ends[i].x, ends[i].y, std::nullopt, 0});
+        }
+    }
+    for (auto& g : open) {
+        double best = nearTolerance;
+        for (auto& o : open) {
+            if (o.pointId == g.pointId) {
+                continue;
+            }
+            double d = std::hypot(g.x - o.x, g.y - o.y);
+            if (d <= best) {
+                best = d;
+                g.nearestPointId = o.pointId;
+                g.gap = d;
+            }
+        }
+    }
+    return open;
+}
+
+// ---------------------------------------------------------------- json
+
+nlohmann::json Sketch::toJson() const
+{
+    nlohmann::json ents = nlohmann::json::array();
+    for (auto& [id, e] : entities_) {
+        nlohmann::json j {{"id", id}, {"type", entityTypeName(e.type)}};
+        if (e.construction) {
+            j["construction"] = true;
+        }
+        switch (e.type) {
+            case EntityType::Point:
+                j["x"] = e.x;
+                j["y"] = e.y;
+                if (e.internal) {
+                    j["internal"] = true;
+                }
+                break;
+            case EntityType::Line:
+                j["p1"] = e.p1;
+                j["p2"] = e.p2;
+                break;
+            case EntityType::Circle:
+                j["center"] = e.center;
+                j["r"] = e.r;
+                break;
+            case EntityType::Arc:
+                j["center"] = e.center;
+                j["p1"] = e.p1;
+                j["p2"] = e.p2;
+                j["r"] = e.r;
+                j["a0"] = e.a0;
+                j["a1"] = e.a1;
+                break;
+        }
+        ents.push_back(j);
+    }
+    nlohmann::json cons = nlohmann::json::array();
+    for (auto& [id, k] : constraints_) {
+        nlohmann::json j {{"id", id}, {"type", toString(k.type)}, {"a", k.a}};
+        if (k.b) {
+            j["b"] = k.b;
+        }
+        if (k.c) {
+            j["c"] = k.c;
+        }
+        if (!k.expr.empty()) {
+            j["value"] = k.expr;
+        }
+        if (!k.driving) {
+            j["driving"] = false;
+        }
+        if (k.type == ConstraintType::Fix) {
+            j["fx"] = k.fx;
+            j["fy"] = k.fy;
+        }
+        cons.push_back(j);
+    }
+    return {{"entities", ents}, {"constraints", cons}, {"next_id", nextId_}};
+}
+
+Result<Sketch> Sketch::fromJson(const nlohmann::json& j)
+{
+    Sketch s;
+    try {
+        for (auto& je : j.at("entities")) {
+            SketchEntity e;
+            e.id = je.at("id").get<int>();
+            auto t = entityTypeFromString(je.at("type").get<std::string>());
+            if (!t) {
+                return makeError("file.sketch", "The file contains an unknown sketch shape.");
+            }
+            e.type = *t;
+            e.construction = je.value("construction", false);
+            e.internal = je.value("internal", false);
+            e.x = je.value("x", 0.0);
+            e.y = je.value("y", 0.0);
+            e.p1 = je.value("p1", 0);
+            e.p2 = je.value("p2", 0);
+            e.center = je.value("center", 0);
+            e.r = je.value("r", 0.0);
+            e.a0 = je.value("a0", 0.0);
+            e.a1 = je.value("a1", 0.0);
+            s.entities_[e.id] = e;
+        }
+        for (auto& jc : j.at("constraints")) {
+            SketchConstraint k;
+            k.id = jc.at("id").get<int>();
+            auto t = constraintTypeFromString(jc.at("type").get<std::string>());
+            if (!t) {
+                return makeError("file.sketch", "The file contains an unknown constraint.");
+            }
+            k.type = *t;
+            k.a = jc.value("a", 0);
+            k.b = jc.value("b", 0);
+            k.c = jc.value("c", 0);
+            k.expr = jc.value("value", std::string {});
+            k.driving = jc.value("driving", true);
+            k.fx = jc.value("fx", 0.0);
+            k.fy = jc.value("fy", 0.0);
+            s.constraints_[k.id] = k;
+        }
+        s.nextId_ = j.value("next_id", 1);
+        int maxId = 0;
+        for (auto& [id, e] : s.entities_) {
+            maxId = std::max(maxId, id);
+        }
+        for (auto& [id, k] : s.constraints_) {
+            maxId = std::max(maxId, id);
+        }
+        s.nextId_ = std::max(s.nextId_, maxId + 1);
+    }
+    catch (const nlohmann::json::exception& ex) {
+        return makeError("file.sketch", "A sketch in this file is damaged.", {}, ex.what());
+    }
+    return s;
+}
+
+}  // namespace jig

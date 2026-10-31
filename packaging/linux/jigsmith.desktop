@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Jigsmith
+GenericName=3D CAD
+Comment=Free parametric CAD for hobbyists and makers
+Exec=jigsmith %f
+Icon=jigsmith
+Categories=Graphics;Engineering;3DGraphics;
+MimeType=application/x-jigsmith;
+Terminal=false

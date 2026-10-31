@@ -1,0 +1,165 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Build, test and package on Linux, Windows and macOS (Apple silicon and Intel)
+# on every push and pull request. A red run blocks merging (branch protection).
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: License audit
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 tools/license_audit.py
+
+  linux:
+    name: Linux (Ubuntu 24.04)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ninja-build \
+            libocct-modeling-algorithms-dev libocct-modeling-data-dev libocct-data-exchange-dev \
+            libocct-foundation-dev libtbb-dev libeigen3-dev libboost-dev nlohmann-json3-dev \
+            libgtest-dev qt6-base-dev libgl-dev xvfb xauth libgl1-mesa-dri \
+            libfuse2 file
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build
+      - name: Test
+        run: ctest --test-dir build --output-on-failure -j4
+      - name: Benchmarks
+        run: ./build/bench/jigsmith-bench | tee bench-linux.json
+      - name: GUI smoke test and screenshot
+        run: |
+          export XDG_RUNTIME_DIR=$(mktemp -d)
+          xvfb-run -a -s "-screen 0 1600x1000x24" ./build/app/jigsmith --sample phone_stand \
+            --screenshot screenshot-linux.png
+      - name: Package AppImage
+        run: |
+          cmake --install build --prefix AppDir/usr
+          mkdir -p AppDir/usr/share/applications AppDir/usr/share/icons/hicolor/scalable/apps
+          cp packaging/linux/jigsmith.desktop AppDir/usr/share/applications/
+          cp packaging/linux/jigsmith.svg AppDir/usr/share/icons/hicolor/scalable/apps/
+          curl -sSLo linuxdeploy https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+          curl -sSLo linuxdeploy-plugin-qt https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
+          chmod +x linuxdeploy linuxdeploy-plugin-qt
+          export QMAKE=/usr/lib/qt6/bin/qmake
+          ./linuxdeploy --appdir AppDir --plugin qt --output appimage \
+            -d AppDir/usr/share/applications/jigsmith.desktop \
+            -i AppDir/usr/share/icons/hicolor/scalable/apps/jigsmith.svg
+          ls -la *.AppImage
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jigsmith-linux
+          path: |
+            *.AppImage
+            screenshot-linux.png
+            bench-linux.json
+
+  sanitizers:
+    name: Linux sanitizers (ASan + UBSan, core only)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ninja-build \
+            libocct-modeling-algorithms-dev libocct-modeling-data-dev libocct-data-exchange-dev \
+            libocct-foundation-dev libtbb-dev libeigen3-dev libboost-dev nlohmann-json3-dev libgtest-dev
+      - run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DJIG_BUILD_GUI=OFF -DJIG_BUILD_BENCH=OFF -DJIG_SANITIZE=address,undefined
+      - run: cmake --build build
+      - run: ctest --test-dir build --output-on-failure -j4
+        env:
+          ASAN_OPTIONS: detect_leaks=0  # OCCT keeps global caches alive at exit
+          UBSAN_OPTIONS: print_stacktrace=1
+
+  macos:
+    name: macOS (${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            arch: Apple silicon
+          - os: macos-15-intel
+            arch: Intel
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: brew install ninja opencascade qt eigen boost nlohmann-json googletest
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$(brew --prefix qt);$(brew --prefix)"
+      - name: Build
+        run: cmake --build build
+      - name: Test
+        run: ctest --test-dir build --output-on-failure -j3
+      - name: Benchmarks
+        run: ./build/bench/jigsmith-bench | tee bench-macos.json
+      - name: Package .dmg (unsigned)
+        run: |
+          "$(brew --prefix qt)/bin/macdeployqt" build/app/jigsmith.app -dmg
+          mv build/app/jigsmith.dmg "Jigsmith-${{ matrix.os }}.dmg"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jigsmith-${{ matrix.os }}
+          path: |
+            Jigsmith-*.dmg
+            bench-macos.json
+
+  windows:
+    name: Windows (x64)
+    runs-on: windows-2022
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: cmd /C CALL {0}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies (conda-forge, prebuilt OCCT)
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          miniforge-version: latest
+          environment-file: packaging/windows/environment.yml
+          activate-environment: jigsmith
+      - name: Install Qt (official LGPL binaries)
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.8.*'
+          cache: true
+      - uses: ilammy/msvc-dev-cmd@v1
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release "-DCMAKE_PREFIX_PATH=%CONDA_PREFIX%\Library;%QT_ROOT_DIR%"
+      - name: Build
+        run: cmake --build build
+      - name: Test
+        run: ctest --test-dir build --output-on-failure -j4
+      - name: Benchmarks
+        run: build\bench\jigsmith-bench.exe > bench-windows.json && type bench-windows.json
+      - name: Package portable zip (unverified on a clean machine)
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Copy-Item build/app/jigsmith.exe, build/cli/jigsmith-cli.exe dist/
+          # OCCT and its runtime dependencies from the conda environment
+          Copy-Item "$env:CONDA_PREFIX/Library/bin/*.dll" dist/
+          windeployqt --release --no-translations dist/jigsmith.exe
+          Copy-Item LICENSE, THIRD_PARTY_LICENSES.md dist/
+          Compress-Archive -Path dist/* -DestinationPath Jigsmith-windows-x64-portable.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jigsmith-windows
+          path: |
+            Jigsmith-windows-x64-portable.zip
+            bench-windows.json

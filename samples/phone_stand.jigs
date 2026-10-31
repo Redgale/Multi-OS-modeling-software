@@ -1,0 +1,34 @@
+# Phone stand: the PDF's starter project 1, built from named parameters.
+# Run headless:  jigsmith-cli --run samples/phone_stand.jigs --report -
+param base_w = 90 mm
+param base_d = 70 mm
+param base_t = 6 mm
+param back_t = 8 mm
+param back_h = 70 mm
+param lean = 75 deg kind=angle
+param lip_h = 14 mm
+param slot_w = 14 mm
+
+# 1. Base plate, centred on the origin
+sketch id=s1 plane=XY name="Base sketch"
+rect sketch=s1 center=0,0 w=base_w h=base_d
+extrude id=e1 sketch=s1 distance=base_t op=new name="Base"
+
+# 2. Back support: a leaning slab drawn on the side (YZ) plane, extruded symmetric
+sketch id=s2 plane=YZ name="Back profile"
+polyline sketch=s2 points="base_d/2 - back_t, 0; base_d/2, 0; base_d/2 + back_h/tan(lean), back_h; base_d/2 - back_t + back_h/tan(lean), back_h"
+extrude id=e2 sketch=s2 distance=base_w direction=symmetric op=join name="Back"
+
+# 3. Front lip, sketched on the top face of the base
+sketch id=s3 on=e1/end name="Lip sketch"
+rect sketch=s3 corner="-base_w/2, -base_d/2" w=base_w h=6mm
+extrude id=e3 sketch=s3 distance=lip_h op=join name="Lip"
+
+# 4. Charging-cable slot through the base
+sketch id=s4 plane=XY name="Cable slot sketch"
+slot sketch=s4 c1="0, -base_d/2 + 14 mm" c2="0, 10 mm" width=slot_w
+extrude id=e4 sketch=s4 extent=all op=cut name="Cable slot"
+
+# 5. Soften the edges
+fillet id=f1 edges="face:e1/start" radius=2mm name="Base edges"
+fillet id=f2 edges="face:e3/end" radius=1.5mm name="Lip edges"

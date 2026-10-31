@@ -1,0 +1,184 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Transactions, undo/redo, incremental recompute and the .jig file format.
+#include <cmath>
+#include <random>
+
+#include <gtest/gtest.h>
+
+#include "helpers.hpp"
+#include "jig/io.hpp"
+
+using namespace jig;
+using namespace jigtest;
+
+TEST(Document, TransactionErrorLeavesModelUntouched)
+{
+    Document doc;
+    auto before = doc.toJson();
+    auto r = doc.transact("bad", [](Model& m) -> Result<bool> {
+        m.parameters.push_back({"x", "1 mm"});
+        return makeError("test", "no");
+    });
+    EXPECT_FALSE(r.ok());
+    EXPECT_EQ(doc.toJson(), before);
+    EXPECT_FALSE(doc.canUndo());
+}
+
+TEST(Document, ParameterCyclesAreExplained)
+{
+    auto doc = build("param a = 5 mm\nparam b = a * 2\n");
+    const auto before = doc->toJson();
+    ScriptRunner r(*doc);
+    // An unknown name is refused, and nothing is committed.
+    auto unknown = r.runLine("param c = d + 1 mm");
+    ASSERT_FALSE(unknown.ok());
+    EXPECT_NE(unknown.error().message.find("'d'"), std::string::npos) << unknown.error().message;
+    // A cycle is refused with a plain explanation, and nothing is committed.
+    auto cyc = r.runLine("param a = b + 1 mm");
+    ASSERT_FALSE(cyc.ok());
+    EXPECT_NE(cyc.error().message.find("itself"), std::string::npos) << cyc.error().message;
+    EXPECT_EQ(doc->toJson(), before);
+    EXPECT_NEAR(doc->evalParam("b")->value, 10, 1e-12);
+}
+
+TEST(Document, ParameterKindIsKeptAndInferred)
+{
+    auto doc = build("param lean = 75 deg\nparam n = 4 kind=number\n");
+    EXPECT_EQ(int(doc->model().parameters[0].kind), int(ParamKind::Angle));
+    run(*doc, "param lean = 70 deg");  // updating keeps it an angle
+    EXPECT_EQ(int(doc->model().parameters[0].kind), int(ParamKind::Angle));
+    run(*doc, "param lean = 60");      // a bare number in an angle parameter means degrees
+    EXPECT_NEAR(doc->evalParam("lean")->value, 60 * M_PI / 180, 1e-12);
+}
+
+TEST(Document, UndoRedoFiftyStepsIsIdentical)
+{
+    // Scenario A6 (second half): undo 50 steps and redo 50 steps with identical results.
+    auto doc = buildSample("phone_stand.jigs");
+    const auto jEnd = doc->toJson();
+    const double vEnd = props(*doc).volume;
+    for (int i = 0; i < 40; ++i) {
+        run(*doc, "param base_w = " + std::to_string(80 + i % 7) + " mm");
+    }
+    ASSERT_GE(doc->undoDepth(), 50u);
+    const auto jTop = doc->toJson();
+    const double vTop = props(*doc).volume;
+    for (int i = 0; i < 50; ++i) {
+        ASSERT_TRUE(doc->undo());
+    }
+    for (int i = 0; i < 50; ++i) {
+        ASSERT_TRUE(doc->redo());
+    }
+    EXPECT_EQ(doc->toJson(), jTop);
+    EXPECT_NEAR(props(*doc).volume, vTop, 1e-6);
+    for (int i = 0; i < 40; ++i) {
+        ASSERT_TRUE(doc->undo());
+    }
+    EXPECT_EQ(doc->toJson(), jEnd);
+    EXPECT_NEAR(props(*doc).volume, vEnd, 1e-6);
+    expectAllOk(*doc);
+}
+
+TEST(Document, RecomputeIsIncremental)
+{
+    auto doc = buildSample("phone_stand.jigs");
+    const int n = int(doc->model().features.size());
+    // Editing the last feature recomputes only that feature.
+    run(*doc, "set f2 radius=1mm");
+    EXPECT_EQ(doc->recomputedLastTime(), 1);
+    // Changing a parameter used only by the slot recomputes from the slot sketch on.
+    run(*doc, "param slot_w = 12 mm");
+    EXPECT_EQ(doc->recomputedLastTime(), n - doc->featureIndex("s4"));
+    // Undo hits the cache: nothing upstream of the change is rebuilt.
+    doc->undo();
+    EXPECT_LE(doc->recomputedLastTime(), n - doc->featureIndex("s4"));
+}
+
+TEST(Document, SaveLoadRecomputesIdentically)
+{
+    auto doc = buildSample("phone_stand.jigs");
+    const auto path = (tempDir() / "roundtrip.jig").string();
+    ASSERT_TRUE(saveDocument(*doc, path).ok());
+    auto back = loadDocument(path);
+    ASSERT_TRUE(back.ok()) << back.error().message;
+    EXPECT_EQ((*back)->toJson(), doc->toJson());
+    auto a = props(*doc), b = props(**back);
+    EXPECT_NEAR(a.volume, b.volume, 1e-6);
+    EXPECT_NEAR(a.area, b.area, 1e-6);
+    EXPECT_EQ(a.faces, b.faces);
+    EXPECT_EQ(a.edges, b.edges);
+    expectAllOk(**back);
+}
+
+TEST(Document, UnknownFieldsArePreserved)
+{
+    auto doc = build("param w = 10 mm\nsketch id=s1\nrect center=0,0 w=w h=5\n");
+    auto j = doc->toJson();
+    j["future_top_level"] = {{"x", 1}};
+    j["features"][0]["future_feature_field"] = "keep me";
+    auto back = Document::fromJson(j);
+    ASSERT_TRUE(back.ok());
+    auto j2 = (*back)->toJson();
+    EXPECT_EQ(j2["future_top_level"]["x"], 1);
+    EXPECT_EQ(j2["features"][0]["future_feature_field"], "keep me");
+}
+
+TEST(Document, NewerFormatIsRefusedPolitely)
+{
+    nlohmann::json j = {{"format_version", kFormatVersion + 1}, {"parameters", nlohmann::json::array()},
+                        {"features", nlohmann::json::array()}};
+    auto r = Document::fromJson(j);
+    ASSERT_FALSE(r.ok());
+    EXPECT_EQ(r.error().code, "file.too_new");
+}
+
+TEST(Document, DocumentJsonIsCanonical)
+{
+    // Stable key order: saving twice gives byte-identical document.json, so designs diff cleanly.
+    auto doc = buildSample("phone_stand.jigs");
+    EXPECT_EQ(doc->toJson().dump(2), Document::fromJson(doc->toJson()).value()->toJson().dump(2));
+}
+
+TEST(Document, DamagedFilesNeverCrash)
+{
+    auto doc = buildSample("phone_stand.jigs");
+    const auto path = (tempDir() / "fuzz.jig").string();
+    ASSERT_TRUE(saveDocument(*doc, path).ok());
+    const std::string good = readFile(path);
+    std::mt19937 rng(99);
+    int opened = 0;
+    for (int i = 0; i < 400; ++i) {
+        std::string bad = good;
+        if (i % 3 == 0) {
+            bad.resize(rng() % good.size());  // truncation
+        }
+        else {
+            for (int k = 0; k < 1 + int(rng() % 8); ++k) {
+                bad[rng() % bad.size()] = char(rng());  // bit rot
+            }
+        }
+        auto r = loadDocumentFromMemory(bad.data(), bad.size());
+        if (r.ok()) {
+            ++opened;  // corruption in compressed padding can be harmless
+        }
+        else {
+            EXPECT_FALSE(r.error().message.empty());
+        }
+    }
+    SUCCEED() << opened << " of 400 corrupted files still opened";
+    // Not a zip at all
+    std::string junk = "hello";
+    EXPECT_FALSE(loadDocumentFromMemory(junk.data(), junk.size()).ok());
+}
+
+TEST(Document, AtomicSaveLeavesNoPartialFile)
+{
+    auto doc = build("param w = 10 mm\n");
+    const auto path = tempDir() / "atomic.jig";
+    ASSERT_TRUE(saveDocument(*doc, path.string()).ok());
+    EXPECT_TRUE(std::filesystem::exists(path));
+    EXPECT_FALSE(std::filesystem::exists(path.string() + ".partial"));
+    // saving into a folder that does not exist fails with an explanation, no crash
+    auto bad = saveDocument(*doc, (tempDir() / "no" / "such" / "dir" / "x.jig").string());
+    EXPECT_FALSE(bad.ok());
+}
