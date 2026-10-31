@@ -1174,7 +1174,25 @@ FeatureOutcome applyRevolve(const Document& doc, const Feature& f, const std::sh
         return failed(angle.error());
     }
     double sweep = angle.value();
+    std::optional<TopoDS_Face> trimAt;  // a curved face (or a plane the axis is not in): cut off there
     if (p.value("extent", std::string("angle")) == "to") {
+        const nlohmann::json toRef = p.value("to", nlohmann::json("XY"));
+        std::optional<TopoDS_Face> face;
+        if (toRef.is_object() && toRef.contains("face")) {
+            ShapeRef ref = ShapeRef::fromJson(toRef["face"]);
+            auto bit = in->bodies.find(ref.body);
+            Resolution r = bit == in->bodies.end() ? Resolution {} : resolve(*bit->second, ref);
+            if (bit == in->bodies.end() || r.status == ResolveStatus::Missing || r.status == ResolveStatus::Ambiguous) {
+                return failed("The face this revolve turns up to no longer exists.", {"Edit the revolve and pick a face again."});
+            }
+            face = TopoDS::Face(bit->second->face(r.index));
+        }
+        if (face && !measureItem(*face).normal) {
+            trimAt = face;
+            sweep = 2 * std::numbers::pi * 0.999;  // almost a full turn, then cut off at the face
+        }
+    }
+    if (p.value("extent", std::string("angle")) == "to" && !trimAt) {
         // up to a plane or flat face the axis lies in: turn (the positive way) until the
         // profile reaches it
         auto to = planeFrame(p.value("to", nlohmann::json("XY")), in, status);
@@ -1212,6 +1230,15 @@ FeatureOutcome applyRevolve(const Document& doc, const Feature& f, const std::sh
         return failed("This revolve has an unknown operation.");
     }
     auto tool = makeRevolution(f.id, profiles, axis, sweep);
+    if (tool && trimAt) {
+        TopoDS_Compound start;
+        BRep_Builder bb;
+        bb.MakeCompound(start);
+        for (const Profile* pr : profiles) {
+            bb.Add(start, pr->face);
+        }
+        tool = trimToFace(tool.value(), *trimAt, start, f.id, f.id + "/end");
+    }
     if (!tool) {
         return failed(tool.error());
     }

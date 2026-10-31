@@ -849,6 +849,14 @@ Result<NamedShape> trimToFace(const NamedShape& body, const TopoDS_Face& target,
         }
         NamedShape out(keep);
         propagateFaceNames(split, {&body}, out);
+        // still holding the far end of the sweep: the face only covered part of the outline
+        for (int i = 0; i < out.faceCount(); ++i) {
+            const std::string& n = out.faceName(i);
+            if (n == endName || n.rfind(endName + "~", 0) == 0) {
+                return makeError("extrude.to_face", "That face does not cross the whole extrude, so there is no clean place to stop.",
+                                 {"Pick a face that covers the sketch's outline, or a flat face or plane."});
+            }
+        }
         // the faces the cut made (named after the target) are the new end
         std::vector<TopoDS_Shape> ends;
         for (int i = 0; i < out.faceCount(); ++i) {

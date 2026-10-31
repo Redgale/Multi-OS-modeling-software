@@ -1917,6 +1917,16 @@
     </message>
     <message>
         <location line="+1" />
+        <source>The face this revolve turns up to no longer exists.</source>
+        <translation>[Thé fáçé thîs révölvé türñs üp tö ñö löñgér éxîsts.~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Edit the revolve and pick a face again.</source>
+        <translation>[Édît thé révölvé áñd pîçk á fáçé ágáîñ.~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
         <source>Revolve can only turn up to a plane or flat face that the axis lies in.</source>
         <translation>[Révölvé çáñ öñlý türñ üp tö á pláñé ör flát fáçé thát thé áxîs lîés îñ.~~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -2601,7 +2611,7 @@
         <translation>[Théré îs ñöthîñg tö éxpört ýét.~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="-86" />
+        <location line="-88" />
         <source>The face this extrude goes up to no longer exists.</source>
         <translation>[Thé fáçé thîs éxtrüdé göés üp tö ñö löñgér éxîsts.~~~~~~~~~~~~~]</translation>
     </message>
@@ -2626,7 +2636,7 @@
         <translation>[Thát fáçé îs lévél wîth thé skétçh, sö théré îs ñö wáý tö téll whîçh wáý tö éxtrüdé.~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+83" />
+        <location line="+85" />
         <source>The 3MF file could not be created.</source>
         <translation>[Thé 3MF fîlé çöüld ñöt bé çréátéd.~~~~~~~~]</translation>
     </message>
@@ -3335,7 +3345,7 @@
 <context>
     <name>jigapp::AxisPanel</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="+2256" />
+        <location filename="../app/FeaturePanels.cpp" line="+2252" />
         <source>Construction axis</source>
         <translation>[Çöñstrüçtîöñ áxîs~~~~~]</translation>
     </message>
@@ -3562,7 +3572,7 @@
 <context>
     <name>jigapp::ExprField</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="-2803" />
+        <location filename="../app/FeaturePanels.cpp" line="-2799" />
         <source>e.g. 45 deg</source>
         <translation>[é.g. 45 dég~]</translation>
     </message>
@@ -3998,7 +4008,7 @@
 <context>
     <name>jigapp::HolePanel</name>
     <message>
-        <location line="+357" />
+        <location line="+353" />
         <location line="+143" />
         <source>Hole</source>
         <translation>[Hölé~]</translation>
@@ -6525,13 +6535,13 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
 <context>
     <name>jigapp::RevolvePanel</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="-1006" />
-        <location line="+174" />
+        <location filename="../app/FeaturePanels.cpp" line="-1002" />
+        <location line="+170" />
         <source>Revolve</source>
         <translation>[Révölvé~~]</translation>
     </message>
     <message>
-        <location line="-173" />
+        <location line="-169" />
         <source>Spin closed areas of a sketch around an axis, like a lathe. Draw half of the outline next to the axis; it must not cross it.</source>
         <translation>[Spîñ çlöséd áréás öf á skétçh áröüñd áñ áxîs, lîké á láthé. Dráw hálf öf thé öütlîñé ñéxt tö thé áxîs; ît müst ñöt çröss ît.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -6542,8 +6552,8 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
     </message>
     <message>
         <location line="+0" />
-        <source>Up to a face or plane through the axis</source>
-        <translation>[Üp tö á fáçé ör pláñé thröügh thé áxîs~~~~~~~~~~]</translation>
+        <source>Up to a face (a curved one, or flat through the axis)</source>
+        <translation>[Üp tö á fáçé (á çürvéd öñé, ör flát thröügh thé áxîs)~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <location line="+2" />
@@ -6617,22 +6627,17 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
     </message>
     <message>
         <location line="+20" />
-        <location line="+73" />
+        <location line="+69" />
         <source>Face %1</source>
         <translation>[Fáçé %1~]</translation>
     </message>
     <message>
-        <location line="-27" />
+        <location line="-23" />
         <source>There is no sketch to revolve yet. Create a sketch first.</source>
         <translation>[Théré îs ñö skétçh tö révölvé ýét. Çréáté á skétçh fîrst.~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+20" />
-        <source>Click a flat face to turn up to.</source>
-        <translation>[Çlîçk á flát fáçé tö türñ üp tö.~~~~~~~~]</translation>
-    </message>
-    <message>
-        <location line="+50" />
+        <location line="+66" />
         <source>Sketch line %1 (construction)</source>
         <translation>[Skétçh lîñé %1 (çöñstrüçtîöñ)~~~~~~~]</translation>
     </message>
@@ -6713,7 +6718,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
 <context>
     <name>jigapp::ShellPanel</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="-336" />
+        <location filename="../app/FeaturePanels.cpp" line="-332" />
         <source>Shell</source>
         <translation>[Shéll~]</translation>
     </message>
@@ -7687,7 +7692,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
 <context>
     <name>jigapp::SplitPanel</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="+1611" />
+        <location filename="../app/FeaturePanels.cpp" line="+1607" />
         <source>Split body</source>
         <translation>[Splît bödý~~~]</translation>
     </message>

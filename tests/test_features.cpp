@@ -8,6 +8,7 @@
 #include "helpers.hpp"
 #include "jig/io.hpp"
 #include "jig/screws.hpp"
+#include <BRepAlgoAPI_Common.hxx>
 #include <BRepBndLib.hxx>
 #include <Bnd_Box.hxx>
 
@@ -1597,4 +1598,50 @@ TEST(Bodies, RemoveTakesBodiesOutFromThatStep)
     r.runText("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=10 h=10\nextrude id=e1 sketch=s1 distance=10\n"
               "remove id=rm1 bodies=e1\n");
     EXPECT_FALSE(r.runText("remove id=rm2 bodies=e1\n").ok());  // nothing called e1 any more
+}
+
+TEST(Revolve, UpToACurvedFace)
+{
+    // a ring section (radius 10 to 20, 5 high) turning about Z from +X towards +Y stops at
+    // the wall of an upright cylinder standing in its way
+    auto doc = build("sketch id=c plane=XY\ncircle sketch=c center=0,15 d=20\nextrude id=pin sketch=c distance=10\n"
+                     "sketch id=s1 plane=XZ\nrect sketch=s1 corner=10,0 w=10 h=5\n");
+    std::string wall;
+    const auto& pin = *doc->state().bodies.at("pin");
+    for (int i = 0; i < pin.faceCount(); ++i) {
+        if (measureItem(pin.face(i)).radius) {
+            wall = pin.faceName(i);
+        }
+    }
+    ASSERT_FALSE(wall.empty());
+    run(*doc, "revolve id=r1 sketch=s1 axis=Z extent=to to=face:" + wall + " op=new");
+    expectAllOk(*doc);
+    const TopoDS_Shape& turned = doc->state().bodies.at("r1")->shape();
+    const double v = massProperties(turned).volume;
+    const double quarter = pi * (400 - 100) * 5 / 4;
+    EXPECT_GT(v, 0.2 * quarter);
+    EXPECT_LT(v, quarter);  // it stops before a quarter turn
+    BRepAlgoAPI_Common overlap(turned, pin.shape());
+    EXPECT_NEAR(massProperties(overlap.Shape()).volume, 0, 1e-6);  // and does not go into the pin
+    // the cut is the revolve's end (in two pieces here: it crosses the pin's seam)
+    const auto& rb = *doc->state().bodies.at("r1");
+    int ends = 0;
+    for (int i = 0; i < rb.faceCount(); ++i) {
+        ends += rb.faceName(i).rfind("r1/end", 0) == 0;
+    }
+    EXPECT_GE(ends, 1);
+    // a pin that only reaches part of the way across the ring is refused
+    auto part = std::make_unique<Document>();
+    ScriptRunner r(*part);
+    r.runText("sketch id=c plane=XY\ncircle sketch=c center=0,25 d=20\nextrude id=pin sketch=c distance=10\n"
+              "sketch id=s1 plane=XZ\nrect sketch=s1 corner=10,0 w=10 h=5\n");
+    std::string w2;
+    const auto& p2 = *part->state().bodies.at("pin");
+    for (int i = 0; i < p2.faceCount(); ++i) {
+        if (measureItem(p2.face(i)).radius) {
+            w2 = p2.faceName(i);
+        }
+    }
+    r.runText("revolve id=r1 sketch=s1 axis=Z extent=to to=face:" + w2 + " op=new\n");
+    EXPECT_NE(part->status(3).message.find("does not cross"), std::string::npos) << part->status(3).message;
 }

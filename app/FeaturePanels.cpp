@@ -1415,7 +1415,7 @@ RevolvePanel::RevolvePanel(jig::Document& doc, Viewport* view, std::string editI
     profiles_->setMaximumHeight(110);
     axis_ = new QComboBox(this);
     angle_ = new ExprField(doc, jig::Dim::ang(), this);
-    extent_ = combo(this, {{tr("By an angle"), "angle"}, {tr("Up to a face or plane through the axis"), "to"}});
+    extent_ = combo(this, {{tr("By an angle"), "angle"}, {tr("Up to a face (a curved one, or flat through the axis)"), "to"}});
     to_ = new QComboBox(this);
     to_->addItem(tr("Floor (XY)"), "\"XY\"");
     to_->addItem(tr("Front (XZ)"), "\"XZ\"");
@@ -1515,11 +1515,7 @@ void RevolvePanel::useFace(const std::string& body, const std::string& name)
     if (hits.empty()) {
         return;
     }
-    if (jig::measureItem(it->second->face(hits[0])).kind != "flat face") {
-        status_->setText("<b>✕ " + tr("Click a flat face to turn up to.") + "</b>");
-        return;
-    }
-    extent_->setCurrentIndex(extent_->findData("to"));
+    extent_->setCurrentIndex(extent_->findData("to"));  // a flat face through the axis, or a curved face
     const QString key = q(nlohmann::json {{"face", it->second->faceRef(body, hits[0]).toJson()}}.dump());
     int i = to_->findData(key);
     if (i < 0) {
