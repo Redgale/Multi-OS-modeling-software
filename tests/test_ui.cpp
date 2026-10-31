@@ -1739,6 +1739,35 @@ private slots:
         QTRY_VERIFY(w.featurePanel() == nullptr);
     }
 
+    // Shell outside: the block becomes the hollow, walls around it.
+    void shellOutside()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        {
+            jig::ScriptRunner r(w.document());
+            QVERIFY(r.runText("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=60 h=40\nextrude id=e1 sketch=s1 distance=20\n").ok());
+        }
+        w.runCommand("solid.shell");
+        auto* sh = qobject_cast<ShellPanel*>(w.featurePanel());
+        QVERIFY(sh);
+        sh->toggleFaceByName("e1", "e1/end");
+        sh->direction()->setCurrentIndex(sh->direction()->findData("outside"));
+        QTest::qWait(300);
+        QTRY_VERIFY(sh->previewOk());
+        QVERIFY(sh->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        const double v = jig::massProperties(w.document().state().bodies.begin()->second->shape()).volume;
+        QVERIFY2(std::abs(v - (64.0 * 44 * 22 - 60.0 * 40 * 20)) < 1e-3, qPrintable(QString::number(v)));
+        w.editFeature(2);
+        sh = qobject_cast<ShellPanel*>(w.featurePanel());
+        QVERIFY(sh);
+        QCOMPARE(sh->direction()->currentData().toString(), QString("outside"));
+        sh->cancel();
+    }
+
     // Named views: saved with the design, listed in the Browser, restored by activating them.
     void namedViews()
     {

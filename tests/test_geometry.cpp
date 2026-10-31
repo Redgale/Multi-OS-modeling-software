@@ -342,6 +342,30 @@ TEST(Shell, ClosedHollowKeepsOuterNames)
     EXPECT_NEAR(props(*doc).volume, 60 * 40 * 20 - 56 * 36 * 16, 1e-3);
 }
 
+TEST(Shell, OutsideWallsGrowAroundThePart)
+{
+    // open at the top: the block becomes the cavity, walls 2 mm outside it (sharp corners)
+    auto open = build("sketch id=s1\nrect center=0,0 w=60 h=40\nextrude sketch=s1 distance=20\n"
+                      "shell id=sh1 faces=face:e1/end thickness=2mm direction=outside\n");
+    expectAllOk(*open);
+    auto p = props(*open);
+    EXPECT_NEAR(p.volume, 64.0 * 44 * 22 - 60.0 * 40 * 20, 1e-3);
+    EXPECT_NEAR(p.xmin, -32, 1e-6);
+    EXPECT_NEAR(p.zmin, -2, 1e-6);
+    EXPECT_NEAR(p.zmax, 20, 1e-6);
+    // closed: a sealed box around the part
+    auto closed = build("sketch id=s1\nrect center=0,0 w=60 h=40\nextrude sketch=s1 distance=20\n"
+                        "shell id=sh1 faces=none thickness=2mm direction=outside\n");
+    expectAllOk(*closed);
+    EXPECT_NEAR(props(*closed).volume, 64.0 * 44 * 24 - 60.0 * 40 * 20, 1e-3);
+    const auto& body = *closed->state().bodies.begin()->second;
+    int outer = 0;
+    for (int i = 0; i < body.faceCount(); ++i) {
+        outer += body.faceName(i).rfind("sh1/outer:", 0) == 0;
+    }
+    EXPECT_EQ(outer, 6);  // the new outside faces are named after the faces they grew from
+}
+
 TEST(Section, CapsKeepHoles)
 {
     // a 40 x 30 x 10 block with a 10 mm hole through it, cut at half height: 1200 - 25 pi

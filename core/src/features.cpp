@@ -1631,7 +1631,7 @@ FeatureOutcome applyShell(const Document& doc, const Feature& f, const std::shar
     if (bit == in->bodies.end()) {
         return failed("There is no body to hollow out.", {"Create a solid first, then shell it."});
     }
-    auto res = shellSolid(f.id, *bit->second, faces, t.value());
+    auto res = shellSolid(f.id, *bit->second, faces, t.value(), p.value("direction", std::string("inside")) == "outside");
     if (!res) {
         return failed(res.error(), "thickness");
     }

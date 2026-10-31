@@ -1395,7 +1395,8 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
         return checkFeature(id);
     }
     if (a.verb == "shell") {
-        // shell faces="face:<name>;face:<name>" thickness=2mm [body=e1]   (faces=none: closed hollow)
+        // shell faces="face:<name>;face:<name>" thickness=2mm [body=e1] [direction=inside|outside]
+        //       (faces=none: closed hollow)
         const ModelState& st = doc.state();
         std::string bodyId = a.get("body");
         if (bodyId.empty()) {
@@ -1433,6 +1434,9 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
             f.name = a.get("name", "Shell " + f.id.substr(2));
             f.kind = FeatureKind::Shell;
             f.params = {{"faces", refs}, {"thickness", a.get("thickness", "2 mm")}, {"body", bodyId}};
+            if (a.get("direction", "inside") == "outside") {
+                f.params["direction"] = "outside";
+            }
             id = f.id;
             insertFeature(m, std::move(f));
             return true;

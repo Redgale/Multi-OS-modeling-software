@@ -3270,7 +3270,7 @@
 <context>
     <name>jigapp::AxisPanel</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="+2252" />
+        <location filename="../app/FeaturePanels.cpp" line="+2260" />
         <source>Construction axis</source>
         <translation>[Çöñstrüçtîöñ áxîs~~~~~]</translation>
     </message>
@@ -3497,7 +3497,7 @@
 <context>
     <name>jigapp::ExprField</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="-2799" />
+        <location filename="../app/FeaturePanels.cpp" line="-2807" />
         <source>e.g. 45 deg</source>
         <translation>[é.g. 45 dég~]</translation>
     </message>
@@ -3938,7 +3938,7 @@
 <context>
     <name>jigapp::HolePanel</name>
     <message>
-        <location line="+349" />
+        <location line="+357" />
         <location line="+143" />
         <source>Hole</source>
         <translation>[Hölé~]</translation>
@@ -6613,7 +6613,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
 <context>
     <name>jigapp::ShellPanel</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="-328" />
+        <location filename="../app/FeaturePanels.cpp" line="-336" />
         <source>Shell</source>
         <translation>[Shéll~]</translation>
     </message>
@@ -6639,11 +6639,26 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
     </message>
     <message>
         <location line="+2" />
+        <source>Inside: the outside stays the same size</source>
+        <translation>[Îñsîdé: thé öütsîdé stáýs thé sámé sîzé~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Outside: the body becomes the hollow</source>
+        <translation>[Öütsîdé: thé bödý béçömés thé höllöw~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Walls</source>
+        <translation>[Wálls~]</translation>
+    </message>
+    <message>
+        <location line="+2" />
         <source>For 3D prints, use at least two nozzle widths (0.8 mm for a 0.4 mm nozzle).</source>
         <translation>[För 3D prîñts, üsé át léást twö ñözzlé wîdths (0.8 mm för á 0.4 mm ñözzlé).~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+61" />
+        <location line="+62" />
         <source>Pick faces of one body at a time.</source>
         <translation>[Pîçk fáçés öf öñé bödý át á tîmé.~~~~~~~~]</translation>
     </message>
@@ -6663,7 +6678,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
         <translation>[Shéll %1~]</translation>
     </message>
     <message>
-        <location line="+22" />
+        <location line="+25" />
         <source>shell</source>
         <translation>[shéll~]</translation>
     </message>

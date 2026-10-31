@@ -1283,6 +1283,10 @@ ShellPanel::ShellPanel(jig::Document& doc, Viewport* view, std::string editId, Q
     form_->addWidget(clear);
     addRow(tr("Wall thickness"), thickness_);
     bindParam("thickness", thickness_);
+    direction_ = combo(this, {{tr("Inside: the outside stays the same size"), "inside"},
+                              {tr("Outside: the body becomes the hollow"), "outside"}});
+    addRow(tr("Walls"), direction_);
+    connect(direction_, &QComboBox::currentIndexChanged, this, [this] { schedulePreview(); });
     auto* tip = new QLabel(tr("For 3D prints, use at least two nozzle widths (0.8 mm for a 0.4 mm nozzle)."), this);
     tip->setWordWrap(true);
     form_->addWidget(tip);
@@ -1298,6 +1302,7 @@ ShellPanel::ShellPanel(jig::Document& doc, Viewport* view, std::string editId, Q
     const auto before = stateBefore();
     if (edit) {
         thickness_->setText(q(edit->params.value("thickness", std::string("2 mm"))));
+        select(direction_, edit->params.value("direction", std::string("inside")));
         body_ = edit->params.value("body", std::string {});
         for (auto& jr : edit->params.value("faces", nlohmann::json::array())) {
             jig::ShapeRef ref = jig::ShapeRef::fromJson(jr);
@@ -1384,6 +1389,9 @@ jig::Feature ShellPanel::draft() const
     f.params = {{"faces", refs},
                 {"thickness", thickness_->text().isEmpty() ? std::string("2 mm") : thickness_->text().toStdString()},
                 {"body", body_}};
+    if (current(direction_) == "outside") {
+        f.params["direction"] = "outside";
+    }
     return f;
 }
 

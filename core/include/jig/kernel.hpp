@@ -390,12 +390,14 @@ Result<NamedShape> chamferEdges(const std::string& featureId,
                                 double distance,
                                 const EdgeOptions& options = {});
 
-// Hollow the body with walls of `thickness` (inward), removing `openFaces` (may be
-// empty: a closed hollow). Inner walls are named "<feature>/inner:<outer face>".
+// Hollow the body with walls of `thickness` (inward, or outward when `outside`: the body
+// becomes the cavity), removing `openFaces` (may be empty: a closed hollow). New walls are
+// named "<feature>/inner:<face>" (or "/outer:").
 Result<NamedShape> shellSolid(const std::string& featureId,
                               const NamedShape& body,
                               const std::vector<int>& openFaces,
-                              double thickness);
+                              double thickness,
+                              bool outside = false);
 
 // True when the point lies strictly inside the solid (used to choose Join or Cut).
 bool pointInside(const TopoDS_Shape& solid, double x, double y, double z);

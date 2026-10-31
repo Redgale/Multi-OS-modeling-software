@@ -1677,7 +1677,8 @@ std::optional<TopoDS_Shape> tryShell(const TopoDS_Shape& shape,
                                      const TopTools_ListOfShape& openings,
                                      double t,
                                      std::unique_ptr<BRepOffsetAPI_MakeThickSolid>* keep = nullptr,
-                                     std::string* why = nullptr)
+                                     std::string* why = nullptr,
+                                     bool outside = false)
 {
     try {
         // Our own checks, so the answer does not depend on the OCCT version (7.9 and 8.0
@@ -1688,7 +1689,7 @@ std::optional<TopoDS_Shape> tryShell(const TopoDS_Shape& shape,
         BRepBndLib::AddOptimal(shape, ob, false, false);
         double x0, y0, z0, x1, y1, z1;
         ob.Get(x0, y0, z0, x1, y1, z1);
-        if (t >= std::min({x1 - x0, y1 - y0, z1 - z0})) {
+        if (!outside && t >= std::min({x1 - x0, y1 - y0, z1 - z0})) {
             if (why) {
                 *why = "thicker than the part";
             }
@@ -1697,7 +1698,9 @@ std::optional<TopoDS_Shape> tryShell(const TopoDS_Shape& shape,
         GProp_GProps og;
         BRepGProp::VolumeProperties(shape, og);
         auto mk = std::make_unique<BRepOffsetAPI_MakeThickSolid>();
-        mk->MakeThickSolidByJoin(shape, openings, -t, 1e-3);
+        // outward walls keep sharp corners (arc joins would round every outside edge)
+        mk->MakeThickSolidByJoin(shape, openings, outside ? t : -t, 1e-3, BRepOffset_Skin, outside, false,
+                                 outside ? GeomAbs_Intersection : GeomAbs_Arc);
         mk->Build();
         if (!mk->IsDone()) {
             return std::nullopt;
@@ -1711,14 +1714,16 @@ std::optional<TopoDS_Shape> tryShell(const TopoDS_Shape& shape,
         }
         GProp_GProps g;
         BRepGProp::VolumeProperties(res, g);
-        if (!(g.Mass() > 0) || g.Mass() >= og.Mass() * (1 - 1e-9)) {
+        if (!(g.Mass() > 0) || (!outside && g.Mass() >= og.Mass() * (1 - 1e-9))) {
             return std::nullopt;
         }
         Bnd_Box rb;
         BRepBndLib::AddOptimal(res, rb, false, false);
         double a0, b0, c0, a1, b1, c1;
         rb.Get(a0, b0, c0, a1, b1, c1);
-        const double tol = 1e-4 * std::max({x1 - x0, y1 - y0, z1 - z0}) + 1e-6;
+        // inside: the result stays within the part; outside: within the part grown by the wall
+        const double grow = outside ? t : 0;
+        const double tol = 1e-4 * std::max({x1 - x0, y1 - y0, z1 - z0}) + 1e-6 + grow;
         if (a0 < x0 - tol || b0 < y0 - tol || c0 < z0 - tol || a1 > x1 + tol || b1 > y1 + tol || c1 > z1 + tol) {
             if (why) {
                 *why = "result grows outside the part";
@@ -1742,8 +1747,10 @@ std::optional<TopoDS_Shape> tryShell(const TopoDS_Shape& shape,
 Result<NamedShape> shellSolid(const std::string& featureId,
                               const NamedShape& body,
                               const std::vector<int>& openFaces,
-                              double thickness)
+                              double thickness,
+                              bool outside)
 {
+    const std::string wall = outside ? "/outer:" : "/inner:";
     if (!(thickness > 1e-6)) {
         return makeError("shell.thickness", "The wall thickness must be larger than zero.");
     }
@@ -1758,12 +1765,13 @@ Result<NamedShape> shellSolid(const std::string& featureId,
             }();
             double x0, y0, z0, x1, y1, z1;
             bb.Get(x0, y0, z0, x1, y1, z1);
-            if (2 * thickness >= std::min({x1 - x0, y1 - y0, z1 - z0})) {
+            if (!outside && 2 * thickness >= std::min({x1 - x0, y1 - y0, z1 - z0})) {
                 return makeError("shell.failed", fmt("A %1 wall does not fit inside this shape.", {fmtMm(thickness)}),
                                  {"Try a thinner wall."});
             }
             BRepOffsetAPI_MakeOffsetShape off;
-            off.PerformByJoin(body.shape(), -thickness, 1e-3);
+            off.PerformByJoin(body.shape(), outside ? thickness : -thickness, 1e-3, BRepOffset_Skin, outside, false,
+                              outside ? GeomAbs_Intersection : GeomAbs_Arc);
             if (!off.IsDone() || off.Shape().IsNull()) {
                 return makeError("shell.failed",
                                  fmt("A %1 wall does not fit inside this shape.", {fmtMm(thickness)}),
@@ -1783,10 +1791,11 @@ Result<NamedShape> shellSolid(const std::string& featureId,
                         name = body.faceName(f);
                     }
                 }
-                inner.setFaceName(u, featureId + "/inner:" + name);
+                inner.setFaceName(u, featureId + wall + name);
             }
             inner.deriveEdgeNames();
-            return booleanOp(featureId, BoolOp::Cut, body, inner);
+            // inside: the part minus a smaller copy; outside: a bigger copy minus the part
+            return outside ? booleanOp(featureId, BoolOp::Cut, inner, body) : booleanOp(featureId, BoolOp::Cut, body, inner);
         }
         catch (const Standard_Failure& f) {
             return makeError("shell.failed", fmt("A %1 wall does not fit inside this shape.", {fmtMm(thickness)}),
@@ -1799,11 +1808,11 @@ Result<NamedShape> shellSolid(const std::string& featureId,
     }
     std::unique_ptr<BRepOffsetAPI_MakeThickSolid> mk;
     std::string why;
-    auto res = tryShell(body.shape(), openings, thickness, &mk, &why);
+    auto res = tryShell(body.shape(), openings, thickness, &mk, &why, outside);
     if (!res) {
         double ok = 0, bad = thickness;
         for (double t = thickness * 0.5; t > thickness / 64; t *= 0.5) {
-            if (tryShell(body.shape(), openings, t)) {
+            if (tryShell(body.shape(), openings, t, nullptr, nullptr, outside)) {
                 ok = t;
                 break;
             }
@@ -1812,7 +1821,7 @@ Result<NamedShape> shellSolid(const std::string& featureId,
         if (ok > 0) {
             for (int k = 0; k < 4; ++k) {
                 double mid = 0.5 * (ok + bad);
-                (tryShell(body.shape(), openings, mid) ? ok : bad) = mid;
+                (tryShell(body.shape(), openings, mid, nullptr, nullptr, outside) ? ok : bad) = mid;
             }
         }
         std::vector<std::string> sug;
@@ -1876,7 +1885,7 @@ Result<NamedShape> shellSolid(const std::string& featureId,
             }
         }
         if (!name.empty()) {
-            byName[featureId + "/inner:" + name].push_back(out.face(u));
+            byName[featureId + wall + name].push_back(out.face(u));
         }
     }
     for (auto& [n, faces] : byName) {

@@ -275,6 +275,10 @@ public:
     {
         return faces_.size();
     }
+    QComboBox* direction() const
+    {
+        return direction_;
+    }
 
 protected:
     jig::Feature draft() const override;
@@ -286,6 +290,7 @@ private:
     std::string body_;
     std::set<int> faces_;
     ExprField* thickness_;
+    QComboBox* direction_;
     QLabel* count_;
 };
 

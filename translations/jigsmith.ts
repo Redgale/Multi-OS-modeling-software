@@ -3271,7 +3271,7 @@
 <context>
     <name>jigapp::AxisPanel</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="+2252"/>
+        <location filename="../app/FeaturePanels.cpp" line="+2260"/>
         <source>Construction axis</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3498,7 +3498,7 @@
 <context>
     <name>jigapp::ExprField</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="-2799"/>
+        <location filename="../app/FeaturePanels.cpp" line="-2807"/>
         <source>e.g. 45 deg</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3941,7 +3941,7 @@
 <context>
     <name>jigapp::HolePanel</name>
     <message>
-        <location line="+349"/>
+        <location line="+357"/>
         <location line="+143"/>
         <source>Hole</source>
         <translation type="unfinished"></translation>
@@ -6619,7 +6619,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::ShellPanel</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="-328"/>
+        <location filename="../app/FeaturePanels.cpp" line="-336"/>
         <source>Shell</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6645,11 +6645,26 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
     </message>
     <message>
         <location line="+2"/>
+        <source>Inside: the outside stays the same size</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Outside: the body becomes the hollow</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Walls</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
         <source>For 3D prints, use at least two nozzle widths (0.8 mm for a 0.4 mm nozzle).</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+61"/>
+        <location line="+62"/>
         <source>Pick faces of one body at a time.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6671,7 +6686,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+22"/>
+        <location line="+25"/>
         <source>shell</source>
         <translation type="unfinished"></translation>
     </message>
