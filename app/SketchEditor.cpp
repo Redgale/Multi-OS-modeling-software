@@ -353,6 +353,7 @@ void SketchEditor::setTool(Tool t)
 
 void SketchEditor::resetToolState()
 {
+    trimHover_.reset();
     first_.reset();
     second_.reset();
     editText_ = 0;
@@ -393,6 +394,8 @@ QString SketchEditor::toolHint() const
         case Tool::Text:
             return first_ ? tr("Type the words, Tab, the size, then press Enter.")
                           : tr("Click where the middle of the text goes.");
+        case Tool::Trim:
+            return tr("Click the piece of a curve to remove. It is cut where other curves cross it.");
         case Tool::Point:
             return tr("Click to place a point.");
         case Tool::Dimension:
@@ -880,6 +883,15 @@ bool SketchEditor::mouseMove(QMouseEvent* e)
     }
     cursor_ = snapAt(pos, tool_ == Tool::Line || tool_ == Tool::Rectangle, e->modifiers());
     cursorValid_ = toLocal(pos).has_value();
+    if (tool_ == Tool::Trim) {
+        trimHover_.reset();
+        if (auto loc = toLocal(pos)) {
+            auto near = work_.curveNear(loc->x(), loc->y());
+            if (near && near->second < 8 * view_->worldPerPixel()) {
+                trimHover_ = work_.trimPiece(near->first, loc->x(), loc->y());
+            }
+        }
+    }
     const int h = (tool_ == Tool::Select || tool_ == Tool::Dimension) ? entityNear(pos) : 0;
     if (h != hover_) {
         hover_ = h;
@@ -924,6 +936,23 @@ bool SketchEditor::mouseRelease(QMouseEvent* e)
                     selection_.insert(hit);
                 }
             }
+            break;
+        }
+        case Tool::Trim: {
+            auto loc = toLocal(pos);
+            if (!loc) {
+                break;
+            }
+            auto near = work_.curveNear(loc->x(), loc->y());
+            if (!near || near->second > 8 * view_->worldPerPixel()) {
+                message_ = tr("Click on a curve to trim it.");
+                break;
+            }
+            jig::Sketch s = work_;
+            if (s.trim(near->first, loc->x(), loc->y())) {
+                commit(tr("Trim"), s);
+            }
+            trimHover_.reset();
             break;
         }
         case Tool::Point: {
@@ -1331,6 +1360,34 @@ void SketchEditor::rebuildOverlay()
         for (size_t i = 0; i + 1 < pts.size(); ++i) {
             ov.lines.push_back({pts[i], vc.text});
             ov.lines.push_back({pts[i + 1], vc.text});
+        }
+    }
+    if (tool_ == Tool::Trim && trimHover_) {
+        const jig::SketchEntity* e = s.entity(trimHover_->entity);
+        if (e) {
+            std::vector<QPointF> pts;
+            if (trimHover_->whole) {
+                pts = polyline(s, *e);
+            }
+            else if (e->type == jig::EntityType::Line) {
+                auto [ax, ay] = s.pointXY(e->p1);
+                auto [bx, by] = s.pointXY(e->p2);
+                for (double u : {trimHover_->from, trimHover_->to}) {
+                    pts.emplace_back(ax + (bx - ax) * u, ay + (by - ay) * u);
+                }
+            }
+            else {
+                auto [cx, cy] = s.pointXY(e->center);
+                double a0 = trimHover_->from, a1 = trimHover_->to;
+                while (a1 <= a0) {
+                    a1 += 2 * kPi;
+                }
+                for (int k = 0; k <= 48; ++k) {
+                    const double t = a0 + (a1 - a0) * k / 48;
+                    pts.emplace_back(cx + e->r * std::cos(t), cy + e->r * std::sin(t));
+                }
+            }
+            addPoly(pts, kGap, true);  // dashed red: this piece will go
         }
     }
     if (options.showProfiles && !dragging_) {

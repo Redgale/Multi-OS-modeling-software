@@ -145,6 +145,24 @@ public:
     bool remove(int entityId);
     void setConstruction(int entityId, bool on);
 
+    // ---- trim -------------------------------------------------------------
+    // The piece of a curve between its nearest crossings with other curves, around the
+    // point (x, y) on it. Lines use the parameter 0..1 from p1 to p2; circles and arcs use
+    // angles (radians), the piece running counter-clockwise from `from` to `to`.
+    struct TrimPiece
+    {
+        int entity = 0;
+        bool whole = false;  // nothing crosses it there: the whole curve goes
+        double from = 0, to = 0;
+    };
+    std::optional<TrimPiece> trimPiece(int entityId, double x, double y) const;
+    // Removes that piece. New ends stay attached to the curves that cut them (a
+    // point-on-curve constraint, or the existing point when they meet at one). Length
+    // and diameter dimensions of the trimmed curve that no longer apply are removed.
+    bool trim(int entityId, double x, double y);
+    // The curve nearest to (x, y) (not points or construction), and its distance.
+    std::optional<std::pair<int, double>> curveNear(double x, double y) const;
+
     // ---- constraints ----------------------------------------------------
     int addConstraint(ConstraintType type, int a, int b = 0, int c = 0, std::string expr = {});
     bool removeConstraint(int constraintId);
@@ -184,6 +202,8 @@ private:
     SolveReport runSolver(const ParamLookup& lookup, const int* dragPoint, double dx, double dy,
                           const std::vector<int>& skip = {});
     void syncCurvePoints();
+    int addArcOn(int center, int p1, int p2, double r, double a0, double a1);
+    void dropUnusedPoint(int pointId);
 
     std::map<int, SketchEntity> entities_;
     std::map<int, SketchConstraint> constraints_;

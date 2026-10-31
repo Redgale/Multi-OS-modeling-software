@@ -453,3 +453,64 @@ TEST(Bodies, CombineSplitMoveAndCopy)
         EXPECT_NE(doc->status(5).message.find("does not cross"), std::string::npos) << doc->status(5).message;
     }
 }
+
+TEST(SketchTrim, LinesCirclesAndLoneCurves)
+{
+    // An X of two lines: trimming the right arm leaves a 10 mm line that ends on the other.
+    auto x = build("sketch id=s1 plane=XY\nline sketch=s1 p1=-10,0 p2=10,0\nline sketch=s1 p1=0,-10 p2=0,10\n");
+    auto lineCount = [](const Document& d) {
+        int n = 0;
+        for (auto& [id, e] : d.state().sketches.at("s1")->solved.entities()) {
+            n += e.type == EntityType::Line;
+        }
+        return n;
+    };
+    // the lines' ends are dimensioned: trimming must keep the sketch solvable
+    auto notError = [](const Document& d) { return d.status(0).level != StatusLevel::Error; };
+    run(*x, "trim sketch=s1 at=5,0");
+    EXPECT_TRUE(notError(*x)) << x->status(0).message;  // an open sketch only warns
+    const auto& sk = x->state().sketches.at("s1")->solved;
+    double longest = 0;
+    for (auto& [id, e] : sk.entities()) {
+        if (e.type == EntityType::Line) {
+            auto [ax, ay] = sk.pointXY(e.p1);
+            auto [bx, by] = sk.pointXY(e.p2);
+            longest = std::max(longest, std::hypot(bx - ax, by - ay));
+            if (std::abs(ay) < 1e-9 && std::abs(by) < 1e-9) {
+                EXPECT_NEAR(std::max(ax, bx), 0, 1e-9);  // the horizontal line now stops at x = 0
+            }
+        }
+    }
+    EXPECT_NEAR(longest, 20, 1e-9);  // the vertical line is untouched
+    EXPECT_EQ(lineCount(*x), 2);
+
+    // Trimming the middle of a line splits it in two.
+    auto mid = build("sketch id=s1 plane=XY\nline sketch=s1 p1=-10,0 p2=10,0\nline sketch=s1 p1=-5,-5 p2=-5,5\n"
+                     "line sketch=s1 p1=5,-5 p2=5,5\ntrim sketch=s1 at=0,0\n");
+    EXPECT_TRUE(notError(*mid)) << mid->status(0).message;
+    EXPECT_EQ(lineCount(*mid), 4);
+
+    // A circle over a rectangle corner: trimming the outside part leaves a quarter arc that
+    // splits the rectangle into two closed areas.
+    auto rc = build("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=20 h=20\ncircle sketch=s1 center=10,10 d=10\n");
+    EXPECT_EQ(rc->state().sketches.at("s1")->profiles.regions.size(), 3u);
+    run(*rc, "trim sketch=s1 at=14,14");
+    expectAllOk(*rc);
+    const auto& regions = rc->state().sketches.at("s1")->profiles.regions;
+    ASSERT_EQ(regions.size(), 2u);
+    std::vector<double> areas {regions[0].area, regions[1].area};
+    std::sort(areas.begin(), areas.end());
+    EXPECT_NEAR(areas[0], pi * 25 / 4, 1e-6);
+    EXPECT_NEAR(areas[0] + areas[1], 400, 1e-6);
+    // the circle's diameter dimension became a radius on the arc
+    bool radius = false;
+    for (auto& [id, c] : rc->state().sketches.at("s1")->solved.constraints()) {
+        radius = radius || c.type == ConstraintType::Radius;
+    }
+    EXPECT_TRUE(radius);
+
+    // A line that nothing crosses is removed entirely.
+    auto lone = build("sketch id=s1 plane=XY\nline sketch=s1 p1=0,0 p2=10,0\ncircle sketch=s1 center=50,50 d=4\n"
+                      "trim sketch=s1 at=5,0\n");
+    EXPECT_EQ(lineCount(*lone), 0);
+}

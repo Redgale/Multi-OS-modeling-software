@@ -673,6 +673,45 @@ private slots:
         w.grab().save(shotPath("inch-dark"));
     }
 
+    // Trim: hover shows the piece, a click removes it.
+    void trimTool()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        Viewport* view = w.viewport();
+        QVERIFY(w.createSketchOn("XY"));
+        SketchEditor* sk = w.sketchEditor();
+        auto click = [&](double x, double y) {
+            QTest::mouseMove(view, sk->screenOf(x, y));
+            QTest::mouseClick(view, Qt::LeftButton, Qt::NoModifier, sk->screenOf(x, y));
+        };
+        sk->setTool(SketchEditor::Tool::CenterRectangle);
+        click(0, 0);
+        QTest::mouseMove(view, sk->screenOf(10, 8));
+        sk->typeValues({"20 mm", "20 mm"});
+        sk->setTool(SketchEditor::Tool::Circle);
+        click(10, 10);  // snaps to the rectangle's corner
+        QTest::mouseMove(view, sk->screenOf(14, 10));
+        sk->typeValues({"10 mm"});
+        auto regions = [&] { return int(w.document().state().sketches.begin()->second->profiles.regions.size()); };
+        QCOMPARE(regions(), 3);
+        w.runCommand("sketch.trim");
+        QCOMPARE(int(sk->tool()), int(SketchEditor::Tool::Trim));
+        const double r = 5 / std::sqrt(2.0);
+        click(10 + r, 10 + r);  // on the circle, outside the rectangle
+        QVERIFY2(sk->message().isEmpty(), qPrintable(sk->message()));
+        QCOMPARE(regions(), 2);  // the rectangle, split by the quarter arc that is left
+        int arcs = 0;
+        for (auto& [id, e] : sk->sketch().entities()) {
+            arcs += e.type == jig::EntityType::Arc;
+        }
+        QCOMPARE(arcs, 1);
+        w.runCommand("edit.undo");  // one undo brings the circle back
+        QTRY_COMPARE(regions(), 3);
+    }
+
     // Revolve a ring, drill it from its top face, repeat the hole around the axis,
     // and mirror the result: the M3 panels driven like a person would.
     void ringRevolveHolePatternMirror()

@@ -49,6 +49,7 @@ ounces) is shown in inches. The owner's standing instruction is in `CLAUDE.md`.
 | Combine, Split, Move/Copy (M4 part) | Combine: join, cut or intersect bodies into one (tools used up or kept). Split body with an origin plane, construction plane or clicked flat face; the cut faces are named `<split>/split`; a plane that misses the body is explained. Move/Copy: shift along X/Y/Z and turn about an origin axis; moved bodies keep their face names so later steps still find them | `Bodies.CombineSplitMoveAndCopy` (volumes and bounding boxes by hand); UI test copies a block 30 mm along X, joins the two and splits the result, checking each volume, then edits the move from the timeline |
 | Section view (M6 part) | Slice the view along an origin or construction plane, move the cut, flip the side; surfaces seen from inside the material are flat brick red; picking ignores what is cut away; the design does not change. Cut faces are open, not filled (capping is not built) | UI test opens the knob sample, turns the section on and checks the rendered pixel in the middle of the knob changes from the model colour to the inside colour, and that closing restores the full view |
 | Measure and Properties (M6 part) | Measure: click a face or edge for its kind and size (area, length, diameter), a second for the shortest distance, angle, centre-to-centre spacing of holes and round edges, and the X/Y/Z offsets; picks edges when the cursor is on one, faces otherwise; nothing in the design changes. Properties: volume, weight for a chosen material (PLA, PETG, ABS, … or a typed density), filament length, area, size, centre of mass, validity. Script command `measure` | `Measure.SizesDistancesAnglesAndHoleSpacing`; UI test clicks a face and an edge in the real view and checks the panel text, then the weight for PLA and aluminium |
+| Trim (M1 part) | Click the piece of a line, circle or arc between its crossings with other curves; hover shows the piece dashed red; a circle becomes an arc (its diameter dimension becomes a radius), a line or arc cut in the middle becomes two, new ends stay attached to the cutting curve; a curve nothing crosses is removed. Script command `trim at=x,y` | `SketchTrim.LinesCirclesAndLoneCurves` (X of lines, split middle, circle over a rectangle corner leaves a π·25/4 quarter region, lone line); UI test clicks the outside of a circle over a rectangle corner, then undoes |
 | Units and themes | Per-design length unit saved in the file; Settings dialog (theme with live preview, this design's unit, unit for new designs); plain numbers typed into size fields, sketch value boxes, parameters and scripts are stored with the unit written out, so changing units never resizes anything; display of lengths, areas (in², cm²), volumes (in³, cm³), weight (oz and g), filament length (ft and m), sketch measurements, Measure, Properties, browser, hover text and status bar in the design's unit; inch-friendly snap grid (1/64 in to 10 ft); new units `yd`, `thou`, `mil`; Dark is the default theme | `Units.FormattingAndTypedInput`, `Document.InchDesignsReadPlainNumbersAsInches` (inch script with a parameter-driven shell, volume by hand, save/load, unit switch does not resize); UI test `darkDefaultAndInchDesign` (dark palette with no saved setting, typed 2 × 1 rectangle and 0.25 extrude in an inch design, Measure "0.25 in" and "2 in²", Properties in³/oz/inches, undo of the unit change) |
 | Parameters (M5 part) | Table dialog: name, value with units/expressions, kind, live result, comment; refuses invalid names, duplicates, cycles | exercised manually under Xvfb only (no automated UI test yet: B-015) |
 | Performance | All headless budgets met | `jigsmith-bench`, numbers in PHASE1_REPORT.md |
@@ -82,7 +83,7 @@ and packaged but its window is not exercised in CI (B-003). Builds are unsigned.
 ## What is stubbed or not started
 
 - M1 still missing: 3-point and tangent arcs, Ellipse and Spline tools,
-  Trim/Extend/Break/Offset/sketch Fillet/Mirror/patterns, selecting and deleting
+  Extend/Break/Offset/sketch Fillet/Mirror/patterns, selecting and deleting
   individual constraints, window selection, collinear/concentric, Project/Include.
 - M2 still missing: extrude drag handle on the canvas, two-sides/to-object/taper/thin,
   Browser visibility/isolate/rename, selection filters, Select Other, timeline reorder and
@@ -113,7 +114,7 @@ and packaged but its window is not exercised in CI (B-003). Builds are unsigned.
 
 ## Next three tasks
 
-1. Finish M1's remaining sketch tools (Trim, Offset, 3-point arc) and constraint
+1. Finish M1's remaining sketch tools (Offset, 3-point arc, sketch fillet) and constraint
    selection/deletion; 3D grid spacing in inches for inch designs.
 2. **B-001 libslvs spike** in an environment where building SolveSpace is allowed.
 3. Windows/macOS GUI screenshots in CI (B-003); Windows DLL audit (B-011).

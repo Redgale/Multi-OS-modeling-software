@@ -143,7 +143,7 @@ CommandRegistry::CommandRegistry()
     // shell, revolve, hole, patterns, mirror, parameters). Everything else above keeps its "coming in" note.
     static const std::set<std::string> inApp {
         "sketch.create", "sketch.finish", "sketch.line", "sketch.rectangle", "sketch.circle", "sketch.point",
-        "sketch.arc", "sketch.slot", "sketch.polygon", "sketch.text",
+        "sketch.arc", "sketch.slot", "sketch.polygon", "sketch.text", "sketch.trim",
         "sketch.dimension", "sketch.construction", "constraint.coincident", "constraint.midpoint", "constraint.fix",
         "constraint.parallel", "constraint.perpendicular", "constraint.horizontal", "constraint.tangent",
         "constraint.symmetric", "constraint.equal", "solid.extrude", "solid.fillet", "solid.chamfer", "solid.shell",
@@ -864,6 +864,26 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
             const int anchor = s.texts().at(id).anchor;
             s.addConstraint(ConstraintType::DistanceX, anchor, 0, 0, pe->first);
             s.addConstraint(ConstraintType::DistanceY, anchor, 0, 0, pe->second);
+            return true;
+        });
+    }
+    if (a.verb == "trim") {
+        // trim [sketch=s1] at=x,y : remove the piece of the curve nearest (x, y) between its crossings
+        const std::string sid = a.get("sketch", last_);
+        return editSketch("Trim", sid, [&](Sketch& s, const Document&) -> Result<bool> {
+            auto pe = parsePairExpr(a.get("at", "0,0"));
+            if (!pe) {
+                return pe.error();
+            }
+            auto px = len(pe->first), py = len(pe->second);
+            if (!px || !py) {
+                return !px ? px.error() : py.error();
+            }
+            auto near = s.curveNear(px.value(), py.value());
+            if (!near || near->second > 1.0) {
+                return makeError("script.args", "There is no curve near that point to trim.");
+            }
+            s.trim(near->first, px.value(), py.value());
             return true;
         });
     }

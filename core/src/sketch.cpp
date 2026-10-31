@@ -172,6 +172,393 @@ int Sketch::addArc(double cx, double cy, double r, double a0, double a1)
     return e.id;
 }
 
+int Sketch::addArcOn(int center, int p1, int p2, double r, double a0, double a1)
+{
+    SketchEntity e;
+    e.id = nextId_++;
+    e.type = EntityType::Arc;
+    e.center = center;
+    e.p1 = p1;
+    e.p2 = p2;
+    e.r = r;
+    e.a0 = a0;
+    e.a1 = a1;
+    entities_[e.id] = e;
+    return e.id;
+}
+
+// ---------------------------------------------------------------- trim
+
+namespace
+{
+constexpr double kTau = 2 * std::numbers::pi;
+
+double wrap(double a)  // into [0, 2pi)
+{
+    a = std::fmod(a, kTau);
+    return a < 0 ? a + kTau : a;
+}
+
+struct Cut
+{
+    double param;   // on the trimmed curve
+    double x, y;
+    int entity;     // the curve that crosses it
+    int point = 0;  // an existing point there, if any
+};
+}  // namespace
+
+std::optional<Sketch::TrimPiece> Sketch::trimPiece(int entityId, double x, double y) const
+{
+    const SketchEntity* t = entity(entityId);
+    if (!t || t->type == EntityType::Point) {
+        return std::nullopt;
+    }
+    const double eps = 1e-7;
+    // geometry of a curve as a line segment or a circle with an optional angle range
+    struct Geo
+    {
+        bool line = false;
+        double ax = 0, ay = 0, bx = 0, by = 0;  // line
+        double cx = 0, cy = 0, r = 0, a0 = 0, span = kTau;  // circle / arc
+    };
+    auto geoOf = [&](const SketchEntity& e) {
+        Geo g;
+        if (e.type == EntityType::Line) {
+            g.line = true;
+            std::tie(g.ax, g.ay) = pointXY(e.p1);
+            std::tie(g.bx, g.by) = pointXY(e.p2);
+        }
+        else {
+            std::tie(g.cx, g.cy) = pointXY(e.center);
+            g.r = e.r;
+            if (e.type == EntityType::Arc) {
+                g.a0 = wrap(e.a0);
+                g.span = wrap(e.a1 - e.a0);
+                if (g.span < eps) {
+                    g.span = kTau;
+                }
+            }
+        }
+        return g;
+    };
+    auto onArc = [&](const Geo& g, double px, double py) {
+        if (g.line) {
+            const double dx = g.bx - g.ax, dy = g.by - g.ay, L2 = dx * dx + dy * dy;
+            const double u = ((px - g.ax) * dx + (py - g.ay) * dy) / L2;
+            return u > -1e-9 && u < 1 + 1e-9;
+        }
+        return g.span >= kTau - eps || wrap(std::atan2(py - g.cy, px - g.cx) - g.a0) <= g.span + 1e-9;
+    };
+    // where on the trimmed curve a point lies: t for lines, angle offset from a0 otherwise
+    const Geo T = geoOf(*t);
+    auto paramOf = [&](double px, double py) {
+        if (T.line) {
+            const double dx = T.bx - T.ax, dy = T.by - T.ay;
+            return ((px - T.ax) * dx + (py - T.ay) * dy) / (dx * dx + dy * dy);
+        }
+        return wrap(std::atan2(py - T.cy, px - T.cx) - T.a0);
+    };
+    std::vector<double> cuts;
+    for (auto& [id, e] : entities_) {
+        if (id == entityId || e.type == EntityType::Point || e.construction) {
+            continue;
+        }
+        const Geo C = geoOf(e);
+        std::vector<std::pair<double, double>> pts;
+        if (T.line && C.line) {
+            const double rx = T.bx - T.ax, ry = T.by - T.ay, sx = C.bx - C.ax, sy = C.by - C.ay;
+            const double den = rx * sy - ry * sx;
+            if (std::abs(den) > 1e-12) {
+                const double u = ((C.ax - T.ax) * sy - (C.ay - T.ay) * sx) / den;
+                pts.emplace_back(T.ax + rx * u, T.ay + ry * u);
+            }
+        }
+        else if (T.line != C.line) {
+            const Geo& L = T.line ? T : C;
+            const Geo& O = T.line ? C : T;
+            const double dx = L.bx - L.ax, dy = L.by - L.ay;
+            const double fx = L.ax - O.cx, fy = L.ay - O.cy;
+            const double A = dx * dx + dy * dy, B = 2 * (fx * dx + fy * dy), Cc = fx * fx + fy * fy - O.r * O.r;
+            const double disc = B * B - 4 * A * Cc;
+            if (disc >= 0) {
+                for (double sgn : {-1.0, 1.0}) {
+                    const double u = (-B + sgn * std::sqrt(disc)) / (2 * A);
+                    pts.emplace_back(L.ax + dx * u, L.ay + dy * u);
+                }
+            }
+        }
+        else {
+            const double dx = C.cx - T.cx, dy = C.cy - T.cy, d = std::hypot(dx, dy);
+            if (d > 1e-12 && d <= T.r + C.r + 1e-9 && d >= std::abs(T.r - C.r) - 1e-9) {
+                const double a = (T.r * T.r - C.r * C.r + d * d) / (2 * d);
+                const double h = std::sqrt(std::max(0.0, T.r * T.r - a * a));
+                const double mx = T.cx + dx * a / d, my = T.cy + dy * a / d;
+                pts.emplace_back(mx + h * dy / d, my - h * dx / d);
+                pts.emplace_back(mx - h * dy / d, my + h * dx / d);
+            }
+        }
+        for (auto [px, py] : pts) {
+            if (!onArc(T, px, py) || !onArc(C, px, py)) {
+                continue;
+            }
+            const double prm = paramOf(px, py);
+            const double end = T.line ? 1.0 : T.span;
+            if (prm > eps && prm < end - eps) {
+                cuts.push_back(prm);
+            }
+        }
+    }
+    std::sort(cuts.begin(), cuts.end());
+    TrimPiece piece;
+    piece.entity = entityId;
+    const double click = T.line ? std::clamp(paramOf(x, y), 0.0, 1.0) : paramOf(x, y);
+    const bool closed = !T.line && T.span >= kTau - eps;
+    if (closed) {
+        if (cuts.size() < 2) {
+            piece.whole = true;
+            return piece;
+        }
+        // the gap between consecutive cuts (cyclic) that contains the click
+        double from = cuts.back(), to = cuts.front();
+        for (size_t i = 0; i + 1 < cuts.size(); ++i) {
+            if (click >= cuts[i] && click <= cuts[i + 1]) {
+                from = cuts[i];
+                to = cuts[i + 1];
+            }
+        }
+        piece.from = wrap(T.a0 + from);
+        piece.to = wrap(T.a0 + to);
+        return piece;
+    }
+    const double end = T.line ? 1.0 : T.span;
+    double a = 0, b = end;
+    for (double c : cuts) {
+        if (c < click) {
+            a = c;
+        }
+        else if (c > click) {
+            b = c;
+            break;
+        }
+    }
+    piece.whole = a <= 0 && b >= end;
+    piece.from = T.line ? a : T.a0 + a;
+    piece.to = T.line ? b : T.a0 + b;
+    return piece;
+}
+
+std::optional<std::pair<int, double>> Sketch::curveNear(double x, double y) const
+{
+    std::optional<std::pair<int, double>> best;
+    for (auto& [id, e] : entities_) {
+        if (e.type == EntityType::Point || e.construction) {
+            continue;
+        }
+        double d = 1e300;
+        if (e.type == EntityType::Line) {
+            auto [ax, ay] = pointXY(e.p1);
+            auto [bx, by] = pointXY(e.p2);
+            const double dx = bx - ax, dy = by - ay, L2 = dx * dx + dy * dy;
+            const double u = L2 > 0 ? std::clamp(((x - ax) * dx + (y - ay) * dy) / L2, 0.0, 1.0) : 0.0;
+            d = std::hypot(ax + dx * u - x, ay + dy * u - y);
+        }
+        else {
+            auto [cx, cy] = pointXY(e.center);
+            d = std::abs(std::hypot(x - cx, y - cy) - e.r);
+            if (e.type == EntityType::Arc) {
+                const double span = wrap(e.a1 - e.a0);
+                if (span > 1e-9 && wrap(std::atan2(y - cy, x - cx) - e.a0) > span) {
+                    auto [sx, sy] = pointXY(e.p1);
+                    auto [tx, ty] = pointXY(e.p2);
+                    d = std::min(std::hypot(x - sx, y - sy), std::hypot(x - tx, y - ty));
+                }
+            }
+        }
+        if (!best || d < best->second) {
+            best = std::pair {id, d};
+        }
+    }
+    return best;
+}
+
+void Sketch::dropUnusedPoint(int pid)
+{
+    const SketchEntity* p = entity(pid);
+    if (!p || !p->internal) {
+        return;
+    }
+    for (auto& [id, e] : entities_) {
+        if (e.type != EntityType::Point && (e.p1 == pid || e.p2 == pid || e.center == pid)) {
+            return;
+        }
+    }
+    for (auto& [id, t] : texts_) {
+        if (t.anchor == pid) {
+            return;
+        }
+    }
+    entities_.erase(pid);
+    std::erase_if(constraints_, [&](const auto& kv) {
+        const auto& c = kv.second;
+        return c.a == pid || c.b == pid || c.c == pid;
+    });
+}
+
+bool Sketch::trim(int entityId, double x, double y)
+{
+    auto piece = trimPiece(entityId, x, y);
+    if (!piece) {
+        return false;
+    }
+    if (piece->whole) {
+        return remove(entityId);
+    }
+    SketchEntity& t = entities_.at(entityId);
+    const bool line = t.type == EntityType::Line;
+    // the curve's own point where a cut lands: attach it to whatever crosses there
+    auto pointAt = [&](double px, double py) {
+        const int pid = addPoint(px, py, true);
+        // the crossing curve(s): every other curve passing through (px, py)
+        for (auto& [id, e] : entities_) {
+            if (id == entityId || e.type == EntityType::Point || e.construction || id == pid) {
+                continue;
+            }
+            // an existing endpoint there: share it
+            for (int q : {e.p1, e.p2}) {
+                if (q && q != pid) {
+                    auto [qx, qy] = pointXY(q);
+                    if (std::hypot(qx - px, qy - py) < 1e-6) {
+                        addConstraint(ConstraintType::Coincident, pid, q);
+                        return pid;
+                    }
+                }
+            }
+        }
+        for (auto& [id, e] : entities_) {
+            if (id == entityId || e.type == EntityType::Point || e.construction || id == pid) {
+                continue;
+            }
+            double dist = 1e300;
+            if (e.type == EntityType::Line) {
+                auto [ax, ay] = pointXY(e.p1);
+                auto [bx, by] = pointXY(e.p2);
+                const double dx = bx - ax, dy = by - ay;
+                const double u = std::clamp(((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy), 0.0, 1.0);
+                dist = std::hypot(ax + dx * u - px, ay + dy * u - py);
+            }
+            else {
+                auto [cx, cy] = pointXY(e.center);
+                dist = std::abs(std::hypot(px - cx, py - cy) - e.r);
+            }
+            if (dist < 1e-6) {
+                addConstraint(ConstraintType::PointOnCurve, pid, id);
+                return pid;
+            }
+        }
+        return pid;
+    };
+    // dimensions that measured the whole curve no longer apply
+    // a line's length, midpoint and equal-length constraints no longer apply
+    auto dropSizeConstraints = [&] {
+        std::erase_if(constraints_, [&](const auto& kv) {
+            const auto& c = kv.second;
+            if (c.type == ConstraintType::Distance && c.a == entityId && !c.b) {
+                return true;
+            }
+            return (c.type == ConstraintType::Midpoint || c.type == ConstraintType::Equal) &&
+                   (c.a == entityId || c.b == entityId);
+        });
+    };
+    if (line) {
+        const auto [ax, ay] = pointXY(t.p1);
+        const auto [bx, by] = pointXY(t.p2);
+        auto at = [&](double u) { return std::pair {ax + (bx - ax) * u, ay + (by - ay) * u}; };
+        const int oldP1 = t.p1, oldP2 = t.p2;
+        dropSizeConstraints();
+        if (piece->from <= 0) {  // the start goes
+            auto [px, py] = at(piece->to);
+            const int np = pointAt(px, py);
+            entities_.at(entityId).p1 = np;
+            dropUnusedPoint(oldP1);
+        }
+        else if (piece->to >= 1) {  // the end goes
+            auto [px, py] = at(piece->from);
+            const int np = pointAt(px, py);
+            entities_.at(entityId).p2 = np;
+            dropUnusedPoint(oldP2);
+        }
+        else {  // the middle goes: two lines
+            auto [px, py] = at(piece->from);
+            auto [qx, qy] = at(piece->to);
+            const int a = pointAt(px, py);
+            const int b = pointAt(qx, qy);
+            entities_.at(entityId).p2 = a;
+            const int second = addLine(b, oldP2);
+            for (auto [cid, c] : std::map<int, SketchConstraint>(constraints_)) {
+                if ((c.type == ConstraintType::Horizontal || c.type == ConstraintType::Vertical) && c.a == entityId && !c.b) {
+                    addConstraint(c.type, second);
+                }
+            }
+        }
+        return true;
+    }
+    // circles and arcs
+    const auto [cx, cy] = pointXY(t.center);
+    const double r = t.r;
+    auto at = [&](double ang) { return std::pair {cx + r * std::cos(ang), cy + r * std::sin(ang)}; };
+    if (t.type == EntityType::Circle) {
+        // what is left runs counter-clockwise from the piece's end round to its start
+        const double s0 = piece->to, s1 = piece->from;
+        auto [sx, sy] = at(s0);
+        auto [ex, ey] = at(s1);
+        const int p1 = pointAt(sx, sy), p2 = pointAt(ex, ey);
+        SketchEntity& e = entities_.at(entityId);
+        e.type = EntityType::Arc;
+        e.p1 = p1;
+        e.p2 = p2;
+        e.a0 = s0;
+        e.a1 = s1 <= s0 ? s1 + kTau : s1;
+        for (auto& [cid, c] : constraints_) {
+            if (c.type == ConstraintType::Diameter && c.a == entityId) {
+                c.type = ConstraintType::Radius;  // arcs are sized by radius
+                c.expr = "(" + c.expr + ") / 2";
+            }
+        }
+        return true;
+    }
+    // arc: angles from a0
+    const double a0 = t.a0, a1 = t.a1 <= t.a0 ? t.a1 + kTau : t.a1;
+    const int oldP1 = t.p1, oldP2 = t.p2;
+    if (piece->from <= a0 + 1e-9) {
+        auto [px, py] = at(piece->to);
+        const int np = pointAt(px, py);
+        SketchEntity& e = entities_.at(entityId);
+        e.p1 = np;
+        e.a0 = piece->to;
+        dropUnusedPoint(oldP1);
+    }
+    else if (piece->to >= a1 - 1e-9) {
+        auto [px, py] = at(piece->from);
+        const int np = pointAt(px, py);
+        SketchEntity& e = entities_.at(entityId);
+        e.p2 = np;
+        e.a1 = piece->from;
+        dropUnusedPoint(oldP2);
+    }
+    else {
+        auto [px, py] = at(piece->from);
+        auto [qx, qy] = at(piece->to);
+        const int a = pointAt(px, py), b = pointAt(qx, qy);
+        SketchEntity& e = entities_.at(entityId);
+        e.p2 = a;
+        e.a1 = piece->from;
+        const int second = addArcOn(e.center, b, oldP2, r, piece->to, a1);
+        addConstraint(ConstraintType::Equal, entityId, second);  // the two pieces keep one radius
+    }
+    return true;
+}
+
 Sketch::SlotIds Sketch::addSlot(double x1, double y1, double x2, double y2, double r)
 {
     const double ang = std::atan2(y2 - y1, x2 - x1);

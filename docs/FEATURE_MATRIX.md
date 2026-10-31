@@ -68,7 +68,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Project / Include, Intersect | 10 | v0.1 M5 (Project); Intersect v0.2 | — | Brief lists Project/Include |
 | Include 3D geometry, intersection curve, project to surface | 10 | v0.2 | — | |
 | Fillet (sketch) | 11 | v0.1 M1 | — | |
-| Trim, Extend, Break | 11 | v0.1 M1 | — | |
+| Trim, Extend, Break | 11 | v0.1 M1 | **app** + scripts: Trim (lines, circles, arcs); Extend and Break not yet | |
 | Sketch scale | 11 | v0.2 | — | Not in brief's list |
 | Offset (chains) | 11 | v0.1 M1 | — | |
 | Move/Copy (sketch) | 11 | v0.1 M1 | — | |

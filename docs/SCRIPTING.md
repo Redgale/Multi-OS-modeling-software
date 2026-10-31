@@ -47,6 +47,7 @@ nothing is committed.
 | `line [sketch=s1] p1=x,y p2=x,y [construction=yes] [name=<n>]` | One line, ends dimensioned. Name it to use it as a revolve axis (`axis=line:<n>`) |
 | `point [sketch=s1] at=x,y` | A point (hole centres) |
 | `text [sketch=s1] center=x,y height=<len> text="…" [font=<font file>] [angle=<angle>]` | Lettering centred on a point. `height` is the font size (capitals are about 0.73 of it). Each letter outline is a closed area (keys `T<id>.<n>`). Built-in font: Inter |
+| `trim [sketch=s1] at=x,y` | Remove the piece of the curve nearest (x, y) between its crossings with other curves |
 | `polygon [sketch=s1] center=x,y d=<len> [sides=6]` | Regular polygon; `d` is the diameter of the circle through the corners. One corner points straight up |
 | `arc [sketch=s1] center=x,y r=<len> from=<angle> to=<angle> [chord=yes]` | Counter-clockwise arc; `chord=yes` closes it with a straight line (a "D" shape) |
 | `constrain [sketch=s1] type=<t> a=<id> [b=<id>] [c=<id>] [value=<expr>]` | Raw constraint by entity id (for tests) |
