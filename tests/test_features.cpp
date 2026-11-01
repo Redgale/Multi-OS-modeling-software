@@ -2317,3 +2317,56 @@ TEST(SketchTrim, EllipsesAndSmoothCurves)
         EXPECT_NEAR(mx, 10, 1e-6);
     }
 }
+
+TEST(Loft, ThroughSquaresIsAFrustum)
+{
+    // 20 x 20 at z = 0 to 10 x 10 at z = 30: a frustum, h/3 (A1 + A2 + sqrt(A1 A2)) = 7000
+    auto doc = build("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=20 h=20\n"
+                     "sketch id=s2 plane=XY offset=30\nrect sketch=s2 center=0,0 w=10 h=10\n"
+                     "loft id=lf1 sections=s1;s2\n");
+    expectAllOk(*doc);
+    EXPECT_NEAR(props(*doc).volume, 7000, 1e-3);
+    const auto& body = *doc->state().bodies.at("lf1");
+    for (const char* name : {"lf1/start", "lf1/end", "lf1/side1", "lf1/side4"}) {
+        EXPECT_EQ(body.findFaces(name).size(), 1u) << name;
+    }
+    // through a smaller square in the middle and back out (ruled: straight between sections)
+    auto waist = build("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=20 h=20\n"
+                       "sketch id=s2 plane=XY offset=15\nrect sketch=s2 center=0,0 w=10 h=10\n"
+                       "sketch id=s3 plane=XY offset=30\nrect sketch=s3 center=0,0 w=20 h=20\n"
+                       "loft id=lf1 sections=s1;s2;s3 ruled=yes\n");
+    expectAllOk(*waist);
+    EXPECT_NEAR(props(*waist).volume, 7000, 1e-3);
+    // a square base blending into a round top (4 edges into 1): a valid solid whose volume lies
+    // between the circle's cylinder and the square's prism
+    auto round = build("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=20 h=20\n"
+                       "sketch id=s2 plane=XY offset=30\ncircle sketch=s2 center=0,0 d=16\n"
+                       "loft id=lf1 sections=s1;s2\n");
+    expectAllOk(*round);
+    const auto rp = props(*round);
+    EXPECT_GT(rp.volume, pi * 64 * 30);
+    EXPECT_LT(rp.volume, 400 * 30);
+    EXPECT_TRUE(jig::massProperties(round->state().bodies.at("lf1")->shape()).valid);
+    // a loft cut out of a block: 30 x 30 x 30 minus the frustum
+    auto cut = build("sketch id=b plane=XY\nrect sketch=b center=0,0 w=30 h=30\nextrude id=e1 sketch=b distance=30\n"
+                     "sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=20 h=20\n"
+                     "sketch id=s2 plane=XY offset=30\nrect sketch=s2 center=0,0 w=10 h=10\n"
+                     "loft id=lf1 sections=s1;s2 op=cut\n");
+    expectAllOk(*cut);
+    EXPECT_NEAR(props(*cut).volume, 27000 - 7000, 1e-3);
+    // refused with reasons: one section; a sketch with two closed areas and none picked
+    auto one = std::make_unique<Document>();
+    ScriptRunner r1(*one);
+    r1.strict = false;
+    ASSERT_TRUE(r1.runText("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=20 h=20\nloft id=lf1 sections=s1\n").ok());
+    EXPECT_EQ(one->status(1).level, StatusLevel::Error);
+    auto two = std::make_unique<Document>();
+    ScriptRunner r2(*two);
+    r2.strict = false;
+    ASSERT_TRUE(r2.runText("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=20 h=20\nrect sketch=s1 center=40,0 w=5 h=5\n"
+                           "sketch id=s2 plane=XY offset=10\nrect sketch=s2 center=0,0 w=10 h=10\n"
+                           "loft id=lf1 sections=s1;s2\n")
+                    .ok());
+    EXPECT_EQ(two->status(2).level, StatusLevel::Error);
+    EXPECT_NE(two->status(2).message.find("several closed areas"), std::string::npos) << two->status(2).message;
+}

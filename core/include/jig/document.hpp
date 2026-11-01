@@ -66,7 +66,8 @@ enum class FeatureKind
     PressPull,  // push or pull a flat face of a body
     Point,      // construction point (typed position, end or centre of an edge, centre of a face)
     Import,     // a solid brought in from a STEP file, kept inside the design
-    Remove      // bodies taken out of the design from here on (delete a body)
+    Remove,     // bodies taken out of the design from here on (delete a body)
+    Loft        // a solid through closed areas of two or more sketches, in order
 };
 
 const char* toString(FeatureKind k);

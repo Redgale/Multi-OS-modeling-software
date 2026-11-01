@@ -3150,6 +3150,78 @@ QString SplitPanel::title() const
     return tr("split");
 }
 
+// ---------------------------------------------------------------- Loft
+
+LoftPanel::LoftPanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent)
+    : FeaturePanel(doc, view, std::move(editId), parent)
+{
+    form_->addWidget(heading(this, tr("Loft"),
+                             tr("A solid that passes through closed areas on two or more sketches, in the order "
+                                "they come in the timeline: a square base blending into a round top, say. Draw each "
+                                "section on its own sketch, on planes one above the other.")));
+    sections_ = new QListWidget(this);
+    sections_->setMaximumHeight(140);
+    ruled_ = new QCheckBox(tr("Straight between sections (no smooth blending)"), this);
+    op_ = combo(this, {{tr("New body"), "new"},
+                       {tr("Join: add to the body"), "join"},
+                       {tr("Cut: remove material"), "cut"},
+                       {tr("Intersect: keep the overlap"), "intersect"}});
+    addRow(tr("Sections (tick two or more)"), sections_);
+    form_->addWidget(ruled_);
+    addRow(tr("Operation"), op_);
+    const auto before = stateBefore();
+    const jig::Feature* edit = editId_.empty() ? nullptr : doc_.feature(editId_);
+    std::set<std::string> wanted;
+    if (edit) {
+        for (const auto& sec : edit->params.value("sections", nlohmann::json::array())) {
+            wanted.insert(sec.is_string() ? sec.get<std::string>() : sec.value("sketch", std::string {}));
+        }
+        select(op_, edit->params.value("op", std::string("new")));
+        ruled_->setChecked(edit->params.value("ruled", false));
+    }
+    for (int i = 0; i < insertIndex(); ++i) {
+        const auto& f = doc_.model().features[size_t(i)];
+        auto it = before->sketches.find(f.id);
+        if (f.kind != jig::FeatureKind::Sketch || it == before->sketches.end() || it->second->profiles.regions.empty()) {
+            continue;
+        }
+        auto* item = new QListWidgetItem(q(f.name), sections_);
+        item->setData(Qt::UserRole, q(f.id));
+        item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+        item->setCheckState(wanted.count(f.id) ? Qt::Checked : Qt::Unchecked);
+    }
+    connect(sections_, &QListWidget::itemChanged, this, [this] { schedulePreview(); });
+    connect(ruled_, &QCheckBox::toggled, this, [this] { schedulePreview(); });
+    connect(op_, &QComboBox::currentIndexChanged, this, [this] { schedulePreview(); });
+    if (sections_->count() < 2) {
+        status_->setText("<b>✕ " + tr("A loft needs closed areas on at least two sketches. Draw each section on its "
+                                      "own sketch first.") + "</b>");
+        ok_->setEnabled(false);
+    }
+    else {
+        schedulePreview();
+    }
+}
+
+jig::Feature LoftPanel::draft() const
+{
+    jig::Feature f = startDraft(doc_, editId_, "lf", tr("Loft"));
+    f.kind = jig::FeatureKind::Loft;
+    nlohmann::json secs = nlohmann::json::array();
+    for (int i = 0; i < sections_->count(); ++i) {
+        if (sections_->item(i)->checkState() == Qt::Checked) {
+            secs.push_back(sections_->item(i)->data(Qt::UserRole).toString().toStdString());
+        }
+    }
+    f.params = {{"sections", secs}, {"ruled", ruled_->isChecked()}, {"op", current(op_)}};
+    return f;
+}
+
+QString LoftPanel::title() const
+{
+    return tr("loft");
+}
+
 // ---------------------------------------------------------------- Move
 
 // Three arrows (X, Y, Z) from the bodies' centre; drag a grip to move along that axis.

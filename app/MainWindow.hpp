@@ -127,6 +127,7 @@ public:
     QAction* commandAction(const QString& id);  // the toolbar/menu action of a command
     bool importSvgFile(const QString& path);
     void openBodyTool(const std::string& tool, const std::string& editId = {});  // combine, split, move
+    void openLoft(const std::string& editId);
     void openPlane(const std::string& editId = {}, const std::string& kind = "offset");
     void openAxis(const std::string& editId = {});
     void openPoint(const std::string& editId = {});

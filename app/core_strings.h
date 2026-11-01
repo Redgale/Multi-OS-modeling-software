@@ -51,6 +51,7 @@ QT_TRANSLATE_NOOP("Core", "Move the selected sketch curves, or copy them (hold C
 QT_TRANSLATE_NOOP("Core", "Turn a curve into a guide that is ignored when extruding.")
 QT_TRANSLATE_NOOP("Core", "Push a closed sketch area into 3D, adding or cutting material.")
 QT_TRANSLATE_NOOP("Core", "Spin a profile around an axis, like a lathe: knobs, cups, wheels.")
+QT_TRANSLATE_NOOP("Core", "Blend between closed areas on two or more sketches, e.g. a square base into a round top.")
 QT_TRANSLATE_NOOP("Core", "Drill a plain, counterbored or countersunk hole for a screw.")
 QT_TRANSLATE_NOOP("Core", "Copy a body across a plane, e.g. to make a symmetric part.")
 QT_TRANSLATE_NOOP("Core", "Repeat a feature in rows and columns.")
@@ -197,6 +198,15 @@ QT_TRANSLATE_NOOP("Core", "Set the offset to 0, or pick a face parallel to the s
 QT_TRANSLATE_NOOP("Core", "That face is level with the sketch, so there is no way to tell which way to extrude.")
 QT_TRANSLATE_NOOP("Core", "That face or plane is in the sketch's own plane, so there is nothing to extrude up to.")
 QT_TRANSLATE_NOOP("Core", "This extrude has an unknown operation.")
+QT_TRANSLATE_NOOP("Core", "A loft needs closed areas on at least two sketches.")
+QT_TRANSLATE_NOOP("Core", "Pick two or more sketches.")
+QT_TRANSLATE_NOOP("Core", "Edit the loft and pick the areas again.")
+QT_TRANSLATE_NOOP("Core", "Edit the loft and pick one area in each sketch.")
+QT_TRANSLATE_NOOP("Core", "A loft goes through the outer outlines only; holes in the sections are filled.")
+QT_TRANSLATE_NOOP("Core", "These sections could not be joined into a solid.")
+QT_TRANSLATE_NOOP("Core", "Check that the sketches are on different planes and in order.")
+QT_TRANSLATE_NOOP("Core", "Sections with very different numbers of corners loft more easily as smooth shapes.")
+QT_TRANSLATE_NOOP("Core", "This loft has an unknown operation.")
 QT_TRANSLATE_NOOP("Core", "The body of the face to push or pull no longer exists.")
 QT_TRANSLATE_NOOP("Core", "Edit the step and click a face.")
 QT_TRANSLATE_NOOP("Core", "The face to push or pull no longer exists.")
@@ -490,6 +500,9 @@ inline const char* const kCorePatterns[] = {
     QT_TRANSLATE_NOOP("Core", "The sketch has no closed area to %1."),
     QT_TRANSLATE_NOOP("Core", "The sketch this %1 uses (%2) is missing or has a problem."),
     QT_TRANSLATE_NOOP("Core", "Edit this %1 and pick another sketch."),
+    QT_TRANSLATE_NOOP("Core", "The closed area this loft used is gone from the sketch %1."),
+    QT_TRANSLATE_NOOP("Core", "The sketch %1 has no closed area to loft through."),
+    QT_TRANSLATE_NOOP("Core", "The sketch %1 has several closed areas; pick one for the loft."),
     QT_TRANSLATE_NOOP("Core", "The body this pattern repeats (%1) no longer exists."),
     QT_TRANSLATE_NOOP("Core", "The step this pattern repeats (%1) is missing, after the pattern, or has a problem."),
     QT_TRANSLATE_NOOP("Core", "The sketch with this pattern's path (%1) is missing or comes later."),
@@ -526,6 +539,7 @@ QT_TRANSLATE_NOOP("CoreWords", "curved face")
 QT_TRANSLATE_NOOP("CoreWords", "extrude")
 QT_TRANSLATE_NOOP("CoreWords", "flat face")
 QT_TRANSLATE_NOOP("CoreWords", "hole")
+QT_TRANSLATE_NOOP("CoreWords", "loft")
 QT_TRANSLATE_NOOP("CoreWords", "revolve")
 QT_TRANSLATE_NOOP("CoreWords", "round face (cylinder)")
 QT_TRANSLATE_NOOP("CoreWords", "rounded face (torus)")

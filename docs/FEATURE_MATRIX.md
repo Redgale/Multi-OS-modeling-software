@@ -101,7 +101,8 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Extrude from selected face | 14 | v0.1 M3 (via Press Pull) | **app** + scripts via Press Pull (flat faces, straight out or in) | |
 | Press Pull | 14, 17 | v0.1 M3 | **app** + scripts (`presspull`): flat faces out (join) or in (cut); whole round faces (a hole's wall, a round boss) change radius; with Q, a fillet, chamfer or hole face opens that step; other curved faces not yet | |
 | Revolve (full, angle, to object) | 15 | v0.1 M4 | **app** + scripts: full, angle, up to a plane or flat face the axis lies in, or up to a curved face in its way; origin axis, sketch line or construction axis | |
-| Sweep, Loft, Rib, Web, Emboss, Coil, Pipe | 15 | v0.2 (Web v0.3+) | — | Brief v0.2 list |
+| Loft | 15 | v0.2 | **app** + scripts (`loft`): through two or more sketches' closed areas, smooth or straight, new/join/cut/intersect; outer outlines only (holes in sections are filled, with a warning) | |
+| Sweep, Rib, Web, Emboss, Coil, Pipe | 15 | v0.2 (Web v0.3+) | — | Brief v0.2 list |
 | Thicken, Boundary fill | 15 | v0.3+ | — | Surface workflows |
 | Derive, Insert into design | 13, 22 | v0.3+ | — | Multi-file projects |
 | Primitives (box, cylinder, sphere, torus) | 13 | v0.2 | — | Sketch+extrude teaches better; low cost later |

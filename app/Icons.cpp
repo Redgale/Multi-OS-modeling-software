@@ -87,6 +87,7 @@ const std::map<QString, QString>& icons()
         {"constraint.equal", "M5 9 L19 9 M5 15 L19 15"},
         // solid: create
         {"solid.extrude", "M3 18 L8 14 L20 14 L15 18 Z f M8 14 L8 7 L20 7 L20 14 Z a M13 12 L13 3 M10 5.5 L13 2.5 L16 5.5"},
+        {"solid.loft", "M5 19 L19 19 L16 13 L8 13 Z M8 13 L10 5 L14 5 L16 13"},
         {"solid.revolve", "M8 4 L8 20 d M12 3 L12 21 a M17 9 A12 12 5 0 -270 M12 7 L15 6"},
         {"solid.hole", "M3 9 L9 5 L21 5 L15 9 Z M3 9 L3 19 L15 19 L15 9 M15 19 L21 15 L21 5 f E12 7 3 1.2 a M9 9 L9 16 M15 9 L15 16"},
         {"solid.mirror", "M3 7 L9 4 L9 18 L3 19 Z d M12 2 L12 22 a M21 7 L15 4 L15 18 L21 19 Z"},

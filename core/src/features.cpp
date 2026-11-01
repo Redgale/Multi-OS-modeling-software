@@ -17,6 +17,7 @@
 #include <BRepPrimAPI_MakeCylinder.hxx>
 #include <BRepAlgoAPI_Cut.hxx>
 #include <BRepTools.hxx>
+#include <BRepOffsetAPI_ThruSections.hxx>
 #include <BRepAdaptor_Surface.hxx>
 #include <TopoDS_Compound.hxx>
 #include <BRep_Builder.hxx>
@@ -932,6 +933,115 @@ FeatureOutcome applyExtrude(const Document& doc, const Feature& f, const std::sh
         return failed(e);
     }
     return applyTool(f, *op, std::move(tool.value()), in, status);
+}
+
+// ---------------------------------------------------------------- loft
+
+// A solid through closed areas of two or more sketches, in the order given: each section is a
+// sketch (its only closed area) or {"sketch": id, "profile": key} for one of several.
+FeatureOutcome applyLoft(const Document& doc, const Feature& f, const std::shared_ptr<const ModelState>& in)
+{
+    (void)doc;
+    const auto& p = f.params;
+    FeatureStatus status;
+    const nlohmann::json sections = p.value("sections", nlohmann::json::array());
+    if (!sections.is_array() || sections.size() < 2) {
+        return failed("A loft needs closed areas on at least two sketches.", {"Pick two or more sketches."});
+    }
+    std::vector<TopoDS_Wire> wires;
+    for (const auto& sec : sections) {
+        const std::string sid = sec.is_string() ? sec.get<std::string>() : sec.value("sketch", std::string {});
+        const SketchState* sk = findSketch(in, sid);
+        if (!sk) {
+            return missingSketch(word("loft"), sid);
+        }
+        const auto& regions = sk->profiles.regions;
+        const Profile* chosen = nullptr;
+        if (sec.is_object() && sec.contains("profile")) {
+            const std::string key = sec.value("profile", std::string {});
+            for (const auto& r : regions) {
+                if (r.key == key) {
+                    chosen = &r;
+                }
+            }
+            if (!chosen) {
+                return failed(fmt("The closed area this loft used is gone from the sketch %1.", {sid}),
+                              {"Edit the loft and pick the areas again."});
+            }
+        }
+        else if (regions.size() == 1) {
+            chosen = &regions.front();
+        }
+        else {
+            return failed(regions.empty() ? fmt("The sketch %1 has no closed area to loft through.", {sid})
+                                          : fmt("The sketch %1 has several closed areas; pick one for the loft.", {sid}),
+                          {"Edit the loft and pick one area in each sketch."});
+        }
+        // a section is its outline: the shape is lofted solid, holes are not carried along
+        int wiresInFace = 0;
+        for (TopExp_Explorer ex(chosen->face, TopAbs_WIRE); ex.More(); ex.Next()) {
+            ++wiresInFace;
+        }
+        if (wiresInFace > 1) {
+            status.level = StatusLevel::Warning;
+            status.message = "A loft goes through the outer outlines only; holes in the sections are filled.";
+        }
+        wires.push_back(BRepTools::OuterWire(chosen->face));
+    }
+    const bool ruled = p.value("ruled", false);
+    try {
+        BRepOffsetAPI_ThruSections loft(true, ruled, 1e-6);
+        loft.CheckCompatibility(true);
+        for (const auto& w : wires) {
+            loft.AddWire(w);
+        }
+        loft.Build();
+        if (!loft.IsDone() || loft.Shape().IsNull()) {
+            return failed("These sections could not be joined into a solid.",
+                          {"Check that the sketches are on different planes and in order.",
+                           "Sections with very different numbers of corners loft more easily as smooth shapes."});
+        }
+        NamedShape tool(loft.Shape());
+        // names: the first and last sections' faces, then the sides in the order of the first
+        // section's edges
+        const TopoDS_Shape first = loft.FirstShape(), last = loft.LastShape();
+        std::vector<TopoDS_Shape> sides;
+        for (TopExp_Explorer ex(wires.front(), TopAbs_EDGE); ex.More(); ex.Next()) {
+            const TopoDS_Shape side = loft.GeneratedFace(ex.Current());
+            if (!side.IsNull()) {
+                sides.push_back(side);
+            }
+        }
+        int other = 0;
+        for (int i = 0; i < tool.faceCount(); ++i) {
+            const TopoDS_Shape& face = tool.face(i);
+            std::string name;
+            if (!first.IsNull() && face.IsSame(first)) {
+                name = f.id + "/start";
+            }
+            else if (!last.IsNull() && face.IsSame(last)) {
+                name = f.id + "/end";
+            }
+            else {
+                for (size_t k = 0; k < sides.size() && name.empty(); ++k) {
+                    if (face.IsSame(sides[k])) {
+                        name = f.id + "/side" + std::to_string(k + 1);
+                    }
+                }
+            }
+            tool.setFaceName(i, name.empty() ? f.id + "/face" + std::to_string(++other) : name);
+        }
+        auto op = opFromString(p.value("op", std::string("new")));
+        if (!op) {
+            return failed("This loft has an unknown operation.");
+        }
+        return applyTool(f, *op, std::move(tool), in, status);
+    }
+    catch (const Standard_Failure& e) {
+        const char* m = e.GetMessageString();
+        return failed("These sections could not be joined into a solid.",
+                      {"Check that the sketches are on different planes and in order."}, m ? m : "");
+    }
 }
 
 // ---------------------------------------------------------------- press pull
@@ -1960,6 +2070,8 @@ FeatureOutcome applyFeature(const Document& doc, const Feature& f, const std::sh
                 return applyShell(doc, f, in);
             case FeatureKind::Revolve:
                 return applyRevolve(doc, f, in);
+            case FeatureKind::Loft:
+                return applyLoft(doc, f, in);
             case FeatureKind::Hole:
                 return applyHole(doc, f, in);
             case FeatureKind::Pattern:

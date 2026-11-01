@@ -630,6 +630,35 @@ private:
     QComboBox *body_, *plane_;
 };
 
+// Create ▸ Loft: a solid through closed areas of two or more sketches, in timeline order.
+class LoftPanel : public FeaturePanel
+{
+    Q_OBJECT
+public:
+    LoftPanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent = nullptr);
+    QListWidget* sections() const
+    {
+        return sections_;
+    }
+    QCheckBox* ruled() const
+    {
+        return ruled_;
+    }
+    QComboBox* operation() const
+    {
+        return op_;
+    }
+
+protected:
+    jig::Feature draft() const override;
+    QString title() const override;
+
+private:
+    QListWidget* sections_;
+    QCheckBox* ruled_;
+    QComboBox* op_;
+};
+
 class MoveHandle;
 
 // Move / copy bodies: shift along X, Y, Z and turn around an origin axis.

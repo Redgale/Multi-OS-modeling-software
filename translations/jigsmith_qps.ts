@@ -519,6 +519,16 @@
     </message>
     <message>
         <location line="+1" />
+        <source>Loft</source>
+        <translation>[Löft~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Blend between closed areas on two or more sketches, e.g. a square base into a round top.</source>
+        <translation>[Bléñd bétwééñ çlöséd áréás öñ twö ör möré skétçhés, é.g. á sqüáré básé îñtö á röüñd töp.~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
         <source>Hole</source>
         <translation>[Hölé~]</translation>
     </message>
@@ -1134,6 +1144,11 @@
         <location line="+1" />
         <source>Spin a profile around an axis, like a lathe: knobs, cups, wheels.</source>
         <translation>[Spîñ á pröfîlé áröüñd áñ áxîs, lîké á láthé: kñöbs, çüps, whééls.~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Blend between closed areas on two or more sketches, e.g. a square base into a round top.</source>
+        <translation>[Bléñd bétwééñ çlöséd áréás öñ twö ör möré skétçhés, é.g. á sqüáré básé îñtö á röüñd töp.~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <location line="+1" />
@@ -1824,6 +1839,51 @@
         <location line="+1" />
         <source>This extrude has an unknown operation.</source>
         <translation>[Thîs éxtrüdé hás áñ üñkñöwñ öpérátîöñ.~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>A loft needs closed areas on at least two sketches.</source>
+        <translation>[Á löft ñééds çlöséd áréás öñ át léást twö skétçhés.~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Pick two or more sketches.</source>
+        <translation>[Pîçk twö ör möré skétçhés.~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Edit the loft and pick the areas again.</source>
+        <translation>[Édît thé löft áñd pîçk thé áréás ágáîñ.~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Edit the loft and pick one area in each sketch.</source>
+        <translation>[Édît thé löft áñd pîçk öñé áréá îñ éáçh skétçh.~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>A loft goes through the outer outlines only; holes in the sections are filled.</source>
+        <translation>[Á löft göés thröügh thé öütér öütlîñés öñlý; hölés îñ thé séçtîöñs áré fîlléd.~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>These sections could not be joined into a solid.</source>
+        <translation>[Thésé séçtîöñs çöüld ñöt bé jöîñéd îñtö á sölîd.~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Check that the sketches are on different planes and in order.</source>
+        <translation>[Çhéçk thát thé skétçhés áré öñ dîfféréñt pláñés áñd îñ ördér.~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Sections with very different numbers of corners loft more easily as smooth shapes.</source>
+        <translation>[Séçtîöñs wîth vérý dîfféréñt ñümbérs öf çörñérs löft möré éásîlý ás smööth shápés.~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>This loft has an unknown operation.</source>
+        <translation>[Thîs löft hás áñ üñkñöwñ öpérátîöñ.~~~~~~~~~]</translation>
     </message>
     <message>
         <location line="+1" />
@@ -2657,6 +2717,21 @@
     </message>
     <message>
         <location line="+1" />
+        <source>The closed area this loft used is gone from the sketch %1.</source>
+        <translation>[Thé çlöséd áréá thîs löft üséd îs göñé fröm thé skétçh %1.~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The sketch %1 has no closed area to loft through.</source>
+        <translation>[Thé skétçh %1 hás ñö çlöséd áréá tö löft thröügh.~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The sketch %1 has several closed areas; pick one for the loft.</source>
+        <translation>[Thé skétçh %1 hás sévérál çlöséd áréás; pîçk öñé för thé löft.~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
         <source>The body this pattern repeats (%1) no longer exists.</source>
         <translation>[Thé bödý thîs páttérñ répéáts (%1) ñö löñgér éxîsts.~~~~~~~~~~~~~]</translation>
     </message>
@@ -2706,7 +2781,7 @@
         <translation>[%1 édgés wéré ré-áttáçhéd bý shápé sîmîlárîtý áftér áñ éárlîér çháñgé. Çhéçk thé résült.~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="-35" />
+        <location line="-38" />
         <source>The id '%1' is already used.</source>
         <translation>[Thé îd '%1' îs álréádý üséd.~~~~~~]</translation>
     </message>
@@ -2716,7 +2791,7 @@
         <translation>[Thîs SVG hás ñö shápés, öütlîñés ör téxt tö brîñg îñ.~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+51" />
+        <location line="+54" />
         <source>A wall of %1 does not fit this outline.</source>
         <translation>[Á wáll öf %1 döés ñöt fît thîs öütlîñé.~~~~~~~~~]</translation>
     </message>
@@ -2791,12 +2866,12 @@
         <translation>[Thé föñt '%1' îs ñöt áváîláblé héré; üsîñg thé büîlt-îñ föñt (Îñtér).~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="-224" />
+        <location line="-227" />
         <source>There is nothing to export yet.</source>
         <translation>[Théré îs ñöthîñg tö éxpört ýét.~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="-172" />
+        <location line="-181" />
         <source>This DXF has no lines, circles, arcs, curves, text or blocks to bring in.</source>
         <translation>[Thîs DXF hás ñö lîñés, çîrçlés, árçs, çürvés, téxt ör blöçks tö brîñg îñ.~~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -2836,7 +2911,7 @@
         <translation>[Thát fáçé îs lévél wîth thé skétçh, sö théré îs ñö wáý tö téll whîçh wáý tö éxtrüdé.~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+99" />
+        <location line="+108" />
         <source>The 3MF file could not be created.</source>
         <translation>[Thé 3MF fîlé çöüld ñöt bé çréátéd.~~~~~~~~]</translation>
     </message>
@@ -3439,7 +3514,7 @@
 <context>
     <name>CoreWords</name>
     <message>
-        <location line="+87" />
+        <location line="+90" />
         <source>ball face (sphere)</source>
         <translation>[báll fáçé (sphéré)~~~~]</translation>
     </message>
@@ -3475,6 +3550,11 @@
     </message>
     <message>
         <location line="+1" />
+        <source>loft</source>
+        <translation>[löft~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
         <source>revolve</source>
         <translation>[révölvé~~]</translation>
     </message>
@@ -3502,7 +3582,7 @@
 <context>
     <name>MainWindow</name>
     <message>
-        <location filename="../app/MainWindow.cpp" line="+511" />
+        <location filename="../app/MainWindow.cpp" line="+513" />
         <source>Rebuilding the design…</source>
         <translation>[Rébüîldîñg thé désîgñ…~~~~~~]</translation>
     </message>
@@ -4442,9 +4522,68 @@
     </message>
 </context>
 <context>
+    <name>jigapp::LoftPanel</name>
+    <message>
+        <location line="+1328" />
+        <location line="+50" />
+        <source>Loft</source>
+        <translation>[Löft~]</translation>
+    </message>
+    <message>
+        <location line="-49" />
+        <source>A solid that passes through closed areas on two or more sketches, in the order they come in the timeline: a square base blending into a round top, say. Draw each section on its own sketch, on planes one above the other.</source>
+        <translation>[Á sölîd thát pássés thröügh çlöséd áréás öñ twö ör möré skétçhés, îñ thé ördér théý çömé îñ thé tîmélîñé: á sqüáré básé bléñdîñg îñtö á röüñd töp, sáý. Dráw éáçh séçtîöñ öñ îts öwñ skétçh, öñ pláñés öñé ábövé thé öthér.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+5" />
+        <source>Straight between sections (no smooth blending)</source>
+        <translation>[Stráîght bétwééñ séçtîöñs (ñö smööth bléñdîñg)~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>New body</source>
+        <translation>[Ñéw bödý~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Join: add to the body</source>
+        <translation>[Jöîñ: ádd tö thé bödý~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Cut: remove material</source>
+        <translation>[Çüt: rémövé mátérîál~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Intersect: keep the overlap</source>
+        <translation>[Îñtérséçt: kéép thé övérláp~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Sections (tick two or more)</source>
+        <translation>[Séçtîöñs (tîçk twö ör möré)~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+2" />
+        <source>Operation</source>
+        <translation>[Öpérátîöñ~~~]</translation>
+    </message>
+    <message>
+        <location line="+26" />
+        <source>A loft needs closed areas on at least two sketches. Draw each section on its own sketch first.</source>
+        <translation>[Á löft ñééds çlöséd áréás öñ át léást twö skétçhés. Dráw éáçh séçtîöñ öñ îts öwñ skétçh fîrst.~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+25" />
+        <source>loft</source>
+        <translation>[löft~]</translation>
+    </message>
+</context>
+<context>
     <name>jigapp::MainWindow</name>
     <message>
-        <location filename="../app/MainWindow.cpp" line="-144" />
+        <location filename="../app/MainWindow.cpp" line="-146" />
         <source>OK</source>
         <translation>[ÖK~]</translation>
     </message>
@@ -4470,15 +4609,15 @@
     </message>
     <message>
         <location line="+9" />
-        <location line="+731" />
+        <location line="+733" />
         <location line="+738" />
-        <location line="+895" />
+        <location line="+898" />
         <location line="+27" />
         <source>Sketch</source>
         <translation>[Skétçh~~]</translation>
     </message>
     <message>
-        <location line="-2389" />
+        <location line="-2394" />
         <source>Extrude</source>
         <translation>[Éxtrüdé~~]</translation>
     </message>
@@ -4556,6 +4695,11 @@
         <location line="+2" />
         <source>Split</source>
         <translation>[Splît~]</translation>
+    </message>
+    <message>
+        <location line="+2" />
+        <source>Loft</source>
+        <translation>[Löft~]</translation>
     </message>
     <message>
         <location line="+2" />
@@ -4715,12 +4859,12 @@
     </message>
     <message>
         <location line="+2" />
-        <location line="+1572" />
+        <location line="+1575" />
         <source>Mouse and trackpad</source>
         <translation>[Möüsé áñd tráçkpád~~~~~]</translation>
     </message>
     <message>
-        <location line="-1570" />
+        <location line="-1573" />
         <source>Default (middle-drag pans, Shift+middle orbits)</source>
         <translation>[Défáült (mîddlé-drág páñs, Shîft+mîddlé örbîts)~~~~~~~~~~~~]</translation>
     </message>
@@ -4741,30 +4885,30 @@
     </message>
     <message>
         <location line="+11" />
-        <location line="+1545" />
+        <location line="+1548" />
         <source>Theme</source>
         <translation>[Thémé~]</translation>
     </message>
     <message>
-        <location line="-1543" />
-        <location line="+1498" />
+        <location line="-1546" />
+        <location line="+1501" />
         <source>Light</source>
         <translation>[Lîght~]</translation>
     </message>
     <message>
-        <location line="-1498" />
-        <location line="+1497" />
+        <location line="-1501" />
+        <location line="+1500" />
         <source>Dark</source>
         <translation>[Dárk~]</translation>
     </message>
     <message>
-        <location line="-1496" />
-        <location line="+1498" />
+        <location line="-1499" />
+        <location line="+1501" />
         <source>High contrast</source>
         <translation>[Hîgh çöñtrást~~~~]</translation>
     </message>
     <message>
-        <location line="-1490" />
+        <location line="-1493" />
         <source>&amp;Help</source>
         <translation>[&amp;Hélp~]</translation>
     </message>
@@ -4881,12 +5025,12 @@
     </message>
     <message>
         <location line="+2" />
-        <location line="+2094" />
+        <location line="+2109" />
         <source>Rename…</source>
         <translation>[Réñámé…~~]</translation>
     </message>
     <message>
-        <location line="-2091" />
+        <location line="-2106" />
         <source>Delete body</source>
         <translation>[Délété bödý~~~]</translation>
     </message>
@@ -4902,13 +5046,13 @@
     </message>
     <message>
         <location line="+5" />
-        <location line="+1552" />
+        <location line="+1555" />
         <location line="+58" />
         <source>Properties</source>
         <translation>[Pröpértîés~~~]</translation>
     </message>
     <message>
-        <location line="-1604" />
+        <location line="-1607" />
         <source>Properties and help</source>
         <translation>[Pröpértîés áñd hélp~~~~~]</translation>
     </message>
@@ -4994,12 +5138,12 @@
     </message>
     <message>
         <location line="+18" />
-        <location line="+1980" />
+        <location line="+1995" />
         <source>Move rollback marker</source>
         <translation>[Mövé röllbáçk márkér~~~~~~]</translation>
     </message>
     <message>
-        <location line="-1808" />
+        <location line="-1823" />
         <source>Start here: every part begins as a flat sketch.
 Click Sketch on the toolbar, then click a plane.
 Or open the phone stand sample (File ▸ Open a sample).</source>
@@ -5200,12 +5344,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+0" />
-        <location line="+357" />
+        <location line="+360" />
         <source>Jigsmith designs (*.jig)</source>
         <translation>[Jîgsmîth désîgñs (*.jîg)~~~~~~]</translation>
     </message>
     <message>
-        <location line="-310" />
+        <location line="-313" />
         <source>Save view</source>
         <translation>[Sávé vîéw~~]</translation>
     </message>
@@ -5220,7 +5364,7 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
         <translation>[Vîéw %1~]</translation>
     </message>
     <message>
-        <location line="+71" />
+        <location line="+74" />
         <source>Import STEP</source>
         <translation>[Împört STÉP~~~]</translation>
     </message>
@@ -5368,12 +5512,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+0" />
-        <location line="+922" />
+        <location line="+931" />
         <source>There is no 3D body yet.</source>
         <translation>[Théré îs ñö 3D bödý ýét.~~~~~]</translation>
     </message>
     <message>
-        <location line="-919" />
+        <location line="-928" />
         <source>STL mesh for slicers (*.stl)</source>
         <translation>[STL mésh för slîçérs (*.stl)~~~~~~]</translation>
     </message>
@@ -5644,7 +5788,7 @@ An empty design with the origin ready</source>
         <translation>[Théré îs ñö 3D bödý ýét: skétçh áñd éxtrüdé fîrst.~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+83" />
+        <location line="+92" />
         <source>That face was made by %1: change its size here.</source>
         <translation>[Thát fáçé wás mádé bý %1: çháñgé îts sîzé héré.~~~~~~~~~~~]</translation>
     </message>
@@ -5756,7 +5900,7 @@ An empty design with the origin ready</source>
         <translation>[Áñ împörtéd sölîd hás ñö séttîñgs tö çháñgé. Tö üsé á ñéwér çöpý öf thé fîlé, délété thîs stép áñd împört ît ágáîñ.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+27" />
+        <location line="+30" />
         <source>Edit…</source>
         <translation>[Édît…~]</translation>
     </message>
@@ -5991,7 +6135,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
 <context>
     <name>jigapp::MirrorPanel</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="+224" />
+        <location filename="../app/FeaturePanels.cpp" line="-1168" />
         <location line="+97" />
         <source>Mirror</source>
         <translation>[Mîrrör~~]</translation>
@@ -6071,7 +6215,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
 <context>
     <name>jigapp::MovePanel</name>
     <message>
-        <location line="+1085" />
+        <location line="+1157" />
         <source>free %1</source>
         <translation>[fréé %1~]</translation>
     </message>
@@ -6262,7 +6406,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
 <context>
     <name>jigapp::PatternPanel</name>
     <message>
-        <location line="-1805" />
+        <location line="-1877" />
         <location line="+154" />
         <source>Pattern</source>
         <translation>[Páttérñ~~]</translation>

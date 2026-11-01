@@ -124,6 +124,7 @@ CommandRegistry::CommandRegistry()
     // Solid.
     add({"solid.extrude", "Extrude", "Extrude", "CREATE", "Push a closed sketch area into 3D, adding or cutting material.", "E", {"pull up", "thicken", "make 3d", "pocket", "cut through"}, true, false, true, m2});
     add({"solid.revolve", "Revolve", "Revolve", "CREATE", "Spin a profile around an axis, like a lathe: knobs, cups, wheels.", "", {"lathe", "spin", "turn"}, true, false, false, m4});
+    add({"solid.loft", "Loft", "Loft", "CREATE", "Blend between closed areas on two or more sketches, e.g. a square base into a round top.", "", {"blend", "transition", "morph", "sections"}, false, false, true, ""});
     add({"solid.hole", "Hole", "Hole", "CREATE", "Drill a plain, counterbored or countersunk hole for a screw.", "H", {"drill", "screw hole", "bore", "countersink", "counterbore"}, true, false, false, m3});
     add({"solid.mirror", "Mirror", "Mirror", "CREATE", "Copy a body across a plane, e.g. to make a symmetric part.", "", {"symmetric", "flip copy"}, false, false, false, m3});
     add({"solid.pattern_rect", "Grid copy", "Rectangular Pattern", "CREATE", "Repeat a feature in rows and columns.", "", {"array", "grid", "repeat"}, false, false, false, m3});
@@ -159,7 +160,7 @@ CommandRegistry::CommandRegistry()
         "constraint.midpoint", "constraint.fix",
         "constraint.parallel", "constraint.perpendicular", "constraint.horizontal", "constraint.tangent",
         "constraint.symmetric", "constraint.equal", "solid.extrude", "solid.fillet", "solid.chamfer", "solid.shell",
-        "solid.revolve", "solid.hole", "solid.mirror", "solid.pattern_rect", "solid.pattern_circ", "modify.parameters",
+        "solid.revolve", "solid.loft", "solid.hole", "solid.mirror", "solid.pattern_rect", "solid.pattern_circ", "modify.parameters",
         "inspect.measure", "inspect.properties", "file.export_3mf", "construct.offset_plane", "construct.angle_plane",
         "construct.midplane", "construct.axis", "construct.point", "solid.presspull", "solid.combine", "solid.split", "solid.move",
         "inspect.section", "insert.dxf", "insert.svg", "help.tutorial"};
@@ -1711,7 +1712,7 @@ Result<bool> ScriptRunner::runLineUnchecked(std::string_view rawLine)
         }
         return checkFeature(id);
     }
-    if (a.verb == "revolve" || a.verb == "hole" || a.verb == "pattern" || a.verb == "mirror") {
+    if (a.verb == "revolve" || a.verb == "hole" || a.verb == "pattern" || a.verb == "mirror" || a.verb == "loft") {
         // revolve sketch=s1 axis=X|Y|Z|line:<name> [angle=360deg | extent=to to=<plane>|face:<name>]
         //         [op=new|join|cut|intersect] [profiles=…]
         // hole sketch=s2 diameter=3.4mm (depth=10mm | extent=all) [type=simple|counterbore|countersink]
@@ -1722,7 +1723,8 @@ Result<bool> ScriptRunner::runLineUnchecked(std::string_view rawLine)
         // pattern body=e1 … [op=new|join]   (whole bodies; dir1/dir2/axis may be construction axes)
         static const std::map<std::string, std::pair<FeatureKind, std::string>> kinds {
             {"revolve", {FeatureKind::Revolve, "r"}}, {"hole", {FeatureKind::Hole, "h"}},
-            {"pattern", {FeatureKind::Pattern, "p"}}, {"mirror", {FeatureKind::Mirror, "m"}}};
+            {"pattern", {FeatureKind::Pattern, "p"}}, {"mirror", {FeatureKind::Mirror, "m"}},
+            {"loft", {FeatureKind::Loft, "lf"}}};
         const auto& [kind, prefix] = kinds.at(a.verb);
         nlohmann::json params = nlohmann::json::object();
         for (auto& [k, v] : a.kv) {
@@ -1770,6 +1772,22 @@ Result<bool> ScriptRunner::runLineUnchecked(std::string_view rawLine)
             }
             params["profiles"] = a.has("profiles") && a.get("profiles") != "all" ? nlohmann::json(split(a.get("profiles"), ';'))
                                                                                   : nlohmann::json("all");
+        }
+        if (a.verb == "loft") {
+            // loft sections=s1;s2;… [ruled=yes] [op=new|join|cut|intersect]
+            //      (a section "s2:<area key>" picks one of several closed areas)
+            nlohmann::json secs = nlohmann::json::array();
+            for (const std::string& sec : split(a.get("sections"), ';')) {
+                const auto colon = sec.find(':');
+                if (colon == std::string::npos) {
+                    secs.push_back(sec);
+                }
+                else {
+                    secs.push_back({{"sketch", sec.substr(0, colon)}, {"profile", sec.substr(colon + 1)}});
+                }
+            }
+            params["sections"] = secs;
+            params["ruled"] = a.get("ruled", "no") == "yes";
         }
         std::string label = a.verb;
         label[0] = char(std::toupper(label[0]));

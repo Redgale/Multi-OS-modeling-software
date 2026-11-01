@@ -2683,6 +2683,47 @@ private slots:
 #endif
     }
 
+    // Loft from the panel: tick two sketches, the preview runs, OK makes the frustum.
+    void loftPanel()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        {
+            jig::ScriptRunner r(w.document());
+            QVERIFY(r.runText("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=20 h=20\n"
+                              "sketch id=s2 plane=XY offset=30\nrect sketch=s2 center=0,0 w=10 h=10\n").ok());
+        }
+        w.refreshAll();
+        w.runCommand("solid.loft");
+        auto* lp = qobject_cast<LoftPanel*>(w.featurePanel());
+        QVERIFY(lp);
+        QCOMPARE(lp->sections()->count(), 2);
+        QVERIFY(!lp->previewOk());
+        for (int i = 0; i < 2; ++i) {
+            lp->sections()->item(i)->setCheckState(Qt::Checked);
+        }
+        QTest::qWait(300);
+        QTRY_VERIFY(lp->previewOk());
+        w.viewport()->homeView();
+        QTRY_VERIFY(w.viewport()->meshesReady());
+        QTest::qWait(200);
+        w.grab().save(shotPath("loft-panel"));
+        QVERIFY(lp->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        const auto& st = w.document().state();
+        QCOMPARE(int(st.bodies.size()), 1);
+        QVERIFY(std::abs(jig::massProperties(st.bodies.begin()->second->shape()).volume - 7000) < 1e-3);
+        // the sketches it uses are hidden, and editing the loft reopens the panel with both ticked
+        w.editFeature(2);
+        auto* again = qobject_cast<LoftPanel*>(w.featurePanel());
+        QVERIFY(again);
+        QCOMPARE(again->sections()->item(0)->checkState(), Qt::Checked);
+        QCOMPARE(again->sections()->item(1)->checkState(), Qt::Checked);
+        again->cancel();
+    }
+
     // Move by the free grip: seen from above it moves in XY, from the front in XZ.
     void moveFreely()
     {
