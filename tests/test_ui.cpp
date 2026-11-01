@@ -2583,6 +2583,57 @@ private slots:
         }
     }
 
+    // Junk typed into the value box of every drawing tool: never a crash, and the sketch stays
+    // solvable (whatever was refused is explained in the message line).
+    void typedJunkIsHandled()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        {
+            jig::ScriptRunner r(w.document());
+            QVERIFY(r.runText("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=40 h=20\n").ok());
+        }
+        w.editFeature(0);
+        QTRY_VERIFY(w.sketchEditor() != nullptr);
+        SketchEditor* sk = w.sketchEditor();
+        Viewport* view = w.viewport();
+        using T = SketchEditor::Tool;
+        const QList<QStringList> junk {{"", ""},       {"abc", "x"},  {"-5", "-5"},       {"0", "0"},
+                                       {"1e9", "1e9"}, {"5 deg", "3"}, {"1/0", "2"},       {"10", "-90 deg"},
+                                       {"nan", "inf"}, {"10 mm + ", ")"}, {"3", "3", "3"}};
+        int tried = 0;
+        for (T tool : {T::Line, T::Rectangle, T::CenterRectangle, T::Circle, T::Arc, T::Arc3, T::Circle2, T::Circle3,
+                       T::Rect3, T::Slot, T::Ellipse, T::Polygon, T::Text}) {
+            for (const QStringList& values : junk) {
+                sk->setTool(tool);
+                // one click to start the shape (most tools then ask for sizes), then the junk
+                const QPoint at = sk->screenOf(60, 40);
+                QTest::mouseMove(view, at);
+                QTest::mouseClick(view, Qt::LeftButton, Qt::NoModifier, at);
+                sk->typeValues(values);
+                QTest::keyClick(view, Qt::Key_Escape);
+                ++tried;
+                for (auto& [id, e] : sk->sketch().entities()) {
+                    if (e.type == jig::EntityType::Point) {
+                        QVERIFY2(std::isfinite(e.x) && std::isfinite(e.y) && std::abs(e.x) < 1e7 && std::abs(e.y) < 1e7,
+                                 qPrintable(QString("tool %1, values %2: point %3,%4")
+                                                .arg(int(tool)).arg(values.join('|')).arg(e.x).arg(e.y)));
+                    }
+                    QVERIFY(std::isfinite(e.r) && std::abs(e.r) < 1e7);
+                }
+                QVERIFY2(w.document().status(0).level != jig::StatusLevel::Error,
+                         qPrintable(QString("tool %1, values %2: %3")
+                                        .arg(int(tool))
+                                        .arg(values.join('|'), QString::fromStdString(w.document().status(0).message))));
+            }
+        }
+        QCOMPARE(tried, 13 * int(junk.size()));
+        w.runCommand("sketch.finish");
+        QTRY_VERIFY(w.sketchEditor() == nullptr);
+    }
+
     // Move by the free grip: seen from above it moves in XY, from the front in XZ.
     void moveFreely()
     {
