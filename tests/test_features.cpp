@@ -2370,3 +2370,53 @@ TEST(Loft, ThroughSquaresIsAFrustum)
     EXPECT_EQ(two->status(2).level, StatusLevel::Error);
     EXPECT_NE(two->status(2).message.find("several closed areas"), std::string::npos) << two->status(2).message;
 }
+
+TEST(Sweep, AlongLinesAndArcs)
+{
+    // a 4 mm circle on the front plane pushed 50 mm along Y: a rod, pi r^2 L
+    auto rod = build("sketch id=s1 plane=XZ\ncircle sketch=s1 center=0,0 d=4\n"
+                     "sketch id=s2 plane=XY\nline sketch=s2 p1=0,0 p2=0,50\n"
+                     "sweep id=sw1 sketch=s1 path=s2\n");
+    expectAllOk(*rod);
+    EXPECT_NEAR(props(*rod).volume, pi * 4 * 50, 1e-3);
+    const auto& body = *rod->state().bodies.at("sw1");
+    for (const char* name : {"sw1/start", "sw1/end", "sw1/side1"}) {
+        EXPECT_EQ(body.findFaces(name).size(), 1u) << name;
+    }
+    // a ring (the area between two circles, picked by its key) stays a tube all the way:
+    // pi (R^2 - r^2) L
+    auto rings = build("sketch id=s1 plane=XZ\ncircle sketch=s1 center=0,0 d=10\ncircle sketch=s1 center=0,0 d=6\n");
+    std::string ringKey;
+    for (const auto& rg : rings->state().sketches.at("s1")->profiles.regions) {
+        if (std::abs(rg.area - pi * (25 - 9)) < 1e-6) {
+            ringKey = rg.key;
+        }
+    }
+    ASSERT_FALSE(ringKey.empty());
+    auto tube = build("sketch id=s1 plane=XZ\ncircle sketch=s1 center=0,0 d=10\ncircle sketch=s1 center=0,0 d=6\n"
+                      "sketch id=s2 plane=XY\nline sketch=s2 p1=0,0 p2=0,50\n"
+                      "sweep id=sw1 sketch=s1 path=s2 profiles=" + ringKey + "\n");
+    expectAllOk(*tube);
+    EXPECT_NEAR(props(*tube).volume, pi * (25 - 9) * 50, 1e-2);
+    // round a bend: 20 mm straight, then a quarter turn of radius 10 (Pappus: area x path length)
+    auto bend = build("sketch id=s1 plane=XZ\ncircle sketch=s1 center=0,0 d=4\n"
+                      "sketch id=s2 plane=XY\nline sketch=s2 p1=0,0 p2=0,20\n"
+                      "arc sketch=s2 center=10,20 r=10 from=90deg to=180deg\n"
+                      "sweep id=sw1 sketch=s1 path=s2\n");
+    expectAllOk(*bend);
+    EXPECT_NEAR(props(*bend).volume, pi * 4 * (20 + 5 * pi), pi * 4 * (20 + 5 * pi) * 1e-3);
+    // cut a channel through a block
+    auto cut = build("sketch id=b plane=XY\nrect sketch=b center=0,25 w=20 h=50\nextrude id=e1 sketch=b distance=10 "
+                     "direction=symmetric\n"
+                     "sketch id=s1 plane=XZ\ncircle sketch=s1 center=0,0 d=4\n"
+                     "sketch id=s2 plane=XY\nline sketch=s2 p1=0,0 p2=0,50\n"
+                     "sweep id=sw1 sketch=s1 path=s2 op=cut\n");
+    expectAllOk(*cut);
+    EXPECT_NEAR(props(*cut).volume, 20 * 50 * 10 - pi * 4 * 50, 1e-2);
+    // the path in the shape's own sketch is refused with a reason
+    auto self = std::make_unique<Document>();
+    ScriptRunner r(*self);
+    r.strict = false;
+    ASSERT_TRUE(r.runText("sketch id=s1 plane=XZ\ncircle sketch=s1 center=0,0 d=4\nsweep id=sw1 sketch=s1 path=s1\n").ok());
+    EXPECT_EQ(self->status(1).level, StatusLevel::Error);
+}

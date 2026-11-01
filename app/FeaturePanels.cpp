@@ -3222,6 +3222,114 @@ QString LoftPanel::title() const
     return tr("loft");
 }
 
+// ---------------------------------------------------------------- Sweep
+
+SweepPanel::SweepPanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent)
+    : FeaturePanel(doc, view, std::move(editId), parent)
+{
+    form_->addWidget(heading(this, tr("Sweep"),
+                             tr("Push a closed area along a path: a handle, a pipe, a rim. Draw the shape on one "
+                                "sketch and the path on another sketch that crosses it, starting at the shape.")));
+    sketch_ = new QComboBox(this);
+    areas_ = new QListWidget(this);
+    areas_->setMaximumHeight(100);
+    path_ = new QComboBox(this);
+    op_ = combo(this, {{tr("New body"), "new"},
+                       {tr("Join: add to the body"), "join"},
+                       {tr("Cut: remove material"), "cut"},
+                       {tr("Intersect: keep the overlap"), "intersect"}});
+    addRow(tr("Shape (sketch)"), sketch_);
+    addRow(tr("Closed areas"), areas_);
+    addRow(tr("Path (sketch)"), path_);
+    addRow(tr("Operation"), op_);
+    const auto before = stateBefore();
+    for (int i = 0; i < insertIndex(); ++i) {
+        const auto& f = doc_.model().features[size_t(i)];
+        auto it = before->sketches.find(f.id);
+        if (f.kind != jig::FeatureKind::Sketch || it == before->sketches.end()) {
+            continue;
+        }
+        if (!it->second->profiles.regions.empty()) {
+            sketch_->addItem(q(f.name), q(f.id));
+        }
+        path_->addItem(q(f.name), q(f.id));
+    }
+    nlohmann::json wanted = "all";
+    if (const jig::Feature* edit = editId_.empty() ? nullptr : doc_.feature(editId_)) {
+        select(sketch_, edit->params.value("sketch", std::string {}));
+        select(path_, edit->params.value("path", nlohmann::json::object()).value("sketch", std::string {}));
+        select(op_, edit->params.value("op", std::string("new")));
+        wanted = edit->params.value("profiles", nlohmann::json("all"));
+    }
+    else if (path_->count() > 1) {
+        path_->setCurrentIndex(path_->count() - 1);  // usually the sketch drawn last
+    }
+    fillAreas(wanted);
+    connect(sketch_, &QComboBox::currentIndexChanged, this, [this] {
+        fillAreas("all");
+        schedulePreview();
+    });
+    connect(areas_, &QListWidget::itemChanged, this, [this] { schedulePreview(); });
+    for (auto* c : {path_, op_}) {
+        connect(c, &QComboBox::currentIndexChanged, this, [this] { schedulePreview(); });
+    }
+    if (sketch_->count() == 0 || path_->count() < 2) {
+        status_->setText("<b>✕ " + tr("A sweep needs a sketch with a closed area and another sketch with the path.") +
+                         "</b>");
+        ok_->setEnabled(false);
+    }
+    else {
+        schedulePreview();
+    }
+}
+
+void SweepPanel::fillAreas(const nlohmann::json& wanted)
+{
+    areas_->blockSignals(true);
+    areas_->clear();
+    const auto before = stateBefore();
+    auto it = before->sketches.find(current(sketch_));
+    if (it != before->sketches.end()) {
+        int n = 1;
+        for (auto& r : it->second->profiles.regions) {
+            auto* item = new QListWidgetItem(tr("Area %1 · %2").arg(n++).arg(q(jig::formatArea(r.area, doc_.units()))),
+                                             areas_);
+            item->setData(Qt::UserRole, q(r.key));
+            item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+            const bool on = wanted == nlohmann::json("all") ||
+                            (wanted.is_array() && std::find(wanted.begin(), wanted.end(), r.key) != wanted.end());
+            item->setCheckState(on ? Qt::Checked : Qt::Unchecked);
+        }
+    }
+    areas_->blockSignals(false);
+}
+
+jig::Feature SweepPanel::draft() const
+{
+    jig::Feature f = startDraft(doc_, editId_, "sw", tr("Sweep"));
+    f.kind = jig::FeatureKind::Sweep;
+    nlohmann::json keys = nlohmann::json::array();
+    bool all = true;
+    for (int i = 0; i < areas_->count(); ++i) {
+        if (areas_->item(i)->checkState() == Qt::Checked) {
+            keys.push_back(areas_->item(i)->data(Qt::UserRole).toString().toStdString());
+        }
+        else {
+            all = false;
+        }
+    }
+    f.params = {{"sketch", current(sketch_)},
+                {"profiles", all ? nlohmann::json("all") : keys},
+                {"path", {{"sketch", current(path_)}, {"curves", "all"}}},
+                {"op", current(op_)}};
+    return f;
+}
+
+QString SweepPanel::title() const
+{
+    return tr("sweep");
+}
+
 // ---------------------------------------------------------------- Move
 
 // Three arrows (X, Y, Z) from the bodies' centre; drag a grip to move along that axis.

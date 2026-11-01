@@ -529,6 +529,16 @@
     </message>
     <message>
         <location line="+1" />
+        <source>Sweep</source>
+        <translation>[Swéép~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Push a closed area along a path of sketch curves: handles, pipes, rims.</source>
+        <translation>[Püsh á çlöséd áréá álöñg á páth öf skétçh çürvés: háñdlés, pîpés, rîms.~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
         <source>Hole</source>
         <translation>[Hölé~]</translation>
     </message>
@@ -1149,6 +1159,11 @@
         <location line="+1" />
         <source>Blend between closed areas on two or more sketches, e.g. a square base into a round top.</source>
         <translation>[Bléñd bétwééñ çlöséd áréás öñ twö ör möré skétçhés, é.g. á sqüáré básé îñtö á röüñd töp.~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Push a closed area along a path of sketch curves: handles, pipes, rims.</source>
+        <translation>[Püsh á çlöséd áréá álöñg á páth öf skétçh çürvés: háñdlés, pîpés, rîms.~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <location line="+1" />
@@ -1884,6 +1899,51 @@
         <location line="+1" />
         <source>This loft has an unknown operation.</source>
         <translation>[Thîs löft hás áñ üñkñöwñ öpérátîöñ.~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Edit the sweep and pick the sketch with the path.</source>
+        <translation>[Édît thé swéép áñd pîçk thé skétçh wîth thé páth.~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The path must be in a different sketch from the shape that goes along it.</source>
+        <translation>[Thé páth müst bé îñ á dîfféréñt skétçh fröm thé shápé thát göés álöñg ît.~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Draw the path on its own sketch, crossing the shape's sketch plane.</source>
+        <translation>[Dráw thé páth öñ îts öwñ skétçh, çrössîñg thé shápé's skétçh pláñé.~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>This shape could not be swept along the path.</source>
+        <translation>[Thîs shápé çöüld ñöt bé swépt álöñg thé páth.~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Put the shape at the start of the path, across it (the path should cross the shape's sketch plane).</source>
+        <translation>[Püt thé shápé át thé stárt öf thé páth, áçröss ît (thé páth shöüld çröss thé shápé's skétçh pláñé).~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Make sharp bends gentler: the shape must not run into itself.</source>
+        <translation>[Máké shárp béñds géñtlér: thé shápé müst ñöt rüñ îñtö îtsélf.~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>A hole in this shape could not be swept along the path.</source>
+        <translation>[Á hölé îñ thîs shápé çöüld ñöt bé swépt álöñg thé páth.~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>This sweep has an unknown operation.</source>
+        <translation>[Thîs swéép hás áñ üñkñöwñ öpérátîöñ.~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Put the shape at the start of the path, across it.</source>
+        <translation>[Püt thé shápé át thé stárt öf thé páth, áçröss ît.~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <location line="+1" />
@@ -2637,6 +2697,11 @@
     </message>
     <message>
         <location line="+1" />
+        <source>Open curves, used as a path by %1.</source>
+        <translation>[Öpéñ çürvés, üséd ás á páth bý %1.~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
         <source>This design uses a feature this version of Jigsmith doesn't know (%1).</source>
         <translation>[Thîs désîgñ üsés á féátüré thîs vérsîöñ öf Jîgsmîth döésñ't kñöw (%1).~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -2732,6 +2797,11 @@
     </message>
     <message>
         <location line="+1" />
+        <source>The sketch with this sweep's path (%1) is missing or comes later.</source>
+        <translation>[Thé skétçh wîth thîs swéép's páth (%1) îs mîssîñg ör çömés látér.~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
         <source>The body this pattern repeats (%1) no longer exists.</source>
         <translation>[Thé bödý thîs páttérñ répéáts (%1) ñö löñgér éxîsts.~~~~~~~~~~~~~]</translation>
     </message>
@@ -2781,7 +2851,7 @@
         <translation>[%1 édgés wéré ré-áttáçhéd bý shápé sîmîlárîtý áftér áñ éárlîér çháñgé. Çhéçk thé résült.~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="-38" />
+        <location line="-40" />
         <source>The id '%1' is already used.</source>
         <translation>[Thé îd '%1' îs álréádý üséd.~~~~~~]</translation>
     </message>
@@ -2791,7 +2861,7 @@
         <translation>[Thîs SVG hás ñö shápés, öütlîñés ör téxt tö brîñg îñ.~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+54" />
+        <location line="+56" />
         <source>A wall of %1 does not fit this outline.</source>
         <translation>[Á wáll öf %1 döés ñöt fît thîs öütlîñé.~~~~~~~~~]</translation>
     </message>
@@ -2866,12 +2936,12 @@
         <translation>[Thé föñt '%1' îs ñöt áváîláblé héré; üsîñg thé büîlt-îñ föñt (Îñtér).~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="-227" />
+        <location line="-229" />
         <source>There is nothing to export yet.</source>
         <translation>[Théré îs ñöthîñg tö éxpört ýét.~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="-181" />
+        <location line="-190" />
         <source>This DXF has no lines, circles, arcs, curves, text or blocks to bring in.</source>
         <translation>[Thîs DXF hás ñö lîñés, çîrçlés, árçs, çürvés, téxt ör blöçks tö brîñg îñ.~~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -2911,7 +2981,7 @@
         <translation>[Thát fáçé îs lévél wîth thé skétçh, sö théré îs ñö wáý tö téll whîçh wáý tö éxtrüdé.~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+108" />
+        <location line="+117" />
         <source>The 3MF file could not be created.</source>
         <translation>[Thé 3MF fîlé çöüld ñöt bé çréátéd.~~~~~~~~]</translation>
     </message>
@@ -3514,7 +3584,7 @@
 <context>
     <name>CoreWords</name>
     <message>
-        <location line="+90" />
+        <location line="+92" />
         <source>ball face (sphere)</source>
         <translation>[báll fáçé (sphéré)~~~~]</translation>
     </message>
@@ -3578,11 +3648,16 @@
         <source>straight edge</source>
         <translation>[stráîght édgé~~~~]</translation>
     </message>
+    <message>
+        <location line="+1" />
+        <source>sweep</source>
+        <translation>[swéép~]</translation>
+    </message>
 </context>
 <context>
     <name>MainWindow</name>
     <message>
-        <location filename="../app/MainWindow.cpp" line="+513" />
+        <location filename="../app/MainWindow.cpp" line="+515" />
         <source>Rebuilding the design…</source>
         <translation>[Rébüîldîñg thé désîgñ…~~~~~~]</translation>
     </message>
@@ -4583,7 +4658,7 @@
 <context>
     <name>jigapp::MainWindow</name>
     <message>
-        <location filename="../app/MainWindow.cpp" line="-146" />
+        <location filename="../app/MainWindow.cpp" line="-148" />
         <source>OK</source>
         <translation>[ÖK~]</translation>
     </message>
@@ -4609,15 +4684,15 @@
     </message>
     <message>
         <location line="+9" />
-        <location line="+733" />
+        <location line="+735" />
         <location line="+738" />
-        <location line="+898" />
+        <location line="+901" />
         <location line="+27" />
         <source>Sketch</source>
         <translation>[Skétçh~~]</translation>
     </message>
     <message>
-        <location line="-2394" />
+        <location line="-2399" />
         <source>Extrude</source>
         <translation>[Éxtrüdé~~]</translation>
     </message>
@@ -4700,6 +4775,11 @@
         <location line="+2" />
         <source>Loft</source>
         <translation>[Löft~]</translation>
+    </message>
+    <message>
+        <location line="+2" />
+        <source>Sweep</source>
+        <translation>[Swéép~]</translation>
     </message>
     <message>
         <location line="+2" />
@@ -4859,12 +4939,12 @@
     </message>
     <message>
         <location line="+2" />
-        <location line="+1575" />
+        <location line="+1578" />
         <source>Mouse and trackpad</source>
         <translation>[Möüsé áñd tráçkpád~~~~~]</translation>
     </message>
     <message>
-        <location line="-1573" />
+        <location line="-1576" />
         <source>Default (middle-drag pans, Shift+middle orbits)</source>
         <translation>[Défáült (mîddlé-drág páñs, Shîft+mîddlé örbîts)~~~~~~~~~~~~]</translation>
     </message>
@@ -4885,30 +4965,30 @@
     </message>
     <message>
         <location line="+11" />
-        <location line="+1548" />
+        <location line="+1551" />
         <source>Theme</source>
         <translation>[Thémé~]</translation>
     </message>
     <message>
-        <location line="-1546" />
-        <location line="+1501" />
+        <location line="-1549" />
+        <location line="+1504" />
         <source>Light</source>
         <translation>[Lîght~]</translation>
     </message>
     <message>
-        <location line="-1501" />
-        <location line="+1500" />
+        <location line="-1504" />
+        <location line="+1503" />
         <source>Dark</source>
         <translation>[Dárk~]</translation>
     </message>
     <message>
-        <location line="-1499" />
-        <location line="+1501" />
+        <location line="-1502" />
+        <location line="+1504" />
         <source>High contrast</source>
         <translation>[Hîgh çöñtrást~~~~]</translation>
     </message>
     <message>
-        <location line="-1493" />
+        <location line="-1496" />
         <source>&amp;Help</source>
         <translation>[&amp;Hélp~]</translation>
     </message>
@@ -5025,12 +5105,12 @@
     </message>
     <message>
         <location line="+2" />
-        <location line="+2109" />
+        <location line="+2124" />
         <source>Rename…</source>
         <translation>[Réñámé…~~]</translation>
     </message>
     <message>
-        <location line="-2106" />
+        <location line="-2121" />
         <source>Delete body</source>
         <translation>[Délété bödý~~~]</translation>
     </message>
@@ -5046,13 +5126,13 @@
     </message>
     <message>
         <location line="+5" />
-        <location line="+1555" />
+        <location line="+1558" />
         <location line="+58" />
         <source>Properties</source>
         <translation>[Pröpértîés~~~]</translation>
     </message>
     <message>
-        <location line="-1607" />
+        <location line="-1610" />
         <source>Properties and help</source>
         <translation>[Pröpértîés áñd hélp~~~~~]</translation>
     </message>
@@ -5138,12 +5218,12 @@
     </message>
     <message>
         <location line="+18" />
-        <location line="+1995" />
+        <location line="+2010" />
         <source>Move rollback marker</source>
         <translation>[Mövé röllbáçk márkér~~~~~~]</translation>
     </message>
     <message>
-        <location line="-1823" />
+        <location line="-1838" />
         <source>Start here: every part begins as a flat sketch.
 Click Sketch on the toolbar, then click a plane.
 Or open the phone stand sample (File ▸ Open a sample).</source>
@@ -5344,12 +5424,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+0" />
-        <location line="+360" />
+        <location line="+363" />
         <source>Jigsmith designs (*.jig)</source>
         <translation>[Jîgsmîth désîgñs (*.jîg)~~~~~~]</translation>
     </message>
     <message>
-        <location line="-313" />
+        <location line="-316" />
         <source>Save view</source>
         <translation>[Sávé vîéw~~]</translation>
     </message>
@@ -5364,7 +5444,7 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
         <translation>[Vîéw %1~]</translation>
     </message>
     <message>
-        <location line="+74" />
+        <location line="+77" />
         <source>Import STEP</source>
         <translation>[Împört STÉP~~~]</translation>
     </message>
@@ -5512,12 +5592,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+0" />
-        <location line="+931" />
+        <location line="+940" />
         <source>There is no 3D body yet.</source>
         <translation>[Théré îs ñö 3D bödý ýét.~~~~~]</translation>
     </message>
     <message>
-        <location line="-928" />
+        <location line="-937" />
         <source>STL mesh for slicers (*.stl)</source>
         <translation>[STL mésh för slîçérs (*.stl)~~~~~~]</translation>
     </message>
@@ -5788,7 +5868,7 @@ An empty design with the origin ready</source>
         <translation>[Théré îs ñö 3D bödý ýét: skétçh áñd éxtrüdé fîrst.~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+92" />
+        <location line="+101" />
         <source>That face was made by %1: change its size here.</source>
         <translation>[Thát fáçé wás mádé bý %1: çháñgé îts sîzé héré.~~~~~~~~~~~]</translation>
     </message>
@@ -5900,7 +5980,7 @@ An empty design with the origin ready</source>
         <translation>[Áñ împörtéd sölîd hás ñö séttîñgs tö çháñgé. Tö üsé á ñéwér çöpý öf thé fîlé, délété thîs stép áñd împört ît ágáîñ.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+30" />
+        <location line="+33" />
         <source>Edit…</source>
         <translation>[Édît…~]</translation>
     </message>
@@ -6215,7 +6295,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
 <context>
     <name>jigapp::MovePanel</name>
     <message>
-        <location line="+1157" />
+        <location line="+1265" />
         <source>free %1</source>
         <translation>[fréé %1~]</translation>
     </message>
@@ -6406,7 +6486,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
 <context>
     <name>jigapp::PatternPanel</name>
     <message>
-        <location line="-1877" />
+        <location line="-1985" />
         <location line="+154" />
         <source>Pattern</source>
         <translation>[Páttérñ~~]</translation>
@@ -8224,6 +8304,75 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
         <location line="+9" />
         <source>split</source>
         <translation>[splît~]</translation>
+    </message>
+</context>
+<context>
+    <name>jigapp::SweepPanel</name>
+    <message>
+        <location line="+80" />
+        <location line="+79" />
+        <source>Sweep</source>
+        <translation>[Swéép~]</translation>
+    </message>
+    <message>
+        <location line="-78" />
+        <source>Push a closed area along a path: a handle, a pipe, a rim. Draw the shape on one sketch and the path on another sketch that crosses it, starting at the shape.</source>
+        <translation>[Püsh á çlöséd áréá álöñg á páth: á háñdlé, á pîpé, á rîm. Dráw thé shápé öñ öñé skétçh áñd thé páth öñ áñöthér skétçh thát çrössés ît, stártîñg át thé shápé.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+6" />
+        <source>New body</source>
+        <translation>[Ñéw bödý~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Join: add to the body</source>
+        <translation>[Jöîñ: ádd tö thé bödý~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Cut: remove material</source>
+        <translation>[Çüt: rémövé mátérîál~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Intersect: keep the overlap</source>
+        <translation>[Îñtérséçt: kéép thé övérláp~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Shape (sketch)</source>
+        <translation>[Shápé (skétçh)~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Closed areas</source>
+        <translation>[Çlöséd áréás~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Path (sketch)</source>
+        <translation>[Páth (skétçh)~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Operation</source>
+        <translation>[Öpérátîöñ~~~]</translation>
+    </message>
+    <message>
+        <location line="+33" />
+        <source>A sweep needs a sketch with a closed area and another sketch with the path.</source>
+        <translation>[Á swéép ñééds á skétçh wîth á çlöséd áréá áñd áñöthér skétçh wîth thé páth.~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+18" />
+        <source>Area %1 · %2</source>
+        <translation>[Áréá %1 · %2~]</translation>
+    </message>
+    <message>
+        <location line="+35" />
+        <source>sweep</source>
+        <translation>[swéép~]</translation>
     </message>
 </context>
 <context>

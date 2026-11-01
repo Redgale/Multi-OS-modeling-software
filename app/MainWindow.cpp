@@ -164,6 +164,8 @@ QString kindWord(jig::FeatureKind k)
             return MainWindow::tr("Split");
         case jig::FeatureKind::Loft:
             return MainWindow::tr("Loft");
+        case jig::FeatureKind::Sweep:
+            return MainWindow::tr("Sweep");
         case jig::FeatureKind::Move:
             return MainWindow::tr("Move");
     }
@@ -1740,6 +1742,9 @@ void MainWindow::runCommand(const QString& id)
     else if (id == "solid.loft") {
         openLoft({});
     }
+    else if (id == "solid.sweep") {
+        openSweep({});
+    }
     else if (id == "solid.revolve") {
         openRevolve();
     }
@@ -2726,6 +2731,15 @@ void MainWindow::openBodyTool(const std::string& tool, const std::string& editId
     }
 }
 
+void MainWindow::openSweep(const std::string& editId)
+{
+    if (sketch_) {
+        exitSketch();
+    }
+    cancelPicker();
+    showPanel(new SweepPanel(*doc_, view_, editId, panelHost_));
+}
+
 void MainWindow::openLoft(const std::string& editId)
 {
     if (sketch_) {
@@ -3076,6 +3090,9 @@ void MainWindow::editFeature(int index)
             break;
         case jig::FeatureKind::Loft:
             openLoft(f.id);
+            break;
+        case jig::FeatureKind::Sweep:
+            openSweep(f.id);
             break;
         case jig::FeatureKind::Move:
             openBodyTool("solid.move", f.id);

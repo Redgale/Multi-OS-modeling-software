@@ -2724,6 +2724,40 @@ private slots:
         again->cancel();
     }
 
+    // Sweep from the panel: the shape's sketch, the path's sketch, OK makes the rod.
+    void sweepPanel()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        {
+            jig::ScriptRunner r(w.document());
+            QVERIFY(r.runText("sketch id=s1 plane=XZ\ncircle sketch=s1 center=0,0 d=4\n"
+                              "sketch id=s2 plane=XY\nline sketch=s2 p1=0,0 p2=0,20\n"
+                              "arc sketch=s2 center=10,20 r=10 from=90deg to=180deg\n").ok());
+        }
+        w.refreshAll();
+        w.runCommand("solid.sweep");
+        auto* sp = qobject_cast<SweepPanel*>(w.featurePanel());
+        QVERIFY(sp);
+        QCOMPARE(sp->sketch()->currentData().toString(), QString("s1"));
+        QCOMPARE(sp->path()->currentData().toString(), QString("s2"));
+        QCOMPARE(sp->areas()->count(), 1);
+        QTRY_VERIFY(sp->previewOk());
+        w.viewport()->homeView();
+        QTRY_VERIFY(w.viewport()->meshesReady());
+        QTest::qWait(200);
+        w.grab().save(shotPath("sweep-panel"));
+        QVERIFY(sp->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        const double want = std::numbers::pi * 4 * (20 + 5 * std::numbers::pi);
+        const auto& st = w.document().state();
+        QCOMPARE(int(st.bodies.size()), 1);
+        QVERIFY(std::abs(jig::massProperties(st.bodies.begin()->second->shape()).volume - want) < want * 1e-3);
+        QVERIFY(w.document().status(1).level == jig::StatusLevel::Ok);  // the path sketch: no warning
+    }
+
     // Move by the free grip: seen from above it moves in XY, from the front in XZ.
     void moveFreely()
     {

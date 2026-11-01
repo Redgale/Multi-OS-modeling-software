@@ -16,8 +16,10 @@
 #include <gp_Cylinder.hxx>
 #include <BRepPrimAPI_MakeCylinder.hxx>
 #include <BRepAlgoAPI_Cut.hxx>
+#include <BRepAlgoAPI_Fuse.hxx>
 #include <BRepTools.hxx>
 #include <BRepOffsetAPI_ThruSections.hxx>
+#include <BRepOffsetAPI_MakePipeShell.hxx>
 #include <BRepAdaptor_Surface.hxx>
 #include <TopoDS_Compound.hxx>
 #include <BRep_Builder.hxx>
@@ -1041,6 +1043,174 @@ FeatureOutcome applyLoft(const Document& doc, const Feature& f, const std::share
         const char* m = e.GetMessageString();
         return failed("These sections could not be joined into a solid.",
                       {"Check that the sketches are on different planes and in order."}, m ? m : "");
+    }
+}
+
+// ---------------------------------------------------------------- sweep
+
+namespace
+{
+// One closed outline pushed along the path, turning with it. The outline's first and last
+// positions and the faces made from its edges are reported for naming.
+struct SweptWire
+{
+    TopoDS_Shape solid;
+    TopoDS_Shape first, last;
+    std::vector<TopoDS_Shape> sides;
+};
+
+std::optional<SweptWire> sweepWire(const TopoDS_Wire& spine, const TopoDS_Wire& outline)
+{
+    BRepOffsetAPI_MakePipeShell pipe(spine);
+    pipe.SetMode(false);  // corrected Frenet: the section turns smoothly with the path
+    pipe.Add(outline, false, false);
+    pipe.Build();
+    if (!pipe.IsDone() || !pipe.MakeSolid()) {
+        return std::nullopt;
+    }
+    SweptWire out;
+    out.solid = pipe.Shape();
+    out.first = pipe.FirstShape();
+    out.last = pipe.LastShape();
+    for (TopExp_Explorer ex(outline, TopAbs_EDGE); ex.More(); ex.Next()) {
+        const TopTools_ListOfShape& made = pipe.Generated(ex.Current());
+        out.sides.push_back(made.IsEmpty() ? TopoDS_Shape() : made.First());
+    }
+    return out;
+}
+}  // namespace
+
+// A sketch's closed area pushed along a path of curves in another sketch (a handle, a pipe, a
+// rim). Holes in the area stay holes all the way along.
+FeatureOutcome applySweep(const Document& doc, const Feature& f, const std::shared_ptr<const ModelState>& in)
+{
+    (void)doc;
+    const auto& p = f.params;
+    FeatureStatus status;
+    const std::string sketchId = p.value("sketch", std::string {});
+    const SketchState* skp = findSketch(in, sketchId);
+    if (!skp) {
+        return missingSketch(word("sweep"), sketchId);
+    }
+    std::vector<const Profile*> profiles;
+    if (auto bad = selectProfiles(*skp, p, status, word("sweep"), profiles)) {
+        return *bad;
+    }
+    const nlohmann::json pj = p.value("path", nlohmann::json::object());
+    const std::string pathId = pj.value("sketch", std::string {});
+    const SketchState* pathSketch = findSketch(in, pathId);
+    if (!pathSketch) {
+        return failed(fmt("The sketch with this sweep's path (%1) is missing or comes later.", {pathId}),
+                      {"Edit the sweep and pick the sketch with the path."});
+    }
+    if (pathId == sketchId) {
+        return failed("The path must be in a different sketch from the shape that goes along it.",
+                      {"Draw the path on its own sketch, crossing the shape's sketch plane."});
+    }
+    std::vector<int> curves;
+    const nlohmann::json cj = pj.value("curves", nlohmann::json("all"));
+    if (cj.is_array()) {
+        for (auto& c : cj) {
+            curves.push_back(c.get<int>());
+        }
+    }
+    else {
+        for (auto& [id, e] : pathSketch->solved.entities()) {
+            if (e.type != EntityType::Point && !e.construction) {
+                curves.push_back(id);
+            }
+        }
+    }
+    auto path = sketchPath(pathSketch->solved, pathSketch->frame, curves);
+    if (!path) {
+        return failed(path.error());
+    }
+    try {
+        TopoDS_Shape result;
+        std::vector<std::pair<TopoDS_Shape, std::string>> names;  // face -> name
+        int sideNo = 0, holeNo = 0;
+        for (const Profile* pr : profiles) {
+            const TopoDS_Wire outer = BRepTools::OuterWire(pr->face);
+            auto main = sweepWire(path->wire, outer);
+            if (!main) {
+                return failed("This shape could not be swept along the path.",
+                              {"Put the shape at the start of the path, across it (the path should cross the "
+                               "shape's sketch plane).",
+                               "Make sharp bends gentler: the shape must not run into itself."});
+            }
+            TopoDS_Shape solid = main->solid;
+            names.emplace_back(main->first, f.id + "/start");
+            names.emplace_back(main->last, f.id + "/end");
+            for (const auto& side : main->sides) {
+                ++sideNo;
+                if (!side.IsNull()) {
+                    names.emplace_back(side, f.id + "/side" + std::to_string(sideNo));
+                }
+            }
+            for (TopExp_Explorer ex(pr->face, TopAbs_WIRE); ex.More(); ex.Next()) {
+                const TopoDS_Wire w = TopoDS::Wire(ex.Current());
+                if (w.IsSame(outer)) {
+                    continue;
+                }
+                auto hole = sweepWire(path->wire, w);
+                if (!hole) {
+                    return failed("A hole in this shape could not be swept along the path.");
+                }
+                ++holeNo;
+                for (const auto& side : hole->sides) {
+                    if (!side.IsNull()) {
+                        names.emplace_back(side, f.id + "/hole" + std::to_string(holeNo));
+                    }
+                }
+                BRepAlgoAPI_Cut cut(solid, hole->solid);
+                if (!cut.IsDone()) {
+                    return failed("A hole in this shape could not be swept along the path.");
+                }
+                // the named faces survive the cut as (modified) faces of the result
+                for (auto& [face, name] : names) {
+                    const TopTools_ListOfShape& mod = cut.Modified(face);
+                    if (!mod.IsEmpty()) {
+                        face = mod.First();
+                    }
+                }
+                solid = cut.Shape();
+            }
+            if (result.IsNull()) {
+                result = solid;
+            }
+            else {
+                BRepAlgoAPI_Fuse fuse(result, solid);
+                for (auto& [face, name] : names) {
+                    const TopTools_ListOfShape& mod = fuse.Modified(face);
+                    if (!mod.IsEmpty()) {
+                        face = mod.First();
+                    }
+                }
+                result = fuse.Shape();
+            }
+        }
+        NamedShape tool(result);
+        int other = 0;
+        for (int i = 0; i < tool.faceCount(); ++i) {
+            std::string name;
+            for (const auto& [face, n] : names) {
+                if (!face.IsNull() && tool.face(i).IsSame(face)) {
+                    name = n;
+                    break;
+                }
+            }
+            tool.setFaceName(i, name.empty() ? f.id + "/face" + std::to_string(++other) : name);
+        }
+        auto op = opFromString(p.value("op", std::string("new")));
+        if (!op) {
+            return failed("This sweep has an unknown operation.");
+        }
+        return applyTool(f, *op, std::move(tool), in, status);
+    }
+    catch (const Standard_Failure& e) {
+        const char* m = e.GetMessageString();
+        return failed("This shape could not be swept along the path.",
+                      {"Put the shape at the start of the path, across it."}, m ? m : "");
     }
 }
 
@@ -2072,6 +2242,8 @@ FeatureOutcome applyFeature(const Document& doc, const Feature& f, const std::sh
                 return applyRevolve(doc, f, in);
             case FeatureKind::Loft:
                 return applyLoft(doc, f, in);
+            case FeatureKind::Sweep:
+                return applySweep(doc, f, in);
             case FeatureKind::Hole:
                 return applyHole(doc, f, in);
             case FeatureKind::Pattern:

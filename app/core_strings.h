@@ -52,6 +52,7 @@ QT_TRANSLATE_NOOP("Core", "Turn a curve into a guide that is ignored when extrud
 QT_TRANSLATE_NOOP("Core", "Push a closed sketch area into 3D, adding or cutting material.")
 QT_TRANSLATE_NOOP("Core", "Spin a profile around an axis, like a lathe: knobs, cups, wheels.")
 QT_TRANSLATE_NOOP("Core", "Blend between closed areas on two or more sketches, e.g. a square base into a round top.")
+QT_TRANSLATE_NOOP("Core", "Push a closed area along a path of sketch curves: handles, pipes, rims.")
 QT_TRANSLATE_NOOP("Core", "Drill a plain, counterbored or countersunk hole for a screw.")
 QT_TRANSLATE_NOOP("Core", "Copy a body across a plane, e.g. to make a symmetric part.")
 QT_TRANSLATE_NOOP("Core", "Repeat a feature in rows and columns.")
@@ -207,6 +208,15 @@ QT_TRANSLATE_NOOP("Core", "These sections could not be joined into a solid.")
 QT_TRANSLATE_NOOP("Core", "Check that the sketches are on different planes and in order.")
 QT_TRANSLATE_NOOP("Core", "Sections with very different numbers of corners loft more easily as smooth shapes.")
 QT_TRANSLATE_NOOP("Core", "This loft has an unknown operation.")
+QT_TRANSLATE_NOOP("Core", "Edit the sweep and pick the sketch with the path.")
+QT_TRANSLATE_NOOP("Core", "The path must be in a different sketch from the shape that goes along it.")
+QT_TRANSLATE_NOOP("Core", "Draw the path on its own sketch, crossing the shape's sketch plane.")
+QT_TRANSLATE_NOOP("Core", "This shape could not be swept along the path.")
+QT_TRANSLATE_NOOP("Core", "Put the shape at the start of the path, across it (the path should cross the shape's sketch plane).")
+QT_TRANSLATE_NOOP("Core", "Make sharp bends gentler: the shape must not run into itself.")
+QT_TRANSLATE_NOOP("Core", "A hole in this shape could not be swept along the path.")
+QT_TRANSLATE_NOOP("Core", "This sweep has an unknown operation.")
+QT_TRANSLATE_NOOP("Core", "Put the shape at the start of the path, across it.")
 QT_TRANSLATE_NOOP("Core", "The body of the face to push or pull no longer exists.")
 QT_TRANSLATE_NOOP("Core", "Edit the step and click a face.")
 QT_TRANSLATE_NOOP("Core", "The face to push or pull no longer exists.")
@@ -484,6 +494,7 @@ inline const char* const kCorePatterns[] = {
     QT_TRANSLATE_NOOP("Core", "Move it to a place before “%1”."),
     QT_TRANSLATE_NOOP("Core", "Moving “%1” there would stop %2 from working."),
     QT_TRANSLATE_NOOP("Core", "Open curves, used as a wall by %1."),
+    QT_TRANSLATE_NOOP("Core", "Open curves, used as a path by %1."),
     QT_TRANSLATE_NOOP("Core", "This design uses a feature this version of Jigsmith doesn't know (%1)."),
     QT_TRANSLATE_NOOP("Core", "The plane '%1' is missing or comes later in the timeline."),
     QT_TRANSLATE_NOOP("Core", "The axis '%1' does not exist (or comes later in the timeline)."),
@@ -503,6 +514,7 @@ inline const char* const kCorePatterns[] = {
     QT_TRANSLATE_NOOP("Core", "The closed area this loft used is gone from the sketch %1."),
     QT_TRANSLATE_NOOP("Core", "The sketch %1 has no closed area to loft through."),
     QT_TRANSLATE_NOOP("Core", "The sketch %1 has several closed areas; pick one for the loft."),
+    QT_TRANSLATE_NOOP("Core", "The sketch with this sweep's path (%1) is missing or comes later."),
     QT_TRANSLATE_NOOP("Core", "The body this pattern repeats (%1) no longer exists."),
     QT_TRANSLATE_NOOP("Core", "The step this pattern repeats (%1) is missing, after the pattern, or has a problem."),
     QT_TRANSLATE_NOOP("Core", "The sketch with this pattern's path (%1) is missing or comes later."),
@@ -545,4 +557,5 @@ QT_TRANSLATE_NOOP("CoreWords", "round face (cylinder)")
 QT_TRANSLATE_NOOP("CoreWords", "rounded face (torus)")
 QT_TRANSLATE_NOOP("CoreWords", "shape")
 QT_TRANSLATE_NOOP("CoreWords", "straight edge")
+QT_TRANSLATE_NOOP("CoreWords", "sweep")
 #endif

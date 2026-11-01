@@ -53,6 +53,8 @@ const char* toString(FeatureKind k)
             return "remove";
         case FeatureKind::Loft:
             return "loft";
+        case FeatureKind::Sweep:
+            return "sweep";
     }
     return "sketch";
 }
@@ -75,7 +77,7 @@ std::optional<FeatureKind> featureKindFromString(std::string_view s)
         return FeatureKind::Shell;
     }
     for (auto k : {FeatureKind::Revolve, FeatureKind::Hole, FeatureKind::Pattern, FeatureKind::Mirror, FeatureKind::Plane,
-                   FeatureKind::Combine, FeatureKind::Split, FeatureKind::Move, FeatureKind::Axis, FeatureKind::PressPull, FeatureKind::Point, FeatureKind::Import, FeatureKind::Remove, FeatureKind::Loft}) {
+                   FeatureKind::Combine, FeatureKind::Split, FeatureKind::Move, FeatureKind::Axis, FeatureKind::PressPull, FeatureKind::Point, FeatureKind::Import, FeatureKind::Remove, FeatureKind::Loft, FeatureKind::Sweep}) {
         if (s == toString(k)) {
             return k;
         }
@@ -592,6 +594,14 @@ void Document::recompute()
                 statuses_[size_t(j)].level == StatusLevel::Ok) {
                 statuses_[size_t(i)] = {};
                 statuses_[size_t(i)].message = fmt("Open curves, used as a wall by %1.", {g.name});
+                break;
+            }
+            // a path for a sweep or a pattern is meant to be open
+            const nlohmann::json path = g.params.value("path", nlohmann::json::object());
+            if ((g.kind == FeatureKind::Sweep || g.kind == FeatureKind::Pattern) && path.is_object() &&
+                path.value("sketch", std::string {}) == f.id && statuses_[size_t(j)].level != StatusLevel::Error) {
+                statuses_[size_t(i)] = {};
+                statuses_[size_t(i)].message = fmt("Open curves, used as a path by %1.", {g.name});
                 break;
             }
         }

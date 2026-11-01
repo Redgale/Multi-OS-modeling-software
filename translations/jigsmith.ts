@@ -530,6 +530,16 @@
     </message>
     <message>
         <location line="+1"/>
+        <source>Sweep</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Push a closed area along a path of sketch curves: handles, pipes, rims.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>Hole</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1149,6 +1159,11 @@
     <message>
         <location line="+1"/>
         <source>Blend between closed areas on two or more sketches, e.g. a square base into a round top.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Push a closed area along a path of sketch curves: handles, pipes, rims.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -1884,6 +1899,51 @@
     <message>
         <location line="+1"/>
         <source>This loft has an unknown operation.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Edit the sweep and pick the sketch with the path.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The path must be in a different sketch from the shape that goes along it.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Draw the path on its own sketch, crossing the shape&apos;s sketch plane.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>This shape could not be swept along the path.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Put the shape at the start of the path, across it (the path should cross the shape&apos;s sketch plane).</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Make sharp bends gentler: the shape must not run into itself.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>A hole in this shape could not be swept along the path.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>This sweep has an unknown operation.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Put the shape at the start of the path, across it.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -2638,6 +2698,11 @@
     </message>
     <message>
         <location line="+1"/>
+        <source>Open curves, used as a path by %1.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>This design uses a feature this version of Jigsmith doesn&apos;t know (%1).</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2733,6 +2798,11 @@
     </message>
     <message>
         <location line="+1"/>
+        <source>The sketch with this sweep&apos;s path (%1) is missing or comes later.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>The body this pattern repeats (%1) no longer exists.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2782,7 +2852,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-38"/>
+        <location line="-40"/>
         <source>The id &apos;%1&apos; is already used.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2792,7 +2862,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+54"/>
+        <location line="+56"/>
         <source>A wall of %1 does not fit this outline.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2867,12 +2937,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-227"/>
+        <location line="-229"/>
         <source>There is nothing to export yet.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-181"/>
+        <location line="-190"/>
         <source>This DXF has no lines, circles, arcs, curves, text or blocks to bring in.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2912,7 +2982,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+108"/>
+        <location line="+117"/>
         <source>The 3MF file could not be created.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3515,7 +3585,7 @@
 <context>
     <name>CoreWords</name>
     <message>
-        <location line="+90"/>
+        <location line="+92"/>
         <source>ball face (sphere)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3579,11 +3649,16 @@
         <source>straight edge</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <location line="+1"/>
+        <source>sweep</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>MainWindow</name>
     <message>
-        <location filename="../app/MainWindow.cpp" line="+513"/>
+        <location filename="../app/MainWindow.cpp" line="+515"/>
         <source>Rebuilding the design…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4586,7 +4661,7 @@
 <context>
     <name>jigapp::MainWindow</name>
     <message>
-        <location filename="../app/MainWindow.cpp" line="-146"/>
+        <location filename="../app/MainWindow.cpp" line="-148"/>
         <source>OK</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4612,15 +4687,15 @@
     </message>
     <message>
         <location line="+9"/>
-        <location line="+733"/>
+        <location line="+735"/>
         <location line="+738"/>
-        <location line="+898"/>
+        <location line="+901"/>
         <location line="+27"/>
         <source>Sketch</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2394"/>
+        <location line="-2399"/>
         <source>Extrude</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4702,6 +4777,11 @@
     <message>
         <location line="+2"/>
         <source>Loft</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Sweep</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -4862,12 +4942,12 @@
     </message>
     <message>
         <location line="+2"/>
-        <location line="+1575"/>
+        <location line="+1578"/>
         <source>Mouse and trackpad</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1573"/>
+        <location line="-1576"/>
         <source>Default (middle-drag pans, Shift+middle orbits)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4888,30 +4968,30 @@
     </message>
     <message>
         <location line="+11"/>
-        <location line="+1548"/>
+        <location line="+1551"/>
         <source>Theme</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1546"/>
-        <location line="+1501"/>
+        <location line="-1549"/>
+        <location line="+1504"/>
         <source>Light</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1501"/>
-        <location line="+1500"/>
+        <location line="-1504"/>
+        <location line="+1503"/>
         <source>Dark</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1499"/>
-        <location line="+1501"/>
+        <location line="-1502"/>
+        <location line="+1504"/>
         <source>High contrast</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1493"/>
+        <location line="-1496"/>
         <source>&amp;Help</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5028,12 +5108,12 @@
     </message>
     <message>
         <location line="+2"/>
-        <location line="+2109"/>
+        <location line="+2124"/>
         <source>Rename…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2106"/>
+        <location line="-2121"/>
         <source>Delete body</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5049,13 +5129,13 @@
     </message>
     <message>
         <location line="+5"/>
-        <location line="+1555"/>
+        <location line="+1558"/>
         <location line="+58"/>
         <source>Properties</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1607"/>
+        <location line="-1610"/>
         <source>Properties and help</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5141,12 +5221,12 @@
     </message>
     <message>
         <location line="+18"/>
-        <location line="+1995"/>
+        <location line="+2010"/>
         <source>Move rollback marker</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1823"/>
+        <location line="-1838"/>
         <source>Start here: every part begins as a flat sketch.
 Click Sketch on the toolbar, then click a plane.
 Or open the phone stand sample (File ▸ Open a sample).</source>
@@ -5345,12 +5425,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+0"/>
-        <location line="+360"/>
+        <location line="+363"/>
         <source>Jigsmith designs (*.jig)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-313"/>
+        <location line="-316"/>
         <source>Save view</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5365,7 +5445,7 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+74"/>
+        <location line="+77"/>
         <source>Import STEP</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5515,12 +5595,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+0"/>
-        <location line="+931"/>
+        <location line="+940"/>
         <source>There is no 3D body yet.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-928"/>
+        <location line="-937"/>
         <source>STL mesh for slicers (*.stl)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5790,7 +5870,7 @@ An empty design with the origin ready</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+92"/>
+        <location line="+101"/>
         <source>That face was made by %1: change its size here.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5906,7 +5986,7 @@ An empty design with the origin ready</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+30"/>
+        <location line="+33"/>
         <source>Edit…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6219,7 +6299,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::MovePanel</name>
     <message>
-        <location line="+1157"/>
+        <location line="+1265"/>
         <source>free %1</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6412,7 +6492,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::PatternPanel</name>
     <message>
-        <location line="-1877"/>
+        <location line="-1985"/>
         <location line="+154"/>
         <source>Pattern</source>
         <translation type="unfinished"></translation>
@@ -8235,6 +8315,75 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
     <message>
         <location line="+9"/>
         <source>split</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>jigapp::SweepPanel</name>
+    <message>
+        <location line="+80"/>
+        <location line="+79"/>
+        <source>Sweep</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-78"/>
+        <source>Push a closed area along a path: a handle, a pipe, a rim. Draw the shape on one sketch and the path on another sketch that crosses it, starting at the shape.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>New body</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Join: add to the body</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Cut: remove material</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Intersect: keep the overlap</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Shape (sketch)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Closed areas</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Path (sketch)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Operation</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+33"/>
+        <source>A sweep needs a sketch with a closed area and another sketch with the path.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+18"/>
+        <source>Area %1 · %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+35"/>
+        <source>sweep</source>
         <translation type="unfinished"></translation>
     </message>
 </context>

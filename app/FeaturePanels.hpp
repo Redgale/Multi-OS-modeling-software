@@ -659,6 +659,39 @@ private:
     QComboBox* op_;
 };
 
+// Create ▸ Sweep: a closed area of one sketch pushed along the curves of another.
+class SweepPanel : public FeaturePanel
+{
+    Q_OBJECT
+public:
+    SweepPanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent = nullptr);
+    QComboBox* sketch() const
+    {
+        return sketch_;
+    }
+    QListWidget* areas() const
+    {
+        return areas_;
+    }
+    QComboBox* path() const
+    {
+        return path_;
+    }
+    QComboBox* operation() const
+    {
+        return op_;
+    }
+
+protected:
+    jig::Feature draft() const override;
+    QString title() const override;
+
+private:
+    void fillAreas(const nlohmann::json& wanted);
+    QComboBox *sketch_, *path_, *op_;
+    QListWidget* areas_;
+};
+
 class MoveHandle;
 
 // Move / copy bodies: shift along X, Y, Z and turn around an origin axis.

@@ -67,7 +67,8 @@ enum class FeatureKind
     Point,      // construction point (typed position, end or centre of an edge, centre of a face)
     Import,     // a solid brought in from a STEP file, kept inside the design
     Remove,     // bodies taken out of the design from here on (delete a body)
-    Loft        // a solid through closed areas of two or more sketches, in order
+    Loft,       // a solid through closed areas of two or more sketches, in order
+    Sweep       // a sketch's closed area pushed along a path of curves in another sketch
 };
 
 const char* toString(FeatureKind k);
