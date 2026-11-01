@@ -4309,15 +4309,15 @@
     </message>
     <message>
         <location line="+9" />
-        <location line="+654" />
-        <location line="+737" />
+        <location line="+656" />
+        <location line="+738" />
         <location line="+834" />
         <location line="+27" />
         <source>Sketch</source>
         <translation>[Skétçh~~]</translation>
     </message>
     <message>
-        <location line="-2250" />
+        <location line="-2253" />
         <source>Extrude</source>
         <translation>[Éxtrüdé~~]</translation>
     </message>
@@ -4463,12 +4463,12 @@
     </message>
     <message>
         <location line="+4" />
-        <location line="+837" />
+        <location line="+840" />
         <source>&lt;p&gt;Nothing selected.&lt;/p&gt;</source>
         <translation>[&lt;p&gt;Ñöthîñg séléçtéd.&lt;/p&gt;~~~~~]</translation>
     </message>
     <message>
-        <location line="-826" />
+        <location line="-829" />
         <source>&lt;h3&gt;Body&lt;/h3&gt;&lt;p&gt;&lt;b&gt;Name:&lt;/b&gt; %1&lt;br&gt;&lt;b&gt;Volume:&lt;/b&gt; %2&lt;br&gt;&lt;b&gt;Size:&lt;/b&gt; %3 × %4 × %5&lt;br&gt;&lt;b&gt;Faces:&lt;/b&gt; %6&lt;/p&gt;&lt;p&gt;Right-click it in the Browser to hide, isolate or rename it.&lt;/p&gt;</source>
         <translation>[&lt;h3&gt;Bödý&lt;/h3&gt;&lt;p&gt;&lt;b&gt;Ñámé:&lt;/b&gt; %1&lt;br&gt;&lt;b&gt;Völümé:&lt;/b&gt; %2&lt;br&gt;&lt;b&gt;Sîzé:&lt;/b&gt; %3 × %4 × %5&lt;br&gt;&lt;b&gt;Fáçés:&lt;/b&gt; %6&lt;/p&gt;&lt;p&gt;Rîght-çlîçk ît îñ thé Bröwsér tö hîdé, îsöláté ör réñámé ît.&lt;/p&gt;~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -4478,7 +4478,7 @@
         <translation>[&lt;h3&gt;Fáçé&lt;/h3&gt;&lt;p&gt;&lt;b&gt;Ñámé:&lt;/b&gt; %1&lt;br&gt;&lt;b&gt;Sürfáçé:&lt;/b&gt; %2&lt;br&gt;&lt;b&gt;Áréá:&lt;/b&gt; %3&lt;br&gt;&lt;b&gt;Bödý:&lt;/b&gt; %4&lt;/p&gt;&lt;p&gt;Fáçés kéép théîr ñámé whéñ éárlîér stéps çháñgé, sö fîlléts áñd skétçhés stáý áttáçhéd.&lt;/p&gt;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+60" />
+        <location line="+62" />
         <source>Key: %1</source>
         <translation>[Kéý: %1~]</translation>
     </message>
@@ -4554,12 +4554,12 @@
     </message>
     <message>
         <location line="+2" />
-        <location line="+1510" />
+        <location line="+1511" />
         <source>Mouse and trackpad</source>
         <translation>[Möüsé áñd tráçkpád~~~~~]</translation>
     </message>
     <message>
-        <location line="-1508" />
+        <location line="-1509" />
         <source>Default (middle-drag pans, Shift+middle orbits)</source>
         <translation>[Défáült (mîddlé-drág páñs, Shîft+mîddlé örbîts)~~~~~~~~~~~~]</translation>
     </message>
@@ -4580,30 +4580,30 @@
     </message>
     <message>
         <location line="+11" />
-        <location line="+1483" />
+        <location line="+1484" />
         <source>Theme</source>
         <translation>[Thémé~]</translation>
     </message>
     <message>
-        <location line="-1481" />
-        <location line="+1436" />
+        <location line="-1482" />
+        <location line="+1437" />
         <source>Light</source>
         <translation>[Lîght~]</translation>
     </message>
     <message>
-        <location line="-1436" />
-        <location line="+1435" />
+        <location line="-1437" />
+        <location line="+1436" />
         <source>Dark</source>
         <translation>[Dárk~]</translation>
     </message>
     <message>
-        <location line="-1434" />
-        <location line="+1436" />
+        <location line="-1435" />
+        <location line="+1437" />
         <source>High contrast</source>
         <translation>[Hîgh çöñtrást~~~~]</translation>
     </message>
     <message>
-        <location line="-1428" />
+        <location line="-1429" />
         <source>&amp;Help</source>
         <translation>[&amp;Hélp~]</translation>
     </message>
@@ -4720,12 +4720,12 @@
     </message>
     <message>
         <location line="+2" />
-        <location line="+2032" />
+        <location line="+2033" />
         <source>Rename…</source>
         <translation>[Réñámé…~~]</translation>
     </message>
     <message>
-        <location line="-2029" />
+        <location line="-2030" />
         <source>Delete body</source>
         <translation>[Délété bödý~~~]</translation>
     </message>
@@ -4741,13 +4741,13 @@
     </message>
     <message>
         <location line="+5" />
-        <location line="+1490" />
+        <location line="+1491" />
         <location line="+58" />
         <source>Properties</source>
         <translation>[Pröpértîés~~~]</translation>
     </message>
     <message>
-        <location line="-1542" />
+        <location line="-1543" />
         <source>Properties and help</source>
         <translation>[Pröpértîés áñd hélp~~~~~]</translation>
     </message>
@@ -4833,7 +4833,7 @@
     </message>
     <message>
         <location line="+18" />
-        <location line="+1918" />
+        <location line="+1919" />
         <source>Move rollback marker</source>
         <translation>[Mövé röllbáçk márkér~~~~~~]</translation>
     </message>
@@ -7129,7 +7129,12 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
         <translation>[Týpé thé wörds (\ñ stárts á ñéw lîñé), Táb, thé sîzé, théñ préss Éñtér.~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+3" />
+        <location line="+1" />
+        <source>Click where the middle of the text goes (on a curve, it follows it).</source>
+        <translation>[Çlîçk whéré thé mîddlé öf thé téxt göés (öñ á çürvé, ît föllöws ît).~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+2" />
         <source>Click the piece of a curve to remove. It is cut where other curves cross it.</source>
         <translation>[Çlîçk thé pîéçé öf á çürvé tö rémövé. Ît îs çüt whéré öthér çürvés çröss ît.~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -7408,12 +7413,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
         <translation>[Çlîçk thé éñd, ör týpé á léñgth (Táb: áñglé) áñd préss Éñtér. Drág fröm thé lást pöîñt för á táñgéñt árç. Çlîçk thé fîrst pöîñt tö çlösé. Ésç éñds.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+52" />
-        <source>Click where the middle of the text goes (on a circle or arc, it bends along it).</source>
-        <translation>[Çlîçk whéré thé mîddlé öf thé téxt göés (öñ á çîrçlé ör árç, ît béñds álöñg ît).~~~~~~~~~~~~~~~~~~~~]</translation>
-    </message>
-    <message>
-        <location line="+31" />
+        <location line="+83" />
         <source>Click an edge of a body (or a face, for its whole outline) to bring it into the sketch. The copy is fixed in place and follows the body when it changes.</source>
         <translation>[Çlîçk áñ édgé öf á bödý (ör á fáçé, för îts whölé öütlîñé) tö brîñg ît îñtö thé skétçh. Thé çöpý îs fîxéd îñ pláçé áñd föllöws thé bödý whéñ ît çháñgés.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -8026,7 +8026,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
         <translation>[Thé 3D vîéw ñééds ÖpéñGL 3.3, áñd thîs çömpütér's gráphîçs drîvér öfférs %1. Üpdátîñg thé gráphîçs drîvér üsüállý fîxés thîs. Désîgñs stîll öpéñ, sávé áñd éxpört; öñlý thé vîéw stáýs émptý.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+600" />
+        <location line="+602" />
         <source>touching</source>
         <translation>[töüçhîñg~~]</translation>
     </message>
@@ -8056,7 +8056,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
         <translation>[Fît~]</translation>
     </message>
     <message>
-        <location line="+146" />
+        <location line="+149" />
         <source>Edge “%1”</source>
         <translation>[Édgé “%1”~]</translation>
     </message>

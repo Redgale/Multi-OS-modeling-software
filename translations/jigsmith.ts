@@ -4312,15 +4312,15 @@
     </message>
     <message>
         <location line="+9"/>
-        <location line="+654"/>
-        <location line="+737"/>
+        <location line="+656"/>
+        <location line="+738"/>
         <location line="+834"/>
         <location line="+27"/>
         <source>Sketch</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2250"/>
+        <location line="-2253"/>
         <source>Extrude</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4466,12 +4466,12 @@
     </message>
     <message>
         <location line="+4"/>
-        <location line="+837"/>
+        <location line="+840"/>
         <source>&lt;p&gt;Nothing selected.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-826"/>
+        <location line="-829"/>
         <source>&lt;h3&gt;Body&lt;/h3&gt;&lt;p&gt;&lt;b&gt;Name:&lt;/b&gt; %1&lt;br&gt;&lt;b&gt;Volume:&lt;/b&gt; %2&lt;br&gt;&lt;b&gt;Size:&lt;/b&gt; %3 × %4 × %5&lt;br&gt;&lt;b&gt;Faces:&lt;/b&gt; %6&lt;/p&gt;&lt;p&gt;Right-click it in the Browser to hide, isolate or rename it.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4481,7 +4481,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+60"/>
+        <location line="+62"/>
         <source>Key: %1</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4557,12 +4557,12 @@
     </message>
     <message>
         <location line="+2"/>
-        <location line="+1510"/>
+        <location line="+1511"/>
         <source>Mouse and trackpad</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1508"/>
+        <location line="-1509"/>
         <source>Default (middle-drag pans, Shift+middle orbits)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4583,30 +4583,30 @@
     </message>
     <message>
         <location line="+11"/>
-        <location line="+1483"/>
+        <location line="+1484"/>
         <source>Theme</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1481"/>
-        <location line="+1436"/>
+        <location line="-1482"/>
+        <location line="+1437"/>
         <source>Light</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1436"/>
-        <location line="+1435"/>
+        <location line="-1437"/>
+        <location line="+1436"/>
         <source>Dark</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1434"/>
-        <location line="+1436"/>
+        <location line="-1435"/>
+        <location line="+1437"/>
         <source>High contrast</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1428"/>
+        <location line="-1429"/>
         <source>&amp;Help</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4723,12 +4723,12 @@
     </message>
     <message>
         <location line="+2"/>
-        <location line="+2032"/>
+        <location line="+2033"/>
         <source>Rename…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2029"/>
+        <location line="-2030"/>
         <source>Delete body</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4744,13 +4744,13 @@
     </message>
     <message>
         <location line="+5"/>
-        <location line="+1490"/>
+        <location line="+1491"/>
         <location line="+58"/>
         <source>Properties</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1542"/>
+        <location line="-1543"/>
         <source>Properties and help</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4836,7 +4836,7 @@
     </message>
     <message>
         <location line="+18"/>
-        <location line="+1918"/>
+        <location line="+1919"/>
         <source>Move rollback marker</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7137,7 +7137,12 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+3"/>
+        <location line="+1"/>
+        <source>Click where the middle of the text goes (on a curve, it follows it).</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
         <source>Click the piece of a curve to remove. It is cut where other curves cross it.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7418,12 +7423,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+52"/>
-        <source>Click where the middle of the text goes (on a circle or arc, it bends along it).</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+31"/>
+        <location line="+83"/>
         <source>Click an edge of a body (or a face, for its whole outline) to bring it into the sketch. The copy is fixed in place and follows the body when it changes.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8038,7 +8038,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+600"/>
+        <location line="+602"/>
         <source>touching</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8068,7 +8068,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+146"/>
+        <location line="+149"/>
         <source>Edge “%1”</source>
         <translation type="unfinished"></translation>
     </message>

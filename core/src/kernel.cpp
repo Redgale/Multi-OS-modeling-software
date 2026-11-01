@@ -697,10 +697,8 @@ Result<ProfileSet> buildProfiles(const Sketch& sketch, const gp_Ax3& frame)
             for (auto& [tid, st] : sketch.texts()) {
                 auto [ax, ay] = sketch.pointXY(st.anchor);
                 SketchText t = st;
-                if (const SketchEntity* c = t.path ? sketch.entity(t.path) : nullptr;
-                    c && (c->type == EntityType::Circle || c->type == EntityType::Arc)) {
-                    std::tie(t.pathCx, t.pathCy) = sketch.pointXY(c->center);  // bend along it
-                    t.pathR = c->r;
+                if (const SketchEntity* c = t.path ? sketch.entity(t.path) : nullptr; c && c->type != EntityType::Point) {
+                    t.pathPts = sketch.curvePoints(t.path, 64);  // follow it
                 }
                 auto out = textFaces(t, ax, ay, frame);
                 if (!out) {

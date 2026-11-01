@@ -56,7 +56,7 @@ timeline edit/rename/suppress/roll back/delete with dependents warning, Paramete
   visibility and folded groups saved with the design).
 - B-019 (sketch window selection, selection filter, Select Other, 3D box selection of edges, faces and bodies done).
 
-- B-020 Text (installed fonts by family and style, several lines, along circles and arcs done): HarfBuzz shaping for
+- B-020 Text (installed fonts by family and style, several lines, along any sketch curve done): HarfBuzz shaping for
   complex scripts, text along a path.
 
 ## Later v0.1 milestones

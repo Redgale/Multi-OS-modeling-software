@@ -2037,6 +2037,32 @@ TEST(Text, BendsAlongACircle)
         BRepGProp::SurfaceProperties(r.face, g);
         EXPECT_NEAR(g.CentreOfMass().Y(), 20, 0.5);
     }
+    // along a slanted construction line: the letters line up along it, at its angle
+    auto slant = build("sketch id=s1 plane=XY\nline sketch=s1 p1=0,0 p2=40,30 construction=yes\n"
+                       "text sketch=s1 center=20,15 height=5 text=\"OOOO\" along=20,15\n");
+    std::vector<gp_Pnt> mids;
+    for (auto& r : slant->state().sketches.at("s1")->profiles.regions) {
+        GProp_GProps g;
+        BRepGProp::SurfaceProperties(r.face, g);
+        mids.push_back(g.CentreOfMass());
+    }
+    ASSERT_GE(mids.size(), 4u);
+    for (auto& m : mids) {
+        EXPECT_NEAR(std::abs(3 * m.X() - 4 * m.Y()) / 5, 0, 0.3);  // on the line 3x = 4y
+    }
+    // along a smooth curve through three points: every letter near the curve
+    auto curve = build("sketch id=s1 plane=XY\nspline sketch=s1 points=\"0,0; 30,15; 60,0\"\n"
+                       "text sketch=s1 center=30,15 height=4 text=\"OOOOO\" along=30,15\n");
+    double lowest = 1e9;
+    for (auto& r : curve->state().sketches.at("s1")->profiles.regions) {
+        if (r.key.rfind("T", 0) != 0) {
+            continue;
+        }
+        GProp_GProps g;
+        BRepGProp::SurfaceProperties(r.face, g);
+        lowest = std::min(lowest, g.CentreOfMass().Y());
+    }
+    EXPECT_LT(lowest, 14);  // the outer letters follow the curve down from its top at 15
     // and it is kept with the design
     const auto path = (tempDir() / "bent-text.jig").string();
     ASSERT_TRUE(saveDocument(*doc, path).ok());

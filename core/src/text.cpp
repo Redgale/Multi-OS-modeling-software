@@ -545,19 +545,55 @@ Result<TextOutline> textFaces(const SketchText& t, double x, double y, const gp_
     }
     const gp_XY centre(0, (ymin + ymax) / 2);
     const double ca = std::cos(t.angle), sa = std::sin(t.angle);
-    // along a circle: the baseline's middle at the anchor's angle, reading clockwise round the
-    // top, letters standing outward; the text's middle height sits on the curve
-    const bool bent = t.pathR > 1e-9;
-    const double theta0 = std::atan2(y - t.pathCy, x - t.pathCx);
+    // along a curve: the baseline's middle at the point of the curve nearest the anchor; it
+    // reads the way that keeps the letters upright (left to right as seen), letters standing
+    // on the left of the way it reads; the text's middle height sits on the curve
+    const auto& P = t.pathPts;
+    const bool bent = P.size() >= 2;
+    std::vector<double> along(P.size(), 0.0);  // distance along the curve to each point
+    double s0 = 0, dir = 1;
+    if (bent) {
+        for (size_t k = 1; k < P.size(); ++k) {
+            along[k] = along[k - 1] + std::hypot(P[k].first - P[k - 1].first, P[k].second - P[k - 1].second);
+        }
+        double best = 1e300;
+        for (size_t k = 0; k + 1 < P.size(); ++k) {
+            const double ax = P[k].first, ay = P[k].second, bx = P[k + 1].first, by = P[k + 1].second;
+            const double L2 = (bx - ax) * (bx - ax) + (by - ay) * (by - ay);
+            const double w = L2 > 0 ? std::clamp(((x - ax) * (bx - ax) + (y - ay) * (by - ay)) / L2, 0.0, 1.0) : 0;
+            const double d = std::hypot(ax + w * (bx - ax) - x, ay + w * (by - ay) - y);
+            if (d < best) {
+                best = d;
+                s0 = along[k] + w * std::sqrt(L2);
+                dir = (bx - ax) >= -1e-12 ? 1 : -1;  // read so that the text goes rightwards
+            }
+        }
+    }
+    // the point and the reading direction at distance s along the curve (straight on past its ends)
+    auto onPath = [&](double s, double& px, double& py, double& tx, double& ty) {
+        size_t k = 0;
+        while (k + 2 < P.size() && along[k + 1] < s) {
+            ++k;
+        }
+        const double L = along[k + 1] - along[k];
+        tx = L > 0 ? (P[k + 1].first - P[k].first) / L : 1;
+        ty = L > 0 ? (P[k + 1].second - P[k].second) / L : 0;
+        const double w = s - along[k];
+        px = P[k].first + tx * w;
+        py = P[k].second + ty * w;
+    };
     auto to3d = [&](const gp_XY& fontPt, double penX, double pY) {
         const double u = (fontPt.X() + penX - centre.X()) * scale;
         const double v = (fontPt.Y() + pY - centre.Y()) * scale;
         double lx = x + u * ca - v * sa;
         double ly = y + u * sa + v * ca;
         if (bent) {
-            const double th = theta0 - u / t.pathR, rho = t.pathR + v;
-            lx = t.pathCx + rho * std::cos(th);
-            ly = t.pathCy + rho * std::sin(th);
+            double px, py, tx, ty;
+            onPath(s0 + dir * u, px, py, tx, ty);
+            tx *= dir;
+            ty *= dir;
+            lx = px - ty * v;  // the left of the reading direction is up for the letters
+            ly = py + tx * v;
         }
         return gp_Pnt(frame.Location().XYZ() + frame.XDirection().XYZ() * lx + frame.YDirection().XYZ() * ly);
     };

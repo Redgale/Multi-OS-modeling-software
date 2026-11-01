@@ -100,9 +100,9 @@ struct SketchText
     std::string height = "5 mm";  // expression: the font size (about 1.4 x capital height)
     double heightValue = 5;  // evaluated on solve
     double angle = 0;        // radians, counter-clockwise
-    int path = 0;            // a circle or arc the text bends along (0: straight)
-    // where that curve is, filled in before the outlines are made (not saved)
-    double pathCx = 0, pathCy = 0, pathR = 0;
+    int path = 0;            // a curve the text follows (0: straight)
+    // that curve as points, filled in before the outlines are made (not saved)
+    std::vector<std::pair<double, double>> pathPts;
 };
 
 // Imported artwork (an SVG logo): closed outlines of straight segments and Béziers,

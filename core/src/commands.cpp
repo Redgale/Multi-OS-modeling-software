@@ -891,13 +891,13 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
             const int anchor = s.texts().at(id).anchor;
             s.addConstraint(ConstraintType::DistanceX, anchor, 0, 0, pe->first);
             s.addConstraint(ConstraintType::DistanceY, anchor, 0, 0, pe->second);
-            if (a.has("along")) {  // bend along the circle or arc nearest this point
+            if (a.has("along")) {  // follow the curve nearest this point (a line, circle, arc, smooth curve…)
                 auto ae = parsePairExpr(a.get("along"));
                 auto qx = ae ? len(ae->first) : Result<double>(0.0), qy = ae ? len(ae->second) : Result<double>(0.0);
                 auto near = ae && qx && qy ? s.curveNear(qx.value(), qy.value(), true) : std::nullopt;
                 const SketchEntity* c = near ? s.entity(near->first) : nullptr;
-                if (!c || (c->type != EntityType::Circle && c->type != EntityType::Arc)) {
-                    return makeError("script.args", "along= needs a point on a circle or arc of the sketch.");
+                if (!c || c->type == EntityType::Point) {
+                    return makeError("script.args", "along= needs a point on a curve of the sketch.");
                 }
                 s.text(id)->path = near->first;
             }

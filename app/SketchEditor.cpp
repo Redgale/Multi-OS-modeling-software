@@ -567,7 +567,7 @@ QString SketchEditor::toolHint() const
                           : tr("Click the centre.");
         case Tool::Text:
             return first_ ? tr("Type the words (\\n starts a new line), Tab, the size, then press Enter.")
-                          : tr("Click where the middle of the text goes (on a circle or arc, it bends along it).");
+                          : tr("Click where the middle of the text goes (on a curve, it follows it).");
         case Tool::Trim:
             return tr("Click the piece of a curve to remove. It is cut where other curves cross it.");
         case Tool::Extend:
@@ -1503,10 +1503,10 @@ void SketchEditor::placeSecond(const Snap& cur, const QStringList& rawTyped)
             if (first_->point) {
                 s.addConstraint(jig::ConstraintType::Coincident, s.texts().at(id).anchor, first_->point);
             }
-            // placed on a circle or arc: the text bends along it
+            // placed on a curve (a line, circle, arc or smooth curve): the text follows it
             if (auto near = s.curveNear(a.x(), a.y(), true); near && near->second < 6 * view_->worldPerPixel()) {
                 const jig::SketchEntity* c = s.entity(near->first);
-                if (c && (c->type == jig::EntityType::Circle || c->type == jig::EntityType::Arc)) {
+                if (c && c->type != jig::EntityType::Point) {
                     s.text(id)->path = near->first;
                 }
             }
