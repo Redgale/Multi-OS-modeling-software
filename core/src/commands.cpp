@@ -132,6 +132,7 @@ CommandRegistry::CommandRegistry()
     add({"solid.cylinder", "Cylinder", "Cylinder", "CREATE", "A cylinder standing on a plane, without drawing a sketch.", "", {"rod", "post", "disc", "primitive", "basic shape"}, false, false, true, ""});
     add({"solid.sphere", "Sphere", "Sphere", "CREATE", "A ball centred on a plane, without drawing a sketch.", "", {"ball", "dome", "primitive", "basic shape"}, false, false, true, ""});
     add({"solid.torus", "Torus", "Torus", "CREATE", "A ring (doughnut) lying on a plane, without drawing a sketch.", "", {"ring", "doughnut", "donut", "o-ring", "primitive", "basic shape"}, false, false, true, ""});
+    add({"solid.rib", "Rib", "Rib", "CREATE", "A thin wall from an open sketch curve to the body: gussets that stiffen corners.", "", {"gusset", "web", "stiffener", "brace"}, false, false, true, ""});
     add({"solid.hole", "Hole", "Hole", "CREATE", "Drill a plain, counterbored or countersunk hole for a screw.", "H", {"drill", "screw hole", "bore", "countersink", "counterbore"}, true, false, false, m3});
     add({"solid.mirror", "Mirror", "Mirror", "CREATE", "Copy a body across a plane, e.g. to make a symmetric part.", "", {"symmetric", "flip copy"}, false, false, false, m3});
     add({"solid.pattern_rect", "Grid copy", "Rectangular Pattern", "CREATE", "Repeat a feature in rows and columns.", "", {"array", "grid", "repeat"}, false, false, false, m3});
@@ -167,7 +168,7 @@ CommandRegistry::CommandRegistry()
         "constraint.midpoint", "constraint.fix",
         "constraint.parallel", "constraint.perpendicular", "constraint.horizontal", "constraint.tangent",
         "constraint.symmetric", "constraint.equal", "solid.extrude", "solid.fillet", "solid.chamfer", "solid.shell",
-        "solid.revolve", "solid.loft", "solid.sweep", "solid.pipe", "solid.coil", "solid.box", "solid.cylinder", "solid.sphere", "solid.torus", "solid.hole", "solid.mirror", "solid.pattern_rect", "solid.pattern_circ", "modify.parameters",
+        "solid.revolve", "solid.loft", "solid.sweep", "solid.pipe", "solid.coil", "solid.box", "solid.cylinder", "solid.sphere", "solid.torus", "solid.rib", "solid.hole", "solid.mirror", "solid.pattern_rect", "solid.pattern_circ", "modify.parameters",
         "inspect.measure", "inspect.properties", "file.export_3mf", "construct.offset_plane", "construct.angle_plane",
         "construct.midplane", "construct.axis", "construct.point", "solid.presspull", "solid.combine", "solid.split", "solid.move",
         "inspect.section", "insert.dxf", "insert.svg", "help.tutorial"};
@@ -1721,7 +1722,7 @@ Result<bool> ScriptRunner::runLineUnchecked(std::string_view rawLine)
     }
     if (a.verb == "revolve" || a.verb == "hole" || a.verb == "pattern" || a.verb == "mirror" || a.verb == "loft" ||
         a.verb == "sweep" || a.verb == "pipe" || a.verb == "coil" ||
-        a.verb == "box" || a.verb == "cylinder" || a.verb == "sphere" || a.verb == "torus") {
+        a.verb == "box" || a.verb == "cylinder" || a.verb == "sphere" || a.verb == "torus" || a.verb == "rib") {
         // revolve sketch=s1 axis=X|Y|Z|line:<name> [angle=360deg | extent=to to=<plane>|face:<name>]
         //         [op=new|join|cut|intersect] [profiles=…]
         // hole sketch=s2 diameter=3.4mm (depth=10mm | extent=all) [type=simple|counterbore|countersink]
@@ -1736,7 +1737,8 @@ Result<bool> ScriptRunner::runLineUnchecked(std::string_view rawLine)
             {"loft", {FeatureKind::Loft, "lf"}}, {"sweep", {FeatureKind::Sweep, "sw"}},
             {"pipe", {FeatureKind::Pipe, "pi"}}, {"coil", {FeatureKind::Coil, "co"}},
             {"box", {FeatureKind::Primitive, "bx"}}, {"cylinder", {FeatureKind::Primitive, "cy"}},
-            {"sphere", {FeatureKind::Primitive, "sp"}}, {"torus", {FeatureKind::Primitive, "to"}}};
+            {"sphere", {FeatureKind::Primitive, "sp"}}, {"torus", {FeatureKind::Primitive, "to"}},
+            {"rib", {FeatureKind::Rib, "rb"}}};
         const auto& [kind, prefix] = kinds.at(a.verb);
         nlohmann::json params = nlohmann::json::object();
         for (auto& [k, v] : a.kv) {

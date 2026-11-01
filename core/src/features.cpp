@@ -14,6 +14,8 @@
 
 #include <BRepAdaptor_Curve.hxx>
 #include <BRepBndLib.hxx>
+#include <BRepPrimAPI_MakePrism.hxx>
+#include <BRepClass3d_SolidClassifier.hxx>
 #include <gp_Cylinder.hxx>
 #include <BRepPrimAPI_MakeCylinder.hxx>
 #include <BRepAlgoAPI_Cut.hxx>
@@ -27,6 +29,7 @@
 #include <BRepBuilderAPI_MakeEdge.hxx>
 #include <BRepBuilderAPI_MakeFace.hxx>
 #include <BRepBuilderAPI_MakeWire.hxx>
+#include <BRepBuilderAPI_Transform.hxx>
 #include <gp_Circ.hxx>
 #include <BRepGProp.hxx>
 #include <GProp_GProps.hxx>
@@ -1623,6 +1626,150 @@ FeatureOutcome applyPrimitive(const Document& doc, const Feature& f, const std::
     }
 }
 
+// ---------------------------------------------------------------- rib
+
+// A thin wall (a gusset) from an open curve in a sketch to the body: the curve is drawn on a
+// plane through the part, the wall fills the plane from the curve to the body, as thick as
+// asked and centred on the plane. The side towards the body is found by itself.
+FeatureOutcome applyRib(const Document& doc, const Feature& f, const std::shared_ptr<const ModelState>& in)
+{
+    const auto& p = f.params;
+    FeatureStatus status;
+    const std::string sketchId = p.value("sketch", std::string {});
+    const SketchState* sk = findSketch(in, sketchId);
+    if (!sk) {
+        return missingSketch(word("rib"), sketchId);
+    }
+    if (in->bodies.empty()) {
+        return failed("A rib joins a body, and there is no body yet.", {"Make the part first, then draw the rib's edge."});
+    }
+    std::vector<int> curves;
+    const nlohmann::json cj = p.value("curves", nlohmann::json("all"));
+    if (cj.is_array()) {
+        for (auto& c : cj) {
+            if (c.is_number_integer()) {
+                curves.push_back(c.get<int>());
+            }
+        }
+    }
+    else {
+        for (auto& [id, e] : sk->solved.entities()) {
+            if (e.type != EntityType::Point && !e.construction) {
+                curves.push_back(id);
+            }
+        }
+    }
+    auto path = sketchPath(sk->solved, sk->frame, curves);
+    if (!path) {
+        return failed(path.error());
+    }
+    if (path->closed) {
+        return failed("A rib's edge must be an open curve (its ends free), not a closed shape.",
+                      {"Draw only the outer edge of the rib: a line or arc from one wall to the other."});
+    }
+    auto th = doc.evalLength(p.value("thickness", std::string("2 mm")));
+    if (!th) {
+        return failed(th.error());
+    }
+    if (th.value() <= 1e-6) {
+        return failed("The rib's thickness must be more than zero.");
+    }
+    const double t = th.value();
+    try {
+        const gp_Dir n = sk->frame.Direction();
+        gp_Pnt a, b, mid;
+        gp_Vec ta, tm;
+        pathAt(*path, 0, a, ta);
+        pathAt(*path, path->length, b, ta);
+        pathAt(*path, path->length / 2, mid, tm);
+        gp_Vec chord(a, b);
+        if (chord.Magnitude() < 1e-9) {
+            chord = tm;  // a curve that comes back near its start: across its middle instead
+        }
+        gp_Vec across = gp_Vec(n).Crossed(chord);
+        if (across.Magnitude() < 1e-12) {
+            return failed("The rib's edge has no direction across the sketch plane.");
+        }
+        across.Normalize();
+        Bnd_Box all;
+        for (auto& [id, body] : in->bodies) {
+            BRepBndLib::Add(body->shape(), all);
+        }
+        BRepBndLib::Add(path->wire, all);
+        const double L = std::sqrt(all.SquareExtent()) * 2 + 10;
+        const double eps = std::min(0.05, t / 4);
+        // try the side asked for, or both: the piece next to the curve must be closed off by the body
+        const std::string side = p.value("side", std::string("auto"));
+        std::vector<int> signs = side == "1" ? std::vector<int> {1} : side == "2" ? std::vector<int> {-1} : std::vector<int> {1, -1};
+        TopoDS_Shape piece;
+        bool open = false;
+        for (int sgn : signs) {
+            const gp_Vec d = across * double(sgn);
+            const TopoDS_Shape sheet = BRepPrimAPI_MakePrism(path->wire, d * L).Shape();
+            gp_Trsf down;
+            down.SetTranslation(gp_Vec(n) * (-t / 2));
+            const TopoDS_Shape slab =
+                BRepPrimAPI_MakePrism(BRepBuilderAPI_Transform(sheet, down, true).Shape(), gp_Vec(n) * t).Shape();
+            TopoDS_Shape rest = slab;
+            for (auto& [id, body] : in->bodies) {
+                BRepAlgoAPI_Cut cut(rest, body->shape());
+                if (!cut.IsDone()) {
+                    return failed("The rib could not be fitted to the body.");
+                }
+                rest = cut.Shape();
+            }
+            const gp_Pnt probe = mid.Translated(d * eps);
+            for (TopExp_Explorer ex(rest, TopAbs_SOLID); ex.More(); ex.Next()) {
+                BRepClass3d_SolidClassifier in3(ex.Current(), probe, 1e-7);
+                if (in3.State() != TopAbs_IN) {
+                    continue;
+                }
+                Bnd_Box pb;
+                BRepBndLib::Add(ex.Current(), pb);
+                double x0, y0, z0, x1, y1, z1;
+                pb.Get(x0, y0, z0, x1, y1, z1);
+                // reaching the far end of the slab means nothing stopped it
+                const gp_Pnt far = mid.Translated(d * (L * 0.9));
+                if (!pb.IsOut(far)) {
+                    open = true;
+                    continue;
+                }
+                piece = ex.Current();
+                break;
+            }
+            if (!piece.IsNull()) {
+                break;
+            }
+        }
+        if (piece.IsNull()) {
+            return open ? failed("The rib does not reach the body on that side: nothing closes it off.",
+                                 {"Draw the edge so the body lies between it and the walls it should join.",
+                                  "Or try the other side."})
+                        : failed("The rib's edge runs inside the body, so there is no room for a rib.",
+                                 {"Draw the edge outside the part, from one wall to the other."});
+        }
+        NamedShape tool(piece);
+        int other = 0;
+        for (int i = 0; i < tool.faceCount(); ++i) {
+            BRepAdaptor_Surface surf(TopoDS::Face(tool.face(i)));
+            std::string name;
+            if (surf.GetType() == GeomAbs_Plane && std::abs(surf.Plane().Axis().Direction().Dot(n)) > 0.999) {
+                name = "side";
+            }
+            tool.setFaceName(i, name.empty() ? f.id + "/face" + std::to_string(++other) : f.id + "/" + name);
+        }
+        auto op = opFromString(p.value("op", std::string("join")));
+        if (!op) {
+            return failed("This rib has an unknown operation.");
+        }
+        return applyTool(f, *op, std::move(tool), in, status);
+    }
+    catch (const Standard_Failure& e) {
+        const char* m = e.GetMessageString();
+        return failed("The rib could not be fitted to the body.", {}, m ? m : "");
+    }
+}
+
 // ---------------------------------------------------------------- press pull
 
 // Pushes or pulls a flat face straight along its normal: out adds material, in removes it.
@@ -2659,6 +2806,8 @@ FeatureOutcome applyFeature(const Document& doc, const Feature& f, const std::sh
                 return applyCoil(doc, f, in);
             case FeatureKind::Primitive:
                 return applyPrimitive(doc, f, in);
+            case FeatureKind::Rib:
+                return applyRib(doc, f, in);
             case FeatureKind::Hole:
                 return applyHole(doc, f, in);
             case FeatureKind::Pattern:

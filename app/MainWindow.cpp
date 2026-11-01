@@ -172,6 +172,8 @@ QString kindWord(jig::FeatureKind k)
             return MainWindow::tr("Coil");
         case jig::FeatureKind::Primitive:
             return MainWindow::tr("Basic shape");
+        case jig::FeatureKind::Rib:
+            return MainWindow::tr("Rib");
         case jig::FeatureKind::Move:
             return MainWindow::tr("Move");
     }
@@ -1751,6 +1753,9 @@ void MainWindow::runCommand(const QString& id)
     else if (id == "solid.box" || id == "solid.cylinder" || id == "solid.sphere" || id == "solid.torus") {
         openPrimitive({}, id.mid(6).toStdString());
     }
+    else if (id == "solid.rib") {
+        openRib({});
+    }
     else if (id == "solid.coil") {
         openCoil({});
     }
@@ -2782,6 +2787,15 @@ void MainWindow::openPrimitive(const std::string& editId, const std::string& sha
     showPanel(new PrimitivePanel(*doc_, view_, editId, shape, panelHost_));
 }
 
+void MainWindow::openRib(const std::string& editId)
+{
+    if (sketch_) {
+        exitSketch();
+    }
+    cancelPicker();
+    showPanel(new RibPanel(*doc_, view_, editId, panelHost_));
+}
+
 void MainWindow::openLoft(const std::string& editId)
 {
     if (sketch_) {
@@ -3141,6 +3155,9 @@ void MainWindow::editFeature(int index)
             break;
         case jig::FeatureKind::Primitive:
             openPrimitive(f.id, {});
+            break;
+        case jig::FeatureKind::Rib:
+            openRib(f.id);
             break;
         case jig::FeatureKind::Sweep:
             openSweep(f.id);

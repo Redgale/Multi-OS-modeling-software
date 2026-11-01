@@ -600,6 +600,16 @@
     </message>
     <message>
         <location line="+1"/>
+        <source>Rib</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>A thin wall from an open sketch curve to the body: gussets that stiffen corners.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>Hole</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1254,6 +1264,11 @@
     <message>
         <location line="+1"/>
         <source>A ring (doughnut) lying on a plane, without drawing a sketch.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>A thin wall from an open sketch curve to the body: gussets that stiffen corners.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -2148,6 +2163,71 @@
     </message>
     <message>
         <location line="+1"/>
+        <source>A rib joins a body, and there is no body yet.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Make the part first, then draw the rib&apos;s edge.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>A rib&apos;s edge must be an open curve (its ends free), not a closed shape.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Draw only the outer edge of the rib: a line or arc from one wall to the other.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The rib&apos;s thickness must be more than zero.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The rib&apos;s edge has no direction across the sketch plane.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The rib could not be fitted to the body.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The rib does not reach the body on that side: nothing closes it off.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Draw the edge so the body lies between it and the walls it should join.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Or try the other side.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The rib&apos;s edge runs inside the body, so there is no room for a rib.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Draw the edge outside the part, from one wall to the other.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>This rib has an unknown operation.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>The body of the face to push or pull no longer exists.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2893,6 +2973,11 @@
     </message>
     <message>
         <location line="+1"/>
+        <source>Open curves, the edge of %1.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>Open curves, used as a wall by %1.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3087,7 +3172,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-47"/>
+        <location line="-48"/>
         <source>The id &apos;%1&apos; is already used.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3097,7 +3182,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+63"/>
+        <location line="+64"/>
         <source>A wall of %1 does not fit this outline.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3172,12 +3257,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-236"/>
+        <location line="-237"/>
         <source>There is nothing to export yet.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-212"/>
+        <location line="-225"/>
         <source>This DXF has no lines, circles, arcs, curves, text or blocks to bring in.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3217,7 +3302,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+139"/>
+        <location line="+152"/>
         <source>The 3MF file could not be created.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3820,7 +3905,7 @@
 <context>
     <name>CoreWords</name>
     <message>
-        <location line="+99"/>
+        <location line="+100"/>
         <source>ball face (sphere)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3881,6 +3966,11 @@
     </message>
     <message>
         <location line="+1"/>
+        <source>rib</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>round face (cylinder)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3918,7 +4008,7 @@
 <context>
     <name>MainWindow</name>
     <message>
-        <location filename="../app/MainWindow.cpp" line="+521"/>
+        <location filename="../app/MainWindow.cpp" line="+523"/>
         <source>Rebuilding the design…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5055,7 +5145,7 @@
 <context>
     <name>jigapp::MainWindow</name>
     <message>
-        <location filename="../app/MainWindow.cpp" line="-154"/>
+        <location filename="../app/MainWindow.cpp" line="-156"/>
         <source>OK</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5081,15 +5171,15 @@
     </message>
     <message>
         <location line="+9"/>
-        <location line="+741"/>
+        <location line="+743"/>
         <location line="+738"/>
-        <location line="+910"/>
+        <location line="+913"/>
         <location line="+27"/>
         <source>Sketch</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2414"/>
+        <location line="-2419"/>
         <source>Extrude</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5191,6 +5281,11 @@
     <message>
         <location line="+2"/>
         <source>Basic shape</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Rib</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -5351,12 +5446,12 @@
     </message>
     <message>
         <location line="+2"/>
-        <location line="+1587"/>
+        <location line="+1590"/>
         <source>Mouse and trackpad</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1585"/>
+        <location line="-1588"/>
         <source>Default (middle-drag pans, Shift+middle orbits)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5377,30 +5472,30 @@
     </message>
     <message>
         <location line="+11"/>
-        <location line="+1560"/>
+        <location line="+1563"/>
         <source>Theme</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1558"/>
-        <location line="+1513"/>
+        <location line="-1561"/>
+        <location line="+1516"/>
         <source>Light</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1513"/>
-        <location line="+1512"/>
+        <location line="-1516"/>
+        <location line="+1515"/>
         <source>Dark</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1511"/>
-        <location line="+1513"/>
+        <location line="-1514"/>
+        <location line="+1516"/>
         <source>High contrast</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1505"/>
+        <location line="-1508"/>
         <source>&amp;Help</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5517,12 +5612,12 @@
     </message>
     <message>
         <location line="+2"/>
-        <location line="+2169"/>
+        <location line="+2184"/>
         <source>Rename…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2166"/>
+        <location line="-2181"/>
         <source>Delete body</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5538,13 +5633,13 @@
     </message>
     <message>
         <location line="+5"/>
-        <location line="+1567"/>
+        <location line="+1570"/>
         <location line="+58"/>
         <source>Properties</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1619"/>
+        <location line="-1622"/>
         <source>Properties and help</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5630,12 +5725,12 @@
     </message>
     <message>
         <location line="+18"/>
-        <location line="+2055"/>
+        <location line="+2070"/>
         <source>Move rollback marker</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1883"/>
+        <location line="-1898"/>
         <source>Start here: every part begins as a flat sketch.
 Click Sketch on the toolbar, then click a plane.
 Or open the phone stand sample (File ▸ Open a sample).</source>
@@ -5834,12 +5929,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+0"/>
-        <location line="+372"/>
+        <location line="+375"/>
         <source>Jigsmith designs (*.jig)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-325"/>
+        <location line="-328"/>
         <source>Save view</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5854,7 +5949,7 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+86"/>
+        <location line="+89"/>
         <source>Import STEP</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6004,12 +6099,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+0"/>
-        <location line="+967"/>
+        <location line="+976"/>
         <source>There is no 3D body yet.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-964"/>
+        <location line="-973"/>
         <source>STL mesh for slicers (*.stl)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6279,7 +6374,7 @@ An empty design with the origin ready</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+128"/>
+        <location line="+137"/>
         <source>That face was made by %1: change its size here.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6395,7 +6490,7 @@ An empty design with the origin ready</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+42"/>
+        <location line="+45"/>
         <source>Edit…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6708,7 +6803,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::MovePanel</name>
     <message>
-        <location line="+1632"/>
+        <location line="+1707"/>
         <source>free %1</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6901,7 +6996,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::PatternPanel</name>
     <message>
-        <location line="-2352"/>
+        <location line="-2427"/>
         <location line="+154"/>
         <source>Pattern</source>
         <translation type="unfinished"></translation>
@@ -7813,6 +7908,75 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
     </message>
 </context>
 <context>
+    <name>jigapp::RibPanel</name>
+    <message>
+        <location line="+2074"/>
+        <location line="+50"/>
+        <source>Rib</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-49"/>
+        <source>A thin wall that stiffens a corner. Sketch on a plane through the part and draw only the rib&apos;s outer edge, from one wall to the other: the rib fills from that edge to the body, centred on the sketch plane.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Towards the body (found by itself)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>First side</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Second side</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Join: add to the body</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>New body</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Edge (sketch)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Thickness</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Fill</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Result</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+26"/>
+        <source>A rib needs a body and a sketch with the rib&apos;s edge.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+27"/>
+        <source>rib</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>jigapp::SectionPanel</name>
     <message>
         <location filename="../app/InspectPanels.cpp" line="-188"/>
@@ -7878,7 +8042,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::ShellPanel</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="-387"/>
+        <location filename="../app/FeaturePanels.cpp" line="-2528"/>
         <source>Shell</source>
         <translation type="unfinished"></translation>
     </message>

@@ -2906,6 +2906,38 @@ private slots:
         pp->cancel();
     }
 
+    // Rib from the panel: the edge's sketch is picked; OK adds the gusset to the bracket.
+    void ribPanel()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        {
+            jig::ScriptRunner r(w.document());
+            QVERIFY(r.runText("sketch id=s1 plane=XZ\nrect sketch=s1 corner=0,0 w=40 h=5\nrect sketch=s1 corner=0,0 w=5 h=40\n"
+                              "extrude id=e1 sketch=s1 distance=20mm direction=symmetric\n"
+                              "sketch id=s2 plane=XZ\nline sketch=s2 p1=35,5 p2=5,35\n").ok());
+        }
+        w.refreshAll();
+        const double before = jig::massProperties(w.document().state().bodies.begin()->second->shape()).volume;
+        w.runCommand("solid.rib");
+        auto* rp = qobject_cast<RibPanel*>(w.featurePanel());
+        QVERIFY(rp);
+        QCOMPARE(rp->sketch()->currentData().toString(), QString("s2"));
+        rp->thickness()->setText("3 mm");
+        QTRY_VERIFY(rp->previewOk());
+        w.viewport()->homeView();
+        QTRY_VERIFY(w.viewport()->meshesReady());
+        QTest::qWait(200);
+        w.grab().save(shotPath("rib-panel"));
+        QVERIFY(rp->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        const double after = jig::massProperties(w.document().state().bodies.begin()->second->shape()).volume;
+        QVERIFY(std::abs(after - before - 1350) < 1e-3);
+        QVERIFY(w.document().status(2).level == jig::StatusLevel::Ok);  // the edge sketch: no warning
+    }
+
     // Areas of a sketch are picked by clicking them in the 3D view: a square with a circle in it
     // can become a round post (the circle) or a block with a hole (the ring), not only a block.
     void clickAreasToExtrude()

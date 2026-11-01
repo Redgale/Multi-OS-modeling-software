@@ -2577,3 +2577,37 @@ TEST(Primitive, BoxCylinderSphereTorusPlacedAndNamed)
         EXPECT_FALSE(doc->status(0).message.empty());
     }
 }
+
+TEST(Rib, GussetFillsFromTheEdgeToTheWalls)
+{
+    // an L bracket on the front plane: a 40 x 5 base and a 5 x 40 wall, 20 deep (Y from -10
+    // to 10); a rib edge from (35, 5) to (5, 35) on the front plane: the gusset is the
+    // triangle between the edge and the two inner faces, 30 x 30 / 2, 3 mm thick
+    const std::string bracket = "sketch id=s1 plane=XZ\nrect sketch=s1 corner=0,0 w=40 h=5\nrect sketch=s1 corner=0,0 w=5 h=40\n"
+                                "extrude id=e1 sketch=s1 distance=20mm direction=symmetric\n";
+    auto base = build(bracket);
+    expectAllOk(*base);
+    const double before = props(*base).volume;
+    auto doc = build(bracket + "sketch id=s2 plane=XZ\nline sketch=s2 p1=35,5 p2=5,35\nrib id=rb1 sketch=s2 thickness=3mm\n");
+    expectAllOk(*doc);
+    EXPECT_NEAR(props(*doc).volume - before, 30 * 30 / 2.0 * 3, 1e-3);
+    EXPECT_EQ(doc->state().bodies.size(), 1u);
+    EXPECT_TRUE(props(*doc).valid);
+    EXPECT_EQ(doc->status(3).level, StatusLevel::Ok);  // the rib's sketch: open on purpose
+    EXPECT_GE(doc->state().bodies.begin()->second->findFaces("rb1/side").size(), 1u);
+    // follows a thickness parameter and the bracket growing
+    auto par = build("param t = 4 mm\n" + bracket + "sketch id=s2 plane=XZ\nline sketch=s2 p1=35,5 p2=5,35\n"
+                     "rib id=rb1 sketch=s2 thickness=t\n");
+    expectAllOk(*par);
+    EXPECT_NEAR(props(*par).volume - before, 30 * 30 / 2.0 * 4, 1e-3);
+    // an edge with nothing to meet on either side, and a closed shape, are explained
+    for (const std::string& bad : {bracket + "sketch id=s2 plane=XZ\nline sketch=s2 p1=60,60 p2=80,80\nrib id=rb1 sketch=s2\n",
+                                   bracket + "sketch id=s2 plane=XZ\nrect sketch=s2 corner=10,10 w=5 h=5\nrib id=rb1 sketch=s2\n"}) {
+        auto d = std::make_unique<Document>();
+        ScriptRunner r(*d);
+        r.strict = false;
+        ASSERT_TRUE(r.runText(bad).ok());
+        EXPECT_EQ(d->status(int(d->model().features.size()) - 1).level, StatusLevel::Error) << bad;
+        EXPECT_FALSE(d->status(int(d->model().features.size()) - 1).message.empty());
+    }
+}

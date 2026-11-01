@@ -61,6 +61,8 @@ const char* toString(FeatureKind k)
             return "coil";
         case FeatureKind::Primitive:
             return "shape";
+        case FeatureKind::Rib:
+            return "rib";
     }
     return "sketch";
 }
@@ -83,7 +85,7 @@ std::optional<FeatureKind> featureKindFromString(std::string_view s)
         return FeatureKind::Shell;
     }
     for (auto k : {FeatureKind::Revolve, FeatureKind::Hole, FeatureKind::Pattern, FeatureKind::Mirror, FeatureKind::Plane,
-                   FeatureKind::Combine, FeatureKind::Split, FeatureKind::Move, FeatureKind::Axis, FeatureKind::PressPull, FeatureKind::Point, FeatureKind::Import, FeatureKind::Remove, FeatureKind::Loft, FeatureKind::Sweep, FeatureKind::Pipe, FeatureKind::Coil, FeatureKind::Primitive}) {
+                   FeatureKind::Combine, FeatureKind::Split, FeatureKind::Move, FeatureKind::Axis, FeatureKind::PressPull, FeatureKind::Point, FeatureKind::Import, FeatureKind::Remove, FeatureKind::Loft, FeatureKind::Sweep, FeatureKind::Pipe, FeatureKind::Coil, FeatureKind::Primitive, FeatureKind::Rib}) {
         if (s == toString(k)) {
             return k;
         }
@@ -595,6 +597,12 @@ void Document::recompute()
         for (int j = i + 1; j < n; ++j) {
             const auto& g = model_.features[size_t(j)];
             const auto prof = g.params.value("profiles", nlohmann::json("all"));
+            if (g.kind == FeatureKind::Rib && g.params.value("sketch", std::string {}) == f.id &&
+                statuses_[size_t(j)].level != StatusLevel::Error) {
+                statuses_[size_t(i)] = {};
+                statuses_[size_t(i)].message = fmt("Open curves, the edge of %1.", {g.name});
+                break;
+            }
             if (g.kind == FeatureKind::Extrude && g.params.value("sketch", std::string {}) == f.id &&
                 (prof == nlohmann::json("open") || prof == nlohmann::json::array({"open"})) &&
                 statuses_[size_t(j)].level == StatusLevel::Ok) {

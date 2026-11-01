@@ -59,6 +59,7 @@ QT_TRANSLATE_NOOP("Core", "A box standing on a plane, without drawing a sketch."
 QT_TRANSLATE_NOOP("Core", "A cylinder standing on a plane, without drawing a sketch.")
 QT_TRANSLATE_NOOP("Core", "A ball centred on a plane, without drawing a sketch.")
 QT_TRANSLATE_NOOP("Core", "A ring (doughnut) lying on a plane, without drawing a sketch.")
+QT_TRANSLATE_NOOP("Core", "A thin wall from an open sketch curve to the body: gussets that stiffen corners.")
 QT_TRANSLATE_NOOP("Core", "Drill a plain, counterbored or countersunk hole for a screw.")
 QT_TRANSLATE_NOOP("Core", "Copy a body across a plane, e.g. to make a symmetric part.")
 QT_TRANSLATE_NOOP("Core", "Repeat a feature in rows and columns.")
@@ -245,6 +246,19 @@ QT_TRANSLATE_NOOP("Core", "The tube is as thick as the whole ring, so there is n
 QT_TRANSLATE_NOOP("Core", "Make the tube thinner than the ring's diameter (the diameter is to the tube's middle).")
 QT_TRANSLATE_NOOP("Core", "This shape has an unknown operation.")
 QT_TRANSLATE_NOOP("Core", "This shape could not be made.")
+QT_TRANSLATE_NOOP("Core", "A rib joins a body, and there is no body yet.")
+QT_TRANSLATE_NOOP("Core", "Make the part first, then draw the rib's edge.")
+QT_TRANSLATE_NOOP("Core", "A rib's edge must be an open curve (its ends free), not a closed shape.")
+QT_TRANSLATE_NOOP("Core", "Draw only the outer edge of the rib: a line or arc from one wall to the other.")
+QT_TRANSLATE_NOOP("Core", "The rib's thickness must be more than zero.")
+QT_TRANSLATE_NOOP("Core", "The rib's edge has no direction across the sketch plane.")
+QT_TRANSLATE_NOOP("Core", "The rib could not be fitted to the body.")
+QT_TRANSLATE_NOOP("Core", "The rib does not reach the body on that side: nothing closes it off.")
+QT_TRANSLATE_NOOP("Core", "Draw the edge so the body lies between it and the walls it should join.")
+QT_TRANSLATE_NOOP("Core", "Or try the other side.")
+QT_TRANSLATE_NOOP("Core", "The rib's edge runs inside the body, so there is no room for a rib.")
+QT_TRANSLATE_NOOP("Core", "Draw the edge outside the part, from one wall to the other.")
+QT_TRANSLATE_NOOP("Core", "This rib has an unknown operation.")
 QT_TRANSLATE_NOOP("Core", "The body of the face to push or pull no longer exists.")
 QT_TRANSLATE_NOOP("Core", "Edit the step and click a face.")
 QT_TRANSLATE_NOOP("Core", "The face to push or pull no longer exists.")
@@ -521,6 +535,7 @@ inline const char* const kCorePatterns[] = {
     QT_TRANSLATE_NOOP("Core", "“%1” uses “%2”, so “%2” must stay before it."),
     QT_TRANSLATE_NOOP("Core", "Move it to a place before “%1”."),
     QT_TRANSLATE_NOOP("Core", "Moving “%1” there would stop %2 from working."),
+    QT_TRANSLATE_NOOP("Core", "Open curves, the edge of %1."),
     QT_TRANSLATE_NOOP("Core", "Open curves, used as a wall by %1."),
     QT_TRANSLATE_NOOP("Core", "Open curves, used as a path by %1."),
     QT_TRANSLATE_NOOP("Core", "This design uses a feature this version of Jigsmith doesn't know (%1)."),
@@ -591,6 +606,7 @@ QT_TRANSLATE_NOOP("CoreWords", "hole")
 QT_TRANSLATE_NOOP("CoreWords", "length")
 QT_TRANSLATE_NOOP("CoreWords", "loft")
 QT_TRANSLATE_NOOP("CoreWords", "revolve")
+QT_TRANSLATE_NOOP("CoreWords", "rib")
 QT_TRANSLATE_NOOP("CoreWords", "round face (cylinder)")
 QT_TRANSLATE_NOOP("CoreWords", "rounded face (torus)")
 QT_TRANSLATE_NOOP("CoreWords", "shape")

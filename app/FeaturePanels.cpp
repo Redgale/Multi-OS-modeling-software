@@ -4020,6 +4020,81 @@ QString PrimitivePanel::title() const
     return shape_->currentText().section(' ', 0, 0).toLower();
 }
 
+// ---------------------------------------------------------------- Rib
+
+RibPanel::RibPanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent)
+    : FeaturePanel(doc, view, std::move(editId), parent)
+{
+    form_->addWidget(heading(this, tr("Rib"),
+                             tr("A thin wall that stiffens a corner. Sketch on a plane through the part and draw "
+                                "only the rib's outer edge, from one wall to the other: the rib fills from that "
+                                "edge to the body, centred on the sketch plane.")));
+    sketch_ = new QComboBox(this);
+    thickness_ = new ExprField(doc, jig::Dim::len(), this);
+    side_ = combo(this, {{tr("Towards the body (found by itself)"), "auto"},
+                         {tr("First side"), "1"},
+                         {tr("Second side"), "2"}});
+    op_ = combo(this, {{tr("Join: add to the body"), "join"}, {tr("New body"), "new"}});
+    addRow(tr("Edge (sketch)"), sketch_);
+    addRow(tr("Thickness"), thickness_);
+    bindParam("thickness", thickness_);
+    addRow(tr("Fill"), side_);
+    addRow(tr("Result"), op_);
+    const auto before = stateBefore();
+    for (int i = 0; i < insertIndex(); ++i) {
+        const auto& f = doc_.model().features[size_t(i)];
+        if (f.kind == jig::FeatureKind::Sketch && before->sketches.count(f.id)) {
+            sketch_->addItem(q(f.name), q(f.id));
+        }
+    }
+    if (const jig::Feature* edit = editId_.empty() ? nullptr : doc_.feature(editId_)) {
+        select(sketch_, edit->params.value("sketch", std::string {}));
+        thickness_->setText(q(edit->params.value("thickness", std::string("2 mm"))));
+        select(side_, edit->params.value("side", std::string("auto")));
+        select(op_, edit->params.value("op", std::string("join")));
+    }
+    else {
+        if (sketch_->count() > 0) {
+            sketch_->setCurrentIndex(sketch_->count() - 1);  // usually the sketch drawn last
+        }
+        thickness_->setText(remembered().count("rib.thickness") ? remembered()["rib.thickness"]
+                                                                 : q(doc_.defaultLength(2, 0.08)));
+    }
+    connect(thickness_, &ExprField::changed, this, [this] { schedulePreview(); });
+    for (auto* c : {sketch_, side_, op_}) {
+        connect(c, &QComboBox::currentIndexChanged, this, [this] { schedulePreview(); });
+    }
+    if (sketch_->count() == 0 || before->bodies.empty()) {
+        status_->setText("<b>✕ " + tr("A rib needs a body and a sketch with the rib's edge.") + "</b>");
+        ok_->setEnabled(false);
+    }
+    else {
+        schedulePreview();
+    }
+}
+
+jig::Feature RibPanel::draft() const
+{
+    jig::Feature f = startDraft(doc_, editId_, "rb", tr("Rib"));
+    f.kind = jig::FeatureKind::Rib;
+    f.params = {{"sketch", current(sketch_)},
+                {"curves", "all"},
+                {"thickness", thickness_->text().toStdString()},
+                {"side", current(side_)},
+                {"op", current(op_)}};
+    return f;
+}
+
+void RibPanel::rememberValues()
+{
+    remembered()["rib.thickness"] = thickness_->text();
+}
+
+QString RibPanel::title() const
+{
+    return tr("rib");
+}
+
 // ---------------------------------------------------------------- Move
 
 // Three arrows (X, Y, Z) from the bodies' centre; drag a grip to move along that axis.

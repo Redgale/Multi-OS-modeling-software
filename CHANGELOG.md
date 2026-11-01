@@ -5,6 +5,7 @@
 - Pipe: a round rod or hollow tube along sketch curves, with no circle to draw.
 - Coil: springs with round or square wire, either hand, on any plane.
 - Basic shapes: box, cylinder, sphere and torus without drawing a sketch.
+- Rib: a gusset from an open sketch edge to the body.
 - Fixed: a fillet or chamfer on the edges of a loft or sweep could lose its edges when an earlier step changed.
 
 ## 0.1.0 (2026-11-01)

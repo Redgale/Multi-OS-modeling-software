@@ -844,6 +844,35 @@ private:
     QCheckBox* flip_;
 };
 
+// Create ▸ Rib: a thin wall from an open sketch curve to the body (a gusset).
+class RibPanel : public FeaturePanel
+{
+    Q_OBJECT
+public:
+    RibPanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent = nullptr);
+    QComboBox* sketch() const
+    {
+        return sketch_;
+    }
+    ExprField* thickness() const
+    {
+        return thickness_;
+    }
+    QComboBox* side() const
+    {
+        return side_;
+    }
+
+protected:
+    jig::Feature draft() const override;
+    QString title() const override;
+    void rememberValues() override;
+
+private:
+    QComboBox *sketch_, *side_, *op_;
+    ExprField* thickness_;
+};
+
 class MoveHandle;
 
 // Move / copy bodies: shift along X, Y, Z and turn around an origin axis.

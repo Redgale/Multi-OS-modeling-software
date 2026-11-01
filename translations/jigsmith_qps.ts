@@ -599,6 +599,16 @@
     </message>
     <message>
         <location line="+1" />
+        <source>Rib</source>
+        <translation>[Rîb~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>A thin wall from an open sketch curve to the body: gussets that stiffen corners.</source>
+        <translation>[Á thîñ wáll fröm áñ öpéñ skétçh çürvé tö thé bödý: güsséts thát stîfféñ çörñérs.~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
         <source>Hole</source>
         <translation>[Hölé~]</translation>
     </message>
@@ -1254,6 +1264,11 @@
         <location line="+1" />
         <source>A ring (doughnut) lying on a plane, without drawing a sketch.</source>
         <translation>[Á rîñg (döüghñüt) lýîñg öñ á pláñé, wîthöüt dráwîñg á skétçh.~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>A thin wall from an open sketch curve to the body: gussets that stiffen corners.</source>
+        <translation>[Á thîñ wáll fröm áñ öpéñ skétçh çürvé tö thé bödý: güsséts thát stîfféñ çörñérs.~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <location line="+1" />
@@ -2147,6 +2162,71 @@
     </message>
     <message>
         <location line="+1" />
+        <source>A rib joins a body, and there is no body yet.</source>
+        <translation>[Á rîb jöîñs á bödý, áñd théré îs ñö bödý ýét.~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Make the part first, then draw the rib's edge.</source>
+        <translation>[Máké thé párt fîrst, théñ dráw thé rîb's édgé.~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>A rib's edge must be an open curve (its ends free), not a closed shape.</source>
+        <translation>[Á rîb's édgé müst bé áñ öpéñ çürvé (îts éñds fréé), ñöt á çlöséd shápé.~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Draw only the outer edge of the rib: a line or arc from one wall to the other.</source>
+        <translation>[Dráw öñlý thé öütér édgé öf thé rîb: á lîñé ör árç fröm öñé wáll tö thé öthér.~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The rib's thickness must be more than zero.</source>
+        <translation>[Thé rîb's thîçkñéss müst bé möré tháñ zérö.~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The rib's edge has no direction across the sketch plane.</source>
+        <translation>[Thé rîb's édgé hás ñö dîréçtîöñ áçröss thé skétçh pláñé.~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The rib could not be fitted to the body.</source>
+        <translation>[Thé rîb çöüld ñöt bé fîttéd tö thé bödý.~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The rib does not reach the body on that side: nothing closes it off.</source>
+        <translation>[Thé rîb döés ñöt réáçh thé bödý öñ thát sîdé: ñöthîñg çlösés ît öff.~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Draw the edge so the body lies between it and the walls it should join.</source>
+        <translation>[Dráw thé édgé sö thé bödý lîés bétwééñ ît áñd thé wálls ît shöüld jöîñ.~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Or try the other side.</source>
+        <translation>[Ör trý thé öthér sîdé.~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The rib's edge runs inside the body, so there is no room for a rib.</source>
+        <translation>[Thé rîb's édgé rüñs îñsîdé thé bödý, sö théré îs ñö rööm för á rîb.~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Draw the edge outside the part, from one wall to the other.</source>
+        <translation>[Dráw thé édgé öütsîdé thé párt, fröm öñé wáll tö thé öthér.~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>This rib has an unknown operation.</source>
+        <translation>[Thîs rîb hás áñ üñkñöwñ öpérátîöñ.~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
         <source>The body of the face to push or pull no longer exists.</source>
         <translation>[Thé bödý öf thé fáçé tö püsh ör püll ñö löñgér éxîsts.~~~~~~~~~~~~~~]</translation>
     </message>
@@ -2892,6 +2972,11 @@
     </message>
     <message>
         <location line="+1" />
+        <source>Open curves, the edge of %1.</source>
+        <translation>[Öpéñ çürvés, thé édgé öf %1.~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
         <source>Open curves, used as a wall by %1.</source>
         <translation>[Öpéñ çürvés, üséd ás á wáll bý %1.~~~~~~~]</translation>
     </message>
@@ -3086,7 +3171,7 @@
         <translation>[%1 édgés wéré ré-áttáçhéd bý shápé sîmîlárîtý áftér áñ éárlîér çháñgé. Çhéçk thé résült.~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="-47" />
+        <location line="-48" />
         <source>The id '%1' is already used.</source>
         <translation>[Thé îd '%1' îs álréádý üséd.~~~~~~]</translation>
     </message>
@@ -3096,7 +3181,7 @@
         <translation>[Thîs SVG hás ñö shápés, öütlîñés ör téxt tö brîñg îñ.~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+63" />
+        <location line="+64" />
         <source>A wall of %1 does not fit this outline.</source>
         <translation>[Á wáll öf %1 döés ñöt fît thîs öütlîñé.~~~~~~~~~]</translation>
     </message>
@@ -3171,12 +3256,12 @@
         <translation>[Thé föñt '%1' îs ñöt áváîláblé héré; üsîñg thé büîlt-îñ föñt (Îñtér).~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="-236" />
+        <location line="-237" />
         <source>There is nothing to export yet.</source>
         <translation>[Théré îs ñöthîñg tö éxpört ýét.~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="-212" />
+        <location line="-225" />
         <source>This DXF has no lines, circles, arcs, curves, text or blocks to bring in.</source>
         <translation>[Thîs DXF hás ñö lîñés, çîrçlés, árçs, çürvés, téxt ör blöçks tö brîñg îñ.~~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -3216,7 +3301,7 @@
         <translation>[Thát fáçé îs lévél wîth thé skétçh, sö théré îs ñö wáý tö téll whîçh wáý tö éxtrüdé.~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+139" />
+        <location line="+152" />
         <source>The 3MF file could not be created.</source>
         <translation>[Thé 3MF fîlé çöüld ñöt bé çréátéd.~~~~~~~~]</translation>
     </message>
@@ -3819,7 +3904,7 @@
 <context>
     <name>CoreWords</name>
     <message>
-        <location line="+99" />
+        <location line="+100" />
         <source>ball face (sphere)</source>
         <translation>[báll fáçé (sphéré)~~~~]</translation>
     </message>
@@ -3880,6 +3965,11 @@
     </message>
     <message>
         <location line="+1" />
+        <source>rib</source>
+        <translation>[rîb~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
         <source>round face (cylinder)</source>
         <translation>[röüñd fáçé (çýlîñdér)~~~~~]</translation>
     </message>
@@ -3917,7 +4007,7 @@
 <context>
     <name>MainWindow</name>
     <message>
-        <location filename="../app/MainWindow.cpp" line="+521" />
+        <location filename="../app/MainWindow.cpp" line="+523" />
         <source>Rebuilding the design…</source>
         <translation>[Rébüîldîñg thé désîgñ…~~~~~~]</translation>
     </message>
@@ -5052,7 +5142,7 @@
 <context>
     <name>jigapp::MainWindow</name>
     <message>
-        <location filename="../app/MainWindow.cpp" line="-154" />
+        <location filename="../app/MainWindow.cpp" line="-156" />
         <source>OK</source>
         <translation>[ÖK~]</translation>
     </message>
@@ -5078,15 +5168,15 @@
     </message>
     <message>
         <location line="+9" />
-        <location line="+741" />
+        <location line="+743" />
         <location line="+738" />
-        <location line="+910" />
+        <location line="+913" />
         <location line="+27" />
         <source>Sketch</source>
         <translation>[Skétçh~~]</translation>
     </message>
     <message>
-        <location line="-2414" />
+        <location line="-2419" />
         <source>Extrude</source>
         <translation>[Éxtrüdé~~]</translation>
     </message>
@@ -5189,6 +5279,11 @@
         <location line="+2" />
         <source>Basic shape</source>
         <translation>[Básîç shápé~~~]</translation>
+    </message>
+    <message>
+        <location line="+2" />
+        <source>Rib</source>
+        <translation>[Rîb~]</translation>
     </message>
     <message>
         <location line="+2" />
@@ -5348,12 +5443,12 @@
     </message>
     <message>
         <location line="+2" />
-        <location line="+1587" />
+        <location line="+1590" />
         <source>Mouse and trackpad</source>
         <translation>[Möüsé áñd tráçkpád~~~~~]</translation>
     </message>
     <message>
-        <location line="-1585" />
+        <location line="-1588" />
         <source>Default (middle-drag pans, Shift+middle orbits)</source>
         <translation>[Défáült (mîddlé-drág páñs, Shîft+mîddlé örbîts)~~~~~~~~~~~~]</translation>
     </message>
@@ -5374,30 +5469,30 @@
     </message>
     <message>
         <location line="+11" />
-        <location line="+1560" />
+        <location line="+1563" />
         <source>Theme</source>
         <translation>[Thémé~]</translation>
     </message>
     <message>
-        <location line="-1558" />
-        <location line="+1513" />
+        <location line="-1561" />
+        <location line="+1516" />
         <source>Light</source>
         <translation>[Lîght~]</translation>
     </message>
     <message>
-        <location line="-1513" />
-        <location line="+1512" />
+        <location line="-1516" />
+        <location line="+1515" />
         <source>Dark</source>
         <translation>[Dárk~]</translation>
     </message>
     <message>
-        <location line="-1511" />
-        <location line="+1513" />
+        <location line="-1514" />
+        <location line="+1516" />
         <source>High contrast</source>
         <translation>[Hîgh çöñtrást~~~~]</translation>
     </message>
     <message>
-        <location line="-1505" />
+        <location line="-1508" />
         <source>&amp;Help</source>
         <translation>[&amp;Hélp~]</translation>
     </message>
@@ -5514,12 +5609,12 @@
     </message>
     <message>
         <location line="+2" />
-        <location line="+2169" />
+        <location line="+2184" />
         <source>Rename…</source>
         <translation>[Réñámé…~~]</translation>
     </message>
     <message>
-        <location line="-2166" />
+        <location line="-2181" />
         <source>Delete body</source>
         <translation>[Délété bödý~~~]</translation>
     </message>
@@ -5535,13 +5630,13 @@
     </message>
     <message>
         <location line="+5" />
-        <location line="+1567" />
+        <location line="+1570" />
         <location line="+58" />
         <source>Properties</source>
         <translation>[Pröpértîés~~~]</translation>
     </message>
     <message>
-        <location line="-1619" />
+        <location line="-1622" />
         <source>Properties and help</source>
         <translation>[Pröpértîés áñd hélp~~~~~]</translation>
     </message>
@@ -5627,12 +5722,12 @@
     </message>
     <message>
         <location line="+18" />
-        <location line="+2055" />
+        <location line="+2070" />
         <source>Move rollback marker</source>
         <translation>[Mövé röllbáçk márkér~~~~~~]</translation>
     </message>
     <message>
-        <location line="-1883" />
+        <location line="-1898" />
         <source>Start here: every part begins as a flat sketch.
 Click Sketch on the toolbar, then click a plane.
 Or open the phone stand sample (File ▸ Open a sample).</source>
@@ -5833,12 +5928,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+0" />
-        <location line="+372" />
+        <location line="+375" />
         <source>Jigsmith designs (*.jig)</source>
         <translation>[Jîgsmîth désîgñs (*.jîg)~~~~~~]</translation>
     </message>
     <message>
-        <location line="-325" />
+        <location line="-328" />
         <source>Save view</source>
         <translation>[Sávé vîéw~~]</translation>
     </message>
@@ -5853,7 +5948,7 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
         <translation>[Vîéw %1~]</translation>
     </message>
     <message>
-        <location line="+86" />
+        <location line="+89" />
         <source>Import STEP</source>
         <translation>[Împört STÉP~~~]</translation>
     </message>
@@ -6001,12 +6096,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+0" />
-        <location line="+967" />
+        <location line="+976" />
         <source>There is no 3D body yet.</source>
         <translation>[Théré îs ñö 3D bödý ýét.~~~~~]</translation>
     </message>
     <message>
-        <location line="-964" />
+        <location line="-973" />
         <source>STL mesh for slicers (*.stl)</source>
         <translation>[STL mésh för slîçérs (*.stl)~~~~~~]</translation>
     </message>
@@ -6277,7 +6372,7 @@ An empty design with the origin ready</source>
         <translation>[Théré îs ñö 3D bödý ýét: skétçh áñd éxtrüdé fîrst.~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+128" />
+        <location line="+137" />
         <source>That face was made by %1: change its size here.</source>
         <translation>[Thát fáçé wás mádé bý %1: çháñgé îts sîzé héré.~~~~~~~~~~~]</translation>
     </message>
@@ -6389,7 +6484,7 @@ An empty design with the origin ready</source>
         <translation>[Áñ împörtéd sölîd hás ñö séttîñgs tö çháñgé. Tö üsé á ñéwér çöpý öf thé fîlé, délété thîs stép áñd împört ît ágáîñ.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+42" />
+        <location line="+45" />
         <source>Edit…</source>
         <translation>[Édît…~]</translation>
     </message>
@@ -6704,7 +6799,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
 <context>
     <name>jigapp::MovePanel</name>
     <message>
-        <location line="+1632" />
+        <location line="+1707" />
         <source>free %1</source>
         <translation>[fréé %1~]</translation>
     </message>
@@ -6895,7 +6990,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
 <context>
     <name>jigapp::PatternPanel</name>
     <message>
-        <location line="-2352" />
+        <location line="-2427" />
         <location line="+154" />
         <source>Pattern</source>
         <translation>[Páttérñ~~]</translation>
@@ -7807,6 +7902,75 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
     </message>
 </context>
 <context>
+    <name>jigapp::RibPanel</name>
+    <message>
+        <location line="+2074" />
+        <location line="+50" />
+        <source>Rib</source>
+        <translation>[Rîb~]</translation>
+    </message>
+    <message>
+        <location line="-49" />
+        <source>A thin wall that stiffens a corner. Sketch on a plane through the part and draw only the rib's outer edge, from one wall to the other: the rib fills from that edge to the body, centred on the sketch plane.</source>
+        <translation>[Á thîñ wáll thát stîfféñs á çörñér. Skétçh öñ á pláñé thröügh thé párt áñd dráw öñlý thé rîb's öütér édgé, fröm öñé wáll tö thé öthér: thé rîb fîlls fröm thát édgé tö thé bödý, çéñtréd öñ thé skétçh pláñé.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+5" />
+        <source>Towards the body (found by itself)</source>
+        <translation>[Töwárds thé bödý (föüñd bý îtsélf)~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>First side</source>
+        <translation>[Fîrst sîdé~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Second side</source>
+        <translation>[Séçöñd sîdé~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Join: add to the body</source>
+        <translation>[Jöîñ: ádd tö thé bödý~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+0" />
+        <source>New body</source>
+        <translation>[Ñéw bödý~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Edge (sketch)</source>
+        <translation>[Édgé (skétçh)~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Thickness</source>
+        <translation>[Thîçkñéss~~~]</translation>
+    </message>
+    <message>
+        <location line="+2" />
+        <source>Fill</source>
+        <translation>[Fîll~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Result</source>
+        <translation>[Résült~~]</translation>
+    </message>
+    <message>
+        <location line="+26" />
+        <source>A rib needs a body and a sketch with the rib's edge.</source>
+        <translation>[Á rîb ñééds á bödý áñd á skétçh wîth thé rîb's édgé.~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+27" />
+        <source>rib</source>
+        <translation>[rîb~]</translation>
+    </message>
+</context>
+<context>
     <name>jigapp::SectionPanel</name>
     <message>
         <location filename="../app/InspectPanels.cpp" line="-188" />
@@ -7872,7 +8036,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
 <context>
     <name>jigapp::ShellPanel</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="-387" />
+        <location filename="../app/FeaturePanels.cpp" line="-2528" />
         <source>Shell</source>
         <translation>[Shéll~]</translation>
     </message>
