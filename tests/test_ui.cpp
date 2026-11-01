@@ -3070,6 +3070,48 @@ private slots:
         dp->cancel();
     }
 
+    // Scale from the panel: the only body is ticked; evenly, then per axis when edited.
+    void scalePanel()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        {
+            jig::ScriptRunner r(w.document());
+            QVERIFY(r.runText("box id=bx1 length=10mm width=10mm height=10mm\n").ok());
+        }
+        w.refreshAll();
+        w.runCommand("solid.scale");
+        auto* sp = qobject_cast<ScalePanel*>(w.featurePanel());
+        QVERIFY(sp);
+        QCOMPARE(sp->bodies()->item(0)->checkState(), Qt::Checked);
+        QVERIFY(sp->factor()->isVisibleTo(sp) && !sp->factor(2)->isVisibleTo(sp));
+        sp->factor()->setText("2");
+        QTRY_VERIFY(sp->previewOk());
+        QVERIFY(sp->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        auto vol = [&] { return jig::massProperties(w.document().state().bodies.begin()->second->shape()).volume; };
+        QVERIFY(std::abs(vol() - 8000) < 1e-6);
+        w.editFeature(1);
+        sp = qobject_cast<ScalePanel*>(w.featurePanel());
+        QVERIFY(sp);
+        sp->mode()->setCurrentIndex(sp->mode()->findData("axes"));
+        QVERIFY(!sp->factor()->isVisibleTo(sp) && sp->factor(2)->isVisibleTo(sp));
+        sp->factor(2)->setText("3");
+        QTRY_VERIFY(sp->previewOk());
+        QVERIFY(sp->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        QVERIFY(std::abs(vol() - 3000) < 1e-6);
+        // none ticked: OK waits and the panel says so
+        w.runCommand("solid.scale");
+        sp = qobject_cast<ScalePanel*>(w.featurePanel());
+        sp->bodies()->item(0)->setCheckState(Qt::Unchecked);
+        QTRY_VERIFY(sp->statusText().contains("Tick the bodies"));
+        QVERIFY(!sp->previewOk());
+        sp->cancel();
+    }
+
     // Areas of a sketch are picked by clicking them in the 3D view: a square with a circle in it
     // can become a round post (the circle) or a block with a hole (the ring), not only a block.
     void clickAreasToExtrude()

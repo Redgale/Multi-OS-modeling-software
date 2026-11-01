@@ -972,6 +972,47 @@ private:
     QCheckBox* flip_;
 };
 
+// Modify ▸ Scale: bodies made bigger or smaller about a point, evenly or per axis.
+class ScalePanel : public FeaturePanel
+{
+    Q_OBJECT
+public:
+    ScalePanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent = nullptr);
+    QListWidget* bodies() const
+    {
+        return bodies_;
+    }
+    QComboBox* mode() const
+    {
+        return mode_;
+    }
+    ExprField* factor(int axis = -1) const  // -1: the even factor; 0, 1, 2: X, Y, Z
+    {
+        return axis < 0 ? factor_ : axes_[size_t(axis)];
+    }
+    QComboBox* about() const
+    {
+        return about_;
+    }
+    QCheckBox* copy() const
+    {
+        return copy_;
+    }
+
+protected:
+    QString notReady() const override;
+    jig::Feature draft() const override;
+    QString title() const override;
+
+private:
+    void showFields();
+    QListWidget* bodies_;
+    QComboBox *mode_, *about_;
+    ExprField* factor_;
+    std::array<ExprField*, 3> axes_ {};
+    QCheckBox* copy_;
+};
+
 class MoveHandle;
 
 // Move / copy bodies: shift along X, Y, Z and turn around an origin axis.

@@ -139,6 +139,7 @@ CommandRegistry::CommandRegistry()
     add({"solid.pattern_rect", "Grid copy", "Rectangular Pattern", "CREATE", "Repeat a feature in rows and columns.", "", {"array", "grid", "repeat"}, false, false, false, m3});
     add({"solid.pattern_circ", "Ring copy", "Circular Pattern", "CREATE", "Repeat a feature around an axis.", "", {"array", "repeat around", "spokes"}, true, false, false, m3});
     add({"solid.draft", "Draft", "Draft", "MODIFY", "Slope faces by a small angle so the part leaves a mould, or prints without overhangs.", "", {"taper faces", "mould", "mold", "angle faces"}, false, false, true, m3});
+    add({"solid.scale", "Scale", "Scale", "MODIFY", "Make bodies bigger or smaller about a point, evenly or by a factor along each axis.", "", {"resize", "enlarge", "shrink", "stretch"}, false, false, true, m3});
     add({"solid.presspull", "Press pull", "Press Pull", "MODIFY", "Push or pull a flat face by a distance; on a rounded edge or hole it opens the step that made it.", "Q", {"push", "pull", "drag face"}, false, false, true, m3});
     add({"solid.fillet", "Fillet", "Fillet", "MODIFY", "Round off edges so parts look finished and are comfortable to hold.", "F", {"round the edges", "round", "soften", "radius"}, true, false, true, m3});
     add({"solid.chamfer", "Chamfer", "Chamfer", "MODIFY", "Cut a flat bevel on edges; great for the bottom of 3D prints.", "", {"bevel", "angled edge", "elephant foot"}, true, false, true, m3});
@@ -175,7 +176,7 @@ CommandRegistry::CommandRegistry()
         "constraint.symmetric", "constraint.equal", "solid.extrude", "solid.fillet", "solid.chamfer", "solid.shell",
         "solid.revolve", "solid.loft", "solid.sweep", "solid.pipe", "solid.coil", "solid.box", "solid.cylinder", "solid.sphere", "solid.torus", "solid.rib", "solid.emboss", "solid.hole", "solid.mirror", "solid.pattern_rect", "solid.pattern_circ", "modify.parameters",
         "inspect.measure", "inspect.properties", "file.export_3mf", "construct.offset_plane", "construct.angle_plane",
-        "construct.midplane", "construct.tangent_plane", "construct.points_plane", "construct.path_plane", "construct.axis", "construct.point", "solid.draft", "solid.presspull", "solid.combine", "solid.split", "solid.move",
+        "construct.midplane", "construct.tangent_plane", "construct.points_plane", "construct.path_plane", "construct.axis", "construct.point", "solid.draft", "solid.scale", "solid.presspull", "solid.combine", "solid.split", "solid.move",
         "inspect.section", "insert.dxf", "insert.svg", "help.tutorial"};
     for (auto& c : commands_) {
         if (inApp.count(c.id)) {
@@ -1499,6 +1500,43 @@ Result<bool> ScriptRunner::runLineUnchecked(std::string_view rawLine)
             if (a.get("direction", "inside") == "outside") {
                 f.params["direction"] = "outside";
             }
+            id = f.id;
+            insertFeature(m, std::move(f));
+            return true;
+        });
+        if (!r) {
+            return r;
+        }
+        return checkFeature(id);
+    }
+    if (a.verb == "scale") {
+        // scale bodies=e1;e2 (factor=2 | x=1 y=1 z=2) [about=origin|<point id>] [copy=yes]
+        const auto bodies = split(a.get("bodies"), ';');
+        for (const auto& b : bodies) {
+            if (!doc.state().bodies.count(b)) {
+                return makeError("script.args", fmt("There is no body called '%1'.", {b}));
+            }
+        }
+        nlohmann::json params {{"bodies", bodies}, {"about", a.get("about", "origin")}, {"copy", a.get("copy", "no") == "yes"}};
+        if (a.has("x") || a.has("y") || a.has("z")) {
+            params["mode"] = "axes";
+            for (const char* k : {"x", "y", "z"}) {
+                params[k] = a.get(k, "1");
+            }
+        }
+        else {
+            params["factor"] = a.get("factor", "2");
+        }
+        std::string id;
+        auto r = doc.transact("Scale", [&](Model& m) -> Result<bool> {
+            Feature f;
+            f.id = a.get("id", Document::newId(m, "sc"));
+            if (findFeature(m, f.id)) {
+                return makeError("script.args", "The id '" + f.id + "' is already used.");
+            }
+            f.name = a.get("name", stepName("Scale", f.id, "sc"));
+            f.kind = FeatureKind::Scale;
+            f.params = params;
             id = f.id;
             insertFeature(m, std::move(f));
             return true;

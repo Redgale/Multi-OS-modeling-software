@@ -4480,6 +4480,148 @@ QString DraftPanel::title() const
     return tr("draft");
 }
 
+// ---------------------------------------------------------------- Scale
+
+ScalePanel::ScalePanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent)
+    : FeaturePanel(doc, view, std::move(editId), parent)
+{
+    form_->addWidget(heading(this, tr("Scale"),
+                             tr("Make bodies bigger or smaller about a point: 2 doubles every size, 0.5 halves it. "
+                                "Per axis stretches or squashes.")));
+    bodies_ = new QListWidget(this);
+    bodies_->setMaximumHeight(90);
+    mode_ = combo(this, {{tr("Evenly"), "uniform"}, {tr("Per axis (stretch)"), "axes"}});
+    factor_ = new ExprField(doc, jig::Dim::none(), this);
+    const QString axisNames[3] = {tr("Along X"), tr("Along Y"), tr("Along Z")};
+    about_ = new QComboBox(this);
+    about_->addItem(tr("Origin"), "origin");
+    copy_ = new QCheckBox(tr("Keep the original (scale a copy)"), this);
+    addRow(tr("Bodies"), bodies_);
+    addRow(tr("Scale"), mode_);
+    addRow(tr("Factor"), factor_);
+    bindParam("factor", factor_);
+    for (int i = 0; i < 3; ++i) {
+        axes_[size_t(i)] = new ExprField(doc, jig::Dim::none(), this);
+        addRow(axisNames[i], axes_[size_t(i)]);
+    }
+    addRow(tr("About"), about_);
+    form_->addWidget(copy_);
+    const auto before = stateBefore();
+    for (int i = 0; i < insertIndex(); ++i) {
+        const auto& f = doc_.model().features[size_t(i)];
+        if (f.kind == jig::FeatureKind::Point && before->points.count(f.id)) {
+            about_->addItem(q(f.name), q(f.id));
+        }
+    }
+    std::set<std::string> chosen;
+    const jig::Feature* edit = editId_.empty() ? nullptr : doc_.feature(editId_);
+    if (edit) {
+        const auto& p = edit->params;
+        for (auto& b : p.value("bodies", nlohmann::json::array())) {
+            if (b.is_string()) {
+                chosen.insert(b.get<std::string>());
+            }
+        }
+        select(mode_, p.value("mode", std::string("uniform")));
+        factor_->setText(q(p.value("factor", std::string("2"))));
+        const char* keys[3] = {"x", "y", "z"};
+        for (int i = 0; i < 3; ++i) {
+            axes_[size_t(i)]->setText(q(p.value(keys[i], std::string("1"))));
+        }
+        select(about_, p.value("about", std::string("origin")));
+        copy_->setChecked(p.value("copy", false));
+    }
+    else {
+        factor_->setText("2");
+        for (auto* e : axes_) {
+            e->setText("1");
+        }
+        if (before->bodies.size() == 1) {
+            chosen.insert(before->bodies.begin()->first);
+        }
+    }
+    for (auto& [id, b] : before->bodies) {
+        const jig::Feature* bf = doc_.feature(id);
+        auto* item = new QListWidgetItem(bf ? q(bf->name) : q(id), bodies_);
+        item->setData(Qt::UserRole, q(id));
+        item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+        item->setCheckState(chosen.count(id) ? Qt::Checked : Qt::Unchecked);
+    }
+    showFields();
+    connect(mode_, &QComboBox::currentIndexChanged, this, [this] {
+        showFields();
+        schedulePreview();
+    });
+    connect(bodies_, &QListWidget::itemChanged, this, [this] { schedulePreview(); });
+    connect(about_, &QComboBox::currentIndexChanged, this, [this] { schedulePreview(); });
+    connect(copy_, &QCheckBox::toggled, this, [this] { schedulePreview(); });
+    for (auto* e : {factor_, axes_[0], axes_[1], axes_[2]}) {
+        connect(e, &ExprField::changed, this, [this] { schedulePreview(); });
+    }
+    if (before->bodies.empty()) {
+        status_->setText("<b>✕ " + tr("There is no body to scale yet.") + "</b>");
+        ok_->setEnabled(false);
+    }
+    else {
+        schedulePreview();
+    }
+}
+
+void ScalePanel::showFields()
+{
+    const bool axes = current(mode_) == "axes";
+    auto show = [this](QWidget* w, bool on) {
+        w->setVisible(on);
+        const int i = form_->indexOf(w);
+        if (i > 0) {
+            if (auto* item = form_->itemAt(i - 1); item && item->widget()) {
+                item->widget()->setVisible(on);
+            }
+        }
+    };
+    show(factor_, !axes);
+    for (auto* e : axes_) {
+        show(e, axes);
+    }
+}
+
+QString ScalePanel::notReady() const
+{
+    for (int i = 0; i < bodies_->count(); ++i) {
+        if (bodies_->item(i)->checkState() == Qt::Checked) {
+            return {};
+        }
+    }
+    return tr("Tick the bodies to scale.");
+}
+
+jig::Feature ScalePanel::draft() const
+{
+    jig::Feature f = startDraft(doc_, editId_, "sc", tr("Scale"));
+    f.kind = jig::FeatureKind::Scale;
+    nlohmann::json bodies = nlohmann::json::array();
+    for (int i = 0; i < bodies_->count(); ++i) {
+        if (bodies_->item(i)->checkState() == Qt::Checked) {
+            bodies.push_back(bodies_->item(i)->data(Qt::UserRole).toString().toStdString());
+        }
+    }
+    f.params = {{"bodies", bodies}, {"mode", current(mode_)}, {"about", current(about_)}, {"copy", copy_->isChecked()}};
+    if (current(mode_) == "axes") {
+        f.params["x"] = axes_[0]->text().toStdString();
+        f.params["y"] = axes_[1]->text().toStdString();
+        f.params["z"] = axes_[2]->text().toStdString();
+    }
+    else {
+        f.params["factor"] = factor_->text().toStdString();
+    }
+    return f;
+}
+
+QString ScalePanel::title() const
+{
+    return tr("scale");
+}
+
 // ---------------------------------------------------------------- Move
 
 // Three arrows (X, Y, Z) from the bodies' centre; drag a grip to move along that axis.

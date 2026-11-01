@@ -66,6 +66,7 @@ QT_TRANSLATE_NOOP("Core", "Copy a body across a plane, e.g. to make a symmetric 
 QT_TRANSLATE_NOOP("Core", "Repeat a feature in rows and columns.")
 QT_TRANSLATE_NOOP("Core", "Repeat a feature around an axis.")
 QT_TRANSLATE_NOOP("Core", "Slope faces by a small angle so the part leaves a mould, or prints without overhangs.")
+QT_TRANSLATE_NOOP("Core", "Make bodies bigger or smaller about a point, evenly or by a factor along each axis.")
 QT_TRANSLATE_NOOP("Core", "Push or pull a flat face by a distance; on a rounded edge or hole it opens the step that made it.")
 QT_TRANSLATE_NOOP("Core", "Round off edges so parts look finished and are comfortable to hold.")
 QT_TRANSLATE_NOOP("Core", "Cut a flat bevel on edges; great for the bottom of 3D prints.")
@@ -320,6 +321,12 @@ QT_TRANSLATE_NOOP("Core", "Pick a plane that passes through the body.")
 QT_TRANSLATE_NOOP("Core", "Use an offset plane to move it.")
 QT_TRANSLATE_NOOP("Core", "Pick at least one body to move.")
 QT_TRANSLATE_NOOP("Core", "A body this step moves no longer exists.")
+QT_TRANSLATE_NOOP("Core", "Pick the bodies to scale.")
+QT_TRANSLATE_NOOP("Core", "A scale factor is a plain number more than 0 (2 doubles, 0.5 halves).")
+QT_TRANSLATE_NOOP("Core", "Edit the scale and pick another point, or the origin.")
+QT_TRANSLATE_NOOP("Core", "A body this step scales no longer exists.")
+QT_TRANSLATE_NOOP("Core", "This body could not be stretched.")
+QT_TRANSLATE_NOOP("Core", "This body could not be scaled.")
 QT_TRANSLATE_NOOP("Core", "The axis line of this revolve is gone from the sketch.")
 QT_TRANSLATE_NOOP("Core", "Edit the revolve and pick an axis again.")
 QT_TRANSLATE_NOOP("Core", "The axis line has no length.")
@@ -612,6 +619,7 @@ inline const char* const kCorePatterns[] = {
     QT_TRANSLATE_NOOP("Core", "Use a pitch larger than the section size (%1)."),
     QT_TRANSLATE_NOOP("Core", "The %1 must be more than zero."),
     QT_TRANSLATE_NOOP("Core", "Jigsmith has no basic shape called '%1'."),
+    QT_TRANSLATE_NOOP("Core", "The point '%1' to scale about is missing or comes later."),
     QT_TRANSLATE_NOOP("Core", "The body this pattern repeats (%1) no longer exists."),
     QT_TRANSLATE_NOOP("Core", "The step this pattern repeats (%1) is missing, after the pattern, or has a problem."),
     QT_TRANSLATE_NOOP("Core", "The sketch with this pattern's path (%1) is missing or comes later."),

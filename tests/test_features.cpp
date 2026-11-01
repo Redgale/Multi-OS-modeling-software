@@ -2740,3 +2740,42 @@ TEST(Draft, SidesSlopeAroundTheNeutralPlane)
         EXPECT_FALSE(d->status(1).message.empty());
     }
 }
+
+TEST(Scale, EvenlyPerAxisAboutAPointAndCopies)
+{
+    const std::string cube = "box id=bx1 length=10mm width=10mm height=10mm\n";
+    // twice as big about the origin: 8 times the volume; the bottom stays on the floor
+    auto two = build(cube + "scale id=sc1 bodies=bx1 factor=2\n");
+    expectAllOk(*two);
+    EXPECT_NEAR(props(*two).volume, 8000, 1e-6);
+    EXPECT_NEAR(props(*two).zmin, 0, 1e-9);
+    EXPECT_NEAR(props(*two).xmax, 10, 1e-9);
+    EXPECT_EQ(two->state().bodies.at("bx1")->findFaces("bx1/top").size(), 1u);  // names kept
+    // halved about a construction point at the cube's top centre: the top stays put
+    auto half = build(cube + "point id=p1 at=0,0,10\nscale id=sc1 bodies=bx1 factor=0.5 about=p1\n");
+    expectAllOk(*half);
+    EXPECT_NEAR(props(*half).volume, 125, 1e-6);
+    EXPECT_NEAR(props(*half).zmax, 10, 1e-9);
+    EXPECT_NEAR(props(*half).zmin, 5, 1e-9);
+    // stretched along Z only, from a parameter; then a fillet on the stretched body's top
+    auto tall = build("param k = 3 kind=number\n" + cube + "scale id=sc1 bodies=bx1 x=1 y=1 z=k\n"
+                      "fillet id=f1 edges=face:bx1/top radius=1mm\n");
+    expectAllOk(*tall);
+    EXPECT_NEAR(props(*tall).zmax, 30, 1e-6);
+    EXPECT_LT(props(*tall).volume, 3000);
+    // a scaled copy is a new body; the original stays
+    auto copy = build(cube + "scale id=sc1 bodies=bx1 factor=2 copy=yes\n");
+    expectAllOk(*copy);
+    EXPECT_EQ(copy->state().bodies.size(), 2u);
+    EXPECT_NEAR(massProperties(copy->state().bodies.at("sc1")->shape()).volume, 8000, 1e-6);
+    // zero, a length and a missing point are refused with a reason
+    for (const std::string& bad : {cube + "scale id=sc1 bodies=bx1 factor=0\n", cube + "scale id=sc1 bodies=bx1 factor=2mm\n",
+                                   cube + "scale id=sc1 bodies=bx1 factor=2 about=nowhere\n"}) {
+        auto d = std::make_unique<Document>();
+        ScriptRunner r(*d);
+        r.strict = false;
+        ASSERT_TRUE(r.runText(bad).ok());
+        EXPECT_EQ(d->status(1).level, StatusLevel::Error) << bad;
+        EXPECT_FALSE(d->status(1).message.empty());
+    }
+}

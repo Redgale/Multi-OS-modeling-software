@@ -74,7 +74,8 @@ enum class FeatureKind
     Primitive,  // a box, cylinder, sphere or torus placed on a plane, no sketch
     Rib,        // a thin wall from an open sketch curve to the body (a gusset)
     Emboss,     // a sketch's areas wrapped onto a round face, raised or sunk
-    Draft       // faces of a body sloped by an angle around a neutral plane
+    Draft,      // faces of a body sloped by an angle around a neutral plane
+    Scale       // bodies made bigger or smaller about a point (or stretched per axis)
 };
 
 const char* toString(FeatureKind k);

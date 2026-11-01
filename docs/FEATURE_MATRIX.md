@@ -125,7 +125,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Chamfer: equal, two distances, distance+angle | 18 | v0.1 M3 | **app** + scripts: all three | |
 | Shell (inside/outside, openings) | 18 | v0.1 M3 | **app** + scripts (`direction=outside`): inside or outside, openings or closed hollow | |
 | Draft | 18 | v0.2 | **app** + scripts (`draft`): faces sloped around a neutral plane (origin, construction or face), either way | Parting-line draft not yet |
-| Scale | 17, 18 | v0.2 | — | |
+| Scale | 17, 18 | v0.2 | **app** + scripts (`scale`): bodies, evenly or per axis, about the origin or a construction point, in place or as a copy | Scaling sketches not yet |
 | Combine join/cut/intersect, keep tools | 17 | v0.1 M4 | **app** + scripts (`combine`) | |
 | Offset face, replace face, split face, silhouette split | 17 | v0.3+ | — | Direct modelling |
 | Split body (plane) | 17, 18 | v0.1 M4 | **app** + scripts (`split`): origin plane, construction plane, flat face, or a curved face that reaches through the body | |

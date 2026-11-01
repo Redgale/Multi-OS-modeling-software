@@ -670,6 +670,16 @@
     </message>
     <message>
         <location line="+2"/>
+        <source>Scale</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Make bodies bigger or smaller about a point, evenly or by a factor along each axis.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>Press pull</source>
         <translation type="unfinished"></translation>
     </message>
@@ -679,12 +689,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2"/>
+        <location line="-4"/>
         <source>MODIFY</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+3"/>
+        <location line="+5"/>
         <source>Fillet</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1349,6 +1359,11 @@
     <message>
         <location line="+1"/>
         <source>Slope faces by a small angle so the part leaves a mould, or prints without overhangs.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Make bodies bigger or smaller about a point, evenly or by a factor along each axis.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -2583,6 +2598,36 @@
     </message>
     <message>
         <location line="+1"/>
+        <source>Pick the bodies to scale.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>A scale factor is a plain number more than 0 (2 doubles, 0.5 halves).</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Edit the scale and pick another point, or the origin.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>A body this step scales no longer exists.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>This body could not be stretched.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>This body could not be scaled.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>The axis line of this revolve is gone from the sketch.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3408,6 +3453,11 @@
     </message>
     <message>
         <location line="+1"/>
+        <source>The point &apos;%1&apos; to scale about is missing or comes later.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>The body this pattern repeats (%1) no longer exists.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3457,7 +3507,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-50"/>
+        <location line="-51"/>
         <source>The id &apos;%1&apos; is already used.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3467,7 +3517,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+66"/>
+        <location line="+67"/>
         <source>A wall of %1 does not fit this outline.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3547,12 +3597,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-248"/>
+        <location line="-249"/>
         <source>There is nothing to export yet.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-256"/>
+        <location line="-262"/>
         <source>This DXF has no lines, circles, arcs, curves, text or blocks to bring in.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3592,7 +3642,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+169"/>
+        <location line="+175"/>
         <source>The 3MF file could not be created.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4195,7 +4245,7 @@
 <context>
     <name>CoreWords</name>
     <message>
-        <location line="+103"/>
+        <location line="+104"/>
         <source>ball face (sphere)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4303,7 +4353,7 @@
 <context>
     <name>MainWindow</name>
     <message>
-        <location filename="../app/MainWindow.cpp" line="+527"/>
+        <location filename="../app/MainWindow.cpp" line="+529"/>
         <source>Rebuilding the design…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5585,7 +5635,7 @@
 <context>
     <name>jigapp::MainWindow</name>
     <message>
-        <location filename="../app/MainWindow.cpp" line="-160"/>
+        <location filename="../app/MainWindow.cpp" line="-162"/>
         <source>OK</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5611,15 +5661,15 @@
     </message>
     <message>
         <location line="+9"/>
-        <location line="+747"/>
+        <location line="+749"/>
         <location line="+738"/>
-        <location line="+925"/>
+        <location line="+928"/>
         <location line="+27"/>
         <source>Sketch</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2435"/>
+        <location line="-2440"/>
         <source>Extrude</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5736,6 +5786,11 @@
     <message>
         <location line="+2"/>
         <source>Draft</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Scale</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -5896,12 +5951,12 @@
     </message>
     <message>
         <location line="+2"/>
-        <location line="+1602"/>
+        <location line="+1605"/>
         <source>Mouse and trackpad</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1600"/>
+        <location line="-1603"/>
         <source>Default (middle-drag pans, Shift+middle orbits)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5922,30 +5977,30 @@
     </message>
     <message>
         <location line="+11"/>
-        <location line="+1575"/>
+        <location line="+1578"/>
         <source>Theme</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1573"/>
-        <location line="+1528"/>
+        <location line="-1576"/>
+        <location line="+1531"/>
         <source>Light</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1528"/>
-        <location line="+1527"/>
+        <location line="-1531"/>
+        <location line="+1530"/>
         <source>Dark</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1526"/>
-        <location line="+1528"/>
+        <location line="-1529"/>
+        <location line="+1531"/>
         <source>High contrast</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1520"/>
+        <location line="-1523"/>
         <source>&amp;Help</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6062,12 +6117,12 @@
     </message>
     <message>
         <location line="+2"/>
-        <location line="+2220"/>
+        <location line="+2235"/>
         <source>Rename…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2217"/>
+        <location line="-2232"/>
         <source>Delete body</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6083,13 +6138,13 @@
     </message>
     <message>
         <location line="+5"/>
-        <location line="+1582"/>
+        <location line="+1585"/>
         <location line="+58"/>
         <source>Properties</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1634"/>
+        <location line="-1637"/>
         <source>Properties and help</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6175,12 +6230,12 @@
     </message>
     <message>
         <location line="+18"/>
-        <location line="+2106"/>
+        <location line="+2121"/>
         <source>Move rollback marker</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1934"/>
+        <location line="-1949"/>
         <source>Start here: every part begins as a flat sketch.
 Click Sketch on the toolbar, then click a plane.
 Or open the phone stand sample (File ▸ Open a sample).</source>
@@ -6379,12 +6434,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+0"/>
-        <location line="+387"/>
+        <location line="+390"/>
         <source>Jigsmith designs (*.jig)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-340"/>
+        <location line="-343"/>
         <source>Save view</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6399,7 +6454,7 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+101"/>
+        <location line="+104"/>
         <source>Import STEP</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6549,12 +6604,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+0"/>
-        <location line="+994"/>
+        <location line="+1003"/>
         <source>There is no 3D body yet.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-991"/>
+        <location line="-1000"/>
         <source>STL mesh for slicers (*.stl)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6824,7 +6879,7 @@ An empty design with the origin ready</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+155"/>
+        <location line="+164"/>
         <source>That face was made by %1: change its size here.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6940,7 +6995,7 @@ An empty design with the origin ready</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+51"/>
+        <location line="+54"/>
         <source>Edit…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7253,7 +7308,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::MovePanel</name>
     <message>
-        <location line="+2091"/>
+        <location line="+2233"/>
         <source>free %1</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7446,7 +7501,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::PatternPanel</name>
     <message>
-        <location line="-2811"/>
+        <location line="-2953"/>
         <location line="+154"/>
         <source>Pattern</source>
         <translation type="unfinished"></translation>
@@ -8477,6 +8532,86 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
     </message>
 </context>
 <context>
+    <name>jigapp::ScalePanel</name>
+    <message>
+        <location line="+301"/>
+        <location line="+12"/>
+        <location line="+100"/>
+        <source>Scale</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-111"/>
+        <source>Make bodies bigger or smaller about a point: 2 doubles every size, 0.5 halves it. Per axis stretches or squashes.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Evenly</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Per axis (stretch)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Along X</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Along Y</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Along Z</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Origin</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Keep the original (scale a copy)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Bodies</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Factor</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>About</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+55"/>
+        <source>There is no body to scale yet.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+33"/>
+        <source>Tick the bodies to scale.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+27"/>
+        <source>scale</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>jigapp::SectionPanel</name>
     <message>
         <location filename="../app/InspectPanels.cpp" line="-188"/>
@@ -8542,7 +8677,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::ShellPanel</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="-2619"/>
+        <location filename="../app/FeaturePanels.cpp" line="-3054"/>
         <source>Shell</source>
         <translation type="unfinished"></translation>
     </message>

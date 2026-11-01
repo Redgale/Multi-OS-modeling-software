@@ -669,6 +669,16 @@
     </message>
     <message>
         <location line="+2" />
+        <source>Scale</source>
+        <translation>[Sçálé~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Make bodies bigger or smaller about a point, evenly or by a factor along each axis.</source>
+        <translation>[Máké bödîés bîggér ör smállér áböüt á pöîñt, évéñlý ör bý á fáçtör álöñg éáçh áxîs.~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
         <source>Press pull</source>
         <translation>[Préss püll~~~]</translation>
     </message>
@@ -678,12 +688,12 @@
         <translation>[Püsh ör püll á flát fáçé bý á dîstáñçé; öñ á röüñdéd édgé ör hölé ît öpéñs thé stép thát mádé ît.~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="-2" />
+        <location line="-4" />
         <source>MODIFY</source>
         <translation>[MÖDÎFÝ~~]</translation>
     </message>
     <message>
-        <location line="+3" />
+        <location line="+5" />
         <source>Fillet</source>
         <translation>[Fîllét~~]</translation>
     </message>
@@ -1349,6 +1359,11 @@
         <location line="+1" />
         <source>Slope faces by a small angle so the part leaves a mould, or prints without overhangs.</source>
         <translation>[Slöpé fáçés bý á smáll áñglé sö thé párt léávés á möüld, ör prîñts wîthöüt övérháñgs.~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Make bodies bigger or smaller about a point, evenly or by a factor along each axis.</source>
+        <translation>[Máké bödîés bîggér ör smállér áböüt á pöîñt, évéñlý ör bý á fáçtör álöñg éáçh áxîs.~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <location line="+1" />
@@ -2582,6 +2597,36 @@
     </message>
     <message>
         <location line="+1" />
+        <source>Pick the bodies to scale.</source>
+        <translation>[Pîçk thé bödîés tö sçálé.~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>A scale factor is a plain number more than 0 (2 doubles, 0.5 halves).</source>
+        <translation>[Á sçálé fáçtör îs á pláîñ ñümbér möré tháñ 0 (2 döüblés, 0.5 hálvés).~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Edit the scale and pick another point, or the origin.</source>
+        <translation>[Édît thé sçálé áñd pîçk áñöthér pöîñt, ör thé örîgîñ.~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>A body this step scales no longer exists.</source>
+        <translation>[Á bödý thîs stép sçálés ñö löñgér éxîsts.~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>This body could not be stretched.</source>
+        <translation>[Thîs bödý çöüld ñöt bé strétçhéd.~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>This body could not be scaled.</source>
+        <translation>[Thîs bödý çöüld ñöt bé sçáléd.~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
         <source>The axis line of this revolve is gone from the sketch.</source>
         <translation>[Thé áxîs lîñé öf thîs révölvé îs göñé fröm thé skétçh.~~~~~~~~~~~~~~]</translation>
     </message>
@@ -3407,6 +3452,11 @@
     </message>
     <message>
         <location line="+1" />
+        <source>The point '%1' to scale about is missing or comes later.</source>
+        <translation>[Thé pöîñt '%1' tö sçálé áböüt îs mîssîñg ör çömés látér.~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
         <source>The body this pattern repeats (%1) no longer exists.</source>
         <translation>[Thé bödý thîs páttérñ répéáts (%1) ñö löñgér éxîsts.~~~~~~~~~~~~~]</translation>
     </message>
@@ -3456,7 +3506,7 @@
         <translation>[%1 édgés wéré ré-áttáçhéd bý shápé sîmîlárîtý áftér áñ éárlîér çháñgé. Çhéçk thé résült.~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="-50" />
+        <location line="-51" />
         <source>The id '%1' is already used.</source>
         <translation>[Thé îd '%1' îs álréádý üséd.~~~~~~]</translation>
     </message>
@@ -3466,7 +3516,7 @@
         <translation>[Thîs SVG hás ñö shápés, öütlîñés ör téxt tö brîñg îñ.~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+66" />
+        <location line="+67" />
         <source>A wall of %1 does not fit this outline.</source>
         <translation>[Á wáll öf %1 döés ñöt fît thîs öütlîñé.~~~~~~~~~]</translation>
     </message>
@@ -3546,12 +3596,12 @@
         <translation>[Thé föñt '%1' îs ñöt áváîláblé héré; üsîñg thé büîlt-îñ föñt (Îñtér).~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="-248" />
+        <location line="-249" />
         <source>There is nothing to export yet.</source>
         <translation>[Théré îs ñöthîñg tö éxpört ýét.~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="-256" />
+        <location line="-262" />
         <source>This DXF has no lines, circles, arcs, curves, text or blocks to bring in.</source>
         <translation>[Thîs DXF hás ñö lîñés, çîrçlés, árçs, çürvés, téxt ör blöçks tö brîñg îñ.~~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -3591,7 +3641,7 @@
         <translation>[Thát fáçé îs lévél wîth thé skétçh, sö théré îs ñö wáý tö téll whîçh wáý tö éxtrüdé.~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+169" />
+        <location line="+175" />
         <source>The 3MF file could not be created.</source>
         <translation>[Thé 3MF fîlé çöüld ñöt bé çréátéd.~~~~~~~~]</translation>
     </message>
@@ -4194,7 +4244,7 @@
 <context>
     <name>CoreWords</name>
     <message>
-        <location line="+103" />
+        <location line="+104" />
         <source>ball face (sphere)</source>
         <translation>[báll fáçé (sphéré)~~~~]</translation>
     </message>
@@ -4302,7 +4352,7 @@
 <context>
     <name>MainWindow</name>
     <message>
-        <location filename="../app/MainWindow.cpp" line="+527" />
+        <location filename="../app/MainWindow.cpp" line="+529" />
         <source>Rebuilding the design…</source>
         <translation>[Rébüîldîñg thé désîgñ…~~~~~~]</translation>
     </message>
@@ -5580,7 +5630,7 @@
 <context>
     <name>jigapp::MainWindow</name>
     <message>
-        <location filename="../app/MainWindow.cpp" line="-160" />
+        <location filename="../app/MainWindow.cpp" line="-162" />
         <source>OK</source>
         <translation>[ÖK~]</translation>
     </message>
@@ -5606,15 +5656,15 @@
     </message>
     <message>
         <location line="+9" />
-        <location line="+747" />
+        <location line="+749" />
         <location line="+738" />
-        <location line="+925" />
+        <location line="+928" />
         <location line="+27" />
         <source>Sketch</source>
         <translation>[Skétçh~~]</translation>
     </message>
     <message>
-        <location line="-2435" />
+        <location line="-2440" />
         <source>Extrude</source>
         <translation>[Éxtrüdé~~]</translation>
     </message>
@@ -5732,6 +5782,11 @@
         <location line="+2" />
         <source>Draft</source>
         <translation>[Dráft~]</translation>
+    </message>
+    <message>
+        <location line="+2" />
+        <source>Scale</source>
+        <translation>[Sçálé~]</translation>
     </message>
     <message>
         <location line="+2" />
@@ -5891,12 +5946,12 @@
     </message>
     <message>
         <location line="+2" />
-        <location line="+1602" />
+        <location line="+1605" />
         <source>Mouse and trackpad</source>
         <translation>[Möüsé áñd tráçkpád~~~~~]</translation>
     </message>
     <message>
-        <location line="-1600" />
+        <location line="-1603" />
         <source>Default (middle-drag pans, Shift+middle orbits)</source>
         <translation>[Défáült (mîddlé-drág páñs, Shîft+mîddlé örbîts)~~~~~~~~~~~~]</translation>
     </message>
@@ -5917,30 +5972,30 @@
     </message>
     <message>
         <location line="+11" />
-        <location line="+1575" />
+        <location line="+1578" />
         <source>Theme</source>
         <translation>[Thémé~]</translation>
     </message>
     <message>
-        <location line="-1573" />
-        <location line="+1528" />
+        <location line="-1576" />
+        <location line="+1531" />
         <source>Light</source>
         <translation>[Lîght~]</translation>
     </message>
     <message>
-        <location line="-1528" />
-        <location line="+1527" />
+        <location line="-1531" />
+        <location line="+1530" />
         <source>Dark</source>
         <translation>[Dárk~]</translation>
     </message>
     <message>
-        <location line="-1526" />
-        <location line="+1528" />
+        <location line="-1529" />
+        <location line="+1531" />
         <source>High contrast</source>
         <translation>[Hîgh çöñtrást~~~~]</translation>
     </message>
     <message>
-        <location line="-1520" />
+        <location line="-1523" />
         <source>&amp;Help</source>
         <translation>[&amp;Hélp~]</translation>
     </message>
@@ -6057,12 +6112,12 @@
     </message>
     <message>
         <location line="+2" />
-        <location line="+2220" />
+        <location line="+2235" />
         <source>Rename…</source>
         <translation>[Réñámé…~~]</translation>
     </message>
     <message>
-        <location line="-2217" />
+        <location line="-2232" />
         <source>Delete body</source>
         <translation>[Délété bödý~~~]</translation>
     </message>
@@ -6078,13 +6133,13 @@
     </message>
     <message>
         <location line="+5" />
-        <location line="+1582" />
+        <location line="+1585" />
         <location line="+58" />
         <source>Properties</source>
         <translation>[Pröpértîés~~~]</translation>
     </message>
     <message>
-        <location line="-1634" />
+        <location line="-1637" />
         <source>Properties and help</source>
         <translation>[Pröpértîés áñd hélp~~~~~]</translation>
     </message>
@@ -6170,12 +6225,12 @@
     </message>
     <message>
         <location line="+18" />
-        <location line="+2106" />
+        <location line="+2121" />
         <source>Move rollback marker</source>
         <translation>[Mövé röllbáçk márkér~~~~~~]</translation>
     </message>
     <message>
-        <location line="-1934" />
+        <location line="-1949" />
         <source>Start here: every part begins as a flat sketch.
 Click Sketch on the toolbar, then click a plane.
 Or open the phone stand sample (File ▸ Open a sample).</source>
@@ -6376,12 +6431,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+0" />
-        <location line="+387" />
+        <location line="+390" />
         <source>Jigsmith designs (*.jig)</source>
         <translation>[Jîgsmîth désîgñs (*.jîg)~~~~~~]</translation>
     </message>
     <message>
-        <location line="-340" />
+        <location line="-343" />
         <source>Save view</source>
         <translation>[Sávé vîéw~~]</translation>
     </message>
@@ -6396,7 +6451,7 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
         <translation>[Vîéw %1~]</translation>
     </message>
     <message>
-        <location line="+101" />
+        <location line="+104" />
         <source>Import STEP</source>
         <translation>[Împört STÉP~~~]</translation>
     </message>
@@ -6544,12 +6599,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+0" />
-        <location line="+994" />
+        <location line="+1003" />
         <source>There is no 3D body yet.</source>
         <translation>[Théré îs ñö 3D bödý ýét.~~~~~]</translation>
     </message>
     <message>
-        <location line="-991" />
+        <location line="-1000" />
         <source>STL mesh for slicers (*.stl)</source>
         <translation>[STL mésh för slîçérs (*.stl)~~~~~~]</translation>
     </message>
@@ -6820,7 +6875,7 @@ An empty design with the origin ready</source>
         <translation>[Théré îs ñö 3D bödý ýét: skétçh áñd éxtrüdé fîrst.~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+155" />
+        <location line="+164" />
         <source>That face was made by %1: change its size here.</source>
         <translation>[Thát fáçé wás mádé bý %1: çháñgé îts sîzé héré.~~~~~~~~~~~]</translation>
     </message>
@@ -6932,7 +6987,7 @@ An empty design with the origin ready</source>
         <translation>[Áñ împörtéd sölîd hás ñö séttîñgs tö çháñgé. Tö üsé á ñéwér çöpý öf thé fîlé, délété thîs stép áñd împört ît ágáîñ.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+51" />
+        <location line="+54" />
         <source>Edit…</source>
         <translation>[Édît…~]</translation>
     </message>
@@ -7247,7 +7302,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
 <context>
     <name>jigapp::MovePanel</name>
     <message>
-        <location line="+2091" />
+        <location line="+2233" />
         <source>free %1</source>
         <translation>[fréé %1~]</translation>
     </message>
@@ -7438,7 +7493,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
 <context>
     <name>jigapp::PatternPanel</name>
     <message>
-        <location line="-2811" />
+        <location line="-2953" />
         <location line="+154" />
         <source>Pattern</source>
         <translation>[Páttérñ~~]</translation>
@@ -8469,6 +8524,86 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
     </message>
 </context>
 <context>
+    <name>jigapp::ScalePanel</name>
+    <message>
+        <location line="+301" />
+        <location line="+12" />
+        <location line="+100" />
+        <source>Scale</source>
+        <translation>[Sçálé~]</translation>
+    </message>
+    <message>
+        <location line="-111" />
+        <source>Make bodies bigger or smaller about a point: 2 doubles every size, 0.5 halves it. Per axis stretches or squashes.</source>
+        <translation>[Máké bödîés bîggér ör smállér áböüt á pöîñt: 2 döüblés évérý sîzé, 0.5 hálvés ît. Pér áxîs strétçhés ör sqüáshés.~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+4" />
+        <source>Evenly</source>
+        <translation>[Évéñlý~~]</translation>
+    </message>
+    <message>
+        <location line="+0" />
+        <source>Per axis (stretch)</source>
+        <translation>[Pér áxîs (strétçh)~~~~]</translation>
+    </message>
+    <message>
+        <location line="+2" />
+        <source>Along X</source>
+        <translation>[Álöñg X~~]</translation>
+    </message>
+    <message>
+        <location line="+0" />
+        <source>Along Y</source>
+        <translation>[Álöñg Ý~~]</translation>
+    </message>
+    <message>
+        <location line="+0" />
+        <source>Along Z</source>
+        <translation>[Álöñg Z~~]</translation>
+    </message>
+    <message>
+        <location line="+2" />
+        <source>Origin</source>
+        <translation>[Örîgîñ~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Keep the original (scale a copy)</source>
+        <translation>[Kéép thé örîgîñál (sçálé á çöpý)~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Bodies</source>
+        <translation>[Bödîés~~]</translation>
+    </message>
+    <message>
+        <location line="+2" />
+        <source>Factor</source>
+        <translation>[Fáçtör~~]</translation>
+    </message>
+    <message>
+        <location line="+6" />
+        <source>About</source>
+        <translation>[Áböüt~]</translation>
+    </message>
+    <message>
+        <location line="+55" />
+        <source>There is no body to scale yet.</source>
+        <translation>[Théré îs ñö bödý tö sçálé ýét.~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+33" />
+        <source>Tick the bodies to scale.</source>
+        <translation>[Tîçk thé bödîés tö sçálé.~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+27" />
+        <source>scale</source>
+        <translation>[sçálé~]</translation>
+    </message>
+</context>
+<context>
     <name>jigapp::SectionPanel</name>
     <message>
         <location filename="../app/InspectPanels.cpp" line="-188" />
@@ -8534,7 +8669,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
 <context>
     <name>jigapp::ShellPanel</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="-2619" />
+        <location filename="../app/FeaturePanels.cpp" line="-3054" />
         <source>Shell</source>
         <translation>[Shéll~]</translation>
     </message>

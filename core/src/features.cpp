@@ -34,6 +34,7 @@
 #include <BRepBuilderAPI_MakeEdge.hxx>
 #include <BRepBuilderAPI_MakeFace.hxx>
 #include <BRepBuilderAPI_MakeWire.hxx>
+#include <BRepBuilderAPI_GTransform.hxx>
 #include <BRepBuilderAPI_Transform.hxx>
 #include <gp_Circ.hxx>
 #include <BRepGProp.hxx>
@@ -2418,6 +2419,102 @@ FeatureOutcome applyMove(const Document& doc, const Feature& f, const std::share
     return {out, status};
 }
 
+// ---------------------------------------------------------------- scale
+
+// Bodies made bigger or smaller about a point: by one factor, or a factor along each axis.
+FeatureOutcome applyScale(const Document& doc, const Feature& f, const std::shared_ptr<const ModelState>& in)
+{
+    const auto& p = f.params;
+    FeatureStatus status;
+    std::vector<std::string> bodies = bodyList(p.value("bodies", nlohmann::json::array()));
+    if (bodies.empty()) {
+        return failed("Pick the bodies to scale.");
+    }
+    auto number = [&](const char* key, const char* def) -> Result<double> {
+        auto v = evaluate(p.value(key, std::string(def)), doc.lookup());
+        if (!v) {
+            return v.error();
+        }
+        if (!(v->dim == Dim::none()) || !(v->value > 1e-6) || v->value > 1e6) {
+            return makeError("scale.factor", "A scale factor is a plain number more than 0 (2 doubles, 0.5 halves).");
+        }
+        return v->value;
+    };
+    const bool perAxis = p.value("mode", std::string("uniform")) == "axes";
+    double fx = 1, fy = 1, fz = 1;
+    if (perAxis) {
+        auto x = number("x", "1"), y = number("y", "1"), z = number("z", "1");
+        for (auto* r : {&x, &y, &z}) {
+            if (!*r) {
+                return failed(r->error(), "factor");
+            }
+        }
+        fx = x.value(), fy = y.value(), fz = z.value();
+    }
+    else {
+        auto k = number("factor", "2");
+        if (!k) {
+            return failed(k.error(), "factor");
+        }
+        fx = fy = fz = k.value();
+    }
+    gp_Pnt c(0, 0, 0);
+    const std::string about = p.value("about", std::string("origin"));
+    if (about != "origin") {
+        auto it = in->points.find(about);
+        if (it == in->points.end()) {
+            return failed(fmt("The point '%1' to scale about is missing or comes later.", {about}),
+                          {"Edit the scale and pick another point, or the origin."});
+        }
+        c = it->second;
+    }
+    const bool copy = p.value("copy", false);
+    auto out = copyState(in);
+    int k = 0;
+    for (const auto& b : bodies) {
+        auto it = in->bodies.find(b);
+        if (it == in->bodies.end()) {
+            return failed("A body this step scales no longer exists.", {"Edit the step and pick the bodies again."});
+        }
+        const NamedShape& src = *it->second;
+        const std::string prefix = copy ? f.id + "/copy:" : "";
+        NamedShape scaled;
+        try {
+            if (std::abs(fx - fy) < 1e-12 && std::abs(fx - fz) < 1e-12) {
+                gp_Trsf t;
+                t.SetScale(c, fx);
+                scaled = transformedCopy(src, t, prefix);
+            }
+            else {
+                gp_GTrsf g;
+                g.SetVectorialPart(gp_Mat(fx, 0, 0, 0, fy, 0, 0, 0, fz));
+                g.SetTranslationPart(gp_XYZ(c.X() * (1 - fx), c.Y() * (1 - fy), c.Z() * (1 - fz)));
+                BRepBuilderAPI_GTransform gt(src.shape(), g, true);
+                if (!gt.IsDone()) {
+                    return failed("This body could not be stretched.");
+                }
+                scaled = NamedShape(gt.Shape());
+                for (int i = 0; i < scaled.faceCount() && i < src.faceCount(); ++i) {
+                    scaled.setFaceName(i, prefix + src.faceName(i));  // the copy keeps the face order
+                }
+                scaled.deriveEdgeNames();
+            }
+        }
+        catch (const Standard_Failure& e) {
+            const char* m = e.GetMessageString();
+            return failed("This body could not be scaled.", {}, m ? m : "");
+        }
+        if (copy) {
+            const std::string id = bodies.size() == 1 ? f.id : f.id + "." + std::to_string(++k);
+            out->bodies[id] = std::make_shared<NamedShape>(std::move(scaled));
+        }
+        else {
+            out->bodies[b] = std::make_shared<NamedShape>(std::move(scaled));
+        }
+    }
+    return {out, status};
+}
+
 // ---------------------------------------------------------------- revolve
 
 FeatureOutcome applyRevolve(const Document& doc, const Feature& f, const std::shared_ptr<const ModelState>& in)
@@ -3175,6 +3272,8 @@ FeatureOutcome applyFeature(const Document& doc, const Feature& f, const std::sh
                 return applyEmboss(doc, f, in);
             case FeatureKind::Draft:
                 return applyDraft(doc, f, in);
+            case FeatureKind::Scale:
+                return applyScale(doc, f, in);
             case FeatureKind::Hole:
                 return applyHole(doc, f, in);
             case FeatureKind::Pattern:
