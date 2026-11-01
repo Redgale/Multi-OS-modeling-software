@@ -192,11 +192,16 @@ screenshot (B-003). No real GPU on Windows or Linux has been tried. Builds are u
 2. **Code of Conduct contact address** (a project email or form; nothing personal is
    published now).
 
+Decided by the owner (2026-11-01): Flathub publishing waits until the app is complete and has
+been bug-tested by hand; no Apple developer account, so the Mac app stays unsigned (README
+explains how to open it); no translations until someone can review them (the strings stay
+ready, with the pseudo-translation as the check).
+
 ## Next three tasks
 
 1. Leftovers: universal macOS binary (B-005); open the Flatpak's window on a real desktop.
-2. First real language once a reviewer is found (step kinds inside messages are translatable now:
-   `word("…")` in the core, the "CoreWords" context, UI test `pseudoTranslation`).
+2. A bug hunt through the whole code (owner's request, 2026-11-01): sanitizers over the UI tests,
+   then reading the riskier code; each bug fixed with a test.
 3. Review THIRD_PARTY_DLLS.txt before the first release (B-011); B-001 libslvs
    spike where building SolveSpace is allowed.
 

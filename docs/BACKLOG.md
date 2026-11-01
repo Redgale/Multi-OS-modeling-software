@@ -17,13 +17,13 @@ decision or finding). Move items to STATUS.md when started.
   (Metal) backend for `Viewport`.
 - **B-005 Universal macOS binary**: the "macOS universal" CI job builds for both architectures at
   once (official Qt, OCCT and FreeType from source; joining two Homebrew apps failed because their
-  library versions differ). Left: a green run; HarfBuzz in that build; signing and notarisation need an Apple developer account (an
-  owner decision; secrets never in the repository).
+  library versions differ). Left: a green run; HarfBuzz in that build. No signing or notarisation: the owner decided against a
+  paid Apple developer account (2026-11-01); README says how to open the unsigned app.
 - ~~B-006 Windows installer~~ done (Inno Setup, tested in CI by silent install, run, uninstall); try
   on a clean machine by hand.
 - **B-007 Flatpak manifest** (brief: AppImage and Flatpak): manifest and AppStream metainfo in
   `packaging/flatpak`, built by the "Flatpak" CI job on [full ci] (green: run 41299218517, CLI runs
-  inside the sandbox). Left: opening the window on a real desktop, pinning OCCT's git commit and submitting to Flathub (an account decision for the owner).
+  inside the sandbox). Left: opening the window on a real desktop, pinning OCCT's git commit and submitting to Flathub: the owner will do that once the app is complete and bug-tested (2026-11-01).
 - ~~B-008 Endpoint tangency~~ done (angle via the shared point); collinear/concentric done.
 - **B-012 OCCT 8 deprecations**: `TopTools_*`/`TColStd_*` typedef headers are deprecated in
   8.0 (warnings on Windows). Switch to `NCollection_*` types once 7.6 support is dropped, or

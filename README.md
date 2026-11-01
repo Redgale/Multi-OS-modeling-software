@@ -30,6 +30,12 @@ Every green build of the development branch is published as the
 | Windows x64 | `Jigsmith-windows-x64-portable.zip`: unzip, run `jigsmith.exe` |
 
 They are unsigned, so macOS Gatekeeper and Windows SmartScreen will warn the first time.
+There are no plans to sign the Mac app (that needs a paid Apple developer account). To open
+it on a Mac: drag Jigsmith to Applications, then right-click (or Control-click) it, choose
+**Open**, and confirm. On recent macOS versions where that is not offered, open System
+Settings ▸ Privacy & Security and choose **Open Anyway** after the first try, or run
+`xattr -dr com.apple.quarantine /Applications/jigsmith.app` in Terminal. On Windows, choose
+**More info ▸ Run anyway** in the SmartScreen window.
 On Void (especially musl), Alpine or other distributions where the AppImage does not
 run, build from source; it takes a few minutes.
 
