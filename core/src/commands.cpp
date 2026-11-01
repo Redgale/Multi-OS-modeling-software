@@ -74,6 +74,7 @@ CommandRegistry::CommandRegistry()
     add({"edit.undo", "Undo", "Undo", "EDIT", "Take back the last change. Nothing is ever lost: you can redo it.", "Ctrl+Z", {"back", "oops", "revert"}, true, true, true, ""});
     add({"edit.redo", "Redo", "Redo", "EDIT", "Bring back a change you undid.", "Ctrl+Shift+Z", {"again", "forward"}, true, true, true, ""});
     add({"edit.palette", "Find a tool…", "Command Search", "EDIT", "Type what you want to do and pick the tool.", "Ctrl+K", {"search", "find", "command", "help"}, true, true, false, ""});
+    add({"view.realistic", "Realistic look", "Realistic", "VIEW", "Softer light from the sky and floor, a shadow under the model and no drawn edges; for showing a design off.", "", {"render", "shadow", "pretty", "presentation"}, false, true, false, ""});
     add({"view.fit", "Fit to view", "Fit", "VIEW", "Zoom so the whole design fits on screen. Use it whenever you feel lost.", "F6", {"zoom all", "lost", "see everything"}, true, true, false, ""});
     add({"view.home", "Home view", "Home", "VIEW", "Return to the default angled view.", "Home", {"reset view", "isometric"}, true, true, false, ""});
     add({"view.save_named", "Save view…", "Named View", "VIEW", "Keep the current view of the design under a name, to come back to it from the Browser.", "", {"camera", "bookmark view", "named view"}, false, true, false, ""});

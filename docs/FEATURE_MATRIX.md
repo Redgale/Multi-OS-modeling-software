@@ -31,7 +31,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Navigation: pan, orbit, zoom to cursor, fit | 5 | v0.1 | yes, four presets; Settings page with a plain description of each, zoom direction and orbit speed | Principle 12 |
 | ViewCube (faces, edges, corners, home, drag) | 5 | v0.1 | axis gizmo: 6 views + Home + Fit | Original design, not a cube clone |
 | Visual styles (shaded, edges, wireframe variants) | 5 | v0.1 (two styles) M8 | shaded with edges | |
-| Environment effects (shadows, AO) | 5 | v0.2 | — | Rendering is v0.2 |
+| Environment effects (shadows, AO) | 5 | v0.2 | **app**: View ▸ Realistic look (sky-and-ground light, rim light, a floor shadow on a soft stage, no drawn edges) | Ambient occlusion and reflections not yet |
 | Orthographic/perspective | 5 | v0.1 | yes | |
 | Grid and snaps display | 5 | v0.1 | grid | Snaps with sketching M1 |
 | Objects visibility toggles | 5 | v0.1 M2 | **app**: per body in the Browser (saved with the design); construction geometry always shown | |
@@ -176,7 +176,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Components, joints (7 types), limits, drive, as-built, rigid group | 7, 30, 31 | v0.2 | Bodies are the parts (D-006). Joints: rigid, revolute, slider, cylindrical, ball, planar, with limits and drive by value or parameter (**app** + scripts `joint`); pin-slot joints and an Animate button too; as-built joints, rigid groups and nested components not yet |
 | Motion link, contact sets, motion study | 31 | v0.3+ | |
 | Configurations | 33 | v0.2 as parameter sets ("variants") | **app** (Parameters dialog) + scripts (`variant`) + Python (`run`): save, use, delete named sets of parameter values |
-| Render workspace, appearances library | 34 | v0.2 (basic viewport rendering) | |
+| Render workspace, appearances library | 34 | v0.2 (basic viewport rendering) | Basic: per-body appearances (colour, finish) and the Realistic look in the view; no separate render workspace or ray tracing |
 | Animation, exploded views | 35 | v0.3+ | |
 | 2D drawings | 36 | v0.3+ | |
 | Simulation (FEA) | 37 | v0.3+ via an existing open solver | Brief |

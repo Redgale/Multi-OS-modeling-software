@@ -238,6 +238,16 @@ public:
         QString finish;
     };
     void setAppearances(std::map<std::string, BodyLook> looks);
+    // The realistic look: sky-and-ground light, a shadow on the floor, no drawn edges.
+    void setRealistic(bool on)
+    {
+        realistic_ = on;
+        update();
+    }
+    bool realistic() const
+    {
+        return realistic_;
+    }
     const std::map<std::string, BodyLook>& appearances() const
     {
         return appearance_;
@@ -426,6 +436,9 @@ private:
     std::vector<std::pair<QString, QVector3D>> datumLabels_;
     std::vector<CanvasPicture> canvases_;
     std::map<std::string, BodyLook> appearance_;
+    bool realistic_ = false;
+    QOpenGLVertexArrayObject stageVao_;  // the realistic look's floor under the model
+    QOpenGLBuffer stageVbo_ {QOpenGLBuffer::VertexBuffer};
     bool overlayDirty_ = false;
     std::unique_ptr<QOpenGLShaderProgram> colorProg_;
     QOpenGLVertexArrayObject ovVao_;

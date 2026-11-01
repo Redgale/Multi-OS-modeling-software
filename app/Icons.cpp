@@ -99,6 +99,7 @@ const std::map<QString, QString>& icons()
         {"solid.draft", "M3 20 L21 20 M7 20 L9 6 L15 6 L17 20 d M12 3 L12 21"},
         {"solid.scale", "R3 13 8 8 a R3 3 18 18 M11 13 L19 5 M14 5 L19 5 L19 10"},
         {"solid.thread", "M8 3 L8 21 M16 3 L16 21 a M8 5 L16 8 M8 9 L16 12 M8 13 L16 16 M8 17 L16 20"},
+        {"view.realistic", "O12 9 5 a E12 19 8 2"},
         {"view.appearance", "M12 3 Q4 10 4 15 Q4 21 12 21 Q20 21 20 15 Q20 10 12 3 Z f O9 15 2"},
         {"assemble.joint", "R3 14 8 7 R13 6 8 7 a O12 13 2.2 M12 13 L12 3"},
         {"inspect.interference", "R3 6 11 11 R10 9 11 11 f R10 9 4 8"},

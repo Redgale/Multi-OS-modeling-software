@@ -21,6 +21,7 @@
 - Fastener library: metric screws, nuts and washers (M2–M12), offline.
 - Sample: the hinged box (parts, knuckles, pin and a hinge joint you open with a parameter).
 - Pin-slot joints and an Animate button for joints; inserted meshes have their holes closed.
+- Realistic look: softer light, a floor shadow, no drawn edges.
 - Fixed: a fillet or chamfer on the edges of a loft or sweep could lose its edges when an earlier step changed.
 
 ## 0.1.0 (2026-11-01)

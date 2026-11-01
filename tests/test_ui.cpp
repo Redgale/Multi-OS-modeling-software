@@ -3378,6 +3378,39 @@ private slots:
         QVERIFY(std::abs(m.zmin + 12) < 1e-6 && std::abs(m.zmax - 4) < 1e-6);
     }
 
+    // The realistic look: a shadow darkens the floor beside the part; edges are not drawn.
+    void realisticLook()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        {
+            jig::ScriptRunner r(w.document());
+            QVERIFY(r.runText("box id=bx1 length=40mm width=40mm height=40mm\n").ok());
+        }
+        w.refreshAll();
+        w.viewport()->homeView();
+        QTRY_VERIFY(w.viewport()->meshesReady());
+        QTest::qWait(200);
+        // the floor where the light throws the shadow: below and behind the box (light from +x, -y, above)
+        const QPointF floorPt = w.viewport()->project(QVector3D(-30, 35, 0));
+        auto at = [&] {
+            const QImage img = w.viewport()->grabFramebuffer();
+            return img.pixelColor(floorPt.toPoint()).lightness();
+        };
+        const int plain = at();
+        QVERIFY(!w.viewport()->realistic());
+        w.runCommand("view.realistic");
+        QVERIFY(w.viewport()->realistic());
+        QTest::qWait(200);
+        const int shaded = at();
+        w.viewport()->grabFramebuffer().save(shotPath("realistic"));
+        QVERIFY2(shaded < plain - 3, qPrintable(QString("%1 vs %2").arg(shaded).arg(plain)));
+        w.runCommand("view.realistic");
+        QVERIFY(!w.viewport()->realistic());
+    }
+
     // Areas of a sketch are picked by clicking them in the 3D view: a square with a circle in it
     // can become a round post (the circle) or a block with a hole (the ring), not only a block.
     void clickAreasToExtrude()

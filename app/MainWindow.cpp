@@ -789,6 +789,11 @@ void MainWindow::buildMenus()
     proj->setCheckable(true);
     proj->setChecked(true);
     view->addAction(proj);
+    auto* real = registryAction("view.realistic");
+    real->setCheckable(true);
+    real->setChecked(QSettings().value("view/realistic", false).toBool());
+    view_->setRealistic(real->isChecked());
+    view->addAction(real);
     view->addAction(registryAction("view.save_named"));
     view->addAction(tr("Top"), view_, &Viewport::viewTop);
     view->addAction(tr("Front"), view_, &Viewport::viewFront);
@@ -1781,6 +1786,11 @@ void MainWindow::runCommand(const QString& id)
     }
     else if (id == "view.home") {
         view_->homeView();
+    }
+    else if (id == "view.realistic") {
+        view_->setRealistic(!view_->realistic());
+        registryAction("view.realistic")->setChecked(view_->realistic());
+        QSettings().setValue("view/realistic", view_->realistic());
     }
     else if (id == "view.projection") {
         view_->setPerspective(!view_->perspective());

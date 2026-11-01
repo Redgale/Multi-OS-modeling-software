@@ -21,6 +21,7 @@
 #include <IntCurvesFace_ShapeIntersector.hxx>
 #include <gp_Lin.hxx>
 #include <QWheelEvent>
+#include <limits>
 
 namespace jigapp
 {
@@ -61,6 +62,7 @@ uniform vec3 uInside;   // colour of surfaces seen from inside the material
 uniform float uSpec;    // highlight strength (the finish)
 uniform float uShine;   // highlight tightness
 uniform int uMetal;     // 1: metal, highlights take the body's colour
+uniform int uRealistic; // 1: softer sky-and-ground light with a rim, for the realistic look
 out vec4 frag;
 void main() {
     vec3 n = normalize(vN);
@@ -76,6 +78,13 @@ void main() {
     }
     vec3 lit = uMetal == 1 ? base * (0.30 + 0.45 * d) + base * s * 1.6 + vec3(s * 0.25)
                            : base * (0.38 + 0.62 * d) + vec3(s);
+    if (uRealistic == 1) {
+        // light from the sky above and the floor below (view space y is roughly up), and a rim
+        float sky = 0.5 + 0.5 * n.y;
+        vec3 ambient = base * mix(vec3(0.20, 0.19, 0.18), vec3(0.42, 0.45, 0.50), sky);
+        float rim = pow(1.0 - max(dot(n, V), 0.0), 3.0) * 0.22;
+        lit = ambient + (lit - base * 0.38) * 0.85 + vec3(rim);
+    }
     frag = vec4(lit, 1.0);
 })";
 
@@ -559,6 +568,88 @@ void Viewport::drawScene(bool pickPass)
         prog->setUniformValue("uSelId", pickId(selected_));
         prog->setUniformValue("uSection", section_ ? 1 : 0);
         prog->setUniformValue("uInside", col(QColor(205, 92, 72)));  // brick red, also lighter than the model
+        prog->setUniformValue("uRealistic", realistic_ ? 1 : 0);
+    }
+    if (!pickPass && realistic_ && !meshes_.empty() && !section_) {
+        // a soft shadow on the floor under the model: every body flattened along a light from
+        // above onto the plane just under the lowest point, drawn dark and see-through
+        float zmin = std::numeric_limits<float>::max();
+        for (auto& m : meshes_) {
+            zmin = std::min(zmin, m->bmin.z());
+        }
+        const QVector3D L = QVector3D(0.25f, -0.35f, 1.0f).normalized();
+        QMatrix4x4 flat;  // p' = p - L (p.z - z0) / L.z
+        flat.setToIdentity();
+        flat(0, 2) = -L.x() / L.z();
+        flat(1, 2) = -L.y() / L.z();
+        flat(2, 2) = 0;
+        flat(0, 3) = L.x() / L.z() * (zmin - 0.05f);
+        flat(1, 3) = L.y() / L.z() * (zmin - 0.05f);
+        flat(2, 3) = zmin - 0.05f;
+        prog->release();
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glDepthMask(GL_FALSE);
+        lineProg_->bind();
+        // a light, soft-edged stage under the model, so the shadow reads on any theme: rings
+        // fading outwards
+        {
+            QVector3D lo(1e30f, 1e30f, 0), hi(-1e30f, -1e30f, 0);
+            for (auto& m : meshes_) {
+                lo.setX(std::min(lo.x(), m->bmin.x()));
+                lo.setY(std::min(lo.y(), m->bmin.y()));
+                hi.setX(std::max(hi.x(), m->bmax.x()));
+                hi.setY(std::max(hi.y(), m->bmax.y()));
+            }
+            const QVector3D c = (lo + hi) / 2;
+            const float r = std::max(1.0f, (hi - lo).length()) * 1.2f;
+            std::vector<float> fan;
+            const int rings = 6, seg = 48;
+            for (int k = 0; k < rings; ++k) {
+                const float r0 = r * k / rings, r1 = r * (k + 1) / rings;
+                for (int i = 0; i < seg; ++i) {
+                    const float a0 = float(i) / seg * 6.2831853f, a1 = float(i + 1) / seg * 6.2831853f;
+                    const QVector3D p[4] = {c + QVector3D(r0 * std::cos(a0), r0 * std::sin(a0), 0),
+                                            c + QVector3D(r1 * std::cos(a0), r1 * std::sin(a0), 0),
+                                            c + QVector3D(r1 * std::cos(a1), r1 * std::sin(a1), 0),
+                                            c + QVector3D(r0 * std::cos(a1), r0 * std::sin(a1), 0)};
+                    for (int t : {0, 1, 2, 0, 2, 3}) {
+                        fan.insert(fan.end(), {p[t].x(), p[t].y(), zmin - 0.06f});
+                    }
+                }
+            }
+            if (!stageVao_.isCreated()) {
+                stageVao_.create();
+                stageVbo_.create();
+            }
+            stageVao_.bind();
+            stageVbo_.bind();
+            stageVbo_.allocate(fan.data(), int(fan.size() * sizeof(float)));
+            glEnableVertexAttribArray(0);
+            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+            lineProg_->setUniformValue("uMvp", mvp);
+            lineProg_->setUniformValue("uClip", QVector4D(0, 0, 0, 1));
+            const int perRing = seg * 6;
+            for (int k = 0; k < rings; ++k) {
+                const float alpha = 0.16f * (1.0f - float(k) / rings);  // brightest in the middle
+                lineProg_->setUniformValue("uColor", QVector4D(0.75f, 0.77f, 0.80f, alpha));
+                glDrawArrays(GL_TRIANGLES, k * perRing, perRing);
+            }
+            stageVbo_.release();
+            stageVao_.release();
+        }
+        lineProg_->setUniformValue("uMvp", mvp * flat);
+        lineProg_->setUniformValue("uClip", QVector4D(0, 0, 0, 1));
+        lineProg_->setUniformValue("uColor", QVector4D(0, 0, 0, 0.5f));
+        for (auto& m : meshes_) {
+            m->vaoTri.bind();
+            glDrawElements(GL_TRIANGLES, m->indexCount, GL_UNSIGNED_INT, nullptr);
+            m->vaoTri.release();
+        }
+        lineProg_->release();
+        glDepthMask(GL_TRUE);
+        glDisable(GL_BLEND);
+        prog->bind();
     }
     for (auto& m : meshes_) {
         if (!pickPass) {
@@ -587,6 +678,9 @@ void Viewport::drawScene(bool pickPass)
     lineProg_->setUniformValue("uClip", clip);
     lineProg_->setUniformValue("uColor", colors_.edge);
     for (auto& m : meshes_) {
+        if (realistic_) {
+            break;  // the realistic look has no drawn edges
+        }
         m->vaoEdge.bind();
         glDrawArrays(GL_LINES, 0, m->edgeVertexCount);
         m->vaoEdge.release();
