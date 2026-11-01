@@ -171,7 +171,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Sheet metal with flat-pattern DXF | 28 | v0.3+ | Brief |
 | Plastic tab (boss, snap fit, grill, lip and groove) | 29 | never as a tab; v0.3+ as plugins | Niche; plugin ecosystem |
 | 3D print utility (send to slicer) | 29, 40 | v0.1 export (**done**: STL, STEP and 3MF with one named object per body); "open in slicer" v0.2 | Export is the core need |
-| Scripts and add-ins (Python API) | 29 | v0.2 | Core designed for it now (commands are data) |
+| Scripts and add-ins (Python API) | 29 | v0.2 | `jigsmith` Python module (pybind11) over the command layer: build, parameters, steps, bodies, faces, properties, export, save/open, undo (docs/PYTHON.md, D-018); in-app console and add-ins not yet |
 | AI assistant | 29, 42 | never (for now) | Requires network/cloud; violates "free means free" defaults |
 | Components, joints (7 types), limits, drive, as-built, rigid group | 7, 30, 31 | v0.2 | Bodies are the parts (D-006). Joints: rigid, revolute, slider, cylindrical, ball, planar, with limits and drive by value or parameter (**app** + scripts `joint`); pin-slot, as-built joints, rigid groups and nested components not yet |
 | Motion link, contact sets, motion study | 31 | v0.3+ | |

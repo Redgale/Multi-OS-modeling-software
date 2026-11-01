@@ -41,3 +41,9 @@ if(Python3_FOUND)
                      -DOUT=${CMAKE_CURRENT_BINARY_DIR}/core_strings.h -DCORE=1
                      -P ${CMAKE_CURRENT_SOURCE_DIR}/check_registry_strings.cmake)
 endif()
+
+# the Python module, through Python itself
+if(TARGET jigsmith_py)
+    add_test(NAME python.api COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_python.py)
+    set_tests_properties(python.api PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/python")
+endif()

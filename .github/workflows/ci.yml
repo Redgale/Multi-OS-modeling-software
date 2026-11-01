@@ -43,14 +43,15 @@ jobs:
             libocct-modeling-algorithms-dev libocct-modeling-data-dev libocct-data-exchange-dev \
             libocct-foundation-dev libtbb-dev libeigen3-dev libboost-dev nlohmann-json3-dev \
             libgtest-dev qt6-base-dev qt6-tools-dev qt6-l10n-tools libgl-dev libfreetype-dev libharfbuzz-dev xvfb xauth libgl1-mesa-dri \
-            libfuse2 file
+            libfuse2 file python3-dev pybind11-dev
       - name: Configure
-        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DPython_EXECUTABLE=/usr/bin/python3
       - name: Build
         run: cmake --build build
       - name: Test (including UI workflow tests under Xvfb)
         run: |
           export XDG_RUNTIME_DIR=$(mktemp -d)
+          ctest --test-dir build -N | grep -q python.api || { echo "the Python module was not built"; exit 1; }
           xvfb-run -a -s "-screen 0 1600x1000x24" ctest --test-dir build --output-on-failure -j4
       - name: Benchmarks
         run: ./build/bench/jigsmith-bench | tee bench-linux.json

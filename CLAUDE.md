@@ -22,6 +22,7 @@ Settings); US units (inches, feet) are fully supported alongside metric.
 - `docs/BACKLOG.md`, `docs/FEATURE_MATRIX.md`: what is left, by milestone.
 - `docs/DECISIONS.md`: decision records (every significant choice, with alternatives).
 - `docs/SCRIPTING.md`: the `.jigs` script commands that drive headless tests.
+- `docs/PYTHON.md`: the `jigsmith` Python module (built when pybind11 is installed).
 - Working branch: `claude/pensive-mayer-l4r19c` (do not open pull requests unless asked).
 
 ## Rules from the brief that always apply

@@ -40,6 +40,8 @@ cmake_map = {"OpenCASCADE": "opencascade", "Eigen3": "eigen3", "Boost": "boost",
              "nlohmann_json": "nlohmann-json", "miniz": "miniz", "googletest": "gtest",
              "GTest": "gtest", "Qt6": "qt6", "Freetype": "freetype"}
 cmake_map["PkgConfig"] = None  # the tool, not a library
+cmake_map["Python"] = None  # the user's own Python runs the module; nothing of it is shipped
+cmake_map["pybind11"] = "pybind11"
 for m in re.finditer(r"(?:find_package|FetchContent_Declare)\(\s*(\w+)", cmake):
     name = m.group(1)
     if name in cmake_map and cmake_map[name] is None:

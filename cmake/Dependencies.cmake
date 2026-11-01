@@ -91,3 +91,18 @@ if(JIG_BUILD_GUI)
         find_package(Qt6 6.4 REQUIRED COMPONENTS Test)  # UI tests drive the real windows
     endif()
 endif()
+
+# --- Python module (optional): pybind11 (BSD-3-Clause, header-only) ---------------------
+# Built when a Python with its development files and pybind11 are found; otherwise skipped.
+if(JIG_BUILD_PYTHON)
+    set(PYBIND11_FINDPYTHON ON)
+    find_package(Python 3.8 COMPONENTS Interpreter Development.Module QUIET)
+    if(Python_FOUND)
+        find_package(pybind11 CONFIG QUIET)
+    endif()
+    if(Python_FOUND AND pybind11_FOUND)
+        message(STATUS "Python module: on (Python ${Python_VERSION}, pybind11 ${pybind11_VERSION})")
+    else()
+        message(STATUS "Python module: off (needs Python development files and pybind11)")
+    endif()
+endif()

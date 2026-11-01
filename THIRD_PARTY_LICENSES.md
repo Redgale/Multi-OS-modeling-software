@@ -128,3 +128,18 @@ The application icon (`packaging/linux/jigsmith.svg`) is an original placeholder
 made for Jigsmith and dedicated to the public domain (CC0). The tool icons are original
 drawings made for Jigsmith. The only third-party asset is the Inter font (above);
 `docs/ASSETS.md` records the source and licence of every asset.
+
+## pybind11
+
+Copyright © 2016 Wenzel Jakob and the pybind11 contributors. Used under the BSD 3-Clause
+licence, header-only, to build the optional `jigsmith` Python module. Redistribution and use in
+source and binary forms, with or without modification, are permitted provided that the
+following conditions are met: (1) redistributions of source code must retain the copyright
+notice, this list of conditions and the following disclaimer; (2) redistributions in binary
+form must reproduce the copyright notice, this list of conditions and the following disclaimer
+in the documentation and/or other materials provided with the distribution; (3) neither the
+name of the copyright holder nor the names of its contributors may be used to endorse or
+promote products derived from this software without specific prior written permission. THIS
+SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR
+IMPLIED WARRANTIES ARE DISCLAIMED; IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+LIABLE FOR ANY DAMAGES ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE.

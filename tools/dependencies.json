@@ -133,6 +133,15 @@
       "use": "built-in font for sketch text",
       "notice": "assets/fonts/OFL.txt shipped with the source and packages",
       "source": "https://github.com/rsms/inter"
+    },
+    {
+      "name": "pybind11",
+      "id": "pybind11",
+      "license": "BSD-3-Clause",
+      "linking": "header-only (optional at build time)",
+      "use": "the jigsmith Python module (scripting API)",
+      "notice": "pybind11's BSD 3-Clause licence kept in THIRD_PARTY_LICENSES.md",
+      "source": "https://github.com/pybind/pybind11"
     }
   ]
 }

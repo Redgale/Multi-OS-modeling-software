@@ -457,3 +457,25 @@ an explanation. The core stays headless: the runner is a plain `std::function`.
 
 **Evidence.** `Document.RecomputeCanRunOnAnotherThread` (same results and file as inline; also
 clean under ThreadSanitizer); UI test `rebuildOffTheUiThread`.
+
+---
+
+## D-018 Python API as a module over the command layer (accepted)
+
+**Context.** Brief v0.2: a Python scripting API; the core must be designed for it (commands are
+data, D-002). Options differ in what users install and what the packages must carry.
+
+**Options.** (a) Embed CPython in the app (a console and add-ins inside Jigsmith): every package
+(AppImage, Flatpak, the three Mac builds, Windows) must ship a Python runtime and match its
+version; the GUI then depends on it. (b) A `jigsmith` Python module (pybind11) over the core: users
+`import jigsmith` in their own Python to build, measure, export and save designs headlessly, and
+the app opens what they save. (c) Our own scripting language only (the `.jigs` commands).
+
+**Decision.** (b) first. The module wraps the same `ScriptRunner` the app's script runner and every
+geometry test use, plus parameters, steps, bodies, faces, properties, undo, save and open, so
+Python can do everything a script can and errors carry the core's explanations. It is optional at
+build time (pybind11 and Python development files found), header-only, BSD-3-Clause. Embedding a
+console in the app (a) stays possible later on top of the same module.
+
+**Evidence.** `python.api` (tests/test_python.py: a part with a hole by commands, a parameter
+driving a fillet, undo/redo, two explained errors, STL/STEP/3MF export, save and open again).
