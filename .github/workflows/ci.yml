@@ -345,10 +345,12 @@ jobs:
         include:
           - name: Void (glibc)
             image: ghcr.io/void-linux/void-glibc-full:latest
-            prep: xbps-install -Syu xbps && xbps-install -Sy git ca-certificates
+            # when the default mirror is down, use the Fastly mirror (also for install-deps.sh later)
+            prep: (xbps-install -Syu xbps || { mkdir -p /etc/xbps.d && sed 's|repo-default.voidlinux.org|repo-fastly.voidlinux.org|' /usr/share/xbps.d/00-repository-main.conf > /etc/xbps.d/00-repository-main.conf && xbps-install -Syu xbps; }) && xbps-install -Sy git ca-certificates
           - name: Void (musl)
             image: ghcr.io/void-linux/void-musl-full:latest
-            prep: xbps-install -Syu xbps && xbps-install -Sy git ca-certificates
+            # when the default mirror is down, use the Fastly mirror (also for install-deps.sh later)
+            prep: (xbps-install -Syu xbps || { mkdir -p /etc/xbps.d && sed 's|repo-default.voidlinux.org|repo-fastly.voidlinux.org|' /usr/share/xbps.d/00-repository-main.conf > /etc/xbps.d/00-repository-main.conf && xbps-install -Syu xbps; }) && xbps-install -Sy git ca-certificates
           - name: Fedora
             image: fedora:latest
             prep: dnf install -y git
