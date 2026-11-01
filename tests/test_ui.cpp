@@ -388,6 +388,25 @@ private slots:
         QVERIFY(!view->sketchGrid());
         QVERIFY(w.createSketchOn("YZ"));
         QVERIFY(view->sketchGrid()->Direction().IsParallel(gp_Dir(1, 0, 0), 1e-9));
+        w.runCommand("sketch.finish");
+        QTRY_VERIFY(w.sketchEditor() == nullptr);
+        // on a block's top face: the grid on the face, and a finished sketch there stays visible
+        {
+            jig::ScriptRunner r(w.document());
+            QVERIFY(r.runText("sketch id=b plane=XY\nrect sketch=b center=0,0 w=60 h=40\nextrude id=e1 sketch=b distance=10\n"
+                              "sketch id=t on=e1/end\ncircle sketch=t center=0,0 d=16\n").ok());
+        }
+        view->homeView();
+        w.editFeature(int(w.document().model().features.size()) - 1);
+        QTRY_VERIFY(w.sketchEditor() != nullptr);
+        QVERIFY(view->sketchGrid()->Direction().IsParallel(gp_Dir(0, 0, 1), 1e-9));
+        QTest::qWait(200);
+        w.grab().save(shotPath("sketch-on-face"));
+        w.runCommand("sketch.finish");
+        QTRY_VERIFY(w.sketchEditor() == nullptr);
+        view->homeView();
+        QTest::qWait(200);
+        w.grab().save(shotPath("finished-sketch-on-face"));
         (void)step;
     }
 
@@ -1187,9 +1206,19 @@ private slots:
         QVERIFY(mv);
         QTRY_VERIFY(view->meshesReady());
         view->fitAll();
-        QTest::qWait(300);
         view->viewTop();
-        QTest::qWait(100);
+        QTRY_VERIFY(view->meshesReady());
+        // settled: from above, the second block is under its centre
+        QString seen;
+        QTRY_VERIFY2([&] {
+            const QPoint at = view->project(QVector3D(40, 0, 10)).toPoint();
+            auto f = view->pickFaceAt(at);
+            seen = QString("at %1,%2 of %3x%4, bodies %5, hit %6 cam %7")
+                       .arg(at.x()).arg(at.y()).arg(view->width()).arg(view->height()).arg(view->bodyCount())
+                       .arg(f ? QString::fromStdString(f->body) : QString("none"))
+                       .arg(QString::fromStdString(view->camera().dump()));
+            return f && f->body == "e2";
+        }(), qPrintable(seen));
         auto ticked = [&] {
             QStringList t;
             for (int i = 0; i < mv->bodies()->count(); ++i) {

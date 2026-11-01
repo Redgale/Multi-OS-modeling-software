@@ -180,7 +180,7 @@ screenshot (B-003). No real GPU on Windows or Linux has been tried. Builds are u
 
 - Rendering on Windows and macOS: verified only on CI runners (software OpenGL on Windows); no real Windows GPU driver yet. B-003.
 - The crash-recovery prompt has not been exercised with a real forced kill.
-- The UI test suite failed once (2026-11-01) in a parallel local `ctest -j8` run and passed on the two runs after it and on its own; the failing test was not captured. Watch CI for it.
+- UI test `boxSelectBodies` failed twice under a loaded parallel `ctest -j8` (2026-11-01) and passes on its own; it now waits for the view to settle (instead of a fixed pause) and reports the camera, the bodies shown and what was under the cursor if it fails again. Three full runs since then were clean.
 - Code of Conduct contact: the owner should add a dedicated contact address.
 
 ## Decisions waiting for the owner

@@ -371,6 +371,14 @@ Result<std::pair<std::string, std::string>> parsePairExpr(const std::string& s)
     return std::pair {parts[0], parts[1]};
 }
 
+// "Extrude 3" for e3; a custom id keeps its whole self ("Extrude cyl", not "Extrude yl").
+std::string stepName(const std::string& label, const std::string& id, const std::string& prefix)
+{
+    const bool numbered = id.size() > prefix.size() && id.compare(0, prefix.size(), prefix) == 0 &&
+                          std::all_of(id.begin() + long(prefix.size()), id.end(), [](char c) { return std::isdigit(static_cast<unsigned char>(c)); });
+    return label + " " + (numbered ? id.substr(prefix.size()) : id);
+}
+
 Feature* findFeature(Model& m, const std::string& id)
 {
     return Document::findFeature(m, id);
@@ -623,7 +631,7 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
             if (findFeature(m, f.id)) {
                 return makeError("script.args", "The id '" + f.id + "' is already used.");
             }
-            f.name = a.get("name", "Sketch " + f.id.substr(1));
+            f.name = a.get("name", stepName("Sketch", f.id, "s"));
             f.kind = FeatureKind::Sketch;
             if (a.has("on")) {
                 // on=<face name> : sketch on a named face of a body
@@ -1269,7 +1277,7 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
             if (findFeature(m, f.id)) {
                 return makeError("script.args", "The id '" + f.id + "' is already used.");
             }
-            f.name = a.get("name", "Extrude " + f.id.substr(1));
+            f.name = a.get("name", stepName("Extrude", f.id, "e"));
             f.kind = FeatureKind::Extrude;
             f.params["sketch"] = a.get("sketch");
             if (a.has("profiles") && a.get("profiles") != "all") {
@@ -1392,7 +1400,7 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
             if (findFeature(m, f.id)) {
                 return makeError("script.args", "The id '" + f.id + "' is already used.");
             }
-            f.name = a.get("name", (isChamfer ? "Chamfer " : "Fillet ") + f.id.substr(1));
+            f.name = a.get("name", stepName(isChamfer ? "Chamfer" : "Fillet", f.id, isChamfer ? "c" : "f"));
             f.kind = isChamfer ? FeatureKind::Chamfer : FeatureKind::Fillet;
             if (isChamfer) {
                 f.params["distance"] = a.get("distance", "1 mm");
@@ -1459,7 +1467,7 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
             if (findFeature(m, f.id)) {
                 return makeError("script.args", "The id '" + f.id + "' is already used.");
             }
-            f.name = a.get("name", "Shell " + f.id.substr(2));
+            f.name = a.get("name", stepName("Shell", f.id, "sh"));
             f.kind = FeatureKind::Shell;
             f.params = {{"faces", refs}, {"thickness", a.get("thickness", "2 mm")}, {"body", bodyId}};
             if (a.get("direction", "inside") == "outside") {
@@ -1489,7 +1497,7 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
             if (findFeature(m, f.id)) {
                 return makeError("script.args", fmt("The id '%1' is already used.", {f.id}));
             }
-            f.name = a.get("name", "Remove " + f.id.substr(2));
+            f.name = a.get("name", stepName("Remove", f.id, "rm"));
             f.kind = FeatureKind::Remove;
             f.params = {{"bodies", bodies}};
             id = f.id;
@@ -1550,7 +1558,7 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
             if (findFeature(m, f.id)) {
                 return makeError("script.args", "The id '" + f.id + "' is already used.");
             }
-            f.name = a.get("name", label + " " + f.id.substr(prefix.size()));
+            f.name = a.get("name", stepName(label, f.id, prefix));
             f.kind = kind;
             f.params = params;
             id = f.id;
@@ -1596,7 +1604,7 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
             if (findFeature(m, f.id)) {
                 return makeError("script.args", "The id '" + f.id + "' is already used.");
             }
-            f.name = a.get("name", "Press pull " + f.id.substr(2));
+            f.name = a.get("name", stepName("Press pull", f.id, "pp"));
             f.kind = FeatureKind::PressPull;
             f.params = {{"face", face}, {"distance", a.get("distance", "5 mm")}};
             id = f.id;
@@ -1679,7 +1687,7 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
             if (findFeature(m, f.id)) {
                 return makeError("script.args", "The id '" + f.id + "' is already used.");
             }
-            f.name = a.get("name", (isPoint ? "Point " : isAxis ? "Axis " : "Plane ") + f.id.substr(2));
+            f.name = a.get("name", stepName(isPoint ? "Point" : isAxis ? "Axis" : "Plane", f.id, isPoint ? "pt" : isAxis ? "ax" : "pl"));
             f.kind = isPoint ? FeatureKind::Point : isAxis ? FeatureKind::Axis : FeatureKind::Plane;
             f.params = params;
             id = f.id;
@@ -1760,7 +1768,7 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
             if (findFeature(m, f.id)) {
                 return makeError("script.args", "The id '" + f.id + "' is already used.");
             }
-            f.name = a.get("name", label + " " + f.id.substr(prefix.size()));
+            f.name = a.get("name", stepName(label, f.id, prefix));
             f.kind = kind;
             f.params = params;
             id = f.id;

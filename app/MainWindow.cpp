@@ -1249,7 +1249,9 @@ void MainWindow::refreshBrowser()
                                                 : tr("%1 free").arg(it->second->report.dof);
         }
         const bool shown = sketchVisible(feats[i].id);
-        auto* sk = new QTreeWidgetItem(sketches, {QString("%1 %2  (%3)%4").arg(statusGlyph(st.level), q(feats[i].name),
+        // the tick box shows visibility; a status mark only when something needs attention
+        const QString glyph = st.level == jig::StatusLevel::Ok ? QString() : statusGlyph(st.level) + " ";
+        auto* sk = new QTreeWidgetItem(sketches, {QString("%1%2  (%3)%4").arg(glyph, q(feats[i].name),
                                                                                extra.isEmpty() ? statusWord(st.level) : extra,
                                                                                shown ? QString() : tr("  hidden"))});
         sk->setData(0, Qt::UserRole + 1, q(feats[i].id));  // the step, for "find in timeline"
