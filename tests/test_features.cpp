@@ -211,6 +211,13 @@ TEST(Pattern, RectangularPatternOfAHole)
                      "spacing2=20mm\n");
     expectAllOk(*doc);
     EXPECT_NEAR(props(*doc).volume, 60 * 40 * 5 - 6 * pi * 4 * 5, 1e-3);
+    // 1000 by 1000 is a million solid operations: refused with a reason instead of never finishing
+    ScriptRunner r(*doc);
+    r.strict = false;
+    ASSERT_TRUE(r.runLine("set p1 count1=1000 count2=1000").ok());
+    const auto& st = doc->status(doc->featureIndex("p1"));
+    EXPECT_EQ(st.level, StatusLevel::Error);
+    EXPECT_NE(st.message.find("at most 1000"), std::string::npos) << st.message;
 }
 
 TEST(Pattern, CopiesThatMissTheBodyAreExplained)

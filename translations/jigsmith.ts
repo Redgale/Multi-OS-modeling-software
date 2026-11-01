@@ -2043,6 +2043,11 @@
     </message>
     <message>
         <location line="+1"/>
+        <source>Use fewer rows or columns.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>This pattern makes no copies.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2673,6 +2678,11 @@
     </message>
     <message>
         <location line="+1"/>
+        <source>That is %1 copies in all; a pattern can make at most 1000.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>The step this mirror copies (%1) is missing, after the mirror, or has a problem.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2697,7 +2707,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-34"/>
+        <location line="-35"/>
         <source>The id &apos;%1&apos; is already used.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2707,7 +2717,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+50"/>
+        <location line="+51"/>
         <source>A wall of %1 does not fit this outline.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2782,12 +2792,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-223"/>
+        <location line="-224"/>
         <source>There is nothing to export yet.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-171"/>
+        <location line="-172"/>
         <source>This DXF has no lines, circles, arcs, curves, text or blocks to bring in.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2827,7 +2837,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+98"/>
+        <location line="+99"/>
         <source>The 3MF file could not be created.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3430,7 +3440,7 @@
 <context>
     <name>CoreWords</name>
     <message>
-        <location line="+86"/>
+        <location line="+87"/>
         <source>ball face (sphere)</source>
         <translation type="unfinished"></translation>
     </message>

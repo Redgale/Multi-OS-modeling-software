@@ -200,6 +200,7 @@ screenshot (B-003). No real GPU on Windows or Linux has been tried. Builds are u
 - Bug hunt, fourth pass (app file handling):
   - Fixed: two Jigsmith windows open at once shared one autosave and one session lock. The second window then offered to "recover" the first one's work, they overwrote each other's autosave, and closing either removed the other's safety copy. Each window now autosaves to its own file under its own lock (`QLockFile`); a copy counts as left by a crash only when no running program holds its lock (UI test `recoveryPerWindow`: two windows, a faked crashed session whose lock names a process that is gone, a window that ends normally removes its copy). The crash prompt itself has still not been exercised with a real forced kill.
   - Fixed: Export added the extension only when the whole path had no dot, so `my.parts/bracket` was saved without `.stl`.
+  - Fixed: a rectangular pattern allowed 1000 copies each way, so up to a million solid operations (in practice a hang); at most 1000 in all now, refused with a reason (`Pattern.RectangularPatternOfAHole`). A damaged version number in a file could overflow when the next version was numbered.
 - Code of Conduct contact: the owner should add a dedicated contact address.
 
 ## Decisions waiting for the owner

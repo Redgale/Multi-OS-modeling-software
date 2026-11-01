@@ -186,7 +186,7 @@ Result<int> saveVersion(const Document& doc, const std::string& path, const std:
     }
     int next = 1;
     for (auto& v : index) {
-        next = std::max(next, v.value("number", 0) + 1);
+        next = std::max(next, std::clamp(v.value("number", 0), 0, 1'000'000) + 1);  // (damaged numbers)
     }
     const std::string body = doc.toJson().dump(2) + "\n";
     versions["versions/" + std::to_string(next) + ".json"] = body;

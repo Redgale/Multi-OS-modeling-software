@@ -240,6 +240,7 @@ QT_TRANSLATE_NOOP("Core", "The number of copies must be a whole number from 2 to
 QT_TRANSLATE_NOOP("Core", "The spacing must be larger than zero.")
 QT_TRANSLATE_NOOP("Core", "Use fewer copies, a smaller spacing, or spread them over the whole path.")
 QT_TRANSLATE_NOOP("Core", "The number of copies in each direction must be a whole number from 1 to 1000.")
+QT_TRANSLATE_NOOP("Core", "Use fewer rows or columns.")
 QT_TRANSLATE_NOOP("Core", "This pattern makes no copies.")
 QT_TRANSLATE_NOOP("Core", "Use a count of 2 or more.")
 QT_TRANSLATE_NOOP("Core", "The body the pattern should change no longer exists.")
@@ -493,6 +494,7 @@ inline const char* const kCorePatterns[] = {
     QT_TRANSLATE_NOOP("Core", "The step this pattern repeats (%1) is missing, after the pattern, or has a problem."),
     QT_TRANSLATE_NOOP("Core", "The sketch with this pattern's path (%1) is missing or comes later."),
     QT_TRANSLATE_NOOP("Core", "%1 copies %2 apart do not fit on a path %3 long."),
+    QT_TRANSLATE_NOOP("Core", "That is %1 copies in all; a pattern can make at most 1000."),
     QT_TRANSLATE_NOOP("Core", "The step this mirror copies (%1) is missing, after the mirror, or has a problem."),
     QT_TRANSLATE_NOOP("Core", "%1 of the edges this chamfer bevelled no longer exist."),
     QT_TRANSLATE_NOOP("Core", "%1 of the edges this fillet rounded no longer exist."),

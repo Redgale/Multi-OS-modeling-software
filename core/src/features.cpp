@@ -1623,6 +1623,10 @@ FeatureOutcome applyPattern(const Document& doc, const Feature& f, const std::sh
         if (!n1 || !n2) {
             return failed("The number of copies in each direction must be a whole number from 1 to 1000.");
         }
+        if (*n1 * *n2 > 1000) {  // each copy is a solid boolean: a million of them never finishes
+            return failed(fmt("That is %1 copies in all; a pattern can make at most 1000.", {std::to_string(*n1 * *n2)}),
+                          {"Use fewer rows or columns."});
+        }
         if (!s1 || !s2) {
             return failed(!s1 ? s1.error() : s2.error());
         }
