@@ -12,5 +12,5 @@
     <polygon points="0,0 10,0 0,10"/>
   </g>
   <path d="M62 0 C 62 0 72 0 72 0 L72 10 l-10 0 Z"/>
-  <path d="M0 0 L 80 20" fill="none" stroke="black"/>
+  <path d="M0 0 L 80 20" fill="none" stroke="none"/>
 </svg>

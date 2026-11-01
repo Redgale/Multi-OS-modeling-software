@@ -2982,11 +2982,16 @@ private slots:
         QVERIFY(w.importDxfFile(QString(JIG_SOURCE_DIR) + "/tests/data/plate_inch.dxf"));
         QVERIFY(w.sketchEditor() != nullptr);
         const auto& regions = w.document().state().sketches.begin()->second->profiles.regions;
-        QCOMPARE(int(regions.size()), 4);
+        int shapes = 0;  // the drawing's areas; its text label comes in as letters too
         double total = 0;
         for (auto& r : regions) {
-            total += r.area;
+            if (r.key.rfind("T", 0) != 0) {
+                ++shapes;
+                total += r.area;
+            }
         }
+        QCOMPARE(shapes, 4);
+        QCOMPARE(int(w.sketchEditor()->sketch().texts().size()), 1);
         const double in2 = 25.4 * 25.4;
         QVERIFY2(std::abs(total - (8 + 2 + M_PI * 0.25) * in2) < 1e-6, qPrintable(QString::number(total)));
         w.runCommand("edit.undo");  // one undo takes the whole import back

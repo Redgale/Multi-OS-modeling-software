@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// SVG import (brief M5): filled shapes of an SVG file (path, rect, circle, ellipse,
+// SVG import (brief M5): filled shapes, drawn outlines (strokes, as the band the pen
+// leaves) and text of an SVG file (path, rect, circle, ellipse, line, polyline, text,
 // polygon) become closed outlines of lines and Béziers, in millimetres. A small reader of
 // our own: the core takes no XML or Qt dependency, and only the geometry is needed.
 #include <algorithm>
 #include <array>
 #include <cctype>
 #include <cmath>
+#include <cstring>
 #include <fstream>
 #include <locale>
 #include <map>
@@ -13,7 +15,22 @@
 #include <set>
 #include <sstream>
 
+#include <BRepAdaptor_Curve.hxx>
+#include <BRepAlgoAPI_Fuse.hxx>
+#include <BRepBuilderAPI_MakeEdge.hxx>
+#include <BRepBuilderAPI_MakeFace.hxx>
+#include <BRepBuilderAPI_MakePolygon.hxx>
+#include <BRepBuilderAPI_MakeWire.hxx>
+#include <BRepTools_WireExplorer.hxx>
+#include <ShapeUpgrade_UnifySameDomain.hxx>
 #include <Standard_Failure.hxx>
+#include <TopExp_Explorer.hxx>
+#include <TopTools_ListOfShape.hxx>
+#include <TopoDS.hxx>
+#include <TopoDS_Compound.hxx>
+#include <BRep_Builder.hxx>
+#include <gp_Ax3.hxx>
+#include <gp_Circ.hxx>
 #include <gp_Pln.hxx>
 
 #include "jig/kernel.hpp"
@@ -118,6 +135,18 @@ std::vector<Element> tags(const std::string& x)
             }
             el.attrs[key] = x.substr(q + 1, endq - q - 1);
             j = endq + 1;
+        }
+        if (!el.closing && !el.selfClosing && (el.name == "text" || el.name == "tspan")) {
+            // the words of a text element, up to the next tag, with the usual entities
+            const size_t next = x.find('<', j + 1);
+            std::string t = x.substr(j + 1, (next == std::string::npos ? x.size() : next) - j - 1);
+            for (auto [ent, ch] : {std::pair {"&amp;", "&"}, {"&lt;", "<"}, {"&gt;", ">"}, {"&quot;", "\""}, {"&apos;", "'"}}) {
+                for (size_t at = t.find(ent); at != std::string::npos; at = t.find(ent, at + 1)) {
+                    t.replace(at, std::strlen(ent), ch);
+                }
+            }
+            const auto b = t.find_first_not_of(" \t\r\n"), e = t.find_last_not_of(" \t\r\n");
+            el.attrs["#text"] = b == std::string::npos ? std::string {} : t.substr(b, e - b + 1);
         }
         out.push_back(std::move(el));
         i = j + 1;
@@ -358,20 +387,28 @@ void arcToCubics(double x1, double y1, double rx, double ry, double phiDeg, int 
 }
 
 // path data -> contours (in user units, untransformed)
-std::vector<Contour> parsePath(const std::string& d)
+// With `closed`, subpaths without Z stay open (for strokes) and each one's closedness is
+// recorded; without it every subpath is closed (for fills).
+std::vector<Contour> parsePath(const std::string& d, std::vector<bool>* closed = nullptr)
 {
     std::vector<Contour> out;
     Contour cur;
     double x = 0, y = 0, sx = 0, sy = 0;     // current point, subpath start
     double lcx = 0, lcy = 0;                  // last control point (S, T)
     char last = 0;
+    bool byZ = false;
     auto close = [&]() {
         if (cur.empty()) {
             return;
         }
-        if (std::hypot(x - sx, y - sy) > 1e-9) {
+        const bool shut = byZ || !closed;
+        if (shut && std::hypot(x - sx, y - sy) > 1e-9) {
             cur.push_back({{x, y}, {sx, sy}});
         }
+        if (closed) {
+            closed->push_back(byZ);
+        }
+        byZ = false;
         out.push_back(std::move(cur));
         cur.clear();
         x = sx;
@@ -390,6 +427,7 @@ std::vector<Contour> parsePath(const std::string& d)
             cmd = d[i];
             n.seek(i + 1);
             if (cmd == 'Z' || cmd == 'z') {
+                byZ = true;
                 close();
                 last = cmd;
                 continue;
@@ -524,6 +562,129 @@ std::vector<Contour> parsePath(const std::string& d)
     return out;
 }
 
+// A point on a segment (2 points: line, 3: quadratic, 4: cubic Bézier) at t in [0, 1].
+std::array<double, 2> segAt(const std::vector<std::array<double, 2>>& s, double t)
+{
+    std::vector<std::array<double, 2>> p(s);
+    for (size_t r = 1; r < p.size(); ++r) {
+        for (size_t k = 0; k + r < p.size(); ++k) {
+            p[k] = {p[k][0] + (p[k + 1][0] - p[k][0]) * t, p[k][1] + (p[k + 1][1] - p[k][1]) * t};
+        }
+    }
+    return p[0];
+}
+
+// The closed outlines of OCCT faces in the XY plane, as straight segments (round edges in
+// short pieces), outer and inner (hole) wires alike.
+std::vector<Contour> faceContours(const TopoDS_Shape& faces)
+{
+    std::vector<Contour> out;
+    for (TopExp_Explorer fx(faces, TopAbs_FACE); fx.More(); fx.Next()) {
+        for (TopExp_Explorer wx(fx.Current(), TopAbs_WIRE); wx.More(); wx.Next()) {
+            std::vector<std::array<double, 2>> pts;
+            for (BRepTools_WireExplorer ex(TopoDS::Wire(wx.Current()), TopoDS::Face(fx.Current())); ex.More(); ex.Next()) {
+                BRepAdaptor_Curve c(ex.Current());
+                const bool rev = ex.Current().Orientation() == TopAbs_REVERSED;
+                const int n = c.GetType() == GeomAbs_Line ? 1 : 12;
+                for (int k = 0; k < n; ++k) {
+                    double t = double(k) / n;
+                    if (rev) {
+                        t = 1 - t;
+                    }
+                    const gp_Pnt p = c.Value(c.FirstParameter() + (c.LastParameter() - c.FirstParameter()) * t);
+                    pts.push_back({p.X(), p.Y()});
+                }
+            }
+            if (pts.size() < 3) {
+                continue;
+            }
+            Contour c;
+            for (size_t k = 0; k < pts.size(); ++k) {
+                c.push_back({pts[k], pts[(k + 1) % pts.size()]});
+            }
+            out.push_back(std::move(c));
+        }
+    }
+    return out;
+}
+
+// What a pen of width w draws along these paths: a band round each piece with round joins
+// and ends, all joined into one outline (with its holes).
+std::vector<Contour> strokeOutline(const std::vector<Contour>& paths, const std::vector<bool>& closed, double w)
+{
+    if (!(w > 1e-9)) {
+        return {};
+    }
+    TopTools_ListOfShape parts;
+    const double r = w / 2;
+    auto disc = [&](const std::array<double, 2>& p) {
+        parts.Append(BRepBuilderAPI_MakeFace(BRepBuilderAPI_MakeWire(BRepBuilderAPI_MakeEdge(
+                                                 gp_Circ(gp_Ax2(gp_Pnt(p[0], p[1], 0), gp_Dir(0, 0, 1)), r)).Edge()).Wire())
+                         .Face());
+    };
+    for (size_t k = 0; k < paths.size(); ++k) {
+        std::vector<std::array<double, 2>> pts;
+        for (auto& seg : paths[k]) {
+            const int n = seg.size() <= 2 ? 1 : 16;  // curves in short straight pieces
+            for (int i = 0; i < n; ++i) {
+                pts.push_back(segAt(seg, double(i) / n));
+            }
+        }
+        if (!paths[k].empty()) {
+            pts.push_back(paths[k].back().back());
+        }
+        for (size_t i = 0; i + 1 < pts.size(); ++i) {
+            const double dx = pts[i + 1][0] - pts[i][0], dy = pts[i + 1][1] - pts[i][1];
+            const double L = std::hypot(dx, dy);
+            if (L < 1e-9) {
+                continue;
+            }
+            const double nx = -dy / L * r, ny = dx / L * r;
+            // counter-clockwise, so every piece faces +Z like the round joins (or they will not merge)
+            BRepBuilderAPI_MakePolygon poly(gp_Pnt(pts[i][0] - nx, pts[i][1] - ny, 0), gp_Pnt(pts[i + 1][0] - nx, pts[i + 1][1] - ny, 0),
+                                            gp_Pnt(pts[i + 1][0] + nx, pts[i + 1][1] + ny, 0), gp_Pnt(pts[i][0] + nx, pts[i][1] + ny, 0), true);
+            parts.Append(BRepBuilderAPI_MakeFace(poly.Wire()).Face());
+            // a round start, and a round join where the path turns (not between the short
+            // pieces of a smooth curve)
+            bool turns = i == 0;
+            if (i > 0) {
+                const double px = pts[i][0] - pts[i - 1][0], py = pts[i][1] - pts[i - 1][1];
+                const double lp = std::hypot(px, py);
+                turns = lp < 1e-9 || (px * dx + py * dy) / (lp * L) < std::cos(2 * kPi / 180);
+            }
+            if (turns) {
+                disc(pts[i]);
+            }
+        }
+        if (!pts.empty() && !(k < closed.size() && closed[k])) {
+            disc(pts.back());  // a round end
+        }
+    }
+    if (parts.IsEmpty()) {
+        return {};
+    }
+    if (parts.Extent() == 1) {
+        return faceContours(parts.First());
+    }
+    TopTools_ListOfShape first, rest;
+    first.Append(parts.First());
+    for (auto it = TopTools_ListIteratorOfListOfShape(parts); it.More(); it.Next()) {
+        if (!it.Value().IsSame(parts.First())) {
+            rest.Append(it.Value());
+        }
+    }
+    BRepAlgoAPI_Fuse fuse;
+    fuse.SetArguments(first);
+    fuse.SetTools(rest);
+    fuse.Build();
+    if (!fuse.IsDone()) {
+        return {};
+    }
+    ShapeUpgrade_UnifySameDomain unify(fuse.Shape(), true, true, false);
+    unify.Build();
+    return faceContours(unify.Shape());
+}
+
 Contour ellipse(double cx, double cy, double rx, double ry)
 {
     const double k = 0.5522847498307936;  // 4/3 (sqrt(2) - 1): quarter circle as a cubic
@@ -622,13 +783,102 @@ Result<SvgArtwork> parseSvg(const std::string& text)
             if (auto st = el.attrs.find("style"); st != el.attrs.end() && st->second.find("display:none") != std::string::npos) {
                 continue;
             }
-            if (auto f = el.attrs.find("fill"); f != el.attrs.end() && f->second == "none") {
-                ++art.skipped["unfilled " + el.name];  // outlines only: nothing to cut or extrude
+            // a style property from the attribute or the style="" list
+            auto prop = [&](const std::string& name) -> std::string {
+                if (auto st = el.attrs.find("style"); st != el.attrs.end()) {
+                    const std::string& css = st->second;
+                    for (size_t at = css.find(name); at != std::string::npos; at = css.find(name, at + 1)) {
+                        if ((at == 0 || css[at - 1] == ';' || std::isspace(static_cast<unsigned char>(css[at - 1]))) &&
+                            css.compare(at + name.size(), 1, ":") == 0) {
+                            const size_t v = at + name.size() + 1, e = css.find(';', v);
+                            std::string val = css.substr(v, e == std::string::npos ? std::string::npos : e - v);
+                            const auto b = val.find_first_not_of(" \t"), z = val.find_last_not_of(" \t");
+                            return b == std::string::npos ? std::string {} : val.substr(b, z - b + 1);
+                        }
+                    }
+                }
+                auto a = el.attrs.find(name);
+                return a == el.attrs.end() ? std::string {} : a->second;
+            };
+            const bool lineLike = el.name == "line" || el.name == "polyline";
+            const bool filled = !lineLike && prop("fill") != "none";
+            const std::string strokeColour = prop("stroke");
+            const bool wantStroke = !strokeColour.empty() && strokeColour != "none";
+            bool stroked = wantStroke && (!filled || lineLike);  // a path left open also counts (below)
+            const double unitScale = std::sqrt(std::abs(m.a * m.d - m.b * m.c));  // how much the transform enlarges
+            auto toUser = [&](Contour c) {
+                for (auto& seg : c) {
+                    for (auto& p : seg) {
+                        p = m.apply(p[0], p[1]);
+                    }
+                }
+                return c;
+            };
+            if (el.name == "text" || el.name == "tspan") {
+                // the words, drawn with the font (outlines, like everything else here)
+                const std::string words = el.attrs.count("#text") ? el.attrs.at("#text") : std::string {};
+                if (words.empty()) {
+                    continue;
+                }
+                std::string size = prop("font-size");
+                const double fs = size.empty() ? 16 : std::max(0.1, std::atof(size.c_str()));
+                std::string family = prop("font-family");
+                if (const auto comma = family.find(','); comma != std::string::npos) {
+                    family = family.substr(0, comma);
+                }
+                family.erase(std::remove(family.begin(), family.end(), '\''), family.end());
+                family.erase(std::remove(family.begin(), family.end(), '"'), family.end());
+                SketchText t;
+                t.text = words;
+                t.font = family == "sans-serif" || family == "serif" || family == "monospace" ? std::string {} : family;
+                t.heightValue = fs;
+                auto faces = textFaces(t, 0, 0, gp_Ax3());
+                if (!faces || faces->faces.empty()) {
+                    ++art.skipped[el.name];
+                    continue;
+                }
+                TopoDS_Compound all;
+                BRep_Builder bb;
+                bb.MakeCompound(all);
+                for (auto& f : faces->faces) {
+                    bb.Add(all, f);
+                }
+                auto cs = faceContours(all);
+                // the text was made centred on (0, 0) with y up: put its baseline start (or its
+                // middle / end, by text-anchor) at x, y, in the drawing's y-down units
+                double x0 = 1e300, x1 = -1e300, y0 = 1e300;
+                for (auto& c : cs) {
+                    for (auto& seg : c) {
+                        for (auto& pt : seg) {
+                            x0 = std::min(x0, pt[0]);
+                            x1 = std::max(x1, pt[0]);
+                            y0 = std::min(y0, pt[1]);
+                        }
+                    }
+                }
+                const std::string anchor = prop("text-anchor");
+                const double ax = anchor == "middle" ? (x0 + x1) / 2 : anchor == "end" ? x1 : x0;
+                const double px = attrNum(el, "x"), py = attrNum(el, "y");
+                for (auto& c : cs) {
+                    for (auto& seg : c) {
+                        for (auto& pt : seg) {
+                            pt = {px + (pt[0] - ax), py - (pt[1] - y0)};  // the lowest point on the baseline
+                        }
+                    }
+                    raw.push_back(toUser(std::move(c)));
+                }
+                continue;
+            }
+            if (el.name == "image" || el.name == "use") {
+                ++art.skipped[el.name];
                 continue;
             }
             std::vector<Contour> cs;
+            std::vector<bool> closedFlags;
             if (el.name == "path" && el.attrs.count("d")) {
-                cs = parsePath(el.attrs.at("d"));
+                cs = parsePath(el.attrs.at("d"), wantStroke ? &closedFlags : nullptr);
+                // a drawn path left open (no Z) is a line, even with the default black fill
+                stroked = stroked || (wantStroke && std::find(closedFlags.begin(), closedFlags.end(), false) != closedFlags.end());
             }
             else if (el.name == "rect") {
                 const double x = attrNum(el, "x"), y = attrNum(el, "y"), w = attrNum(el, "width"), h = attrNum(el, "height");
@@ -648,7 +898,11 @@ Result<SvgArtwork> parseSvg(const std::string& text)
                     cs.push_back(ellipse(attrNum(el, "cx"), attrNum(el, "cy"), rx, ry));
                 }
             }
-            else if (el.name == "polygon" && el.attrs.count("points")) {
+            else if (el.name == "line") {
+                cs.push_back({{{attrNum(el, "x1"), attrNum(el, "y1")}, {attrNum(el, "x2"), attrNum(el, "y2")}}});
+                closedFlags.push_back(false);
+            }
+            else if ((el.name == "polygon" || el.name == "polyline") && el.attrs.count("points")) {
                 Numbers n(el.attrs.at("points"));
                 std::vector<std::array<double, 2>> pts;
                 while (true) {
@@ -658,36 +912,48 @@ Result<SvgArtwork> parseSvg(const std::string& text)
                     }
                     pts.push_back({*a, *b});
                 }
-                if (pts.size() >= 3) {
+                const bool shut = el.name == "polygon";
+                if (pts.size() >= (shut ? 3u : 2u)) {
                     Contour c;
-                    for (size_t k = 0; k < pts.size(); ++k) {
+                    for (size_t k = 0; k + 1 < pts.size() + (shut ? 1 : 0); ++k) {
                         c.push_back({pts[k], pts[(k + 1) % pts.size()]});
                     }
                     cs.push_back(c);
+                    closedFlags.push_back(shut);
                 }
-            }
-            else if (el.name == "text" || el.name == "image" || el.name == "line" || el.name == "polyline" || el.name == "use") {
-                ++art.skipped[el.name];
-                continue;
             }
             else {
                 continue;
             }
-            for (auto& c : cs) {
-                for (auto& seg : c) {
-                    for (auto& p : seg) {
-                        p = m.apply(p[0], p[1]);
-                    }
+            if (closedFlags.size() != cs.size()) {
+                closedFlags.assign(cs.size(), true);  // rectangles, circles, ellipses
+            }
+            if (filled && !stroked) {
+                for (auto& c : cs) {
+                    raw.push_back(toUser(std::move(c)));
                 }
-                raw.push_back(std::move(c));
+            }
+            else if (stroked) {
+                // a drawn outline: the band the pen leaves, as a shape of its own
+                std::string sw = prop("stroke-width");
+                const double w = (sw.empty() ? 1.0 : std::atof(sw.c_str())) * unitScale;
+                std::vector<Contour> user;
+                for (auto& c : cs) {
+                    user.push_back(toUser(std::move(c)));
+                }
+                for (auto& c : strokeOutline(user, closedFlags, w)) {
+                    raw.push_back(std::move(c));
+                }
+            }
+            else {
+                ++art.skipped["unfilled " + el.name];  // neither filled nor drawn: nothing to cut or extrude
             }
         }
         if (!sawRoot) {
             return makeError("svg.format", "This is not an SVG file.");
         }
         if (raw.empty()) {
-            return makeError("svg.empty", "This SVG has no filled shapes to bring in.",
-                             {"Text must be converted to paths first (in Inkscape: Path ▸ Object to Path)."});
+            return makeError("svg.empty", "This SVG has no shapes, outlines or text to bring in.");
         }
         // millimetres, y up, centred on the bounding box of the control points
         double xmin = 1e300, xmax = -1e300, ymin = 1e300, ymax = -1e300;

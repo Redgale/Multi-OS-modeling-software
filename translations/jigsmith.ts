@@ -2417,17 +2417,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
-        <source>This SVG has no filled shapes to bring in.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+1"/>
-        <source>Text must be converted to paths first (in Inkscape: Path ▸ Object to Path).</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+1"/>
+        <location line="+2"/>
         <source>The shapes in this SVG have no size.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2642,7 +2632,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+35"/>
+        <location line="-13"/>
+        <source>This SVG has no shapes, outlines or text to bring in.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+48"/>
         <source>A wall of %1 does not fit this outline.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2717,7 +2712,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-215"/>
+        <location line="-214"/>
         <source>There is nothing to export yet.</source>
         <translation type="unfinished"></translation>
     </message>

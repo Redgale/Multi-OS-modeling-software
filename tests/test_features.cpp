@@ -768,6 +768,54 @@ TEST(DxfImport, DamagedFilesNeverCrash)
     EXPECT_GT(parsed, 0);  // many mutations still read; the rest are refused cleanly
 }
 
+TEST(SvgImport, StrokesAndText)
+{
+    auto areas = [](const SvgArtwork& art) {
+        Sketch s;
+        const int id = s.addArtwork(0, 0, art.contours, art.width, {}, art.width, "t");
+        (void)id;
+        auto prof = buildProfiles(s, originPlaneFrame(OriginPlane::XY, 0));
+        std::vector<double> a;
+        for (auto& r : prof->regions) {
+            a.push_back(r.area);
+        }
+        std::sort(a.begin(), a.end());
+        return a;
+    };
+    // a line 20 long drawn 2 wide: a band with round ends, 20 x 2 + a circle of radius 1
+    auto line = parseSvg("<svg xmlns='http://www.w3.org/2000/svg' width='100mm' viewBox='0 0 100 100'>"
+                         "<line x1='10' y1='10' x2='30' y2='10' stroke='black' stroke-width='2'/></svg>");
+    ASSERT_TRUE(line.ok()) << line.error().message;
+    auto la = areas(*line);
+    ASSERT_EQ(la.size(), 1u);
+    EXPECT_NEAR(la[0], 40 + pi, 0.05);  // round ends are made of short straight pieces
+    // a circle of radius 10 drawn 2 wide (style syntax): a ring between radius 9 and 11
+    auto ring = parseSvg("<svg xmlns='http://www.w3.org/2000/svg' width='100mm' viewBox='0 0 100 100'>"
+                         "<circle cx='50' cy='50' r='10' style='fill:none;stroke:#000;stroke-width:2'/></svg>");
+    ASSERT_TRUE(ring.ok()) << ring.error().message;
+    auto ra = areas(*ring);
+    double total = 0;
+    for (double a : ra) {
+        total += a;
+    }
+    EXPECT_NEAR(total, pi * (121 - 81), 0.5);
+    // an open L-shaped polyline, a path left open, text, and a filled square side by side
+    auto mixed = parseSvg("<svg xmlns='http://www.w3.org/2000/svg' width='200mm' viewBox='0 0 200 200'>"
+                          "<polyline points='0,0 20,0 20,20' fill='none' stroke='black' stroke-width='1'/>"
+                          "<path d='M40 0 L60 0' stroke='black'/>"
+                          "<text x='80' y='40' font-size='20'>OK</text>"
+                          "<rect x='150' y='0' width='10' height='10'/></svg>");
+    ASSERT_TRUE(mixed.ok()) << mixed.error().message;
+    auto ma = areas(*mixed);
+    EXPECT_GE(ma.size(), 5u);  // the L, the open path drawn as a band, the O (a ring), the K and the square
+    bool square = false;
+    for (double a : ma) {
+        square = square || std::abs(a - 100) < 1e-6;
+    }
+    EXPECT_TRUE(square);
+    EXPECT_FALSE(mixed->skipped.count("text"));
+}
+
 TEST(SvgImport, ShapesHolesTransformsAndUnits)
 {
     const std::string path = std::string(JIG_SOURCE_DIR) + "/tests/data/badge.svg";

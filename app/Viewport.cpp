@@ -813,6 +813,7 @@ nlohmann::json Viewport::camera() const
 
 void Viewport::setCamera(const nlohmann::json& c)
 {
+    emit cameraMoved();  // someone chose this view: nothing should take it away later
     if (!c.is_object()) {
         return;
     }
@@ -840,6 +841,7 @@ float Viewport::worldPerPixel() const
 
 void Viewport::lookAlong(const QVector3D& normal, const QVector3D& up, const QVector3D& center)
 {
+    emit cameraMoved();  // someone chose this view: nothing should take it away later
     QVector3D n = normal.normalized();
     pitch_ = std::clamp(float(qRadiansToDegrees(std::asin(std::clamp(n.z(), -1.0f, 1.0f)))), -89.9f, 89.9f);
     if (std::abs(n.z()) > 0.999f) {
@@ -1287,6 +1289,7 @@ void Viewport::drawGizmo(QPainter& p)
 
 void Viewport::orbit(const QPoint& d)
 {
+    emit cameraMoved();  // someone chose this view: nothing should take it away later
     yaw_ -= d.x() * 0.4f * orbitSpeed_;
     pitch_ = std::clamp(pitch_ + d.y() * 0.4f * orbitSpeed_, -89.9f, 89.9f);
     update();
@@ -1294,6 +1297,7 @@ void Viewport::orbit(const QPoint& d)
 
 void Viewport::pan(const QPoint& d)
 {
+    emit cameraMoved();  // someone chose this view: nothing should take it away later
     const float wpp = 2 * distance_ * std::tan(qDegreesToRadians(kFovDeg / 2)) / float(std::max(height(), 1));
     const QMatrix4x4 v = viewMatrix();
     const QVector3D right(v(0, 0), v(0, 1), v(0, 2)), up(v(1, 0), v(1, 1), v(1, 2));
@@ -1303,6 +1307,7 @@ void Viewport::pan(const QPoint& d)
 
 void Viewport::zoomAt(double factor, const QPoint& at)
 {
+    emit cameraMoved();  // someone chose this view: nothing should take it away later
     // keep the point under the cursor fixed while zooming
     const QMatrix4x4 inv = (projMatrix() * viewMatrix()).inverted();
     const QVector3D tn = (projMatrix() * viewMatrix()).map(target_);
@@ -1722,6 +1727,7 @@ void Viewport::homeView()
 
 void Viewport::viewTop()
 {
+    emit cameraMoved();  // someone chose this view: nothing should take it away later
     yaw_ = -90;
     pitch_ = 89.9f;
     update();
@@ -1729,6 +1735,7 @@ void Viewport::viewTop()
 
 void Viewport::viewFront()
 {
+    emit cameraMoved();  // someone chose this view: nothing should take it away later
     yaw_ = -90;
     pitch_ = 0;
     update();
@@ -1736,6 +1743,7 @@ void Viewport::viewFront()
 
 void Viewport::viewRight()
 {
+    emit cameraMoved();  // someone chose this view: nothing should take it away later
     yaw_ = 0;
     pitch_ = 0;
     update();

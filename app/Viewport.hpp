@@ -286,6 +286,8 @@ signals:
     // the graphics driver cannot draw the 3D view (too old an OpenGL): what to tell the person
     void graphicsProblem(const QString& explanation);
     void meshesUpdated();
+    // the camera was turned, panned, zoomed or set to a view (not by fitting to new bodies)
+    void cameraMoved();
 
 protected:
     void initializeGL() override;

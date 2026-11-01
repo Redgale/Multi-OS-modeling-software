@@ -554,13 +554,15 @@ MainWindow::MainWindow()
                               .arg(q(jig::formatArea(fp.size, doc_->units())))
                               .arg(body));
     });
+    // A design just opened is framed once its bodies are meshed, unless the camera was moved
+    // meanwhile (it used to jump back to the home view whenever the first meshes arrived).
     connect(view_, &Viewport::meshesUpdated, this, [this] {
-        static bool first = true;
-        if (first && doc_ && !doc_->state().bodies.empty()) {
+        if (homeWhenMeshed_ && doc_ && !doc_->state().bodies.empty()) {
+            homeWhenMeshed_ = false;
             view_->homeView();
-            first = false;
         }
     });
+    connect(view_, &Viewport::cameraMoved, this, [this] { homeWhenMeshed_ = false; });
 
     QSettings st;
     // Dark is the default. The key is new: the old "theme" key was written with Light on
@@ -1059,6 +1061,7 @@ void MainWindow::setDocument(std::unique_ptr<jig::Document> doc, const QString& 
     autosavedRevision_ = savedRevision_;
     refreshAll();
     view_->homeView();
+    homeWhenMeshed_ = !doc_->state().bodies.empty();  // frame them when their meshes are ready
 }
 
 bool MainWindow::sketchVisible(const std::string& id) const

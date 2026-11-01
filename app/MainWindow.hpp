@@ -233,6 +233,7 @@ private:
     QWidget* panelHost_ = nullptr;
     QWidget* sketchPanel_ = nullptr;
     QCheckBox* sliceBox_ = nullptr;
+    bool homeWhenMeshed_ = false;  // frame a just-opened design once its meshes are ready
     QLabel* sketchInfo_ = nullptr;
     QAction* centerRect_ = nullptr;
     Theme theme_ = Theme::Dark;

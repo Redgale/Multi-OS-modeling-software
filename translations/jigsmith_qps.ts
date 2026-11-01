@@ -2416,17 +2416,7 @@
         <translation>[Thîs îs ñöt áñ SVG fîlé.~~~~~~]</translation>
     </message>
     <message>
-        <location line="+1" />
-        <source>This SVG has no filled shapes to bring in.</source>
-        <translation>[Thîs SVG hás ñö fîlléd shápés tö brîñg îñ.~~~~~~~~~~~]</translation>
-    </message>
-    <message>
-        <location line="+1" />
-        <source>Text must be converted to paths first (in Inkscape: Path ▸ Object to Path).</source>
-        <translation>[Téxt müst bé çöñvértéd tö páths fîrst (îñ Îñksçápé: Páth ▸ Öbjéçt tö Páth).~~~~~~~~~~~~~~~~~~~]</translation>
-    </message>
-    <message>
-        <location line="+1" />
+        <location line="+2" />
         <source>The shapes in this SVG have no size.</source>
         <translation>[Thé shápés îñ thîs SVG hávé ñö sîzé.~~~~~~~~~]</translation>
     </message>
@@ -2641,7 +2631,12 @@
         <translation>[Thé îd '%1' îs álréádý üséd.~~~~~~]</translation>
     </message>
     <message>
-        <location line="+35" />
+        <location line="-13" />
+        <source>This SVG has no shapes, outlines or text to bring in.</source>
+        <translation>[Thîs SVG hás ñö shápés, öütlîñés ör téxt tö brîñg îñ.~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+48" />
         <source>A wall of %1 does not fit this outline.</source>
         <translation>[Á wáll öf %1 döés ñöt fît thîs öütlîñé.~~~~~~~~~]</translation>
     </message>
@@ -2716,7 +2711,7 @@
         <translation>[Thé föñt '%1' îs ñöt áváîláblé héré; üsîñg thé büîlt-îñ föñt (Îñtér).~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="-215" />
+        <location line="-214" />
         <source>There is nothing to export yet.</source>
         <translation>[Théré îs ñöthîñg tö éxpört ýét.~~~~~~~~]</translation>
     </message>
