@@ -2336,12 +2336,7 @@
         <translation>[Éxpört á sölîd (ñöt jüst sürfáçés) fröm thé öthér prögrám.~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+21" />
-        <source>A curve can be tangent to an ellipse only if it is a line.</source>
-        <translation>[Á çürvé çáñ bé táñgéñt tö áñ éllîpsé öñlý îf ît îs á lîñé.~~~~~~~~~~~~~~]</translation>
-    </message>
-    <message>
-        <location line="+1" />
+        <location line="+22" />
         <source>A smooth curve can be made tangent only where it meets the other curve at one of its ends.</source>
         <translation>[Á smööth çürvé çáñ bé mádé táñgéñt öñlý whéré ît mééts thé öthér çürvé át öñé öf îts éñds.~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -3161,7 +3156,12 @@
         <translation>[Éqüál ñééds twö lîñés ör twö röüñd çürvés.~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+3" />
+        <location line="+1" />
+        <source>A curve can be tangent to an ellipse only if it is a line, circle or arc.</source>
+        <translation>[Á çürvé çáñ bé táñgéñt tö áñ éllîpsé öñlý îf ît îs á lîñé, çîrçlé ör árç.~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+2" />
         <source>Tangent needs a line or curve and a round curve.</source>
         <translation>[Táñgéñt ñééds á lîñé ör çürvé áñd á röüñd çürvé.~~~~~~~~~~~~]</translation>
     </message>

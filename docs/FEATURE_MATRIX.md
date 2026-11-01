@@ -57,7 +57,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Circle center, 2-point, 3-point, 2/3-tangent | 10 | v0.1 M1 (3-tangent v0.2) | **app** (centre, 2-point, 3-point, tangent to two lines with a typed radius); 3-tangent v0.2 | Brief lists "tangent" |
 | Arc 3-point, tangent, center | 10 | v0.1 M1 | **app**: center arc (typed radius and angle), 3-point arc, tangent arc from a loose end; scripts: `arc` | |
 | Polygon (inscribed, circumscribed, edge) | 10 | v0.1 M1 | **app** + scripts: inscribed (corners on the circle) | |
-| Ellipse | 10 | v0.1 M1 | **app** + scripts (`ellipse`): radii as dimensions; point-on and line-tangent constraints along it (our own solver constraints) | Solver sees its centre and axis end; the minor radius is set before solving (D-015) |
+| Ellipse | 10 | v0.1 M1 | **app** + scripts (`ellipse`): radii as dimensions; point-on and tangent (line, circle, arc) constraints along it (our own solver constraints) | Solver sees its centre and axis end; the minor radius is set before solving (D-015) |
 | Slot (center-to-center, overall, arc slots) | 10 | v0.1 M1 (arc slots v0.2) | **app** + scripts: center-to-center | |
 | Fit-point spline | 10 | v0.1 M1 | **app** + scripts (`spline`): open or closed, drag points to reshape; no tangent handles or constraints along it yet | |
 | Control-point spline | 10 | v0.2 | — | Not in brief's v0.1 list |

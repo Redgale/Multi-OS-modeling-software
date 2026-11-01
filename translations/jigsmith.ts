@@ -2337,12 +2337,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+21"/>
-        <source>A curve can be tangent to an ellipse only if it is a line.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+1"/>
+        <location line="+22"/>
         <source>A smooth curve can be made tangent only where it meets the other curve at one of its ends.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3162,7 +3157,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+3"/>
+        <location line="+1"/>
+        <source>A curve can be tangent to an ellipse only if it is a line, circle or arc.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
         <source>Tangent needs a line or curve and a round curve.</source>
         <translation type="unfinished"></translation>
     </message>

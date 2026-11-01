@@ -36,6 +36,7 @@ private:
 // Signed distance-like errors (zero on the curve). Value layouts are in the .cpp.
 double pointOnEllipse(const std::vector<double>& v, double minor);  // px py cx cy ax ay
 double lineTangentToEllipse(const std::vector<double>& v, double minor);  // l1 l2 c a
+double circleTangentToEllipse(const std::vector<double>& v, double minor);  // ccx ccy r c a
 double pointOnSmooth(const std::vector<double>& v, bool closed);  // px py, then the fit points
 // Two directions at a shared point running the same way (or straight back):
 // each is 4 values (from, to); `perp` turns one a quarter turn (an arc: its radius).

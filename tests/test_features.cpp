@@ -1194,11 +1194,27 @@ TEST(SketchCurves, ConstraintsAlongEllipsesAndSmoothCurves)
     const auto& Q = c.entity(sp2)->pts;
     EXPECT_NEAR(cross(dir(c.entity(ln)->p1, c.entity(ln)->p2), dir(P[0], P[1])), 0, 1e-7);
     EXPECT_NEAR(cross(dir(P[2], P[1]), dir(Q[0], Q[1])), 0, 1e-7);
-    // refused: a circle tangent to an ellipse, a smooth curve tangent to a line it does not meet
-    Sketch bad;
-    const int e2 = bad.addEllipse(0, 0, 20, 0, 10);
-    bad.addConstraint(ConstraintType::Tangent, bad.addCircle(40, 0, 5), e2);
-    EXPECT_EQ(bad.solve().state, SolveState::Failed);
+    // a circle of radius 5 touching a fixed ellipse (radii 20 and 10): from outside on the right
+    // its centre ends 25 from the ellipse's centre; one inside at the top sits 5 below the top
+    Sketch ce;
+    const int e2 = ce.addEllipse(0, 0, 20, 0, 10);
+    ce.addConstraint(ConstraintType::Fix, ce.entity(e2)->center);
+    ce.addConstraint(ConstraintType::Fix, ce.entity(e2)->p1);
+    const int outside = ce.addCircle(27, 1, 5), inside = ce.addCircle(0, 3, 5);
+    for (int k : {outside, inside}) {
+        ce.addConstraint(ConstraintType::Radius, k, 0, 0, "5 mm");
+    }
+    ce.addConstraint(ConstraintType::Horizontal, ce.entity(outside)->center, ce.entity(e2)->center);
+    ce.addConstraint(ConstraintType::Vertical, ce.entity(inside)->center, ce.entity(e2)->center);
+    ce.addConstraint(ConstraintType::Tangent, outside, e2);
+    ce.addConstraint(ConstraintType::Tangent, inside, e2);
+    auto rc = ce.solve();
+    ASSERT_NE(rc.state, SolveState::Failed) << rc.message;
+    EXPECT_NEAR(ce.pointXY(ce.entity(outside)->center).first, 25, 1e-6);
+    // the inside one stays on the vertical centre line and touches the top from below
+    EXPECT_NEAR(ce.pointXY(ce.entity(inside)->center).first, 0, 1e-9);
+    EXPECT_NEAR(ce.pointXY(ce.entity(inside)->center).second, 5, 1e-6);
+    // refused: a smooth curve tangent to a line it does not meet
     Sketch bad2;
     const int s3 = bad2.addSpline({{0, 0}, {10, 5}, {20, 0}});
     bad2.addConstraint(ConstraintType::Tangent, bad2.addLine(50, 0, 60, 0), s3);

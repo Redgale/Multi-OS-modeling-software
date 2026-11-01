@@ -1747,8 +1747,21 @@ SolveReport Sketch::runSolver(const ParamLookup& lookup, const int* dragPoint, d
                         sys.addConstraint(con);
                         break;
                     }
+                    if (el && (isCircle(other) || isArc(other))) {  // touching it from inside or out
+                        double* cx = isCircle(other) ? circles[other].center.x : arcs[other].center.x;
+                        double* cy = isCircle(other) ? circles[other].center.y : arcs[other].center.y;
+                        double* rad = isCircle(other) ? circles[other].rad : arcs[other].rad;
+                        const GCS::Point &c = pts[el->center], &ax = pts[el->p1];
+                        const double minor = el->r;
+                        auto* con = new detail::FuncConstraint(
+                            {cx, cy, rad, c.x, c.y, ax.x, ax.y},
+                            [minor](const auto& v) { return detail::circleTangentToEllipse(v, minor); });
+                        con->setTag(tag);
+                        sys.addConstraint(con);
+                        break;
+                    }
                     if (el) {
-                        return fail(cid, "A curve can be tangent to an ellipse only if it is a line.");
+                        return fail(cid, "A curve can be tangent to an ellipse only if it is a line, circle or arc.");
                     }
                     // a smooth curve: tangent where it meets the other curve at one of its ends
                     struct Dir

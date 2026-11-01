@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <numbers>
 #include <tuple>
 
 namespace jig::detail
@@ -111,6 +112,38 @@ double lineTangentToEllipse(const std::vector<double>& v, double minor)
     }
     const double dist = std::abs(q1.first * ey - q1.second * ex) / L;  // centre to the line
     return (dist - 1) * std::min(A, minor);
+}
+
+double circleTangentToEllipse(const std::vector<double>& v, double minor)
+{
+    const double A = std::hypot(v[5] - v[3], v[6] - v[4]), b = minor;
+    if (A < 1e-12 || b < 1e-12) {
+        return 0;
+    }
+    const double dx = (v[5] - v[3]) / A, dy = (v[6] - v[4]) / A;
+    const double rx = v[0] - v[3], ry = v[1] - v[4];
+    const double u = rx * dx + ry * dy, w = -rx * dy + ry * dx;  // the centre in the ellipse's axes
+    // the nearest point (A cos t, b sin t): Newton from four starts, the closest kept
+    double best = 1e300;
+    for (int s = 0; s < 4; ++s) {
+        double t = std::atan2(w * A, u * b) + s * std::numbers::pi / 2;
+        for (int it = 0; it < 30; ++it) {
+            const double c = std::cos(t), sn = std::sin(t);
+            const double ex = A * c - u, ey = b * sn - w;
+            const double f = -ex * A * sn + ey * b * c;  // half the derivative of the squared distance
+            const double fp = A * A * sn * sn + b * b * c * c - ex * A * c - ey * b * sn;
+            if (std::abs(fp) < 1e-15) {
+                break;
+            }
+            const double step = std::clamp(-f / fp, -0.5, 0.5);
+            t += step;
+            if (std::abs(step) < 1e-15) {
+                break;
+            }
+        }
+        best = std::min(best, std::hypot(A * std::cos(t) - u, b * std::sin(t) - w));
+    }
+    return best - v[2];
 }
 
 double pointOnSmooth(const std::vector<double>& v, bool closed)
