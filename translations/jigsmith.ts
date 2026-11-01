@@ -900,6 +900,16 @@
     </message>
     <message>
         <location line="+1"/>
+        <source>Insert mesh…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Bring in a closed mesh (STL, OBJ or 3MF) as a solid you can change, kept inside the design.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>Import SVG…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1474,6 +1484,11 @@
     <message>
         <location line="+1"/>
         <source>Bring in a solid from another CAD program.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Bring in a closed mesh (STL, OBJ or 3MF) as a solid you can change, kept inside the design.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -3167,6 +3182,116 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location line="+1"/>
+        <source>This STL file has damaged numbers in it.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>This STL file could not be read: a corner has no proper numbers.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>This file has no triangles, or is not an STL file.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>This OBJ file could not be read: a corner has no proper numbers.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>This OBJ file refers to a corner that is not there.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>This file has no faces, or is not an OBJ file.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>This 3MF file could not be opened (it is not a zip archive).</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>This 3MF file has no model in it.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>This 3MF file has damaged numbers in it.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>This 3MF file refers to a corner that is not there.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>This 3MF file has no triangles in it.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Jigsmith reads meshes from STL, OBJ and 3MF files.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The file could not be read (it is missing, unreadable or larger than 256 MB).</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>This mesh has no triangles.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Reduce the mesh in another program first (for example, decimate it in a slicer or mesh editor), then insert it again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>This mesh is too small to close into a solid.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>This mesh has holes in it, so it does not enclose a solid.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Repair the mesh in another program (close its holes), then insert it again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>This mesh&apos;s triangles do not join into a closed skin.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Repair the mesh in another program, then insert it again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>This mesh could not be turned into a solid.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The mesh&apos;s unit must be more than zero.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <location line="+21"/>
         <source>A smooth curve can be made tangent only where it meets the other curve at one of its ends.</source>
         <translation type="unfinished"></translation>
@@ -3633,6 +3758,11 @@
     </message>
     <message>
         <location line="+1"/>
+        <source>This mesh has %1 triangles; Jigsmith turns meshes of up to %2 into solids.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>There is no screw size called &apos;%1&apos; in the clearance table.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3667,7 +3797,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-249"/>
+        <location line="-272"/>
         <source>There is nothing to export yet.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4002,7 +4132,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+9"/>
+        <location line="+31"/>
         <source>Use M2 to M12, or #4, #6, #8, #10, 1/4&quot;, 5/16&quot;, 3/8&quot;, 1/2&quot;.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4315,7 +4445,7 @@
 <context>
     <name>CoreWords</name>
     <message>
-        <location line="+104"/>
+        <location line="+105"/>
         <source>ball face (sphere)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5733,13 +5863,13 @@
         <location line="+9"/>
         <location line="+751"/>
         <location line="+738"/>
-        <location line="+931"/>
+        <location line="+938"/>
         <location line="+27"/>
         <source>Sketch</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2445"/>
+        <location line="-2452"/>
         <source>Extrude</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6026,12 +6156,12 @@
     </message>
     <message>
         <location line="+2"/>
-        <location line="+1608"/>
+        <location line="+1615"/>
         <source>Mouse and trackpad</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1606"/>
+        <location line="-1613"/>
         <source>Default (middle-drag pans, Shift+middle orbits)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6052,30 +6182,30 @@
     </message>
     <message>
         <location line="+11"/>
-        <location line="+1581"/>
+        <location line="+1588"/>
         <source>Theme</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1579"/>
-        <location line="+1534"/>
+        <location line="-1586"/>
+        <location line="+1541"/>
         <source>Light</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1534"/>
-        <location line="+1533"/>
+        <location line="-1541"/>
+        <location line="+1540"/>
         <source>Dark</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1532"/>
-        <location line="+1534"/>
+        <location line="-1539"/>
+        <location line="+1541"/>
         <source>High contrast</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1526"/>
+        <location line="-1533"/>
         <source>&amp;Help</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6192,12 +6322,12 @@
     </message>
     <message>
         <location line="+2"/>
-        <location line="+2250"/>
+        <location line="+2300"/>
         <source>Rename…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2247"/>
+        <location line="-2297"/>
         <source>Delete body</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6213,13 +6343,13 @@
     </message>
     <message>
         <location line="+5"/>
-        <location line="+1588"/>
+        <location line="+1595"/>
         <location line="+58"/>
         <source>Properties</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1640"/>
+        <location line="-1647"/>
         <source>Properties and help</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6305,12 +6435,12 @@
     </message>
     <message>
         <location line="+18"/>
-        <location line="+2136"/>
+        <location line="+2186"/>
         <source>Move rollback marker</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1964"/>
+        <location line="-2014"/>
         <source>Start here: every part begins as a flat sketch.
 Click Sketch on the toolbar, then click a plane.
 Or open the phone stand sample (File ▸ Open a sample).</source>
@@ -6509,12 +6639,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+0"/>
-        <location line="+393"/>
+        <location line="+400"/>
         <source>Jigsmith designs (*.jig)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-346"/>
+        <location line="-353"/>
         <source>Save view</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6530,6 +6660,17 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+107"/>
+        <location line="+1155"/>
+        <source>Insert mesh</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-1154"/>
+        <source>Meshes (*.stl *.obj *.3mf)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
         <source>Import STEP</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6679,12 +6820,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+0"/>
-        <location line="+1012"/>
+        <location line="+1055"/>
         <source>There is no 3D body yet.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1009"/>
+        <location line="-1052"/>
         <source>STL mesh for slicers (*.stl)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6966,7 +7107,27 @@ An empty design with the origin ready</source>
         </translation>
     </message>
     <message>
-        <location line="+8"/>
+        <location line="+18"/>
+        <source>Millimetres (most 3D-printing files)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>What unit is this file in? STL and OBJ files do not say.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+17"/>
+        <source>Could not insert the mesh</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Inserted %1 as a solid. It is kept inside this design.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+7"/>
         <location line="+47"/>
         <source>Import DXF</source>
         <translation type="unfinished"></translation>
@@ -6977,8 +7138,8 @@ An empty design with the origin ready</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-17"/>
-        <location line="+23"/>
+        <location line="-60"/>
+        <location line="+66"/>
         <location line="+30"/>
         <location line="+25"/>
         <location line="+30"/>
@@ -6992,12 +7153,14 @@ An empty design with the origin ready</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+0"/>
+        <location line="-45"/>
+        <location line="+45"/>
         <source>Inches</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+0"/>
+        <location line="-45"/>
+        <location line="+45"/>
         <source>Centimetres</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7007,7 +7170,8 @@ An empty design with the origin ready</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+0"/>
+        <location line="-44"/>
+        <location line="+44"/>
         <source>Metres</source>
         <translation type="unfinished"></translation>
     </message>

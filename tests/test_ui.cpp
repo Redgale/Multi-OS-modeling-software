@@ -19,6 +19,7 @@
 #include <QTableWidget>
 #include <QToolBar>
 #include <QToolButton>
+#include <QStatusBar>
 #include <QTimer>
 #include <QTreeWidget>
 #include <QtTest>
@@ -3142,6 +3143,41 @@ private slots:
         const double v = jig::massProperties(w.document().state().bodies.begin()->second->shape()).volume;
         QVERIFY(v < std::numbers::pi * 9 * 20 - 50);
         QVERIFY(w.document().status(1).level == jig::StatusLevel::Ok);
+    }
+
+    // Insert a mesh: an STL exported from a part comes back as a solid that later steps can use.
+    void insertMesh()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        auto part = std::make_unique<jig::Document>();
+        {
+            jig::ScriptRunner r(*part);
+            QVERIFY(r.runText("box id=bx1 length=30mm width=20mm height=10mm\n").ok());
+        }
+        const QString stl = QDir::temp().filePath("jig-ui-mesh.stl");
+        QVERIFY(jig::exportStl(part->state().bodies.begin()->second->shape(), stl.toStdString()).ok());
+        QVERIFY(w.insertMeshFile(stl, 1));
+        QCOMPARE(int(w.document().state().bodies.size()), 1);
+        QVERIFY(std::abs(jig::massProperties(w.document().state().bodies.begin()->second->shape()).volume - 6000) < 1e-3);
+        QVERIFY(w.statusBar()->currentMessage().contains("kept inside this design"));
+        QTRY_VERIFY(w.viewport()->meshesReady());
+        // a broken file: refused with the reason, nothing added
+        const QString bad = QDir::temp().filePath("jig-ui-bad.obj");
+        {
+            QFile f(bad);
+            QVERIFY(f.open(QIODevice::WriteOnly));
+            f.write("v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n");
+        }
+        QTimer::singleShot(300, [] {
+            if (auto* box = qobject_cast<QMessageBox*>(QApplication::activeModalWidget())) {
+                box->accept();
+            }
+        });
+        QVERIFY(!w.insertMeshFile(bad, 1));
+        QCOMPARE(int(w.document().model().features.size()), 1);
     }
 
     // Areas of a sketch are picked by clicking them in the 3D view: a square with a circle in it

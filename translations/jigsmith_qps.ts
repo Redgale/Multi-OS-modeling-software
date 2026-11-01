@@ -899,6 +899,16 @@
     </message>
     <message>
         <location line="+1" />
+        <source>Insert mesh…</source>
+        <translation>[Îñsért mésh…~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Bring in a closed mesh (STL, OBJ or 3MF) as a solid you can change, kept inside the design.</source>
+        <translation>[Brîñg îñ á çlöséd mésh (STL, ÖBJ ör 3MF) ás á sölîd ýöü çáñ çháñgé, képt îñsîdé thé désîgñ.~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
         <source>Import SVG…</source>
         <translation>[Împört SVG…~~~]</translation>
     </message>
@@ -1474,6 +1484,11 @@
         <location line="+1" />
         <source>Bring in a solid from another CAD program.</source>
         <translation>[Brîñg îñ á sölîd fröm áñöthér ÇÁD prögrám.~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Bring in a closed mesh (STL, OBJ or 3MF) as a solid you can change, kept inside the design.</source>
+        <translation>[Brîñg îñ á çlöséd mésh (STL, ÖBJ ör 3MF) ás á sölîd ýöü çáñ çháñgé, képt îñsîdé thé désîgñ.~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <location line="+1" />
@@ -3166,6 +3181,116 @@
         <translation>[Trý á smállér áñglé.~~~~~]</translation>
     </message>
     <message>
+        <location line="+1" />
+        <source>This STL file has damaged numbers in it.</source>
+        <translation>[Thîs STL fîlé hás dámágéd ñümbérs îñ ît.~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>This STL file could not be read: a corner has no proper numbers.</source>
+        <translation>[Thîs STL fîlé çöüld ñöt bé réád: á çörñér hás ñö pröpér ñümbérs.~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>This file has no triangles, or is not an STL file.</source>
+        <translation>[Thîs fîlé hás ñö trîáñglés, ör îs ñöt áñ STL fîlé.~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>This OBJ file could not be read: a corner has no proper numbers.</source>
+        <translation>[Thîs ÖBJ fîlé çöüld ñöt bé réád: á çörñér hás ñö pröpér ñümbérs.~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>This OBJ file refers to a corner that is not there.</source>
+        <translation>[Thîs ÖBJ fîlé référs tö á çörñér thát îs ñöt théré.~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>This file has no faces, or is not an OBJ file.</source>
+        <translation>[Thîs fîlé hás ñö fáçés, ör îs ñöt áñ ÖBJ fîlé.~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>This 3MF file could not be opened (it is not a zip archive).</source>
+        <translation>[Thîs 3MF fîlé çöüld ñöt bé öpéñéd (ît îs ñöt á zîp árçhîvé).~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>This 3MF file has no model in it.</source>
+        <translation>[Thîs 3MF fîlé hás ñö mödél îñ ît.~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>This 3MF file has damaged numbers in it.</source>
+        <translation>[Thîs 3MF fîlé hás dámágéd ñümbérs îñ ît.~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>This 3MF file refers to a corner that is not there.</source>
+        <translation>[Thîs 3MF fîlé référs tö á çörñér thát îs ñöt théré.~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>This 3MF file has no triangles in it.</source>
+        <translation>[Thîs 3MF fîlé hás ñö trîáñglés îñ ît.~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Jigsmith reads meshes from STL, OBJ and 3MF files.</source>
+        <translation>[Jîgsmîth réáds méshés fröm STL, ÖBJ áñd 3MF fîlés.~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The file could not be read (it is missing, unreadable or larger than 256 MB).</source>
+        <translation>[Thé fîlé çöüld ñöt bé réád (ît îs mîssîñg, üñréádáblé ör lárgér tháñ 256 MB).~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>This mesh has no triangles.</source>
+        <translation>[Thîs mésh hás ñö trîáñglés.~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Reduce the mesh in another program first (for example, decimate it in a slicer or mesh editor), then insert it again.</source>
+        <translation>[Rédüçé thé mésh îñ áñöthér prögrám fîrst (för éxámplé, déçîmáté ît îñ á slîçér ör mésh édîtör), théñ îñsért ît ágáîñ.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>This mesh is too small to close into a solid.</source>
+        <translation>[Thîs mésh îs töö smáll tö çlösé îñtö á sölîd.~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>This mesh has holes in it, so it does not enclose a solid.</source>
+        <translation>[Thîs mésh hás hölés îñ ît, sö ît döés ñöt éñçlösé á sölîd.~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Repair the mesh in another program (close its holes), then insert it again.</source>
+        <translation>[Répáîr thé mésh îñ áñöthér prögrám (çlösé îts hölés), théñ îñsért ît ágáîñ.~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>This mesh's triangles do not join into a closed skin.</source>
+        <translation>[Thîs mésh's trîáñglés dö ñöt jöîñ îñtö á çlöséd skîñ.~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Repair the mesh in another program, then insert it again.</source>
+        <translation>[Répáîr thé mésh îñ áñöthér prögrám, théñ îñsért ît ágáîñ.~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>This mesh could not be turned into a solid.</source>
+        <translation>[Thîs mésh çöüld ñöt bé türñéd îñtö á sölîd.~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The mesh's unit must be more than zero.</source>
+        <translation>[Thé mésh's üñît müst bé möré tháñ zérö.~~~~~~~~~~]</translation>
+    </message>
+    <message>
         <location line="+21" />
         <source>A smooth curve can be made tangent only where it meets the other curve at one of its ends.</source>
         <translation>[Á smööth çürvé çáñ bé mádé táñgéñt öñlý whéré ît mééts thé öthér çürvé át öñé öf îts éñds.~~~~~~~~~~~~~~~~~~~~~~~]</translation>
@@ -3632,6 +3757,11 @@
     </message>
     <message>
         <location line="+1" />
+        <source>This mesh has %1 triangles; Jigsmith turns meshes of up to %2 into solids.</source>
+        <translation>[Thîs mésh hás %1 trîáñglés; Jîgsmîth türñs méshés öf üp tö %2 îñtö sölîds.~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
         <source>There is no screw size called '%1' in the clearance table.</source>
         <translation>[Théré îs ñö sçréw sîzé çálléd '%1' îñ thé çléáráñçé táblé.~~~~~~~~~~~~~~]</translation>
     </message>
@@ -3666,7 +3796,7 @@
         <translation>[Thé föñt '%1' îs ñöt áváîláblé héré; üsîñg thé büîlt-îñ föñt (Îñtér).~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="-249" />
+        <location line="-272" />
         <source>There is nothing to export yet.</source>
         <translation>[Théré îs ñöthîñg tö éxpört ýét.~~~~~~~~]</translation>
     </message>
@@ -4001,7 +4131,7 @@
         <translation>[Thé çüt çöüld ñöt bé wörkéd öüt för thîs shápé.~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+9" />
+        <location line="+31" />
         <source>Use M2 to M12, or #4, #6, #8, #10, 1/4", 5/16", 3/8", 1/2".</source>
         <translation>[Üsé M2 tö M12, ör #4, #6, #8, #10, 1/4", 5/16", 3/8", 1/2".~~~]</translation>
     </message>
@@ -4314,7 +4444,7 @@
 <context>
     <name>CoreWords</name>
     <message>
-        <location line="+104" />
+        <location line="+105" />
         <source>ball face (sphere)</source>
         <translation>[báll fáçé (sphéré)~~~~]</translation>
     </message>
@@ -5728,13 +5858,13 @@
         <location line="+9" />
         <location line="+751" />
         <location line="+738" />
-        <location line="+931" />
+        <location line="+938" />
         <location line="+27" />
         <source>Sketch</source>
         <translation>[Skétçh~~]</translation>
     </message>
     <message>
-        <location line="-2445" />
+        <location line="-2452" />
         <source>Extrude</source>
         <translation>[Éxtrüdé~~]</translation>
     </message>
@@ -6021,12 +6151,12 @@
     </message>
     <message>
         <location line="+2" />
-        <location line="+1608" />
+        <location line="+1615" />
         <source>Mouse and trackpad</source>
         <translation>[Möüsé áñd tráçkpád~~~~~]</translation>
     </message>
     <message>
-        <location line="-1606" />
+        <location line="-1613" />
         <source>Default (middle-drag pans, Shift+middle orbits)</source>
         <translation>[Défáült (mîddlé-drág páñs, Shîft+mîddlé örbîts)~~~~~~~~~~~~]</translation>
     </message>
@@ -6047,30 +6177,30 @@
     </message>
     <message>
         <location line="+11" />
-        <location line="+1581" />
+        <location line="+1588" />
         <source>Theme</source>
         <translation>[Thémé~]</translation>
     </message>
     <message>
-        <location line="-1579" />
-        <location line="+1534" />
+        <location line="-1586" />
+        <location line="+1541" />
         <source>Light</source>
         <translation>[Lîght~]</translation>
     </message>
     <message>
-        <location line="-1534" />
-        <location line="+1533" />
+        <location line="-1541" />
+        <location line="+1540" />
         <source>Dark</source>
         <translation>[Dárk~]</translation>
     </message>
     <message>
-        <location line="-1532" />
-        <location line="+1534" />
+        <location line="-1539" />
+        <location line="+1541" />
         <source>High contrast</source>
         <translation>[Hîgh çöñtrást~~~~]</translation>
     </message>
     <message>
-        <location line="-1526" />
+        <location line="-1533" />
         <source>&amp;Help</source>
         <translation>[&amp;Hélp~]</translation>
     </message>
@@ -6187,12 +6317,12 @@
     </message>
     <message>
         <location line="+2" />
-        <location line="+2250" />
+        <location line="+2300" />
         <source>Rename…</source>
         <translation>[Réñámé…~~]</translation>
     </message>
     <message>
-        <location line="-2247" />
+        <location line="-2297" />
         <source>Delete body</source>
         <translation>[Délété bödý~~~]</translation>
     </message>
@@ -6208,13 +6338,13 @@
     </message>
     <message>
         <location line="+5" />
-        <location line="+1588" />
+        <location line="+1595" />
         <location line="+58" />
         <source>Properties</source>
         <translation>[Pröpértîés~~~]</translation>
     </message>
     <message>
-        <location line="-1640" />
+        <location line="-1647" />
         <source>Properties and help</source>
         <translation>[Pröpértîés áñd hélp~~~~~]</translation>
     </message>
@@ -6300,12 +6430,12 @@
     </message>
     <message>
         <location line="+18" />
-        <location line="+2136" />
+        <location line="+2186" />
         <source>Move rollback marker</source>
         <translation>[Mövé röllbáçk márkér~~~~~~]</translation>
     </message>
     <message>
-        <location line="-1964" />
+        <location line="-2014" />
         <source>Start here: every part begins as a flat sketch.
 Click Sketch on the toolbar, then click a plane.
 Or open the phone stand sample (File ▸ Open a sample).</source>
@@ -6506,12 +6636,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+0" />
-        <location line="+393" />
+        <location line="+400" />
         <source>Jigsmith designs (*.jig)</source>
         <translation>[Jîgsmîth désîgñs (*.jîg)~~~~~~]</translation>
     </message>
     <message>
-        <location line="-346" />
+        <location line="-353" />
         <source>Save view</source>
         <translation>[Sávé vîéw~~]</translation>
     </message>
@@ -6527,6 +6657,17 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+107" />
+        <location line="+1155" />
+        <source>Insert mesh</source>
+        <translation>[Îñsért mésh~~~]</translation>
+    </message>
+    <message>
+        <location line="-1154" />
+        <source>Meshes (*.stl *.obj *.3mf)</source>
+        <translation>[Méshés (*.stl *.öbj *.3mf)~~~~]</translation>
+    </message>
+    <message>
+        <location line="+6" />
         <source>Import STEP</source>
         <translation>[Împört STÉP~~~]</translation>
     </message>
@@ -6674,12 +6815,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+0" />
-        <location line="+1012" />
+        <location line="+1055" />
         <source>There is no 3D body yet.</source>
         <translation>[Théré îs ñö 3D bödý ýét.~~~~~]</translation>
     </message>
     <message>
-        <location line="-1009" />
+        <location line="-1052" />
         <source>STL mesh for slicers (*.stl)</source>
         <translation>[STL mésh för slîçérs (*.stl)~~~~~~]</translation>
     </message>
@@ -6960,7 +7101,27 @@ An empty design with the origin ready</source>
         <translation><numerusform>[Împörtéd %n sölîd(s) fröm %1. Ît îs képt îñsîdé thîs désîgñ.~~~~~~~~~~~~~~]</numerusform><numerusform>[Împörtéd %n sölîd(s) fröm %1. Ît îs képt îñsîdé thîs désîgñ.~~~~~~~~~~~~~~]</numerusform></translation>
     </message>
     <message>
-        <location line="+8" />
+        <location line="+18" />
+        <source>Millimetres (most 3D-printing files)</source>
+        <translation>[Mîllîmétrés (möst 3D-prîñtîñg fîlés)~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+4" />
+        <source>What unit is this file in? STL and OBJ files do not say.</source>
+        <translation>[Whát üñît îs thîs fîlé îñ? STL áñd ÖBJ fîlés dö ñöt sáý.~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+17" />
+        <source>Could not insert the mesh</source>
+        <translation>[Çöüld ñöt îñsért thé mésh~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+5" />
+        <source>Inserted %1 as a solid. It is kept inside this design.</source>
+        <translation>[Îñsértéd %1 ás á sölîd. Ît îs képt îñsîdé thîs désîgñ.~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+7" />
         <location line="+47" />
         <source>Import DXF</source>
         <translation>[Împört DXF~~~]</translation>
@@ -6971,8 +7132,8 @@ An empty design with the origin ready</source>
         <translation>[DXF dráwîñgs (*.dxf)~~~~]</translation>
     </message>
     <message>
-        <location line="-17" />
-        <location line="+23" />
+        <location line="-60" />
+        <location line="+66" />
         <location line="+30" />
         <location line="+25" />
         <location line="+30" />
@@ -6986,12 +7147,14 @@ An empty design with the origin ready</source>
         <translation>[Mîllîmétrés~~~]</translation>
     </message>
     <message>
-        <location line="+0" />
+        <location line="-45" />
+        <location line="+45" />
         <source>Inches</source>
         <translation>[Îñçhés~~]</translation>
     </message>
     <message>
-        <location line="+0" />
+        <location line="-45" />
+        <location line="+45" />
         <source>Centimetres</source>
         <translation>[Çéñtîmétrés~~~]</translation>
     </message>
@@ -7001,7 +7164,8 @@ An empty design with the origin ready</source>
         <translation>[Féét~]</translation>
     </message>
     <message>
-        <location line="+0" />
+        <location line="-44" />
+        <location line="+44" />
         <source>Metres</source>
         <translation>[Métrés~~]</translation>
     </message>

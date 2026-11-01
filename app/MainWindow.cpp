@@ -1830,6 +1830,13 @@ void MainWindow::runCommand(const QString& id)
     else if (id == "insert.svg") {
         importSvg();
     }
+    else if (id == "insert.mesh") {
+        const QString path = QFileDialog::getOpenFileName(this, tr("Insert mesh"), {},
+                                                          tr("Meshes (*.stl *.obj *.3mf)"));
+        if (!path.isEmpty()) {
+            insertMeshFile(path);
+        }
+    }
     else if (id == "insert.step") {
         const QString path = QFileDialog::getOpenFileName(this, tr("Import STEP"), {}, tr("STEP files (*.step *.stp)"));
         if (!path.isEmpty()) {
@@ -2960,6 +2967,49 @@ bool MainWindow::importStepFile(const QString& path)
     }
     statusBar()->showMessage(tr("Imported %n solid(s) from %1. It is kept inside this design.", "", n)
                                  .arg(QFileInfo(path).fileName()),
+                             8000);
+    return true;
+}
+
+bool MainWindow::insertMeshFile(const QString& path, double unitMm)
+{
+    if (sketch_) {
+        exitSketch();
+    }
+    cancelPicker();
+    // STL and OBJ files carry no unit: ask, with millimetres first
+    if (unitMm <= 0) {
+        if (path.endsWith(".3mf", Qt::CaseInsensitive)) {
+            unitMm = 1;
+        }
+        else {
+            QStringList units {tr("Millimetres (most 3D-printing files)"), tr("Centimetres"), tr("Inches"),
+                               tr("Metres")};
+            bool ok = false;
+            const QString u = QInputDialog::getItem(this, tr("Insert mesh"),
+                                                    tr("What unit is this file in? STL and OBJ files do not say."),
+                                                    units, 0, false, &ok);
+            if (!ok) {
+                return false;
+            }
+            const double sizes[4] = {1, 10, 25.4, 1000};
+            unitMm = sizes[std::max<qsizetype>(0, units.indexOf(u))];
+        }
+    }
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+    auto id = jig::insertMesh(*doc_, path.toStdString(), unitMm);
+    QApplication::restoreOverrideCursor();
+    if (!id) {
+        QString text = coreText(id.error().message);
+        for (const auto& s : id.error().suggestions) {
+            text += "\n" + coreText(s);
+        }
+        QMessageBox::warning(this, tr("Could not insert the mesh"), text);
+        return false;
+    }
+    refreshAll();
+    view_->fitAll();
+    statusBar()->showMessage(tr("Inserted %1 as a solid. It is kept inside this design.").arg(QFileInfo(path).fileName()),
                              8000);
     return true;
 }

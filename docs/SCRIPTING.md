@@ -124,6 +124,7 @@ Profile keys are the sorted ids of the sketch curves around a closed area, e.g. 
 | `import svg <path> [sketch=s1] [width=<len>] [at=x,y]` | Bring an SVG's filled shapes into a sketch as artwork centred at (x, y); its outlines become closed areas (keys `G<id>.<n>`). Natural size unless `width` is given |
 | `import dxf <path> [sketch=s1] [units=mm\|in\|…] [at=x,y]` | Bring a DXF drawing's lines, circles, arcs and polylines into a sketch as editable curves. Units come from the file (`$INSUNITS`) unless given |
 | `import step <path> [id=im1]` | An Import step with the file's solids (one body per solid, ids `im1` or `im1.1`, `im1.2`…), kept inside the design so it does not need the file again. Faces are named `im1/face:<n>` in the file's order |
+| `import mesh <path.stl\|.obj\|.3mf> [unit=mm\|cm\|m\|in\|ft] [id=ms1]` | A closed mesh turned into a solid (triangles sewn together, flat neighbours merged into one face), kept inside the design as an Import step. STL and OBJ carry no unit (default mm); 3MF says its own. Open meshes and meshes of more than 20,000 triangles are refused with a reason |
 
 ## Output
 

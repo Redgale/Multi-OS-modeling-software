@@ -180,6 +180,8 @@ QT_TRANSLATE_NOOP("Command", "Volume, area, weight and center of mass of a body.
 QT_TRANSLATE_NOOP("Command", "Import STEP…")
 QT_TRANSLATE_NOOP("Command", "Bring in a solid from another CAD program.")
 QT_TRANSLATE_NOOP("Command", "INSERT")
+QT_TRANSLATE_NOOP("Command", "Insert mesh…")
+QT_TRANSLATE_NOOP("Command", "Bring in a closed mesh (STL, OBJ or 3MF) as a solid you can change, kept inside the design.")
 QT_TRANSLATE_NOOP("Command", "Import SVG…")
 QT_TRANSLATE_NOOP("Command", "Bring vector artwork into a sketch, e.g. a logo.")
 QT_TRANSLATE_NOOP("Command", "Import DXF…")

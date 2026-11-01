@@ -110,6 +110,8 @@ public:
     void importSvg();  // Insert > SVG
     // Insert > STEP: an Import step with the file's solids (false, with a message, if not)
     bool importStepFile(const QString& path);
+    // A mesh file as a solid; unitMm <= 0 asks for the unit (STL and OBJ do not say).
+    bool insertMeshFile(const QString& path, double unitMm = 0);
     void saveVersionInteractive();
     bool saveNamedVersion(const QString& label);  // saves first when the design has no file yet
     void showVersions();

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Revolve, Hole, Pattern and Mirror (acceptance scenario A2, the knob), checked against
 // hand-computed volumes.
+#include <fstream>
 #include <cmath>
 #include <numbers>
 #include <random>
@@ -2816,5 +2817,70 @@ TEST(Thread, ShaftsAndHolesGetAHelicalGroove)
         ASSERT_TRUE(r.runText(bad).ok());
         EXPECT_EQ(d->status(1).level, StatusLevel::Error) << bad;
         EXPECT_FALSE(d->status(1).message.empty());
+    }
+}
+
+TEST(MeshImport, StlObjAnd3mfBecomeSolids)
+{
+    // a box with a hole, out as STL and 3MF and back in as solids of the same volume
+    auto part = build("box id=bx1 length=30mm width=20mm height=10mm\ncylinder diameter=6mm height=10mm op=cut\n");
+    const double v = props(*part).volume;
+    const TopoDS_Shape shape = part->state().bodies.begin()->second->shape();
+    const auto dir = tempDir();
+    const std::string stl = (dir / "part.stl").string(), mf = (dir / "part.3mf").string();
+    ASSERT_TRUE(exportStl(shape, stl, 0.01).ok());
+    ASSERT_TRUE(export3mf({{"part", shape}}, mf, 0.01).ok());
+    for (const std::string& path : {stl, mf}) {
+        auto doc = std::make_unique<Document>();
+        auto id = insertMesh(*doc, path);
+        ASSERT_TRUE(id.ok()) << id.error().message;
+        expectAllOk(*doc);
+        auto pr = props(*doc);
+        EXPECT_TRUE(pr.valid) << path;
+        EXPECT_EQ(pr.solids, 1) << path;
+        EXPECT_NEAR(pr.volume, v, v * 0.01) << path;  // the hole is faceted
+        EXPECT_LT(doc->state().bodies.begin()->second->faceCount(), 200) << path;  // flat sides merged
+    }
+    // a cube as text OBJ (quads), in inches
+    const std::string obj = (dir / "cube.obj").string();
+    {
+        std::ofstream o(obj);
+        o << "# cube\nv 0 0 0\nv 1 0 0\nv 1 1 0\nv 0 1 0\nv 0 0 1\nv 1 0 1\nv 1 1 1\nv 0 1 1\n"
+             "f 1 4 3 2\nf 5 6 7 8\nf 1 2 6 5\nf 2 3 7 6\nf 3 4 8 7\nf 4 1 5 8\n";
+    }
+    auto cube = build("import mesh " + obj + " unit=in id=ms1\n");
+    expectAllOk(*cube);
+    EXPECT_NEAR(props(*cube).volume, 25.4 * 25.4 * 25.4, 1e-3);
+    EXPECT_EQ(cube->state().bodies.at("ms1")->faceCount(), 6);
+    // the inserted cube survives saving and loading (kept inside the design)
+    auto back = Document::fromJson(cube->toJson());
+    ASSERT_TRUE(back.ok());
+    EXPECT_NEAR(props(**back).volume, 25.4 * 25.4 * 25.4, 1e-3);
+    // an open mesh (one side missing), an unknown file kind and too many triangles are explained
+    {
+        std::ofstream o((dir / "open.obj").string());
+        o << "v 0 0 0\nv 1 0 0\nv 1 1 0\nv 0 1 0\nv 0 0 1\nv 1 0 1\nv 1 1 1\nv 0 1 1\n"
+             "f 1 4 3 2\nf 5 6 7 8\nf 1 2 6 5\nf 2 3 7 6\nf 3 4 8 7\n";
+    }
+    auto d = std::make_unique<Document>();
+    auto open = insertMesh(*d, (dir / "open.obj").string());
+    ASSERT_FALSE(open.ok());
+    EXPECT_NE(open.error().message.find("holes"), std::string::npos) << open.error().message;
+    EXPECT_FALSE(insertMesh(*d, (dir / "part.step").string()).ok());
+    auto mesh = readMeshFile(stl);
+    ASSERT_TRUE(mesh.ok());
+    auto big = solidFromMesh(*mesh, 10);
+    ASSERT_FALSE(big.ok());
+    EXPECT_FALSE(big.error().suggestions.empty());
+    // damaged files never crash
+    for (const char* junk : {"solid x\nfacet\nvertex 1 nan 2\n", "f 1 2 3\n", "PK\x03\x04garbage"}) {
+        for (const char* ext : {".stl", ".obj", ".3mf"}) {
+            const std::string p = (dir / (std::string("junk") + ext)).string();
+            {
+                std::ofstream o(p, std::ios::binary);
+                o << junk;
+            }
+            EXPECT_FALSE(insertMesh(*d, p).ok()) << junk << ext;
+        }
     }
 }

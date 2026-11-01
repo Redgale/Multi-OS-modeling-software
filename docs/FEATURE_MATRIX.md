@@ -150,7 +150,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Component colours | 21 | v0.2 | — | |
 | Insert SVG, DXF | 22 | v0.1 M5 | **app** + scripts: DXF (lines, arcs, circles, polylines with bulges, splines, ellipses, text, blocks; unit detection); SVG (filled paths and shapes, drawn outlines as bands, text, transforms, viewBox; as scalable artwork) | |
 | Insert STEP | 22 | v0.1 M6 | **app** + scripts (`import step`): an Import step with one body per solid, kept inside the design; faces named `<step>/face:<n>` for later steps | |
-| Insert mesh (STL/OBJ/3MF) | 22, 27 | v0.2 | — | Brief v0.2 |
+| Insert mesh (STL/OBJ/3MF) | 22, 27 | v0.2 | **app** + scripts (`import mesh`): closed meshes become solids kept in the design | Up to 20,000 triangles; open meshes refused |
 | Attached canvas (image tracing) | 22 | v0.2 | — | Hobby-valuable; small |
 | Decal | 22, 34 | v0.3+ | — | Rendering |
 | McMaster-Carr, manufacturer parts | 22, 32 | never | — | Requires network and third-party catalogs |
@@ -167,7 +167,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Direct modelling mode | 24 | v0.3+ | History-based first |
 | Surface tools (patch, ruled, trim, stitch, thicken…) | 25 | v0.3+ | Brief |
 | Form / T-spline sculpting | 26 | v0.3+ (as subdivision) | Brief |
-| Mesh: insert, repair, reduce, remesh, plane cut, convert to solid | 27 | v0.2 | Brief |
+| Mesh: insert, repair, reduce, remesh, plane cut, convert to solid | 27 | v0.2 | Insert + convert to solid done (see Insert mesh); repair, reduce, remesh and plane cut not yet |
 | Sheet metal with flat-pattern DXF | 28 | v0.3+ | Brief |
 | Plastic tab (boss, snap fit, grill, lip and groove) | 29 | never as a tab; v0.3+ as plugins | Niche; plugin ecosystem |
 | 3D print utility (send to slicer) | 29, 40 | v0.1 export (**done**: STL, STEP and 3MF with one named object per body); "open in slicer" v0.2 | Export is the core need |

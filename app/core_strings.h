@@ -87,6 +87,7 @@ QT_TRANSLATE_NOOP("Core", "Read distances, angles, lengths and areas.")
 QT_TRANSLATE_NOOP("Core", "Slice the view to look inside walls and holes.")
 QT_TRANSLATE_NOOP("Core", "Volume, area, weight and center of mass of a body.")
 QT_TRANSLATE_NOOP("Core", "Bring in a solid from another CAD program.")
+QT_TRANSLATE_NOOP("Core", "Bring in a closed mesh (STL, OBJ or 3MF) as a solid you can change, kept inside the design.")
 QT_TRANSLATE_NOOP("Core", "Bring vector artwork into a sketch, e.g. a logo.")
 QT_TRANSLATE_NOOP("Core", "Bring a 2D drawing or laser-cut file into a sketch.")
 QT_TRANSLATE_NOOP("Core", "Name sizes like width or wall and use them in any field.")
@@ -492,6 +493,28 @@ QT_TRANSLATE_NOOP("Core", "Leave out faces that meet the neutral plane at a shar
 QT_TRANSLATE_NOOP("Core", "These faces could not be sloped.")
 QT_TRANSLATE_NOOP("Core", "Try a smaller angle, or fewer faces at once.")
 QT_TRANSLATE_NOOP("Core", "Try a smaller angle.")
+QT_TRANSLATE_NOOP("Core", "This STL file has damaged numbers in it.")
+QT_TRANSLATE_NOOP("Core", "This STL file could not be read: a corner has no proper numbers.")
+QT_TRANSLATE_NOOP("Core", "This file has no triangles, or is not an STL file.")
+QT_TRANSLATE_NOOP("Core", "This OBJ file could not be read: a corner has no proper numbers.")
+QT_TRANSLATE_NOOP("Core", "This OBJ file refers to a corner that is not there.")
+QT_TRANSLATE_NOOP("Core", "This file has no faces, or is not an OBJ file.")
+QT_TRANSLATE_NOOP("Core", "This 3MF file could not be opened (it is not a zip archive).")
+QT_TRANSLATE_NOOP("Core", "This 3MF file has no model in it.")
+QT_TRANSLATE_NOOP("Core", "This 3MF file has damaged numbers in it.")
+QT_TRANSLATE_NOOP("Core", "This 3MF file refers to a corner that is not there.")
+QT_TRANSLATE_NOOP("Core", "This 3MF file has no triangles in it.")
+QT_TRANSLATE_NOOP("Core", "Jigsmith reads meshes from STL, OBJ and 3MF files.")
+QT_TRANSLATE_NOOP("Core", "The file could not be read (it is missing, unreadable or larger than 256 MB).")
+QT_TRANSLATE_NOOP("Core", "This mesh has no triangles.")
+QT_TRANSLATE_NOOP("Core", "Reduce the mesh in another program first (for example, decimate it in a slicer or mesh editor), then insert it again.")
+QT_TRANSLATE_NOOP("Core", "This mesh is too small to close into a solid.")
+QT_TRANSLATE_NOOP("Core", "This mesh has holes in it, so it does not enclose a solid.")
+QT_TRANSLATE_NOOP("Core", "Repair the mesh in another program (close its holes), then insert it again.")
+QT_TRANSLATE_NOOP("Core", "This mesh's triangles do not join into a closed skin.")
+QT_TRANSLATE_NOOP("Core", "Repair the mesh in another program, then insert it again.")
+QT_TRANSLATE_NOOP("Core", "This mesh could not be turned into a solid.")
+QT_TRANSLATE_NOOP("Core", "The mesh's unit must be more than zero.")
 QT_TRANSLATE_NOOP("Core", "Use M2 to M12, or #4, #6, #8, #10, 1/4\", 5/16\", 3/8\", 1/2\".")
 QT_TRANSLATE_NOOP("Core", "Or type the diameter.")
 QT_TRANSLATE_NOOP("Core", "The table has close and free fits for US screws, not a loose one.")
@@ -651,6 +674,7 @@ inline const char* const kCorePatterns[] = {
     QT_TRANSLATE_NOOP("Core", "A %1 wall does not fit inside this shape."),
     QT_TRANSLATE_NOOP("Core", "A %1 wall does not fit inside this shape: some part of it is thinner than twice the wall."),
     QT_TRANSLATE_NOOP("Core", "The face %1 cannot be sloped this way."),
+    QT_TRANSLATE_NOOP("Core", "This mesh has %1 triangles; Jigsmith turns meshes of up to %2 into solids."),
     QT_TRANSLATE_NOOP("Core", "There is no screw size called '%1' in the clearance table."),
     QT_TRANSLATE_NOOP("Core", "A %1 round does not fit this corner."),
     QT_TRANSLATE_NOOP("Core", "A dimension must be larger than zero (got %1)."),

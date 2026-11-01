@@ -160,6 +160,7 @@ CommandRegistry::CommandRegistry()
     add({"inspect.section", "Section view", "Section Analysis", "INSPECT", "Slice the view to look inside walls and holes.", "", {"cut view", "cross section", "inside"}, false, false, false, m6});
     add({"inspect.properties", "Properties", "Properties", "INSPECT", "Volume, area, weight and center of mass of a body.", "", {"volume", "weight", "mass", "filament"}, true, false, true, m6});
     add({"insert.step", "Import STEP…", "Insert STEP", "INSERT", "Bring in a solid from another CAD program.", "", {"stp", "import solid"}, false, true, true, m6});
+    add({"insert.mesh", "Insert mesh…", "Insert Mesh", "INSERT", "Bring in a closed mesh (STL, OBJ or 3MF) as a solid you can change, kept inside the design.", "", {"stl", "obj", "3mf", "import mesh", "printable"}, false, true, true, m6});
     add({"insert.svg", "Import SVG…", "Insert SVG", "INSERT", "Bring vector artwork into a sketch, e.g. a logo.", "", {"logo", "vector", "artwork"}, false, false, false, m5});
     add({"insert.dxf", "Import DXF…", "Insert DXF", "INSERT", "Bring a 2D drawing or laser-cut file into a sketch.", "", {"laser", "2d drawing"}, false, false, false, m5});
     add({"modify.parameters", "Parameters", "Change Parameters", "MODIFY", "Name sizes like width or wall and use them in any field.", "", {"variables", "named values", "change size"}, true, false, true, m5});
@@ -2205,6 +2206,19 @@ Result<bool> ScriptRunner::runLineUnchecked(std::string_view rawLine)
         // import step <path> [id=im1]                 (solids, kept inside the design)
         if (a.positional.size() >= 2 && (lower(a.positional[0]) == "step" || lower(a.positional[0]) == "stp")) {
             auto id = insertStep(doc, a.positional[1], a.get("id"));
+            if (!id) {
+                return id.error();
+            }
+            return checkFeature(id.value());
+        }
+        // import mesh <path.stl|.obj|.3mf> [unit=mm|cm|m|in|ft] [id=ms1]   (a closed mesh, as a solid)
+        if (a.positional.size() >= 2 && lower(a.positional[0]) == "mesh") {
+            static const std::map<std::string, double> units {{"mm", 1}, {"cm", 10}, {"m", 1000}, {"in", 25.4}, {"ft", 304.8}};
+            auto u = units.find(a.get("unit", "mm"));
+            if (u == units.end()) {
+                return makeError("script.args", "unit= is one of mm, cm, m, in, ft.");
+            }
+            auto id = insertMesh(doc, a.positional[1], u->second, a.get("id"));
             if (!id) {
                 return id.error();
             }

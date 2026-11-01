@@ -62,6 +62,16 @@ struct Mesh
 // Tessellates a solid into a closed mesh suitable for slicers.
 Mesh meshOf(const TopoDS_Shape& s, double deflection = 0.02);
 
+// A mesh file read in: STL (binary or text), OBJ or 3MF; corners welded, numbers as in the
+// file (3MF: converted to millimetres from its unit).
+Result<Mesh> readMeshFile(const std::string& path);
+// A closed mesh turned into a solid (triangles sewn together; flat neighbours merged).
+// Refuses open meshes and meshes with more than `maxTriangles` triangles, with a reason.
+Result<TopoDS_Shape> solidFromMesh(const Mesh& mesh, size_t maxTriangles = 20000);
+// Adds an Import step with the solid made from a mesh file (kept inside the design);
+// `unitMm` is the size of one of the file's units in millimetres (STL and OBJ have none).
+Result<std::string> insertMesh(Document& doc, const std::string& path, double unitMm = 1, std::string id = {});
+
 // 3MF (3D Manufacturing Format) with one object per body, units in millimetres.
 Result<bool> export3mf(const std::vector<std::pair<std::string, TopoDS_Shape>>& bodies, const std::string& path,
                        double deflection = 0.02);
