@@ -2337,7 +2337,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+40"/>
+        <location line="+21"/>
+        <source>A curve can be tangent to an ellipse only if it is a line.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>A smooth curve can be made tangent only where it meets the other curve at one of its ends.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+20"/>
         <source>Extend works on lines and arcs. An ellipse or smooth curve can be what they run to, but not extended itself.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2722,7 +2732,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-214"/>
+        <location line="-216"/>
         <source>There is nothing to export yet.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3152,7 +3162,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
+        <location line="+3"/>
         <source>Tangent needs a line or curve and a round curve.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7407,7 +7417,12 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-273"/>
+        <location line="+1245"/>
+        <source>Select a line and a curve, or two curves.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-1518"/>
         <location line="+284"/>
         <location line="+691"/>
         <location line="+101"/>
@@ -7741,12 +7756,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+11"/>
-        <source>Select a line and a circle, or two circles.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+11"/>
+        <location line="+22"/>
         <source>Select two points, or a point and a curve.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7791,7 +7801,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+394"/>
+        <location line="+401"/>
         <source>gap %1</source>
         <translation type="unfinished"></translation>
     </message>

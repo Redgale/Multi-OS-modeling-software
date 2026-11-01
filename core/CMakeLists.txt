@@ -16,6 +16,7 @@ add_library(jig_core STATIC
     src/sketch.cpp
     src/sketch_offset.cpp
     src/sketch_edit.cpp
+    src/curve_constraints.cpp
     src/screws.cpp
     src/svg.cpp
     src/text.cpp

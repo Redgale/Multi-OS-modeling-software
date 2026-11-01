@@ -961,6 +961,14 @@ TEST(SketchExtend, LinesRunOnToEllipsesAndSmoothCurves)
     ASSERT_TRUE(r.ok()) << r.error().message;
     EXPECT_NEAR(s.pointXY(s.entity(l)->p2).first, 22, 0.05);
     EXPECT_NEAR(s.pointXY(s.entity(l)->p2).second, 3, 1e-9);
+    // held on the ellipse: once solved it is exactly on it
+    s.addConstraint(ConstraintType::Fix, s.entity(el)->center);
+    s.addConstraint(ConstraintType::Fix, s.entity(el)->p1);
+    ASSERT_NE(s.solve().state, SolveState::Failed);
+    {
+        auto [ex, ey] = s.pointXY(s.entity(l)->p2);
+        EXPECT_NEAR((ex - 30) * (ex - 30) / 100 + ey * ey / 25, 1, 1e-9);
+    }
     // a smooth curve through (50, -10), (50, 0), (50, 10): the line's other end runs to it
     Sketch c;
     const int m = c.addLine(30, 0, 40, 0);
@@ -1115,6 +1123,86 @@ TEST(SketchCopy, MoveCopyAndPatterns)
     ASSERT_TRUE(one.moveCurves({arc}, 0, 0, pi / 2, 0, 0).ok());
     EXPECT_NEAR(one.pointXY(one.entity(arc)->center).second, 10, 1e-9);
     EXPECT_NEAR(one.entity(arc)->a0, pi / 2, 1e-9);
+}
+
+TEST(SketchCurves, ConstraintsAlongEllipsesAndSmoothCurves)
+{
+    auto nearest = [](const Sketch& s, int curve, double x, double y) {
+        double best = 1e300;  // to the nearest of the curve's short straight pieces
+        const auto Q = s.curvePoints(curve, 4000);
+        for (size_t k = 0; k + 1 < Q.size(); ++k) {
+            const double ex = Q[k + 1].first - Q[k].first, ey = Q[k + 1].second - Q[k].second;
+            const double u = std::clamp(((x - Q[k].first) * ex + (y - Q[k].second) * ey) / (ex * ex + ey * ey), 0.0, 1.0);
+            best = std::min(best, std::hypot(Q[k].first + ex * u - x, Q[k].second + ey * u - y));
+        }
+        return best;
+    };
+    // a point pulled onto an ellipse (radii 20 and 10)
+    Sketch s;
+    const int el = s.addEllipse(0, 0, 20, 0, 10);
+    const int p = s.addPoint(25, 3);
+    s.addConstraint(ConstraintType::Fix, s.entity(el)->center);
+    const int axFix = s.addConstraint(ConstraintType::Fix, s.entity(el)->p1);
+    s.addConstraint(ConstraintType::PointOnCurve, p, el);
+    ASSERT_NE(s.solve().state, SolveState::Failed);
+    auto [x, y] = s.pointXY(p);
+    EXPECT_NEAR(x * x / 400 + y * y / 100, 1, 1e-6);
+    // a level line touching it: at y = 10 (or -10)
+    const int l = s.addLine(-30, 14, 30, 15);
+    s.addConstraint(ConstraintType::Horizontal, l);
+    s.addConstraint(ConstraintType::Tangent, l, el);
+    ASSERT_NE(s.solve().state, SolveState::Failed);
+    EXPECT_NEAR(s.pointXY(s.entity(l)->p1).second, 10, 1e-6);
+    EXPECT_NEAR(s.pointXY(s.entity(l)->p2).second, 10, 1e-6);
+    // the ellipse turned 30 degrees: still touching (the line stays level)
+    const int ax = s.entity(el)->p1;
+    s.removeConstraint(axFix);
+    auto rep = s.drag(ax, 20 * std::cos(pi / 6), 20 * std::sin(pi / 6));
+    ASSERT_NE(rep.state, SolveState::Failed);
+    s.solve();
+    const double yl = s.pointXY(s.entity(l)->p1).second;
+    // the top of an ellipse a = 20, b = 10 turned by t: sqrt(a² sin² t + b² cos² t)
+    EXPECT_NEAR(std::abs(yl), std::sqrt(400 * 0.25 + 100 * 0.75), 1e-4);
+    std::tie(x, y) = s.pointXY(p);
+    EXPECT_LT(nearest(s, el, x, y), 1e-5);  // the pieces cut inside by < 1e-5
+
+    // a smooth curve: a point held on it, a line and another curve joining its ends smoothly
+    Sketch c;
+    const int sp = c.addSpline({{0, 0}, {10, 5}, {20, 0}});
+    const int q = c.addPoint(10, 9);
+    c.addConstraint(ConstraintType::PointOnCurve, q, sp);
+    const int start = c.entity(sp)->pts.front();
+    const int ln = c.addLine(c.addPoint(-10, -8), start);
+    c.addConstraint(ConstraintType::Tangent, ln, sp);
+    const int sp2 = c.addSpline({{20.5, 0.5}, {30, 0}, {40, 4}});
+    c.addConstraint(ConstraintType::Coincident, c.entity(sp2)->pts.front(), c.entity(sp)->pts.back());
+    c.addConstraint(ConstraintType::Tangent, sp, sp2);
+    auto r = c.solve();
+    ASSERT_NE(r.state, SolveState::Failed) << r.message;
+    std::tie(x, y) = c.pointXY(q);
+    EXPECT_LT(nearest(c, sp, x, y), 1e-5);
+    auto dir = [&](int a, int b) {
+        auto [ax2, ay2] = c.pointXY(a);
+        auto [bx, by] = c.pointXY(b);
+        const double L = std::hypot(bx - ax2, by - ay2);
+        return std::pair {(bx - ax2) / L, (by - ay2) / L};
+    };
+    auto cross = [](std::pair<double, double> u, std::pair<double, double> v) {
+        return u.first * v.second - u.second * v.first;
+    };
+    const auto& P = c.entity(sp)->pts;
+    const auto& Q = c.entity(sp2)->pts;
+    EXPECT_NEAR(cross(dir(c.entity(ln)->p1, c.entity(ln)->p2), dir(P[0], P[1])), 0, 1e-7);
+    EXPECT_NEAR(cross(dir(P[2], P[1]), dir(Q[0], Q[1])), 0, 1e-7);
+    // refused: a circle tangent to an ellipse, a smooth curve tangent to a line it does not meet
+    Sketch bad;
+    const int e2 = bad.addEllipse(0, 0, 20, 0, 10);
+    bad.addConstraint(ConstraintType::Tangent, bad.addCircle(40, 0, 5), e2);
+    EXPECT_EQ(bad.solve().state, SolveState::Failed);
+    Sketch bad2;
+    const int s3 = bad2.addSpline({{0, 0}, {10, 5}, {20, 0}});
+    bad2.addConstraint(ConstraintType::Tangent, bad2.addLine(50, 0, 60, 0), s3);
+    EXPECT_EQ(bad2.solve().state, SolveState::Failed);
 }
 
 TEST(SketchCurves, EllipsesAndSmoothCurves)

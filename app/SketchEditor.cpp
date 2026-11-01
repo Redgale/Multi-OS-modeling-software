@@ -2507,7 +2507,7 @@ bool SketchEditor::applyConstraint(jig::ConstraintType t)
                 s.addConstraint(t, rounds[0], rounds[1]);
             }
             else {
-                need = tr("Select a line and a circle, or two circles.");
+                need = tr("Select a line and a curve, or two curves.");
             }
             break;
         case CT::Coincident:
@@ -2937,6 +2937,13 @@ void SketchEditor::paint(QPainter& p)
                 auto [x1, y1] = s.pointXY(e->p1);
                 auto [x2, y2] = s.pointXY(e->p2);
                 return scr((x1 + x2) / 2, (y1 + y2) / 2);
+            }
+            if (e->type == jig::EntityType::Spline) {
+                if (e->pts.empty()) {
+                    return std::nullopt;
+                }
+                auto [x, y] = s.pointXY(e->pts[e->pts.size() / 2]);  // its middle fit point
+                return scr(x, y);
             }
             auto [cx, cy] = s.pointXY(e->center);
             return scr(cx + e->r * 0.7071, cy + e->r * 0.7071);

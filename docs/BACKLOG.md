@@ -37,8 +37,9 @@ Done: sketch mode, plane/face picker, look-at, Line/Rectangle/Centre rectangle/C
 Dimension, typed values, snapping, automatic H/V, constraint commands, drag, DOF display,
 conflict refusal, gap rings, profiles, construction toggle, delete.
 
-- B-013 (all v0.1 drawing tools done, incl. tangent arc, 2/3-point circle, 3-point rectangle) constraints along
-  ellipses and splines; (trim and break of them, and extending lines to them, done).
+- B-013 done (all v0.1 drawing tools, incl. tangent arc, 2/3-point circle, 3-point rectangle; point-on and
+  tangent constraints along ellipses and smooth curves; trim and break of them, extending lines to them).
+  Left: circles and arcs tangent to ellipses; extending the curves themselves.
 - B-014 done (Trim, Extend, Break, Offset (linked), sketch Fillet, Mirror, Move/Copy with a turn,
   Grid/Ring copy (linked)).
 - B-016 Select and delete individual constraints (click a glyph); window selection; collinear,

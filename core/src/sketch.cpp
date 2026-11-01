@@ -11,6 +11,7 @@
 
 #include <planegcs/GCS.h>
 
+#include "curve_constraints.hpp"
 #include "jig/kernel.hpp"  // offsetCurves, for offsets that follow their source
 
 namespace jig
@@ -226,39 +227,15 @@ int Sketch::addSpline(const std::vector<std::pair<double, double>>& points, bool
 
 std::vector<Bezier2> Sketch::splinePieces(int splineId) const
 {
-    std::vector<Bezier2> out;
     const SketchEntity* e = entity(splineId);
     if (!e || e->type != EntityType::Spline || e->pts.size() < 2) {
-        return out;
+        return {};
     }
     std::vector<std::pair<double, double>> P;
     for (int pid : e->pts) {
         P.push_back(pointXY(pid));
     }
-    const int n = int(P.size());
-    // the neighbour before/after each point; open ends mirror their neighbour
-    auto at = [&](int i) -> std::pair<double, double> {
-        if (e->closed) {
-            return P[size_t(((i % n) + n) % n)];
-        }
-        if (i < 0) {
-            return {2 * P[0].first - P[1].first, 2 * P[0].second - P[1].second};
-        }
-        if (i >= n) {
-            return {2 * P[size_t(n - 1)].first - P[size_t(n - 2)].first,
-                    2 * P[size_t(n - 1)].second - P[size_t(n - 2)].second};
-        }
-        return P[size_t(i)];
-    };
-    const int pieces = e->closed ? n : n - 1;
-    for (int i = 0; i < pieces; ++i) {
-        auto p0 = at(i - 1), p1 = at(i), p2 = at(i + 1), p3 = at(i + 2);
-        out.push_back({p1,
-                       std::pair {p1.first + (p2.first - p0.first) / 6, p1.second + (p2.second - p0.second) / 6},
-                       std::pair {p2.first - (p3.first - p1.first) / 6, p2.second - (p3.second - p1.second) / 6},
-                       p2});
-    }
-    return out;
+    return detail::catmullRom(P, e->closed);
 }
 
 std::vector<std::pair<double, double>> Sketch::curvePoints(int entityId, int perPiece) const
@@ -768,11 +745,39 @@ int Sketch::attachedPoint(int entityId, double px, double py)
         }
     }
     for (auto& [id, e] : entities_) {
-        if (id == entityId || e.type == EntityType::Point || e.construction || id == pid || freeForm(e.type)) {
+        if (id == entityId || e.type == EntityType::Point || e.construction || id == pid) {
             continue;
         }
         double dist = 1e300;
-        if (e.type == EntityType::Line) {
+        if (freeForm(e.type)) {
+            // cuts on these are found on short straight pieces, so allow for the pieces' sag;
+            // the constraint then puts the point exactly on the curve
+            std::vector<double> v {px, py};
+            double size = 0;
+            if (e.type == EntityType::Ellipse) {
+                for (int q : {e.center, e.p1}) {
+                    v.push_back(pointXY(q).first);
+                    v.push_back(pointXY(q).second);
+                }
+                size = std::max(std::hypot(v[4] - v[2], v[5] - v[3]), e.r);
+                if (std::abs(detail::pointOnEllipse(v, e.r)) < 3e-3 * size) {
+                    dist = 0;
+                }
+            }
+            else {
+                for (int q : e.pts) {
+                    v.push_back(pointXY(q).first);
+                    v.push_back(pointXY(q).second);
+                }
+                for (size_t k = 4; k + 1 < v.size(); k += 2) {
+                    size = std::max(size, std::hypot(v[k] - v[k - 2], v[k + 1] - v[k - 1]));
+                }
+                if (std::abs(detail::pointOnSmooth(v, e.closed)) < 1e-3 * std::max(size, 1.0)) {
+                    dist = 0;
+                }
+            }
+        }
+        else if (e.type == EntityType::Line) {
             auto [ax, ay] = pointXY(e.p1);
             auto [bx, by] = pointXY(e.p2);
             const double dx = bx - ax, dy = by - ay;
@@ -1610,6 +1615,28 @@ SolveReport Sketch::runSolver(const ParamLookup& lookup, const int* dragPoint, d
                 else if (isArc(k.b)) {
                     sys.addConstraintPointOnArc(pts[k.a], arcs[k.b], tag);
                 }
+                else if (const SketchEntity* f = entity(k.b); isPoint(k.a) && f && f->type == EntityType::Ellipse) {
+                    const GCS::Point &p = pts[k.a], &c = pts[f->center], &ax = pts[f->p1];
+                    const double minor = f->r;
+                    auto* con = new detail::FuncConstraint({p.x, p.y, c.x, c.y, ax.x, ax.y}, [minor](const auto& v) {
+                        return detail::pointOnEllipse(v, minor);
+                    });
+                    con->setTag(tag);
+                    sys.addConstraint(con);
+                }
+                else if (isPoint(k.a) && f && f->type == EntityType::Spline && f->pts.size() >= 2) {
+                    std::vector<double*> ps {pts[k.a].x, pts[k.a].y};
+                    for (int q : f->pts) {
+                        ps.push_back(pts[q].x);
+                        ps.push_back(pts[q].y);
+                    }
+                    const bool closed = f->closed;
+                    auto* con = new detail::FuncConstraint(std::move(ps), [closed](const auto& v) {
+                        return detail::pointOnSmooth(v, closed);
+                    });
+                    con->setTag(tag);
+                    sys.addConstraint(con);
+                }
                 else {
                     return fail(cid, "Point-on-curve needs a point and a curve.");
                 }
@@ -1699,6 +1726,82 @@ SolveReport Sketch::runSolver(const ParamLookup& lookup, const int* dragPoint, d
                     }
                     return false;
                 };
+                // an ellipse or smooth curve
+                const SketchEntity* ea = entity(k.a);
+                const SketchEntity* eb = entity(k.b);
+                auto freeCurve = [](const SketchEntity* e) {
+                    return e && (e->type == EntityType::Ellipse || e->type == EntityType::Spline);
+                };
+                if (freeCurve(ea) || freeCurve(eb)) {
+                    const SketchEntity* el = ea && ea->type == EntityType::Ellipse ? ea
+                                             : eb && eb->type == EntityType::Ellipse ? eb : nullptr;
+                    const int other = el == ea ? k.b : k.a;
+                    if (el && isLine(other)) {  // a line touching an ellipse anywhere
+                        GCS::Line& l = lines[other];
+                        const GCS::Point &c = pts[el->center], &ax = pts[el->p1];
+                        const double minor = el->r;
+                        auto* con = new detail::FuncConstraint(
+                            {l.p1.x, l.p1.y, l.p2.x, l.p2.y, c.x, c.y, ax.x, ax.y},
+                            [minor](const auto& v) { return detail::lineTangentToEllipse(v, minor); });
+                        con->setTag(tag);
+                        sys.addConstraint(con);
+                        break;
+                    }
+                    if (el) {
+                        return fail(cid, "A curve can be tangent to an ellipse only if it is a line.");
+                    }
+                    // a smooth curve: tangent where it meets the other curve at one of its ends
+                    struct Dir
+                    {
+                        int end = 0;
+                        std::array<double*, 4> v {};
+                        bool perp = false;
+                    };
+                    auto dirsOf = [&](int id) {
+                        std::vector<Dir> out;
+                        const SketchEntity* e = entity(id);
+                        if (isLine(id)) {
+                            for (int q : {e->p1, e->p2}) {
+                                out.push_back({q, {lines[id].p1.x, lines[id].p1.y, lines[id].p2.x, lines[id].p2.y}});
+                            }
+                        }
+                        else if (isArc(id)) {
+                            const GCS::Point& c = pts[e->center];
+                            for (int q : {e->p1, e->p2}) {
+                                out.push_back({q, {c.x, c.y, pts[q].x, pts[q].y}, true});
+                            }
+                        }
+                        else if (e && e->type == EntityType::Spline && !e->closed && e->pts.size() >= 2) {
+                            const size_t n = e->pts.size();
+                            const int f0 = e->pts[0], f1 = e->pts[1], b0 = e->pts[n - 1], b1 = e->pts[n - 2];
+                            out.push_back({f0, {pts[f0].x, pts[f0].y, pts[f1].x, pts[f1].y}});
+                            out.push_back({b0, {pts[b0].x, pts[b0].y, pts[b1].x, pts[b1].y}});
+                        }
+                        return out;
+                    };
+                    bool made = false;
+                    for (const Dir& da : dirsOf(k.a)) {
+                        for (const Dir& db : dirsOf(k.b)) {
+                            if (made || !joined(da.end, db.end)) {
+                                continue;
+                            }
+                            std::vector<double*> ps(da.v.begin(), da.v.end());
+                            ps.insert(ps.end(), db.v.begin(), db.v.end());
+                            const bool pa = da.perp, pb = db.perp;
+                            auto* con = new detail::FuncConstraint(std::move(ps), [pa, pb](const auto& v) {
+                                return detail::sameDirection(v, pa, pb);
+                            });
+                            con->setTag(tag);
+                            sys.addConstraint(con);
+                            made = true;
+                        }
+                    }
+                    if (!made) {
+                        return fail(cid, "A smooth curve can be made tangent only where it meets the other curve "
+                                         "at one of its ends.");
+                    }
+                    break;
+                }
                 int shared = 0;
                 if (curveOf(k.a) && curveOf(k.b)) {
                     for (int p : endsOf(k.a)) {

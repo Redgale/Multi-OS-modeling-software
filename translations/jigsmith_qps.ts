@@ -2336,7 +2336,17 @@
         <translation>[Éxpört á sölîd (ñöt jüst sürfáçés) fröm thé öthér prögrám.~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+40" />
+        <location line="+21" />
+        <source>A curve can be tangent to an ellipse only if it is a line.</source>
+        <translation>[Á çürvé çáñ bé táñgéñt tö áñ éllîpsé öñlý îf ît îs á lîñé.~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>A smooth curve can be made tangent only where it meets the other curve at one of its ends.</source>
+        <translation>[Á smööth çürvé çáñ bé mádé táñgéñt öñlý whéré ît mééts thé öthér çürvé át öñé öf îts éñds.~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+20" />
         <source>Extend works on lines and arcs. An ellipse or smooth curve can be what they run to, but not extended itself.</source>
         <translation>[Éxtéñd wörks öñ lîñés áñd árçs. Áñ éllîpsé ör smööth çürvé çáñ bé whát théý rüñ tö, büt ñöt éxtéñdéd îtsélf.~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -2721,7 +2731,7 @@
         <translation>[Thé föñt '%1' îs ñöt áváîláblé héré; üsîñg thé büîlt-îñ föñt (Îñtér).~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="-214" />
+        <location line="-216" />
         <source>There is nothing to export yet.</source>
         <translation>[Théré îs ñöthîñg tö éxpört ýét.~~~~~~~~]</translation>
     </message>
@@ -3151,7 +3161,7 @@
         <translation>[Éqüál ñééds twö lîñés ör twö röüñd çürvés.~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+1" />
+        <location line="+3" />
         <source>Tangent needs a line or curve and a round curve.</source>
         <translation>[Táñgéñt ñééds á lîñé ör çürvé áñd á röüñd çürvé.~~~~~~~~~~~~]</translation>
     </message>
@@ -7397,7 +7407,12 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
         <translation>[Lîñé~]</translation>
     </message>
     <message>
-        <location line="-273" />
+        <location line="+1245" />
+        <source>Select a line and a curve, or two curves.</source>
+        <translation>[Séléçt á lîñé áñd á çürvé, ör twö çürvés.~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="-1518" />
         <location line="+284" />
         <location line="+691" />
         <location line="+101" />
@@ -7731,12 +7746,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
         <translation>[Séléçt twö lîñés, ör twö çîrçlés/árçs.~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+11" />
-        <source>Select a line and a circle, or two circles.</source>
-        <translation>[Séléçt á lîñé áñd á çîrçlé, ör twö çîrçlés.~~~~~~~~~~~]</translation>
-    </message>
-    <message>
-        <location line="+11" />
+        <location line="+22" />
         <source>Select two points, or a point and a curve.</source>
         <translation>[Séléçt twö pöîñts, ör á pöîñt áñd á çürvé.~~~~~~~~~~]</translation>
     </message>
@@ -7781,7 +7791,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
         <translation>[Délété~~]</translation>
     </message>
     <message>
-        <location line="+394" />
+        <location line="+401" />
         <source>gap %1</source>
         <translation>[gáp %1~]</translation>
     </message>
