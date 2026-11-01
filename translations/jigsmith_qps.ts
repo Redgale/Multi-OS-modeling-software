@@ -2281,7 +2281,7 @@
         <translation>[Thîs fîlé çöüld ñöt bé réád. Çhéçk thát ît stîll éxîsts áñd thát ýöü çáñ öpéñ ît.~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+5" />
+        <location line="+6" />
         <source>The file could not be written (it may be too large).</source>
         <translation>[Thé fîlé çöüld ñöt bé wrîttéñ (ît máý bé töö lárgé).~~~~~~~~~~~~~]</translation>
     </message>
@@ -2291,12 +2291,12 @@
         <translation>[Çhéçk thát thé földér éxîsts áñd ýöü çáñ wrîté tö ît.~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="-67" />
+        <location line="-68" />
         <source>This file could not be opened. It may be damaged or not a Jigsmith design.</source>
         <translation>[Thîs fîlé çöüld ñöt bé öpéñéd. Ît máý bé dámágéd ör ñöt á Jîgsmîth désîgñ.~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+10" />
+        <location line="+11" />
         <source>The path has no curves.</source>
         <translation>[Thé páth hás ñö çürvés.~~~~~~]</translation>
     </message>
@@ -2351,7 +2351,7 @@
         <translation>[Pîçk á fáçé thát çövérs thé skétçh's öütlîñé, ör á flát fáçé ör pláñé.~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+52" />
+        <location line="+51" />
         <source>The imported solid stored in this design is damaged.</source>
         <translation>[Thé împörtéd sölîd störéd îñ thîs désîgñ îs dámágéd.~~~~~~~~~~~~~~]</translation>
     </message>
@@ -2826,17 +2826,17 @@
         <translation>[Thát fáçé îs lévél wîth thé skétçh, sö théré îs ñö wáý tö téll whîçh wáý tö éxtrüdé.~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+96" />
+        <location line="+98" />
         <source>The 3MF file could not be created.</source>
         <translation>[Thé 3MF fîlé çöüld ñöt bé çréátéd.~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+1" />
+        <location line="-2" />
         <source>The file could not be written.</source>
         <translation>[Thé fîlé çöüld ñöt bé wrîttéñ.~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+2" />
+        <location line="+4" />
         <source>A sketch can only be placed on a flat face.</source>
         <translation>[Á skétçh çáñ öñlý bé pláçéd öñ á flát fáçé.~~~~~~~~~~~]</translation>
     </message>
@@ -3091,12 +3091,12 @@
         <translation>[Thé dîstáñçé bétwééñ thésé twö çöüld ñöt bé méásüréd.~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+2" />
+        <location line="-64" />
         <source>The STL file could not be created.</source>
         <translation>[Thé STL fîlé çöüld ñöt bé çréátéd.~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+1" />
+        <location line="+66" />
         <source>The STEP file could not be created.</source>
         <translation>[Thé STÉP fîlé çöüld ñöt bé çréátéd.~~~~~~~~~]</translation>
     </message>

@@ -62,7 +62,6 @@
 #include <ShapeAnalysis_FreeBounds.hxx>
 #include <BRepTools.hxx>
 #include <STEPControl_Writer.hxx>
-#include <StlAPI_Writer.hxx>
 #include <TColgp_Array1OfPnt.hxx>
 #include <TColStd_Array1OfInteger.hxx>
 #include <TColStd_Array1OfReal.hxx>
@@ -2400,24 +2399,7 @@ Result<bool> atomicWrite(const std::string& path, WriteFn&& fn)
 }
 }  // namespace
 
-Result<bool> exportStl(const TopoDS_Shape& original, const std::string& path, double deflection)
-{
-    if (original.IsNull()) {
-        return makeError("export.empty", "There is nothing to export yet.");
-    }
-    try {
-        TopoDS_Shape s = BRepBuilderAPI_Copy(original, true, false).Shape();
-        BRepMesh_IncrementalMesh mesher(s, deflection, false, 0.2, true);
-        return atomicWrite(path, [&](const std::string& p) {
-            StlAPI_Writer w;
-            w.ASCIIMode() = false;
-            return static_cast<bool>(w.Write(s, p.c_str()));
-        });
-    }
-    catch (const Standard_Failure& f) {
-        return makeError("export.stl", "The STL file could not be created.", {}, kernelText(f));
-    }
-}
+// exportStl is in io.cpp (written from the welded mesh, through a UTF-8 path)
 
 Result<bool> exportStep(const TopoDS_Shape& s, const std::string& path)
 {

@@ -19,6 +19,8 @@
 #include <BRep_Tool.hxx>
 #include <BRepMesh_IncrementalMesh.hxx>
 #include <BRepBuilderAPI_Copy.hxx>
+#include <gp_Vec.hxx>
+#include <Standard_Failure.hxx>
 
 #include "jig/files.hpp"
 #include "jig/version.hpp"
@@ -30,6 +32,9 @@ namespace
 
 constexpr size_t kMaxJsonBytes = 64u * 1024u * 1024u;
 constexpr size_t kMaxFileBytes = 1024u * 1024u * 1024u;  // a design file larger than 1 GB is refused
+
+Result<bool> writeAtomically(const std::filesystem::path& target, const void* data, size_t size, const char* code,
+                             const char* failed);
 
 // Writes a zip built in memory to `tmp`, then puts it in place of `target` (both UTF-8 paths).
 Result<bool> writeZipAtomically(mz_zip_archive& zip, const std::filesystem::path& target, const char* code,
@@ -44,10 +49,19 @@ Result<bool> writeZipAtomically(mz_zip_archive& zip, const std::filesystem::path
         mz_free(buf);
         return makeError(code, failed);
     }
+    auto r = writeAtomically(target, buf, size, code, failed);
+    mz_free(buf);
+    return r;
+}
+
+// Writes `data` to `target` through a ".partial" file, so a failed write never leaves half a file.
+Result<bool> writeAtomically(const std::filesystem::path& target, const void* data, size_t size, const char* code,
+                             const char* failed)
+{
+    namespace fs = std::filesystem;
     fs::path tmp = target;
     tmp += ".partial";
-    const bool written = writeWholeFile(tmp, buf, size);
-    mz_free(buf);
+    const bool written = writeWholeFile(tmp, data, size);
     std::error_code ec;
     if (!written) {
         fs::remove(tmp, ec);
@@ -323,6 +337,49 @@ Mesh meshOf(const TopoDS_Shape& original, double deflection)
         }
     }
     return m;
+}
+
+Result<bool> exportStl(const TopoDS_Shape& shape, const std::string& path, double deflection)
+{
+    if (shape.IsNull()) {
+        return makeError("export.empty", "There is nothing to export yet.");
+    }
+    try {
+        // binary STL: an 80-byte header, the triangle count, then per triangle its normal, its
+        // three corners (32-bit floats, little-endian) and two unused bytes
+        const Mesh m = meshOf(shape, deflection);
+        const size_t n = m.triangles.size() / 3;
+        std::string out(84 + 50 * n, '\0');
+        const std::string header = "Jigsmith binary STL, millimetres";
+        std::memcpy(out.data(), header.data(), header.size());
+        const uint32_t count = uint32_t(n);
+        std::memcpy(out.data() + 80, &count, 4);
+        for (size_t t = 0; t < n; ++t) {
+            float v[12];
+            const double* p[3];
+            for (int k = 0; k < 3; ++k) {
+                p[k] = &m.xyz[size_t(m.triangles[t * 3 + size_t(k)]) * 3];
+            }
+            const gp_Vec e1(p[1][0] - p[0][0], p[1][1] - p[0][1], p[1][2] - p[0][2]);
+            const gp_Vec e2(p[2][0] - p[0][0], p[2][1] - p[0][1], p[2][2] - p[0][2]);
+            gp_Vec nrm = e1.Crossed(e2);
+            if (nrm.Magnitude() > 1e-300) {
+                nrm.Normalize();
+            }
+            v[0] = float(nrm.X()), v[1] = float(nrm.Y()), v[2] = float(nrm.Z());
+            for (int k = 0; k < 3; ++k) {
+                for (int c = 0; c < 3; ++c) {
+                    v[3 + k * 3 + c] = float(p[k][c]);
+                }
+            }
+            std::memcpy(out.data() + 84 + 50 * t, v, sizeof v);
+        }
+        return writeAtomically(pathFromUtf8(path), out.data(), out.size(), "export.write", "The file could not be written.");
+    }
+    catch (const Standard_Failure& f) {
+        const char* msg = f.GetMessageString();
+        return makeError("export.stl", "The STL file could not be created.", {}, msg ? msg : "");
+    }
 }
 
 Result<bool> export3mf(const std::vector<std::pair<std::string, TopoDS_Shape>>& bodies, const std::string& path,

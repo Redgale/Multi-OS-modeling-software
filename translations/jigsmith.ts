@@ -2282,7 +2282,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+5"/>
+        <location line="+6"/>
         <source>The file could not be written (it may be too large).</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2292,12 +2292,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-67"/>
+        <location line="-68"/>
         <source>This file could not be opened. It may be damaged or not a Jigsmith design.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+10"/>
+        <location line="+11"/>
         <source>The path has no curves.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2352,7 +2352,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+52"/>
+        <location line="+51"/>
         <source>The imported solid stored in this design is damaged.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2827,17 +2827,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+96"/>
+        <location line="+98"/>
         <source>The 3MF file could not be created.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
+        <location line="-2"/>
         <source>The file could not be written.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+2"/>
+        <location line="+4"/>
         <source>A sketch can only be placed on a flat face.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3092,12 +3092,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+2"/>
+        <location line="-64"/>
         <source>The STL file could not be created.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
+        <location line="+66"/>
         <source>The STEP file could not be created.</source>
         <translation type="unfinished"></translation>
     </message>
