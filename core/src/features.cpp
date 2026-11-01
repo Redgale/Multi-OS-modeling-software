@@ -13,6 +13,7 @@
 #include <sstream>
 
 #include <BRepAdaptor_Curve.hxx>
+#include <BRepAlgoAPI_Common.hxx>
 #include <BRepBndLib.hxx>
 #include <ShapeFix_Face.hxx>
 #include <GCE2d_MakeSegment.hxx>
@@ -2678,6 +2679,201 @@ FeatureOutcome applyScale(const Document& doc, const Feature& f, const std::shar
     return {out, status};
 }
 
+// ---------------------------------------------------------------- joints
+
+namespace
+{
+// Where a joint attaches on a part, as a frame: a round edge gives its centre and axis, a
+// flat face its middle and outward normal, a straight edge its middle and direction.
+Result<gp_Ax3> jointFrame(const nlohmann::json& ref, const std::shared_ptr<const ModelState>& in, std::string* body,
+                          FeatureStatus& status)
+{
+    if (ref.is_string() && ref.get<std::string>() == "origin") {
+        if (body) {
+            body->clear();
+        }
+        return gp_Ax3(gp::Origin(), gp::DZ(), gp::DX());
+    }
+    const bool face = ref.is_object() && ref.contains("face");
+    const bool edge = ref.is_object() && ref.contains("edge");
+    if (!face && !edge) {
+        return makeError("joint.ref", "This joint is missing where it attaches.", {"Edit the joint and click an edge or face."});
+    }
+    ShapeRef sr = ShapeRef::fromJson(face ? ref["face"] : ref["edge"]);
+    auto bit = in->bodies.find(sr.body);
+    if (bit == in->bodies.end()) {
+        return makeError("joint.ref", "A part this joint attaches to no longer exists.", {"Edit the joint and pick the parts again."});
+    }
+    Resolution r = resolve(*bit->second, sr);
+    if (r.status == ResolveStatus::Missing || r.status == ResolveStatus::Ambiguous) {
+        return makeError("joint.ref", "An edge or face this joint attaches to no longer exists.",
+                         {"Edit the joint and click the edge or face again."});
+    }
+    if (r.status == ResolveStatus::Rebound && status.level == StatusLevel::Ok) {
+        status.level = StatusLevel::Warning;
+        status.message = "An edge or face of a joint changed; the most similar one is used. Check it.";
+    }
+    if (body) {
+        *body = sr.body;
+    }
+    const TopoDS_Shape& s = face ? bit->second->face(r.index) : bit->second->edge(r.index);
+    const MeasureItem m = measureItem(s);
+    if (face) {
+        if (m.kind != "flat face" || !m.normal) {
+            if (m.axis && m.radius) {  // a round face: its axis, halfway along it
+                Bnd_Box b;
+                BRepBndLib::Add(s, b);
+                double x0, y0, z0, x1, y1, z1;
+                b.Get(x0, y0, z0, x1, y1, z1);
+                const gp_Pnt mid((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
+                const gp_Ax1 a = *m.axis;
+                const gp_Pnt on = a.Location().Translated(gp_Vec(a.Direction()) * gp_Vec(a.Location(), mid).Dot(gp_Vec(a.Direction())));
+                return gp_Ax3(on, a.Direction());
+            }
+            return makeError("joint.ref", "A joint attaches to a flat face, a round face or an edge.");
+        }
+        GProp_GProps gp;
+        BRepGProp::SurfaceProperties(s, gp);
+        return gp_Ax3(gp.CentreOfMass(), *m.normal);
+    }
+    if (m.axis && m.radius) {
+        return gp_Ax3(m.axis->Location(), m.axis->Direction());
+    }
+    if (m.axis) {
+        GProp_GProps gp;
+        BRepGProp::LinearProperties(s, gp);
+        return gp_Ax3(gp.CentreOfMass(), m.axis->Direction());
+    }
+    return makeError("joint.ref", "A joint attaches to a round edge, a straight edge or a face.");
+}
+
+// The x direction both frames share once aligned: the target's own x, so the parts line up
+// the same way whatever the moving frame's x was.
+gp_Ax3 withX(const gp_Ax3& f, const gp_Dir& x)
+{
+    gp_Vec v(x);
+    v -= gp_Vec(f.Direction()) * v.Dot(gp_Vec(f.Direction()));
+    if (v.Magnitude() < 1e-9) {
+        return f;
+    }
+    return gp_Ax3(f.Location(), f.Direction(), gp_Dir(v));
+}
+}  // namespace
+
+// A joint moves one part so that a point on it meets a point on another part (or the origin),
+// facing it, and then by the joint's own motion: turning (revolute), sliding (slider), both
+// (cylindrical), turning on two axes (ball), sliding in a plane (planar), or none (rigid).
+// Limits keep the motion values in a range.
+FeatureOutcome applyJoint(const Document& doc, const Feature& f, const std::shared_ptr<const ModelState>& in)
+{
+    const auto& p = f.params;
+    FeatureStatus status;
+    std::string moving, fixed;
+    auto a = jointFrame(p.value("from", nlohmann::json::object()), in, &moving, status);
+    if (!a) {
+        return failed(a.error());
+    }
+    auto b = jointFrame(p.value("to", nlohmann::json("origin")), in, &fixed, status);
+    if (!b) {
+        return failed(b.error());
+    }
+    if (moving.empty()) {
+        return failed("The first pick of a joint must be on the part that moves.");
+    }
+    if (moving == fixed) {
+        return failed("A joint connects two different parts.", {"Pick the second edge or face on another part."});
+    }
+    const std::string kind = p.value("kind", std::string("rigid"));
+    static const std::set<std::string> kinds {"rigid", "revolute", "slider", "cylindrical", "ball", "planar"};
+    if (!kinds.count(kind)) {
+        return failed(fmt("Jigsmith has no joint called '%1'.", {kind}));
+    }
+    // motion values, each kept within its limits when limits are set
+    auto value = [&](const char* key, bool angle, double& out) -> std::optional<FeatureOutcome> {
+        auto v = angle ? doc.evalAngle(p.value(key, std::string("0 deg"))) : doc.evalLength(p.value(key, std::string("0 mm")));
+        if (!v) {
+            return failed(v.error(), key);
+        }
+        out = v.value();
+        const std::string lo = std::string(key) + "_min", hi = std::string(key) + "_max";
+        for (const auto& [lim, isMin] : {std::pair {lo, true}, std::pair {hi, false}}) {
+            if (!p.contains(lim) || p[lim].is_null() || p.value(lim, std::string {}).empty()) {
+                continue;
+            }
+            auto l = angle ? doc.evalAngle(p.value(lim, std::string {})) : doc.evalLength(p.value(lim, std::string {}));
+            if (!l) {
+                return failed(l.error(), lim);
+            }
+            if ((isMin && out < l.value() - 1e-12) || (!isMin && out > l.value() + 1e-12)) {
+                out = l.value();
+                if (status.level == StatusLevel::Ok) {
+                    status.level = StatusLevel::Warning;
+                    status.message = fmt("The joint stops at its limit (%1).", {p.value(lim, std::string {})});
+                }
+            }
+        }
+        return std::nullopt;
+    };
+    double angle = 0, angle2 = 0, dist = 0, dist2 = 0, offset = 0;
+    const bool turns = kind == "revolute" || kind == "cylindrical" || kind == "ball";
+    const bool slides = kind == "slider" || kind == "cylindrical" || kind == "planar";
+    if (turns) {
+        if (auto bad = value("angle", true, angle)) {
+            return *bad;
+        }
+    }
+    if (kind == "ball") {
+        if (auto bad = value("angle2", true, angle2)) {
+            return *bad;
+        }
+    }
+    if (slides) {
+        if (auto bad = value("distance", false, dist)) {
+            return *bad;
+        }
+    }
+    if (kind == "planar") {
+        if (auto bad = value("distance2", false, dist2)) {
+            return *bad;
+        }
+    }
+    {
+        auto o = doc.evalLength(p.value("offset", std::string("0 mm")));
+        if (!o) {
+            return failed(o.error(), "offset");
+        }
+        offset = o.value();
+    }
+    // the moving frame turned to face the target (opposite normals), or the same way when flipped
+    gp_Ax3 to = b.value();
+    gp_Ax3 from = a.value();
+    if (!p.value("flip", false)) {
+        from = gp_Ax3(from.Location(), from.Direction().Reversed());
+    }
+    from = withX(from, to.XDirection());
+    // motion in the target's frame: slide along its x/y (planar) or its normal (slider), then
+    // turn about its normal (and its x, for a ball)
+    gp_Ax3 goal = to;
+    goal.Translate(gp_Vec(to.Direction()) * offset);
+    if (kind == "slider" || kind == "cylindrical") {
+        goal.Translate(gp_Vec(to.Direction()) * dist);
+    }
+    if (kind == "planar") {
+        goal.Translate(gp_Vec(to.XDirection()) * dist + gp_Vec(to.YDirection()) * dist2);
+    }
+    if (turns) {
+        goal.Rotate(gp_Ax1(goal.Location(), goal.Direction()), angle);
+    }
+    if (kind == "ball") {
+        goal.Rotate(gp_Ax1(goal.Location(), goal.XDirection()), angle2);
+    }
+    gp_Trsf t;
+    t.SetDisplacement(from, goal);
+    auto out = copyState(in);
+    out->bodies[moving] = std::make_shared<NamedShape>(transformedCopy(*in->bodies.at(moving), t, ""));
+    return {out, status};
+}
+
 // ---------------------------------------------------------------- revolve
 
 FeatureOutcome applyRevolve(const Document& doc, const Feature& f, const std::shared_ptr<const ModelState>& in)
@@ -3441,6 +3637,8 @@ FeatureOutcome applyFeature(const Document& doc, const Feature& f, const std::sh
                 return applyThread(doc, f, in);
             case FeatureKind::Canvas:
                 return applyCanvas(doc, f, in);
+            case FeatureKind::Joint:
+                return applyJoint(doc, f, in);
             case FeatureKind::Hole:
                 return applyHole(doc, f, in);
             case FeatureKind::Pattern:
@@ -3478,4 +3676,39 @@ FeatureOutcome applyFeature(const Document& doc, const Feature& f, const std::sh
     return failed("Unknown feature type.");
 }
 
+}  // namespace jig
+
+namespace jig
+{
+// Parts that overlap: every pair of bodies whose solids share volume, with how much.
+std::vector<Interference> interferences(const ModelState& st)
+{
+    std::vector<Interference> out;
+    std::vector<std::pair<std::string, std::shared_ptr<const NamedShape>>> parts(st.bodies.begin(), st.bodies.end());
+    for (size_t i = 0; i < parts.size(); ++i) {
+        for (size_t j = i + 1; j < parts.size(); ++j) {
+            Bnd_Box bi, bj;
+            BRepBndLib::Add(parts[i].second->shape(), bi);
+            BRepBndLib::Add(parts[j].second->shape(), bj);
+            if (bi.IsOut(bj)) {
+                continue;
+            }
+            try {
+                BRepAlgoAPI_Common common(parts[i].second->shape(), parts[j].second->shape());
+                if (!common.IsDone()) {
+                    continue;
+                }
+                GProp_GProps gp;
+                BRepGProp::VolumeProperties(common.Shape(), gp);
+                if (gp.Mass() > 1e-6) {
+                    out.push_back({parts[i].first, parts[j].first, gp.Mass(), common.Shape()});
+                }
+            }
+            catch (const Standard_Failure&) {
+                // a pair the kernel cannot intersect: left out
+            }
+        }
+    }
+    return out;
+}
 }  // namespace jig

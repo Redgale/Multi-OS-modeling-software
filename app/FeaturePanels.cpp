@@ -4795,6 +4795,232 @@ QString CanvasPanel::title() const
     return tr("picture");
 }
 
+// ---------------------------------------------------------------- Joint
+
+JointPanel::JointPanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent)
+    : FeaturePanel(doc, view, std::move(editId), parent)
+{
+    form_->addWidget(heading(this, tr("Joint"),
+                             tr("Click an edge or face on the part that moves (a hole's edge, the bottom of a "
+                                "lid), then one on the part it attaches to. They meet face to face; then the "
+                                "joint lets it turn or slide.")));
+    kind_ = combo(this, {{tr("Rigid: fixed in place"), "rigid"},
+                         {tr("Revolute: turns (a hinge)"), "revolute"},
+                         {tr("Slider: slides"), "slider"},
+                         {tr("Cylindrical: turns and slides"), "cylindrical"},
+                         {tr("Ball: turns any way"), "ball"},
+                         {tr("Planar: slides on a surface"), "planar"}});
+    fromLabel_ = new QLabel(this);
+    toLabel_ = new QLabel(this);
+    fromLabel_->setWordWrap(true);
+    toLabel_->setWordWrap(true);
+    auto* origin = new QPushButton(tr("Attach to the origin instead"), this);
+    auto* again = new QPushButton(tr("Pick again"), this);
+    angle_ = new ExprField(doc, jig::Dim::ang(), this);
+    distance_ = new ExprField(doc, jig::Dim::len(), this);
+    try_ = new QSlider(Qt::Horizontal, this);
+    try_->setRange(0, 360);
+    try_->setAccessibleName(tr("Try the motion"));
+    flip_ = new QCheckBox(tr("Face the same way instead of facing each other"), this);
+    addRow(tr("Kind"), kind_);
+    addRow(tr("Moving part attaches at"), fromLabel_);
+    addRow(tr("To"), toLabel_);
+    form_->addWidget(origin);
+    form_->addWidget(again);
+    addRow(tr("Angle"), angle_);
+    bindParam("angle", angle_);
+    addRow(tr("Distance"), distance_);
+    bindParam("distance", distance_);
+    const std::vector<std::tuple<std::string, QString, jig::Dim>> extra = {
+        {"angle2", tr("Second angle"), jig::Dim::ang()},       {"distance2", tr("Sideways distance"), jig::Dim::len()},
+        {"offset", tr("Gap between them"), jig::Dim::len()},   {"angle_min", tr("Angle stops at least at"), jig::Dim::ang()},
+        {"angle_max", tr("Angle stops at most at"), jig::Dim::ang()},
+        {"distance_min", tr("Distance at least"), jig::Dim::len()},
+        {"distance_max", tr("Distance at most"), jig::Dim::len()}};
+    for (const auto& [key, label, dim] : extra) {
+        auto* e = new ExprField(doc, dim, this);
+        fields_[key] = e;
+        addRow(label, e);
+        bindParam(key, e);
+        connect(e, &ExprField::changed, this, [this] { schedulePreview(); });
+    }
+    addRow(tr("Try the motion"), try_);
+    form_->addWidget(flip_);
+    if (const jig::Feature* edit = editId_.empty() ? nullptr : doc_.feature(editId_)) {
+        const auto& p = edit->params;
+        select(kind_, p.value("kind", std::string("rigid")));
+        from_ = p.value("from", nlohmann::json());
+        to_ = p.value("to", nlohmann::json("origin"));
+        angle_->setText(q(p.value("angle", std::string("0 deg"))));
+        distance_->setText(q(p.value("distance", std::string("0 mm"))));
+        for (auto& [key, e] : fields_) {
+            e->setText(q(p.value(key, std::string {})));
+        }
+        flip_->setChecked(p.value("flip", false));
+    }
+    else {
+        select(kind_, "revolute");
+        angle_->setText("0 deg");
+        distance_->setText(q(doc_.defaultLength(0, 0)));
+    }
+    if (fields_["offset"]->text().isEmpty()) {
+        fields_["offset"]->setText(q(doc_.defaultLength(0, 0)));
+    }
+    showFields();
+    showPicks();
+    connect(kind_, &QComboBox::currentIndexChanged, this, [this] {
+        showFields();
+        schedulePreview();
+    });
+    for (auto* e : {angle_, distance_}) {
+        connect(e, &ExprField::changed, this, [this] { schedulePreview(); });
+    }
+    connect(flip_, &QCheckBox::toggled, this, [this] { schedulePreview(); });
+    connect(origin, &QPushButton::clicked, this, [this] { pickOrigin(); });
+    connect(again, &QPushButton::clicked, this, [this] {
+        from_ = nlohmann::json();
+        to_ = nlohmann::json();
+        showPicks();
+        schedulePreview();
+    });
+    // the slider tries angles (0..360) or distances (0..100 in the design's unit) live
+    connect(try_, &QSlider::valueChanged, this, [this](int v) {
+        const std::string k = current(kind_);
+        if (k == "slider" || k == "planar") {
+            distance_->setText(q(doc_.fmtLength(v * (doc_.units() == jig::LengthUnit::Millimetre ? 1.0 : 25.4 / 4))));
+        }
+        else {
+            angle_->setText(QString("%1 deg").arg(v));
+        }
+    });
+    if (view_) {
+        view_->setPickMode(PickMode::Any);
+        connect(view_.data(), &Viewport::faceClicked, this, [this](const QString& b, const QString& n, Qt::KeyboardModifiers) {
+            pick(b.toStdString(), n.toStdString(), true);
+        });
+        connect(view_.data(), &Viewport::edgeClicked, this, [this](const QString& b, const QString& n, Qt::KeyboardModifiers) {
+            pick(b.toStdString(), n.toStdString(), false);
+        });
+    }
+    if (stateBefore()->bodies.size() < 1) {
+        status_->setText("<b>✕ " + tr("A joint needs parts: make at least one body first.") + "</b>");
+        ok_->setEnabled(false);
+    }
+    else {
+        schedulePreview();
+    }
+}
+
+void JointPanel::pick(const std::string& body, const std::string& name, bool face)
+{
+    const auto before = stateBefore();
+    auto bit = before->bodies.find(body);
+    if (bit == before->bodies.end()) {
+        return;  // the preview's own copy: the part before this joint is what counts
+    }
+    auto hits = face ? bit->second->findFaces(name) : bit->second->findEdges(name);
+    if (hits.size() != 1) {
+        return;
+    }
+    nlohmann::json ref {{face ? "face" : "edge", (face ? bit->second->faceRef(body, hits[0]) : bit->second->edgeRef(body, hits[0])).toJson()}};
+    if (from_.is_null() || (!to_.is_null() && !to_.empty())) {
+        from_ = ref;
+        to_ = nlohmann::json();
+    }
+    else {
+        to_ = ref;
+    }
+    showPicks();
+    schedulePreview();
+}
+
+void JointPanel::pickOrigin()
+{
+    to_ = "origin";
+    showPicks();
+    schedulePreview();
+}
+
+void JointPanel::showPicks()
+{
+    auto describe = [this](const nlohmann::json& r, const QString& none) {
+        if (r.is_string()) {
+            return tr("the origin");
+        }
+        if (!r.is_object() || r.empty()) {
+            return none;
+        }
+        const bool face = r.contains("face");
+        const std::string name = (face ? r["face"] : r["edge"]).value("name", std::string("?"));
+        return (face ? tr("face %1") : tr("edge %1")).arg(q(name));
+    };
+    fromLabel_->setText(describe(from_, tr("— click an edge or face of the part that moves")));
+    toLabel_->setText(describe(to_, from_.is_null() ? tr("—") : tr("— click an edge or face on the other part")));
+}
+
+void JointPanel::showFields()
+{
+    const std::string k = current(kind_);
+    const bool turns = k == "revolute" || k == "cylindrical" || k == "ball";
+    const bool slides = k == "slider" || k == "cylindrical" || k == "planar";
+    auto show = [this](QWidget* w, bool on) {
+        w->setVisible(on);
+        const int i = form_->indexOf(w);
+        if (i > 0) {
+            if (auto* item = form_->itemAt(i - 1); item && item->widget()) {
+                item->widget()->setVisible(on);
+            }
+        }
+    };
+    show(angle_, turns);
+    show(distance_, slides);
+    show(fields_["angle2"], k == "ball");
+    show(fields_["distance2"], k == "planar");
+    show(fields_["angle_min"], turns);
+    show(fields_["angle_max"], turns);
+    show(fields_["distance_min"], slides);
+    show(fields_["distance_max"], slides);
+    show(try_, turns || slides);
+    try_->setRange(0, slides && !turns ? 100 : 360);
+}
+
+QString JointPanel::notReady() const
+{
+    if (from_.is_null() || (from_.is_object() && from_.empty())) {
+        return tr("Click an edge or face of the part that moves.");
+    }
+    if (to_.is_null() || (to_.is_object() && to_.empty())) {
+        return tr("Now click an edge or face on the part it attaches to.");
+    }
+    return {};
+}
+
+jig::Feature JointPanel::draft() const
+{
+    jig::Feature f = startDraft(doc_, editId_, "j", tr("Joint"));
+    f.kind = jig::FeatureKind::Joint;
+    f.params = {{"kind", current(kind_)},
+                {"from", from_.is_null() ? nlohmann::json::object() : from_},
+                {"to", to_.is_null() ? nlohmann::json("origin") : to_},
+                {"flip", flip_->isChecked()},
+                {"angle", angle_->text().toStdString()},
+                {"distance", distance_->text().toStdString()}};
+    for (const auto& [key, e] : fields_) {
+        if (!e->text().trimmed().isEmpty() && e->isVisibleTo(this)) {
+            f.params[key] = e->text().toStdString();
+        }
+    }
+    if (!f.params.contains("offset")) {
+        f.params["offset"] = fields_.at("offset")->text().toStdString();
+    }
+    return f;
+}
+
+QString JointPanel::title() const
+{
+    return tr("joint");
+}
+
 // ---------------------------------------------------------------- Move
 
 // Three arrows (X, Y, Z) from the bodies' centre; drag a grip to move along that axis.

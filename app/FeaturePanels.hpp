@@ -1080,6 +1080,59 @@ private:
     QSlider* opacity_;
 };
 
+// Assemble ▸ Joint: one part placed against another, then turned or slid by the joint.
+class JointPanel : public FeaturePanel
+{
+    Q_OBJECT
+public:
+    JointPanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent = nullptr);
+    // A click on an edge or face: the first picks where the moving part attaches, the next
+    // where it attaches to (on another part).
+    void pick(const std::string& body, const std::string& name, bool face);
+    void pickOrigin();  // attach to the origin instead of a part
+    QComboBox* kind() const
+    {
+        return kind_;
+    }
+    ExprField* angle() const
+    {
+        return angle_;
+    }
+    ExprField* distance() const
+    {
+        return distance_;
+    }
+    ExprField* field(const std::string& key) const
+    {
+        auto it = fields_.find(key);
+        return it == fields_.end() ? nullptr : it->second;
+    }
+    QSlider* tryIt() const
+    {
+        return try_;
+    }
+    QCheckBox* flip() const
+    {
+        return flip_;
+    }
+
+protected:
+    QString notReady() const override;
+    jig::Feature draft() const override;
+    QString title() const override;
+
+private:
+    void showFields();
+    void showPicks();
+    nlohmann::json from_, to_;
+    QLabel *fromLabel_, *toLabel_;
+    QComboBox* kind_;
+    ExprField *angle_, *distance_;
+    std::map<std::string, ExprField*> fields_;  // angle2 distance2 offset and the limits
+    QSlider* try_;
+    QCheckBox* flip_;
+};
+
 class MoveHandle;
 
 // Move / copy bodies: shift along X, Y, Z and turn around an origin axis.

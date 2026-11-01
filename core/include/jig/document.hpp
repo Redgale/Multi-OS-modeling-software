@@ -77,7 +77,8 @@ enum class FeatureKind
     Draft,      // faces of a body sloped by an angle around a neutral plane
     Scale,      // bodies made bigger or smaller about a point (or stretched per axis)
     Thread,     // a helical thread cut into a shaft or the wall of a hole
-    Canvas      // a picture placed on a plane to trace over (display only)
+    Canvas,     // a picture placed on a plane to trace over (display only)
+    Joint       // a part placed against another and moved by the joint's motion
 };
 
 const char* toString(FeatureKind k);
@@ -157,6 +158,16 @@ struct ModelState
     };
     std::map<std::string, Canvas> canvases;
 };
+
+// Two parts that overlap, and by how much (Inspect ▸ Interference).
+struct Interference
+{
+    std::string a, b;
+    double volume = 0;  // mm^3
+    TopoDS_Shape overlap;
+};
+std::vector<Interference> interferences(const ModelState& st);
+
 
 class Document
 {

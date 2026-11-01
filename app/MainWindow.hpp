@@ -17,6 +17,7 @@ class QLockFile;
 
 class QAction;
 class QCheckBox;
+class QScrollArea;
 class QDockWidget;
 class QStackedWidget;
 class QToolBar;
@@ -116,6 +117,9 @@ public:
     // A picture to trace, on the floor plane, then its settings panel.
     bool insertCanvasFile(const QString& path);
     void openCanvas(const std::string& editId);
+    void openJoint(const std::string& editId);
+    // Inspect ▸ Interference: which parts overlap and by how much (also shown in the status bar).
+    QString showInterference();
     void saveVersionInteractive();
     bool saveNamedVersion(const QString& label);  // saves first when the design has no file yet
     void showVersions();
@@ -257,6 +261,7 @@ private:
     QDockWidget* propsDock_ = nullptr;
     QStackedWidget* sideStack_ = nullptr;
     QWidget* panelHost_ = nullptr;
+    QScrollArea* panelScroll_ = nullptr;
     QWidget* sketchPanel_ = nullptr;
     QCheckBox* sliceBox_ = nullptr;
     bool homeWhenMeshed_ = false;  // frame a just-opened design once its meshes are ready

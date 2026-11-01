@@ -68,6 +68,8 @@ QT_TRANSLATE_NOOP("Core", "Repeat a feature in rows and columns.")
 QT_TRANSLATE_NOOP("Core", "Repeat a feature around an axis.")
 QT_TRANSLATE_NOOP("Core", "Slope faces by a small angle so the part leaves a mould, or prints without overhangs.")
 QT_TRANSLATE_NOOP("Core", "Make bodies bigger or smaller about a point, evenly or by a factor along each axis.")
+QT_TRANSLATE_NOOP("Core", "Put one part against another and let it turn or slide: hinges, lids, sliders.")
+QT_TRANSLATE_NOOP("Core", "Find parts that overlap each other, and by how much.")
 QT_TRANSLATE_NOOP("Core", "Push or pull a flat face by a distance; on a rounded edge or hole it opens the step that made it.")
 QT_TRANSLATE_NOOP("Core", "Round off edges so parts look finished and are comfortable to hold.")
 QT_TRANSLATE_NOOP("Core", "Cut a flat bevel on edges; great for the bottom of 3D prints.")
@@ -116,6 +118,7 @@ QT_TRANSLATE_NOOP("Core", "A polygon needs 3 to 64 sides.")
 QT_TRANSLATE_NOOP("Core", "Say which body to fillet with body=<id>.")
 QT_TRANSLATE_NOOP("Core", "Say which body to shell with body=<id>.")
 QT_TRANSLATE_NOOP("Core", "Shell faces are given as face:<face name>.")
+QT_TRANSLATE_NOOP("Core", "Joint ends are edge:<name>, face:<name> or origin.")
 QT_TRANSLATE_NOOP("Core", "Draft faces are given as face:<face name>.")
 QT_TRANSLATE_NOOP("Core", "A point's at= needs three coordinates, like at=10,0,5.")
 QT_TRANSLATE_NOOP("Core", "Unknown step in reorder.")
@@ -344,6 +347,18 @@ QT_TRANSLATE_NOOP("Core", "Edit the scale and pick another point, or the origin.
 QT_TRANSLATE_NOOP("Core", "A body this step scales no longer exists.")
 QT_TRANSLATE_NOOP("Core", "This body could not be stretched.")
 QT_TRANSLATE_NOOP("Core", "This body could not be scaled.")
+QT_TRANSLATE_NOOP("Core", "This joint is missing where it attaches.")
+QT_TRANSLATE_NOOP("Core", "Edit the joint and click an edge or face.")
+QT_TRANSLATE_NOOP("Core", "A part this joint attaches to no longer exists.")
+QT_TRANSLATE_NOOP("Core", "Edit the joint and pick the parts again.")
+QT_TRANSLATE_NOOP("Core", "An edge or face this joint attaches to no longer exists.")
+QT_TRANSLATE_NOOP("Core", "Edit the joint and click the edge or face again.")
+QT_TRANSLATE_NOOP("Core", "An edge or face of a joint changed; the most similar one is used. Check it.")
+QT_TRANSLATE_NOOP("Core", "A joint attaches to a flat face, a round face or an edge.")
+QT_TRANSLATE_NOOP("Core", "A joint attaches to a round edge, a straight edge or a face.")
+QT_TRANSLATE_NOOP("Core", "The first pick of a joint must be on the part that moves.")
+QT_TRANSLATE_NOOP("Core", "A joint connects two different parts.")
+QT_TRANSLATE_NOOP("Core", "Pick the second edge or face on another part.")
 QT_TRANSLATE_NOOP("Core", "The axis line of this revolve is gone from the sketch.")
 QT_TRANSLATE_NOOP("Core", "Edit the revolve and pick an axis again.")
 QT_TRANSLATE_NOOP("Core", "The axis line has no length.")
@@ -662,6 +677,8 @@ inline const char* const kCorePatterns[] = {
     QT_TRANSLATE_NOOP("Core", "The %1 must be more than zero."),
     QT_TRANSLATE_NOOP("Core", "Jigsmith has no basic shape called '%1'."),
     QT_TRANSLATE_NOOP("Core", "The point '%1' to scale about is missing or comes later."),
+    QT_TRANSLATE_NOOP("Core", "Jigsmith has no joint called '%1'."),
+    QT_TRANSLATE_NOOP("Core", "The joint stops at its limit (%1)."),
     QT_TRANSLATE_NOOP("Core", "The body this pattern repeats (%1) no longer exists."),
     QT_TRANSLATE_NOOP("Core", "The step this pattern repeats (%1) is missing, after the pattern, or has a problem."),
     QT_TRANSLATE_NOOP("Core", "The sketch with this pattern's path (%1) is missing or comes later."),

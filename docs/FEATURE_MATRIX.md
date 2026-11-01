@@ -145,7 +145,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Measure | 21 | v0.1 M6 | **app** + scripts: size of a face/edge, distance, angle, centre-to-centre, X/Y/Z offsets | |
 | Section analysis | 21 | v0.1 M6 | **app**: view-only cut along origin or construction planes, movable, flippable; cut faces filled in (capped) with the cut area shown | |
 | Properties: volume, area, mass, center of mass | 21 | v0.1 M6 | **app**: volume, weight by material or density, filament length, area, size, centre of mass; CLI `report` | |
-| Interference | 21 | v0.2 | — | Needs parts |
+| Interference | 21 | v0.2 | **app**: Inspect ▸ Interference lists overlapping parts and their overlap volume | Highlighting the overlap in the view not yet |
 | Curvature comb, zebra, draft, curvature map, isocurve, accessibility, min radius | 21 | v0.3+ | — | Surface-quality tools |
 | Component colours | 21 | v0.2 | — | |
 | Insert SVG, DXF | 22 | v0.1 M5 | **app** + scripts: DXF (lines, arcs, circles, polylines with bulges, splines, ellipses, text, blocks; unit detection); SVG (filled paths and shapes, drawn outlines as bands, text, transforms, viewBox; as scalable artwork) | |
@@ -173,7 +173,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | 3D print utility (send to slicer) | 29, 40 | v0.1 export (**done**: STL, STEP and 3MF with one named object per body); "open in slicer" v0.2 | Export is the core need |
 | Scripts and add-ins (Python API) | 29 | v0.2 | Core designed for it now (commands are data) |
 | AI assistant | 29, 42 | never (for now) | Requires network/cloud; violates "free means free" defaults |
-| Components, joints (7 types), limits, drive, as-built, rigid group | 7, 30, 31 | v0.2 | Brief |
+| Components, joints (7 types), limits, drive, as-built, rigid group | 7, 30, 31 | v0.2 | Bodies are the parts (D-006). Joints: rigid, revolute, slider, cylindrical, ball, planar, with limits and drive by value or parameter (**app** + scripts `joint`); pin-slot, as-built joints, rigid groups and nested components not yet |
 | Motion link, contact sets, motion study | 31 | v0.3+ | |
 | Configurations | 33 | v0.2 as parameter sets ("variants") | Brief |
 | Render workspace, appearances library | 34 | v0.2 (basic viewport rendering) | |

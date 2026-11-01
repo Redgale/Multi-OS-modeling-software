@@ -142,6 +142,8 @@ CommandRegistry::CommandRegistry()
     add({"solid.pattern_circ", "Ring copy", "Circular Pattern", "CREATE", "Repeat a feature around an axis.", "", {"array", "repeat around", "spokes"}, true, false, false, m3});
     add({"solid.draft", "Draft", "Draft", "MODIFY", "Slope faces by a small angle so the part leaves a mould, or prints without overhangs.", "", {"taper faces", "mould", "mold", "angle faces"}, false, false, true, m3});
     add({"solid.scale", "Scale", "Scale", "MODIFY", "Make bodies bigger or smaller about a point, evenly or by a factor along each axis.", "", {"resize", "enlarge", "shrink", "stretch"}, false, false, true, m3});
+    add({"assemble.joint", "Joint", "Joint", "ASSEMBLE", "Put one part against another and let it turn or slide: hinges, lids, sliders.", "J", {"hinge", "assemble", "connect parts", "mate", "pivot"}, false, false, true, m3});
+    add({"inspect.interference", "Interference", "Interference", "INSPECT", "Find parts that overlap each other, and by how much.", "", {"collision", "overlap", "clash", "check fit"}, false, false, true, m3});
     add({"solid.presspull", "Press pull", "Press Pull", "MODIFY", "Push or pull a flat face by a distance; on a rounded edge or hole it opens the step that made it.", "Q", {"push", "pull", "drag face"}, false, false, true, m3});
     add({"solid.fillet", "Fillet", "Fillet", "MODIFY", "Round off edges so parts look finished and are comfortable to hold.", "F", {"round the edges", "round", "soften", "radius"}, true, false, true, m3});
     add({"solid.chamfer", "Chamfer", "Chamfer", "MODIFY", "Cut a flat bevel on edges; great for the bottom of 3D prints.", "", {"bevel", "angled edge", "elephant foot"}, true, false, true, m3});
@@ -180,7 +182,7 @@ CommandRegistry::CommandRegistry()
         "constraint.symmetric", "constraint.equal", "solid.extrude", "solid.fillet", "solid.chamfer", "solid.shell",
         "solid.revolve", "solid.loft", "solid.sweep", "solid.pipe", "solid.coil", "solid.box", "solid.cylinder", "solid.sphere", "solid.torus", "solid.rib", "solid.emboss", "solid.thread", "solid.hole", "solid.mirror", "solid.pattern_rect", "solid.pattern_circ", "modify.parameters",
         "inspect.measure", "inspect.properties", "file.export_3mf", "construct.offset_plane", "construct.angle_plane",
-        "construct.midplane", "construct.tangent_plane", "construct.points_plane", "construct.path_plane", "construct.axis", "construct.point", "solid.draft", "solid.scale", "solid.presspull", "solid.combine", "solid.split", "solid.move",
+        "construct.midplane", "construct.tangent_plane", "construct.points_plane", "construct.path_plane", "construct.axis", "construct.point", "solid.draft", "solid.scale", "assemble.joint", "inspect.interference", "solid.presspull", "solid.combine", "solid.split", "solid.move",
         "inspect.section", "insert.dxf", "insert.svg", "help.tutorial"};
     for (auto& c : commands_) {
         if (inApp.count(c.id)) {
@@ -1504,6 +1506,63 @@ Result<bool> ScriptRunner::runLineUnchecked(std::string_view rawLine)
             if (a.get("direction", "inside") == "outside") {
                 f.params["direction"] = "outside";
             }
+            id = f.id;
+            insertFeature(m, std::move(f));
+            return true;
+        });
+        if (!r) {
+            return r;
+        }
+        return checkFeature(id);
+    }
+    if (a.verb == "joint") {
+        // joint kind=rigid|revolute|slider|cylindrical|ball|planar from=edge:<name>|face:<name>
+        //       [to=edge:<name>|face:<name>|origin] [angle=… angle_min=… angle_max=…]
+        //       [distance=… distance_min=… distance_max=…] [angle2=…] [distance2=…] [offset=…] [flip=yes]
+        auto ref = [&](const std::string& v) -> Result<nlohmann::json> {
+            if (v == "origin") {
+                return nlohmann::json("origin");
+            }
+            const bool face = v.rfind("face:", 0) == 0, edge = v.rfind("edge:", 0) == 0;
+            if (!face && !edge) {
+                return makeError("script.args", "Joint ends are edge:<name>, face:<name> or origin.");
+            }
+            const std::string name = v.substr(5);
+            for (auto& [bid, body] : doc.state().bodies) {
+                auto hits = face ? body->findFaces(name) : body->findEdges(name);
+                if (hits.size() == 1) {
+                    return nlohmann::json {{face ? "face" : "edge",
+                                            (face ? body->faceRef(bid, hits[0]) : body->edgeRef(bid, hits[0])).toJson()}};
+                }
+            }
+            return makeError("script.args", "There is no single " + std::string(face ? "face" : "edge") + " called '" + name + "'.");
+        };
+        auto from = ref(a.get("from"));
+        if (!from) {
+            return from.error();
+        }
+        auto to = ref(a.get("to", "origin"));
+        if (!to) {
+            return to.error();
+        }
+        nlohmann::json params {{"kind", a.get("kind", "rigid")}, {"from", from.value()}, {"to", to.value()},
+                               {"flip", a.get("flip", "no") == "yes"}};
+        for (const char* k : {"angle", "angle_min", "angle_max", "angle2", "distance", "distance_min", "distance_max",
+                              "distance2", "offset"}) {
+            if (a.has(k)) {
+                params[k] = a.get(k);
+            }
+        }
+        std::string id;
+        auto r = doc.transact("Joint", [&](Model& m) -> Result<bool> {
+            Feature f;
+            f.id = a.get("id", Document::newId(m, "j"));
+            if (findFeature(m, f.id)) {
+                return makeError("script.args", "The id '" + f.id + "' is already used.");
+            }
+            f.name = a.get("name", stepName("Joint", f.id, "j"));
+            f.kind = FeatureKind::Joint;
+            f.params = params;
             id = f.id;
             insertFeature(m, std::move(f));
             return true;

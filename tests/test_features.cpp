@@ -2931,3 +2931,55 @@ TEST(Canvas, PicturesArePlacedOnPlanesAndKeptInTheDesign)
     EXPECT_FALSE(insertCanvas(*d, txt, "XY", "0", "0", "100 mm").ok());
     EXPECT_FALSE(insertCanvas(*d, (dir / "none.png").string(), "XY", "0", "0", "100 mm").ok());
 }
+
+TEST(Joint, PartsMeetTurnSlideStopAtLimitsAndInterfere)
+{
+    // two separate boxes; a rigid joint puts the small one's bottom on the big one's top,
+    // centred and facing it
+    const std::string parts = "box id=a length=40mm width=40mm height=10mm\n"
+                              "box id=b center=100,0 length=10mm width=20mm height=6mm op=new\n";
+    auto rigid = build(parts + "joint id=j1 kind=rigid from=face:b/bottom to=face:a/top\n");
+    expectAllOk(*rigid);
+    auto bb = massProperties(rigid->state().bodies.at("b")->shape());
+    EXPECT_NEAR(bb.zmin, 10, 1e-6);
+    EXPECT_NEAR(bb.zmax, 16, 1e-6);
+    EXPECT_NEAR((bb.xmin + bb.xmax) / 2, 0, 1e-6);
+    EXPECT_NEAR((bb.ymin + bb.ymax) / 2, 0, 1e-6);
+    EXPECT_NEAR(massProperties(rigid->state().bodies.at("a")->shape()).zmax, 10, 1e-9);  // the other stays
+    // revolute: turned 90 degrees about the top's normal, the small box's long side swaps axes
+    auto turned = build(parts + "joint id=j1 kind=revolute from=face:b/bottom to=face:a/top angle=90deg\n");
+    expectAllOk(*turned);
+    auto bt = massProperties(turned->state().bodies.at("b")->shape());
+    EXPECT_NEAR(bt.xmax - bt.xmin, 20, 1e-6);
+    EXPECT_NEAR(bt.ymax - bt.ymin, 10, 1e-6);
+    // the angle follows a parameter, and editing it moves the part
+    auto param = build("param lid = 0 deg\n" + parts +
+                       "joint id=j1 kind=revolute from=face:b/bottom to=face:a/top angle=lid\nparam lid = 90 deg\n");
+    expectAllOk(*param);
+    EXPECT_NEAR(massProperties(param->state().bodies.at("b")->shape()).xmax, 10, 1e-6);
+    // slider with a limit: asked 50, stops at 20 and says so
+    auto slid = build(parts + "joint id=j1 kind=slider from=face:b/bottom to=face:a/top distance=50mm distance_max=20mm\n");
+    EXPECT_NEAR(massProperties(slid->state().bodies.at("b")->shape()).zmin, 30, 1e-6);
+    EXPECT_EQ(slid->status(2).level, StatusLevel::Warning);
+    EXPECT_NE(slid->status(2).message.find("limit"), std::string::npos);
+    // a pin into a hole: a round edge to a round edge lines up their axes
+    auto pin = build("box id=a length=40mm width=40mm height=10mm\ncylinder id=h diameter=6mm height=10mm op=cut\n"
+                     "cylinder id=p center=80,30 diameter=6mm height=30mm op=new\n"
+                     "joint id=j1 kind=revolute from=face:p/bottom to=face:a/top offset=-10mm\n");
+    expectAllOk(*pin);
+    auto pp = massProperties(pin->state().bodies.at("p")->shape());
+    EXPECT_NEAR((pp.xmin + pp.xmax) / 2, 0, 1e-6);
+    EXPECT_NEAR(pp.zmin, 0, 1e-6);
+    // interference: the pin in its hole does not overlap; a box pushed into the plate does
+    EXPECT_TRUE(interferences(pin->state()).empty());
+    auto clash = build(parts + "joint id=j1 kind=rigid from=face:b/bottom to=face:a/top offset=-2mm\n");
+    auto hits = interferences(clash->state());
+    ASSERT_EQ(hits.size(), 1u);
+    EXPECT_NEAR(hits[0].volume, 10 * 20 * 2, 1e-6);
+    // the same part twice, and a pick on nothing, are explained
+    auto self = std::make_unique<Document>();
+    ScriptRunner r(*self);
+    r.strict = false;
+    ASSERT_TRUE(r.runText(parts + "joint id=j1 kind=rigid from=face:b/bottom to=face:b/top\n").ok());
+    EXPECT_EQ(self->status(2).level, StatusLevel::Error);
+}

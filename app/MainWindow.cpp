@@ -16,6 +16,8 @@
 #include <QCheckBox>
 #include <QPainter>
 #include <QInputDialog>
+#include <QScrollArea>
+#include <QScrollBar>
 #include <QMenu>
 #include <QShortcut>
 #include <QStackedWidget>
@@ -185,6 +187,8 @@ QString kindWord(jig::FeatureKind k)
             return MainWindow::tr("Thread");
         case jig::FeatureKind::Canvas:
             return MainWindow::tr("Picture");
+        case jig::FeatureKind::Joint:
+            return MainWindow::tr("Joint");
         case jig::FeatureKind::Move:
             return MainWindow::tr("Move");
     }
@@ -1026,10 +1030,17 @@ void MainWindow::buildDocks()
     details_->setWhatsThis(tr("Details about what you selected, and explanations and fixes for any step "
                               "marked with a problem."));
     sideStack_->addWidget(details_);
-    panelHost_ = new QWidget(sideStack_);
+    // tool panels scroll when they are taller than the window, rather than squeezing their
+    // explanations to one line
+    panelScroll_ = new QScrollArea(sideStack_);
+    panelScroll_->setWidgetResizable(true);
+    panelScroll_->setFrameShape(QFrame::NoFrame);
+    panelScroll_->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    panelHost_ = new QWidget(panelScroll_);
     new QVBoxLayout(panelHost_);
     panelHost_->layout()->setContentsMargins(0, 0, 0, 0);
-    sideStack_->addWidget(panelHost_);
+    panelScroll_->setWidget(panelHost_);
+    sideStack_->addWidget(panelScroll_);
     // sketch palette: state in words and shapes, plus display options
     sketchPanel_ = new QWidget(sideStack_);
     {
@@ -1858,6 +1869,15 @@ void MainWindow::runCommand(const QString& id)
     else if (id == "insert.svg") {
         importSvg();
     }
+    else if (id == "assemble.joint") {
+        openJoint({});
+    }
+    else if (id == "inspect.interference") {
+        const QString text = showInterference();
+        if (text.contains('\n') || jig::interferences(doc_->state()).size() == 1) {
+            QMessageBox::information(this, tr("Interference"), text);
+        }
+    }
     else if (id == "insert.canvas") {
         const QString path = QFileDialog::getOpenFileName(this, tr("Picture to trace"), {},
                                                           tr("Pictures (*.png *.jpg *.jpeg)"));
@@ -2680,7 +2700,9 @@ void MainWindow::showPanel(ToolPanel* p)
     nameInputsFromLabels(p);  // screen readers say each field's label
     panel_ = p;
     panelHost_->layout()->addWidget(p);
-    sideStack_->setCurrentWidget(panelHost_);
+    // wide enough for the panel and a scroll bar beside it, so nothing is cut off at the right
+    panelScroll_->setMinimumWidth(p->minimumSizeHint().width() + panelScroll_->verticalScrollBar()->sizeHint().width() + 4);
+    sideStack_->setCurrentWidget(panelScroll_);
     propsDock_->setWindowTitle(tr("Change"));
     propsDock_->show();
     connect(p, &ToolPanel::finished, this, [this](bool) { closePanel(); });
@@ -3004,6 +3026,38 @@ bool MainWindow::importStepFile(const QString& path)
                                  .arg(QFileInfo(path).fileName()),
                              8000);
     return true;
+}
+
+void MainWindow::openJoint(const std::string& editId)
+{
+    if (sketch_) {
+        exitSketch();
+    }
+    cancelPicker();
+    showPanel(new JointPanel(*doc_, view_, editId, panelHost_));
+}
+
+QString MainWindow::showInterference()
+{
+    const auto hits = jig::interferences(doc_->state());
+    QString text;
+    if (hits.empty()) {
+        text = doc_->state().bodies.size() < 2 ? tr("There is only one part, so nothing can overlap.")
+                                               : tr("No parts overlap.");
+    }
+    else {
+        QStringList lines;
+        for (const auto& h : hits) {
+            auto name = [this](const std::string& id) {
+                const jig::Feature* f = doc_->feature(id);
+                return f ? q(f->name) : q(id);
+            };
+            lines << tr("%1 and %2 overlap by %3.").arg(name(h.a), name(h.b), q(jig::formatVolume(h.volume, doc_->units())));
+        }
+        text = lines.join("\n");
+    }
+    statusBar()->showMessage(text.section('\n', 0, 0), 10000);
+    return text;
 }
 
 bool MainWindow::insertCanvasFile(const QString& path)
@@ -3347,6 +3401,9 @@ void MainWindow::editFeature(int index)
             break;
         case jig::FeatureKind::Canvas:
             openCanvas(f.id);
+            break;
+        case jig::FeatureKind::Joint:
+            openJoint(f.id);
             break;
         case jig::FeatureKind::Sweep:
             openSweep(f.id);

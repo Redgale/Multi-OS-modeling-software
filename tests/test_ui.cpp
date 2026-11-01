@@ -3220,6 +3220,56 @@ private slots:
         QVERIFY2(at.red() > at.blue() + 40, qPrintable(at.name()));
     }
 
+    // A hinge from the panel: click the lid's bottom, then the base's top; turn it with the
+    // slider; limits stop it; interference finds a lid pushed into the base.
+    void jointPanel()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        {
+            jig::ScriptRunner r(w.document());
+            QVERIFY(r.runText("box id=a length=40mm width=40mm height=10mm\n"
+                              "box id=b center=100,0 length=10mm width=20mm height=6mm op=new\n").ok());
+        }
+        w.refreshAll();
+        w.runCommand("assemble.joint");
+        auto* jp = qobject_cast<JointPanel*>(w.featurePanel());
+        QVERIFY(jp);
+        QCOMPARE(jp->kind()->currentData().toString(), QString("revolute"));
+        QTest::qWait(200);
+        QVERIFY(!jp->previewOk());
+        QVERIFY(jp->statusText().contains("part that moves"));
+        jp->pick("b", "b/bottom", true);
+        QTRY_VERIFY(jp->statusText().contains("attaches to"));
+        jp->pick("a", "a/top", true);
+        jp->tryIt()->setValue(90);
+        QCOMPARE(jp->angle()->text(), QString("90 deg"));
+        QTRY_VERIFY(jp->previewOk());
+        w.viewport()->homeView();
+        QTRY_VERIFY(w.viewport()->meshesReady());
+        QTest::qWait(200);
+        w.grab().save(shotPath("joint-panel"));
+        QVERIFY(jp->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        auto box = [&](const char* id) { return jig::massProperties(w.document().state().bodies.at(id)->shape()); };
+        QVERIFY(std::abs(box("b").zmin - 10) < 1e-6);
+        QVERIFY(std::abs(box("b").xmax - box("b").xmin - 20) < 1e-6);  // turned a quarter
+        QCOMPARE(w.showInterference(), QString("No parts overlap."));
+        // edit: a gap of -2 mm pushes it into the base, and Interference says by how much
+        w.editFeature(2);
+        jp = qobject_cast<JointPanel*>(w.featurePanel());
+        QVERIFY(jp);
+        jp->field("offset")->setText("-2 mm");
+        jp->field("angle_max")->setText("45 deg");
+        QTRY_VERIFY(jp->previewOk());
+        QVERIFY(jp->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        QVERIFY(w.document().status(2).level == jig::StatusLevel::Warning);  // stopped at 45
+        QVERIFY(w.showInterference().contains("overlap by"));
+    }
+
     // Areas of a sketch are picked by clicking them in the 3D view: a square with a circle in it
     // can become a round post (the circle) or a block with a hole (the ring), not only a block.
     void clickAreasToExtrude()
