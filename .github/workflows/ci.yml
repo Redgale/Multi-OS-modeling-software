@@ -57,16 +57,21 @@ jobs:
       - name: Package AppImage
         run: |
           cmake --install build --prefix AppDir/usr
-          mkdir -p AppDir/usr/share/applications AppDir/usr/share/icons/hicolor/scalable/apps
+          mkdir -p AppDir/usr/share/applications AppDir/usr/share/icons/hicolor/scalable/apps \
+            AppDir/usr/share/icons/hicolor/256x256/apps
           cp packaging/linux/jigsmith.desktop AppDir/usr/share/applications/
           cp packaging/linux/jigsmith.svg AppDir/usr/share/icons/hicolor/scalable/apps/
+          # appimagetool (since late October 2026) makes .DirIcon only from a PNG or XPM
+          cp packaging/linux/jigsmith.png AppDir/usr/share/icons/hicolor/256x256/apps/
+          cp packaging/linux/jigsmith.png AppDir/jigsmith.png
           curl -sSLo linuxdeploy https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
           curl -sSLo linuxdeploy-plugin-qt https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
           chmod +x linuxdeploy linuxdeploy-plugin-qt
           export QMAKE=/usr/lib/qt6/bin/qmake
           ./linuxdeploy --appdir AppDir --plugin qt --output appimage \
             -d AppDir/usr/share/applications/jigsmith.desktop \
-            -i AppDir/usr/share/icons/hicolor/scalable/apps/jigsmith.svg
+            -i AppDir/usr/share/icons/hicolor/scalable/apps/jigsmith.svg \
+            -i AppDir/usr/share/icons/hicolor/256x256/apps/jigsmith.png
           ls -la *.AppImage
       - uses: actions/upload-artifact@v4
         with:
