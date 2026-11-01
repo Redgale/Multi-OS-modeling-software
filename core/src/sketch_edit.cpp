@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Sketch editing tools that change existing curves: Extend, Break and Mirror.
+#include <set>
 #include <algorithm>
 #include <cmath>
 #include <map>
@@ -713,6 +714,58 @@ Result<bool> Sketch::moveCurves(const std::vector<int>& ids, double dx, double d
     for (auto& [cid, c] : constraints_) {
         if (c.type == ConstraintType::Fix && std::find(items.begin(), items.end(), c.a) != items.end()) {
             std::tie(c.fx, c.fy) = pointXY(c.a);  // pinned at its new place
+        }
+    }
+    syncCurvePoints();
+    return true;
+}
+
+Result<bool> Sketch::scaleCurves(const std::vector<int>& ids, double factor, double cx, double cy)
+{
+    if (!(factor > 1e-6) || factor > 1e6) {
+        return editError("sketch.scale", "A scale factor is a number more than 0 (2 doubles, 0.5 halves).");
+    }
+    const std::vector<int> items = withPoints(*this, ids);
+    if (items.empty()) {
+        return editError("sketch.scale", "Select the curves to scale first.");
+    }
+    const std::set<int> in(items.begin(), items.end());
+    for (int id : items) {
+        SketchEntity& e = entities_.at(id);
+        if (e.type == EntityType::Point) {
+            e.x = cx + (e.x - cx) * factor;
+            e.y = cy + (e.y - cy) * factor;
+        }
+        else if (e.type == EntityType::Circle || e.type == EntityType::Arc || e.type == EntityType::Ellipse) {
+            e.r *= factor;
+        }
+    }
+    // lengths among the scaled items scale too; angles do not
+    char buf[32];
+    std::snprintf(buf, sizeof buf, "%.12g", factor);
+    for (auto& [cid, c] : constraints_) {
+        const bool lengthDim = c.type == ConstraintType::Distance || c.type == ConstraintType::DistanceX ||
+                               c.type == ConstraintType::DistanceY || c.type == ConstraintType::Radius ||
+                               c.type == ConstraintType::Diameter;
+        const bool inside = in.count(c.a) && (c.b == 0 ? c.type == ConstraintType::Distance || c.type == ConstraintType::Radius ||
+                                                             c.type == ConstraintType::Diameter
+                                                       : in.count(c.b) > 0);
+        if (lengthDim && inside && !c.expr.empty()) {
+            c.expr = "(" + c.expr + ") * " + buf;
+        }
+        // a coordinate from the sketch origin: x' = x k + cx (1 - k)
+        if ((c.type == ConstraintType::DistanceX || c.type == ConstraintType::DistanceY) && c.b == 0 && in.count(c.a) &&
+            !c.expr.empty()) {
+            const double shift = (c.type == ConstraintType::DistanceX ? cx : cy) * (1 - factor);
+            c.expr = "(" + c.expr + ") * " + buf;
+            if (std::abs(shift) > 1e-12) {
+                char sh[48];
+                std::snprintf(sh, sizeof sh, " + (%.12g mm)", shift);
+                c.expr += sh;
+            }
+        }
+        if (c.type == ConstraintType::Fix && in.count(c.a)) {
+            std::tie(c.fx, c.fy) = pointXY(c.a);
         }
     }
     syncCurvePoints();

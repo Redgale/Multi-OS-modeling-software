@@ -83,6 +83,8 @@ public:
     // Two lines on one infinite line (both ends of the second lie on the first); circles
     // and arcs that share a centre. Made from point-on-curve and coincident constraints.
     bool applyCollinear();
+    // Scales the selected curves by `factor` about their middle (their dimensions too).
+    bool scaleSelection(double factor);
     bool applyConcentric();
     void toggleConstruction();
     void deleteSelection();
@@ -119,6 +121,8 @@ public:
     {
         return selection_;
     }
+    // Every visible curve (not the points curves own).
+    void selectAll();
     const jig::Sketch& sketch() const
     {
         return work_;

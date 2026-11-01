@@ -2420,6 +2420,57 @@ bool SketchEditor::applyCollinear()
     return commit(tr("Collinear"), s);
 }
 
+void SketchEditor::selectAll()
+{
+    selection_.clear();
+    for (auto& [id, e] : work_.entities()) {
+        if (e.type != jig::EntityType::Point || !e.internal) {
+            if (e.type != jig::EntityType::Point) {
+                selection_.insert(id);
+            }
+        }
+    }
+    emit stateChanged();
+}
+
+bool SketchEditor::scaleSelection(double factor)
+{
+    std::vector<int> curves(selection_.begin(), selection_.end());
+    if (curves.empty()) {
+        message_ = tr("Select the curves to scale first.");
+        emit stateChanged();
+        return false;
+    }
+    // about the middle of what is selected (its points' bounding box)
+    double x0 = 1e300, y0 = 1e300, x1 = -1e300, y1 = -1e300;
+    for (int id : curves) {
+        const auto* e = work_.entity(id);
+        if (!e) {
+            continue;
+        }
+        std::vector<int> pts = e->type == jig::EntityType::Point ? std::vector<int> {id} : std::vector<int> {e->p1, e->p2, e->center};
+        pts.insert(pts.end(), e->pts.begin(), e->pts.end());
+        for (int p : pts) {
+            if (p && work_.entity(p)) {
+                auto [x, y] = work_.pointXY(p);
+                double r = e->type == jig::EntityType::Circle ? e->r : 0;
+                x0 = std::min(x0, x - r), y0 = std::min(y0, y - r), x1 = std::max(x1, x + r), y1 = std::max(y1, y + r);
+            }
+        }
+    }
+    if (x0 > x1) {
+        return false;
+    }
+    jig::Sketch s = work_;
+    auto r = s.scaleCurves(curves, factor, (x0 + x1) / 2, (y0 + y1) / 2);
+    if (!r) {
+        message_ = coreText(r.error().message);
+        emit stateChanged();
+        return false;
+    }
+    return commit(tr("Scale"), s);
+}
+
 bool SketchEditor::applyConcentric()
 {
     std::vector<int> rounds;

@@ -228,6 +228,10 @@ public:
     // Moves them instead (their end points move, so joined curves stretch to follow).
     Result<bool> moveCurves(const std::vector<int>& ids, double dx, double dy, double angle = 0, double cx = 0,
                             double cy = 0);
+    // Scales curves and points by `factor` about (cx, cy): positions, radii and the lengths of
+    // dimensions among them (a dimension's value becomes "(value) * factor"). Fixed points
+    // move with them.
+    Result<bool> scaleCurves(const std::vector<int>& ids, double factor, double cx = 0, double cy = 0);
     // Copies in rows and columns: n1 along (dx1, dy1), n2 along (dx2, dy2); counts include
     // the original. Copies around (cx, cy): n in all, spread over `total` (a full turn
     // spaces them evenly).

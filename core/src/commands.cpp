@@ -109,6 +109,7 @@ CommandRegistry::CommandRegistry()
     add({"sketch.break", "Break", "Break", "SKETCH MODIFY", "Split a curve where other curves cross it.", "", {"split curve"}, false, false, true, m1});
     add({"sketch.offset", "Offset", "Offset", "SKETCH MODIFY", "Make a parallel copy at a set distance, e.g. a wall or clearance.", "O", {"parallel copy", "wall thickness", "clearance"}, true, false, false, m1});
     add({"sketch.fillet", "Round corner (sketch)", "Sketch Fillet", "SKETCH MODIFY", "Round a sharp corner between two sketch curves.", "", {"round corner", "radius"}, false, false, false, m1});
+    add({"sketch.scale", "Scale (sketch)", "Sketch Scale", "SKETCH MODIFY", "Make the selected sketch curves bigger or smaller about their middle; their dimensions follow.", "", {"resize", "enlarge", "shrink"}, false, false, true, m1});
     add({"sketch.move", "Move / copy (sketch)", "Sketch Move/Copy", "SKETCH MODIFY", "Move the selected sketch curves, or copy them (hold Ctrl).", "M", {"translate", "rotate", "duplicate"}, false, false, true, m1});
     add({"sketch.construction", "Construction line", "Construction", "SKETCH MODIFY", "Turn a curve into a guide that is ignored when extruding.", "X", {"guide", "helper line", "centerline"}, true, false, false, m1});
     const char* cons[][3] = {
@@ -178,7 +179,7 @@ CommandRegistry::CommandRegistry()
     // shell, revolve, hole, patterns, mirror, parameters). Everything else above keeps its "coming in" note.
     static const std::set<std::string> inApp {
         "sketch.create", "sketch.finish", "sketch.line", "sketch.rectangle", "sketch.circle", "sketch.point",
-        "sketch.arc", "sketch.arc3", "sketch.arc_tangent", "sketch.circle2", "sketch.circle_tangent", "sketch.circle3", "sketch.rect3", "sketch.slot", "sketch.polygon", "sketch.ellipse", "sketch.spline", "sketch.text", "sketch.trim", "sketch.offset", "sketch.fillet", "sketch.project", "sketch.extend", "sketch.break", "sketch.mirror", "sketch.move", "sketch.pattern_rect", "sketch.pattern_circ",
+        "sketch.arc", "sketch.arc3", "sketch.arc_tangent", "sketch.circle2", "sketch.circle_tangent", "sketch.circle3", "sketch.rect3", "sketch.slot", "sketch.polygon", "sketch.ellipse", "sketch.spline", "sketch.text", "sketch.trim", "sketch.offset", "sketch.fillet", "sketch.project", "sketch.extend", "sketch.break", "sketch.mirror", "sketch.move", "sketch.scale", "sketch.pattern_rect", "sketch.pattern_circ",
         "sketch.dimension", "sketch.construction", "constraint.coincident", "constraint.collinear", "constraint.concentric",
         "constraint.midpoint", "constraint.fix",
         "constraint.parallel", "constraint.perpendicular", "constraint.horizontal", "constraint.tangent",
@@ -1052,7 +1053,7 @@ Result<bool> ScriptRunner::runLineUnchecked(std::string_view rawLine)
         });
     }
     // (a sketch mirror names a line with axis=; a body mirror names a plane)
-    const bool sketchMove = (a.verb == "move" || a.verb == "copy") && a.has("at");
+    const bool sketchMove = (a.verb == "move" || a.verb == "copy" || a.verb == "scale") && a.has("at");
     if (a.verb == "extend" || a.verb == "break" || (a.verb == "mirror" && a.has("axis")) || sketchMove ||
         a.verb == "grid" || a.verb == "ring") {
         // extend|break [sketch=s1] at=x,y : the curve nearest (x, y)
@@ -1063,7 +1064,7 @@ Result<bool> ScriptRunner::runLineUnchecked(std::string_view rawLine)
         // ring [sketch=s1] at=x,y;… center=x,y count=<n> [angle=360 deg]
         static const std::map<std::string, std::string> titles {
             {"extend", "Extend"}, {"break", "Break"}, {"mirror", "Mirror"}, {"move", "Move"},
-            {"copy", "Copy"},     {"grid", "Grid copy"}, {"ring", "Ring copy"}};
+            {"copy", "Copy"},     {"grid", "Grid copy"}, {"ring", "Ring copy"}, {"scale", "Scale"}};
         const std::string title = titles.at(a.verb);
         return editSketch(title, sid, [&](Sketch& s, const Document&) -> Result<bool> {
             auto curveAt = [&](const std::string& text, bool construction = false)
@@ -1126,6 +1127,18 @@ Result<bool> ScriptRunner::runLineUnchecked(std::string_view rawLine)
                     }
                     ids.push_back(c->first);
                     from = semi + 1;
+                }
+                if (a.verb == "scale") {
+                    // scale [sketch=s1] at=x,y;… factor=2 [about=x,y]
+                    auto about = pairOf("about", "0,0");
+                    if (!about) {
+                        return about.error();
+                    }
+                    auto k = evaluate(a.get("factor", "2"), doc.lookup());
+                    if (!k || !(k->dim == Dim::none())) {
+                        return makeError("script.args", "factor= is a plain number (2 doubles, 0.5 halves).");
+                    }
+                    return s.scaleCurves(ids, k->value, about->first, about->second);
                 }
                 if (a.verb == "move" || a.verb == "copy") {
                     auto by = pairOf("by", "0,0");

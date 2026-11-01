@@ -489,6 +489,16 @@
     </message>
     <message>
         <location line="+1" />
+        <source>Scale (sketch)</source>
+        <translation>[Sçálé (skétçh)~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Make the selected sketch curves bigger or smaller about their middle; their dimensions follow.</source>
+        <translation>[Máké thé séléçtéd skétçh çürvés bîggér ör smállér áböüt théîr mîddlé; théîr dîméñsîöñs föllöw.~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
         <source>Move / copy (sketch)</source>
         <translation>[Mövé / çöpý (skétçh)~~~~]</translation>
     </message>
@@ -1354,6 +1364,11 @@
         <location line="+1" />
         <source>Round a sharp corner between two sketch curves.</source>
         <translation>[Röüñd á shárp çörñér bétwééñ twö skétçh çürvés.~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Make the selected sketch curves bigger or smaller about their middle; their dimensions follow.</source>
+        <translation>[Máké thé séléçtéd skétçh çürvés bîggér ör smállér áböüt théîr mîddlé; théîr dîméñsîöñs föllöw.~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <location line="+1" />
@@ -3566,7 +3581,17 @@
         <translation>[Çlîçk á çürvé tö bréák ît.~~~~~~]</translation>
     </message>
     <message>
-        <location line="+20" />
+        <location line="+7" />
+        <source>A scale factor is a number more than 0 (2 doubles, 0.5 halves).</source>
+        <translation>[Á sçálé fáçtör îs á ñümbér möré tháñ 0 (2 döüblés, 0.5 hálvés).~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Select the curves to scale first.</source>
+        <translation>[Séléçt thé çürvés tö sçálé fîrst.~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+14" />
         <source>Pick an edge to project.</source>
         <translation>[Pîçk áñ édgé tö pröjéçt.~~~~~~]</translation>
     </message>
@@ -4076,7 +4101,7 @@
         <translation>[Thé föñt '%1' îs ñöt áváîláblé héré; üsîñg thé büîlt-îñ föñt (Îñtér).~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="-282" />
+        <location line="-284" />
         <source>There is nothing to export yet.</source>
         <translation>[Théré îs ñöthîñg tö éxpört ýét.~~~~~~~~]</translation>
     </message>
@@ -4656,7 +4681,7 @@
         <translation>[Séléçt thé çürvés tö mövé fîrst.~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+1" />
+        <location line="+3" />
         <source>A grid copy needs at least two in all.</source>
         <translation>[Á grîd çöpý ñééds át léást twö îñ áll.~~~~~~~~~]</translation>
     </message>
@@ -6520,13 +6545,13 @@
         <location line="+9" />
         <location line="+763" />
         <location line="+775" />
-        <location line="+968" />
+        <location line="+976" />
         <location line="+27" />
         <source>Sketch</source>
         <translation>[Skétçh~~]</translation>
     </message>
     <message>
-        <location line="-2531" />
+        <location line="-2539" />
         <source>Extrude</source>
         <translation>[Éxtrüdé~~]</translation>
     </message>
@@ -6647,11 +6672,12 @@
     </message>
     <message>
         <location line="+2" />
+        <location line="+1795" />
         <source>Scale</source>
         <translation>[Sçálé~]</translation>
     </message>
     <message>
-        <location line="+2" />
+        <location line="-1793" />
         <source>Thread</source>
         <translation>[Thréád~~]</translation>
     </message>
@@ -6823,12 +6849,12 @@
     </message>
     <message>
         <location line="+2" />
-        <location line="+1682" />
+        <location line="+1690" />
         <source>Mouse and trackpad</source>
         <translation>[Möüsé áñd tráçkpád~~~~~]</translation>
     </message>
     <message>
-        <location line="-1680" />
+        <location line="-1688" />
         <source>Default (middle-drag pans, Shift+middle orbits)</source>
         <translation>[Défáült (mîddlé-drág páñs, Shîft+mîddlé örbîts)~~~~~~~~~~~~]</translation>
     </message>
@@ -6849,30 +6875,30 @@
     </message>
     <message>
         <location line="+11" />
-        <location line="+1655" />
+        <location line="+1663" />
         <source>Theme</source>
         <translation>[Thémé~]</translation>
     </message>
     <message>
-        <location line="-1653" />
-        <location line="+1608" />
+        <location line="-1661" />
+        <location line="+1616" />
         <source>Light</source>
         <translation>[Lîght~]</translation>
     </message>
     <message>
-        <location line="-1608" />
-        <location line="+1607" />
+        <location line="-1616" />
+        <location line="+1615" />
         <source>Dark</source>
         <translation>[Dárk~]</translation>
     </message>
     <message>
-        <location line="-1606" />
-        <location line="+1608" />
+        <location line="-1614" />
+        <location line="+1616" />
         <source>High contrast</source>
         <translation>[Hîgh çöñtrást~~~~]</translation>
     </message>
     <message>
-        <location line="-1600" />
+        <location line="-1608" />
         <source>&amp;Help</source>
         <translation>[&amp;Hélp~]</translation>
     </message>
@@ -6989,12 +7015,12 @@
     </message>
     <message>
         <location line="+2" />
-        <location line="+2541" />
+        <location line="+2549" />
         <source>Rename…</source>
         <translation>[Réñámé…~~]</translation>
     </message>
     <message>
-        <location line="-2538" />
+        <location line="-2546" />
         <source>Delete body</source>
         <translation>[Délété bödý~~~]</translation>
     </message>
@@ -7010,13 +7036,13 @@
     </message>
     <message>
         <location line="+5" />
-        <location line="+1662" />
+        <location line="+1670" />
         <location line="+60" />
         <source>Properties</source>
         <translation>[Pröpértîés~~~]</translation>
     </message>
     <message>
-        <location line="-1716" />
+        <location line="-1724" />
         <source>Properties and help</source>
         <translation>[Pröpértîés áñd hélp~~~~~]</translation>
     </message>
@@ -7102,12 +7128,12 @@
     </message>
     <message>
         <location line="+18" />
-        <location line="+2420" />
+        <location line="+2428" />
         <source>Move rollback marker</source>
         <translation>[Mövé röllbáçk márkér~~~~~~]</translation>
     </message>
     <message>
-        <location line="-2218" />
+        <location line="-2226" />
         <source>Start here: every part begins as a flat sketch.
 Click Sketch on the toolbar, then click a plane.
 Or open the phone stand sample (File ▸ Open a sample).</source>
@@ -7318,12 +7344,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+0" />
-        <location line="+427" />
+        <location line="+435" />
         <source>Jigsmith designs (*.jig)</source>
         <translation>[Jîgsmîth désîgñs (*.jîg)~~~~~~]</translation>
     </message>
     <message>
-        <location line="-380" />
+        <location line="-388" />
         <source>Save view</source>
         <translation>[Sávé vîéw~~]</translation>
     </message>
@@ -7354,12 +7380,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+6" />
-        <location line="+1322" />
+        <location line="+1330" />
         <source>Insert mesh</source>
         <translation>[Îñsért mésh~~~]</translation>
     </message>
     <message>
-        <location line="-1321" />
+        <location line="-1329" />
         <source>Meshes (*.stl *.obj *.3mf)</source>
         <translation>[Méshés (*.stl *.öbj *.3mf)~~~~]</translation>
     </message>
@@ -7384,7 +7410,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
         <translation>[Öpéñ á skétçh fîrst: çlîçk Skétçh, théñ á pláñé.~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+42" />
+        <location line="+38" />
+        <source>Scale the selected curves by (2 doubles, 0.5 halves):</source>
+        <translation>[Sçálé thé séléçtéd çürvés bý (2 döüblés, 0.5 hálvés):~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+12" />
         <source>That tool is not available yet.</source>
         <translation>[Thát tööl îs ñöt áváîláblé ýét.~~~~~~~~]</translation>
     </message>
@@ -10323,12 +10354,22 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
         <translation>[Çlîçk öñ á lîñé, árç ör öpéñ smööth çürvé, ñéár thé éñd tö léñgthéñ.~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+656" />
+        <location line="+584" />
+        <source>Select the curves to scale first.</source>
+        <translation>[Séléçt thé çürvés tö sçálé fîrst.~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+31" />
+        <source>Scale</source>
+        <translation>[Sçálé~]</translation>
+    </message>
+    <message>
+        <location line="+92" />
         <source>Select a line and a curve, or two curves.</source>
         <translation>[Séléçt á lîñé áñd á çürvé, ör twö çürvés.~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="-1518" />
+        <location line="-1569" />
         <location line="+284" />
         <location line="+691" />
         <location line="+101" />
@@ -10632,7 +10673,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
         <translation>[Çöllîñéár~~~]</translation>
     </message>
     <message>
-        <location line="+13" />
+        <location line="+64" />
         <source>Select two or more circles or arcs to share one centre.</source>
         <translation>[Séléçt twö ör möré çîrçlés ör árçs tö sháré öñé çéñtré.~~~~~~~~~~~~~~]</translation>
     </message>

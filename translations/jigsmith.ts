@@ -490,6 +490,16 @@
     </message>
     <message>
         <location line="+1"/>
+        <source>Scale (sketch)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Make the selected sketch curves bigger or smaller about their middle; their dimensions follow.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>Move / copy (sketch)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1354,6 +1364,11 @@
     <message>
         <location line="+1"/>
         <source>Round a sharp corner between two sketch curves.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Make the selected sketch curves bigger or smaller about their middle; their dimensions follow.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -3567,7 +3582,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+20"/>
+        <location line="+7"/>
+        <source>A scale factor is a number more than 0 (2 doubles, 0.5 halves).</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Select the curves to scale first.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+14"/>
         <source>Pick an edge to project.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4077,7 +4102,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-282"/>
+        <location line="-284"/>
         <source>There is nothing to export yet.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4657,7 +4682,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
+        <location line="+3"/>
         <source>A grid copy needs at least two in all.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6525,13 +6550,13 @@
         <location line="+9"/>
         <location line="+763"/>
         <location line="+775"/>
-        <location line="+968"/>
+        <location line="+976"/>
         <location line="+27"/>
         <source>Sketch</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2531"/>
+        <location line="-2539"/>
         <source>Extrude</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6652,11 +6677,12 @@
     </message>
     <message>
         <location line="+2"/>
+        <location line="+1795"/>
         <source>Scale</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+2"/>
+        <location line="-1793"/>
         <source>Thread</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6828,12 +6854,12 @@
     </message>
     <message>
         <location line="+2"/>
-        <location line="+1682"/>
+        <location line="+1690"/>
         <source>Mouse and trackpad</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1680"/>
+        <location line="-1688"/>
         <source>Default (middle-drag pans, Shift+middle orbits)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6854,30 +6880,30 @@
     </message>
     <message>
         <location line="+11"/>
-        <location line="+1655"/>
+        <location line="+1663"/>
         <source>Theme</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1653"/>
-        <location line="+1608"/>
+        <location line="-1661"/>
+        <location line="+1616"/>
         <source>Light</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1608"/>
-        <location line="+1607"/>
+        <location line="-1616"/>
+        <location line="+1615"/>
         <source>Dark</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1606"/>
-        <location line="+1608"/>
+        <location line="-1614"/>
+        <location line="+1616"/>
         <source>High contrast</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1600"/>
+        <location line="-1608"/>
         <source>&amp;Help</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6994,12 +7020,12 @@
     </message>
     <message>
         <location line="+2"/>
-        <location line="+2541"/>
+        <location line="+2549"/>
         <source>Rename…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2538"/>
+        <location line="-2546"/>
         <source>Delete body</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7015,13 +7041,13 @@
     </message>
     <message>
         <location line="+5"/>
-        <location line="+1662"/>
+        <location line="+1670"/>
         <location line="+60"/>
         <source>Properties</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1716"/>
+        <location line="-1724"/>
         <source>Properties and help</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7107,12 +7133,12 @@
     </message>
     <message>
         <location line="+18"/>
-        <location line="+2420"/>
+        <location line="+2428"/>
         <source>Move rollback marker</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2218"/>
+        <location line="-2226"/>
         <source>Start here: every part begins as a flat sketch.
 Click Sketch on the toolbar, then click a plane.
 Or open the phone stand sample (File ▸ Open a sample).</source>
@@ -7321,12 +7347,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+0"/>
-        <location line="+427"/>
+        <location line="+435"/>
         <source>Jigsmith designs (*.jig)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-380"/>
+        <location line="-388"/>
         <source>Save view</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7357,12 +7383,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+6"/>
-        <location line="+1322"/>
+        <location line="+1330"/>
         <source>Insert mesh</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1321"/>
+        <location line="-1329"/>
         <source>Meshes (*.stl *.obj *.3mf)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7387,7 +7413,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+42"/>
+        <location line="+38"/>
+        <source>Scale the selected curves by (2 doubles, 0.5 halves):</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+12"/>
         <source>That tool is not available yet.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -10335,12 +10366,22 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+656"/>
+        <location line="+584"/>
+        <source>Select the curves to scale first.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+31"/>
+        <source>Scale</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+92"/>
         <source>Select a line and a curve, or two curves.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1518"/>
+        <location line="-1569"/>
         <location line="+284"/>
         <location line="+691"/>
         <location line="+101"/>
@@ -10644,7 +10685,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+13"/>
+        <location line="+64"/>
         <source>Select two or more circles or arcs to share one centre.</source>
         <translation type="unfinished"></translation>
     </message>

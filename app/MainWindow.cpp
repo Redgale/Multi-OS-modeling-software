@@ -924,7 +924,7 @@ void MainWindow::buildToolbar()
     for (const char* id : {"sketch.circle", "sketch.arc", "sketch.arc3", "sketch.slot", "sketch.polygon", "sketch.ellipse",
                            "sketch.spline", "sketch.text",
                            "sketch.point", "sketch.dimension", "sketch.construction", "sketch.trim", "sketch.offset",
-                           "sketch.extend", "sketch.break", "sketch.fillet", "sketch.mirror", "sketch.move",
+                           "sketch.extend", "sketch.break", "sketch.fillet", "sketch.mirror", "sketch.move", "sketch.scale",
                            "sketch.pattern_rect", "sketch.pattern_circ", "sketch.project"}) {
         sketchBar_->addAction(registryAction(id));
     }
@@ -1976,6 +1976,14 @@ void MainWindow::runCommand(const QString& id)
         }
         else if (id == "constraint.collinear") {
             sketch_->applyCollinear();
+        }
+        else if (id == "sketch.scale") {
+            bool ok = false;
+            const double k = QInputDialog::getDouble(this, tr("Scale"), tr("Scale the selected curves by (2 doubles, 0.5 halves):"),
+                                                     2.0, 0.001, 1000.0, 3, &ok);
+            if (ok) {
+                sketch_->scaleSelection(k);
+            }
         }
         else if (id == "constraint.concentric") {
             sketch_->applyConcentric();

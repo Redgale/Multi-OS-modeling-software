@@ -3113,3 +3113,39 @@ TEST(Joint, PinInASlotTurnsAndSlides)
     EXPECT_NEAR(bb.zmin, 10, 1e-6);
     EXPECT_NEAR(std::max(bb.xmax - bb.xmin, bb.ymax - bb.ymin), 20, 1e-6);
 }
+
+TEST(SketchScale, CurvesAndTheirDimensionsScale)
+{
+    // a dimensioned 10 x 6 rectangle and a 4 mm circle, doubled about the origin: 20 x 12 and 8
+    auto doc = build("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=10 h=6\ncircle sketch=s1 center=20,0 d=4\n"
+                     "scale sketch=s1 at=5,0;-5,0;0,3;0,-3;22,0 factor=2\n");
+    expectAllOk(*doc);
+    const auto& st = *doc->state().sketches.at("s1");
+    std::vector<double> areas;
+    for (auto& r : st.profiles.regions) {
+        areas.push_back(r.area);
+    }
+    std::sort(areas.begin(), areas.end());
+    ASSERT_EQ(areas.size(), 2u);
+    EXPECT_NEAR(areas[0], pi * 16, 1e-6);  // the circle, now 8 across
+    EXPECT_NEAR(areas[1], 240, 1e-6);      // the rectangle, 20 x 12
+    // the circle's centre moved away from the origin too
+    double cxMax = 0;
+    for (auto& [id, e] : st.solved.entities()) {
+        if (e.type == EntityType::Circle) {
+            cxMax = st.solved.pointXY(e.center).first;
+        }
+    }
+    EXPECT_NEAR(cxMax, 40, 1e-6);
+    // halved about a point, and refused for a zero factor or nothing near
+    auto half = build("sketch id=s1 plane=XY\nrect sketch=s1 center=10,10 w=10 h=10\n"
+                      "scale sketch=s1 at=15,10;5,10;10,15;10,5 factor=0.5 about=10,10\n");
+    expectAllOk(*half);
+    EXPECT_NEAR(half->state().sketches.at("s1")->profiles.regions[0].area, 25, 1e-6);
+    for (const char* bad : {"sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=10 h=6\nscale sketch=s1 at=5,0 factor=0\n",
+                            "sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=10 h=6\nscale sketch=s1 at=50,50 factor=2\n"}) {
+        auto d = std::make_unique<Document>();
+        ScriptRunner r(*d);
+        EXPECT_FALSE(r.runText(bad).ok()) << bad;
+    }
+}

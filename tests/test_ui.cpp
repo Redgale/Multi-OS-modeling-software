@@ -3411,6 +3411,27 @@ private slots:
         QVERIFY(!w.viewport()->realistic());
     }
 
+    // Sketch scale: everything selected, doubled about its middle; the dimensions follow.
+    void sketchScale()
+    {
+        MainWindow w;
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        {
+            jig::ScriptRunner r(w.document());
+            QVERIFY(r.runText("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=10 h=6\n").ok());
+        }
+        w.refreshAll();
+        w.editFeature(0);
+        QTRY_VERIFY(w.sketchEditor() != nullptr);
+        w.sketchEditor()->selectAll();
+        QVERIFY(!w.sketchEditor()->selection().empty());
+        QVERIFY(w.sketchEditor()->scaleSelection(2));
+        w.runCommand("sketch.finish");
+        QTRY_VERIFY(w.sketchEditor() == nullptr);
+        QVERIFY(std::abs(w.document().state().sketches.at("s1")->profiles.regions.at(0).area - 240) < 1e-6);
+    }
+
     // Areas of a sketch are picked by clicking them in the 3D view: a square with a circle in it
     // can become a round post (the circle) or a block with a hole (the ring), not only a block.
     void clickAreasToExtrude()
