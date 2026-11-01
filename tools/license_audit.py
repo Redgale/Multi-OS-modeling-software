@@ -26,8 +26,8 @@ for d in data["dependencies"]:
 
 conda = (root / "packaging/windows/environment.yml").read_text()
 conda_map = {"occt": "opencascade", "eigen": "eigen3", "libboost-headers": "boost",
-             "nlohmann_json": "nlohmann-json", "gtest": "gtest", "freetype": "freetype", "cmake": None,
-             "ninja": None}
+             "nlohmann_json": "nlohmann-json", "gtest": "gtest", "freetype": "freetype", "harfbuzz": "harfbuzz", "cmake": None,
+             "ninja": None, "pkg-config": None}
 for m in re.finditer(r"^\s*-\s*([A-Za-z0-9_.-]+)", conda.split("dependencies:", 1)[1], re.M):
     name = m.group(1)
     if name not in conda_map:
@@ -39,10 +39,17 @@ cmake = (root / "cmake/Dependencies.cmake").read_text()
 cmake_map = {"OpenCASCADE": "opencascade", "Eigen3": "eigen3", "Boost": "boost",
              "nlohmann_json": "nlohmann-json", "miniz": "miniz", "googletest": "gtest",
              "GTest": "gtest", "Qt6": "qt6", "Freetype": "freetype"}
+cmake_map["PkgConfig"] = None  # the tool, not a library
 for m in re.finditer(r"(?:find_package|FetchContent_Declare)\(\s*(\w+)", cmake):
     name = m.group(1)
+    if name in cmake_map and cmake_map[name] is None:
+        continue
     if cmake_map.get(name) not in deps:
         errors.append(f"cmake/Dependencies.cmake uses '{name}', which is not in tools/dependencies.json")
+# pkg-config modules: pkg_check_modules(PREFIX [options] module)
+for m in re.finditer(r"pkg_check_modules\(\s*\w+((?:\s+[A-Z_]+)*)\s+([a-z0-9_+-]+)", cmake):
+    if m.group(2) not in deps:
+        errors.append(f"cmake/Dependencies.cmake uses pkg-config module '{m.group(2)}', which is not in tools/dependencies.json")
 
 notices = (root / "THIRD_PARTY_LICENSES.md").read_text()
 for d in data["dependencies"]:

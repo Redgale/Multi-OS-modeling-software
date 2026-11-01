@@ -41,6 +41,18 @@ endif()
 # --- FreeType (FTL, BSD-style), glyph outlines for sketch text (D-014) ---------------
 find_package(Freetype 2.8 REQUIRED)
 
+# --- HarfBuzz (MIT), text shaping: joined and reordered scripts, ligatures, kerning ------
+# Optional: without it, letters are placed one by one with FreeType's pair kerning.
+find_package(PkgConfig QUIET)
+if(PkgConfig_FOUND)
+    pkg_check_modules(HARFBUZZ QUIET IMPORTED_TARGET GLOBAL harfbuzz)
+endif()
+if(HARFBUZZ_FOUND)
+    message(STATUS "Text shaping: HarfBuzz ${HARFBUZZ_VERSION}")
+else()
+    message(STATUS "Text shaping: HarfBuzz not found; letters are placed one by one")
+endif()
+
 # --- nlohmann/json (MIT) -----------------------------------------------------------
 find_package(nlohmann_json 3.10 QUIET CONFIG)
 if(NOT nlohmann_json_FOUND)

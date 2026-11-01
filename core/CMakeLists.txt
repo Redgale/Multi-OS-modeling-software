@@ -29,4 +29,9 @@ target_link_libraries(jig_core
     PUBLIC  jig_occt nlohmann_json::nlohmann_json
     PRIVATE planegcs jig_miniz Freetype::Freetype)
 target_compile_features(jig_core PUBLIC cxx_std_20)
+
+if(TARGET PkgConfig::HARFBUZZ)  # text shaping (cmake/Dependencies.cmake)
+    target_link_libraries(jig_core PRIVATE PkgConfig::HARFBUZZ)
+    target_compile_definitions(jig_core PRIVATE JIG_HAVE_HARFBUZZ=1)
+endif()
 jig_set_warnings(jig_core)

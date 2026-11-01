@@ -154,6 +154,7 @@ public:
     QMenu* openSelectOther(const QPoint& viewPos);
     void isolateBody(const std::string& body);
     void showAllBodies();
+    void refreshAll();  // after any model change (also from tests that change the document directly)
     bool bodyVisible(const std::string& body) const
     {
         return !doc_->hiddenBodies().count(body);
@@ -180,7 +181,6 @@ private:
     void buildMenus();
     void buildToolbar();
     void buildDocks();
-    void refreshAll();  // after any model change
     void refreshDatums();
     void refreshBrowser();
     void refreshTimeline();

@@ -121,6 +121,11 @@ public:
     {
         return shownBodies_;
     }
+    // bodies whose meshes are in the view now
+    int meshedBodyCount() const
+    {
+        return int(meshes_.size());
+    }
 
     void setNavPreset(NavPreset p)
     {
@@ -372,6 +377,7 @@ private:
     } drag_ = Drag::None;
     std::optional<PickResult> hover_, selected_;
     std::atomic<int> generation_ {0};
+    int meshGeneration_ = 0;  // the generation meshes_ belongs to
     int pending_ = 0;
     int shownBodies_ = 0;
     bool zoomInverted_ = false;

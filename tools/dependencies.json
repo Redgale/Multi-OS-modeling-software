@@ -117,6 +117,15 @@
       "source": "https://freetype.org"
     },
     {
+      "name": "HarfBuzz",
+      "id": "harfbuzz",
+      "license": "MIT",
+      "linking": "dynamic (optional at build time)",
+      "use": "text shaping for sketch text: joined and right-to-left scripts, ligatures, kerning",
+      "notice": "HarfBuzz's 'Old MIT' licence: copyright notice and permission notice kept in THIRD_PARTY_LICENSES.md",
+      "source": "https://harfbuzz.github.io"
+    },
+    {
       "name": "Inter font",
       "id": "inter",
       "license": "SIL-OFL-1.1",

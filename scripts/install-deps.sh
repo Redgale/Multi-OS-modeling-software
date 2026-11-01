@@ -37,16 +37,16 @@ elif command -v xbps-install >/dev/null 2>&1; then
     # Void Linux (glibc or musl)
     # xbps must be current before it installs anything else (fresh containers often are not)
     [ "$mode" = print ] || $SUDO xbps-install -Syu xbps
-    cmd="xbps-install -Sy base-devel cmake ninja pkg-config occt-devel qt6-base-devel eigen boost-headers json-c++ gtest-devel tbb-devel freetype-devel MesaLib-devel"
+    cmd="xbps-install -Sy base-devel cmake ninja pkg-config occt-devel qt6-base-devel eigen boost-headers json-c++ gtest-devel tbb-devel freetype-devel harfbuzz-devel MesaLib-devel"
 elif command -v apt-get >/dev/null 2>&1; then
-    cmd="apt-get install -y build-essential cmake ninja-build libocct-modeling-algorithms-dev libocct-modeling-data-dev libocct-data-exchange-dev libocct-foundation-dev libtbb-dev libeigen3-dev libboost-dev nlohmann-json3-dev libgtest-dev qt6-base-dev qt6-tools-dev qt6-l10n-tools libgl-dev libfreetype-dev"
+    cmd="apt-get install -y build-essential cmake ninja-build libocct-modeling-algorithms-dev libocct-modeling-data-dev libocct-data-exchange-dev libocct-foundation-dev libtbb-dev libeigen3-dev libboost-dev nlohmann-json3-dev libgtest-dev qt6-base-dev qt6-tools-dev qt6-l10n-tools libgl-dev libfreetype-dev libharfbuzz-dev"
     [ "$mode" = print ] || $SUDO apt-get update
 elif command -v dnf >/dev/null 2>&1; then
-    cmd="dnf install -y gcc-c++ cmake ninja-build opencascade-devel qt6-qtbase-devel eigen3-devel boost-devel json-devel gtest-devel tbb-devel freetype-devel mesa-libGL-devel"
+    cmd="dnf install -y gcc-c++ cmake ninja-build opencascade-devel qt6-qtbase-devel eigen3-devel boost-devel json-devel gtest-devel tbb-devel freetype-devel harfbuzz-devel mesa-libGL-devel"
 elif command -v pacman >/dev/null 2>&1; then
-    cmd="pacman -S --needed --noconfirm base-devel cmake ninja opencascade qt6-base eigen boost nlohmann-json gtest onetbb freetype2"
+    cmd="pacman -S --needed --noconfirm base-devel cmake ninja opencascade qt6-base eigen boost nlohmann-json gtest onetbb freetype2 harfbuzz"
 elif command -v zypper >/dev/null 2>&1; then
-    cmd="zypper --non-interactive install gcc-c++ cmake ninja occt-devel qt6-base-devel qt6-opengl-devel qt6-openglwidgets-devel qt6-test-devel eigen3-devel boost-devel nlohmann_json-devel googletest-devel tbb-devel freetype2-devel Mesa-libGL-devel"
+    cmd="zypper --non-interactive install gcc-c++ cmake ninja occt-devel qt6-base-devel qt6-opengl-devel qt6-openglwidgets-devel qt6-test-devel eigen3-devel boost-devel nlohmann_json-devel googletest-devel tbb-devel freetype2-devel harfbuzz-devel Mesa-libGL-devel"
 else
     echo "Sorry, this script does not know your package manager." >&2
     echo "See the comment at the top of $0 for what to install by hand." >&2

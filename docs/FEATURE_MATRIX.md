@@ -63,7 +63,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Control-point spline | 10 | v0.2 | — | Not in brief's v0.1 list |
 | Conic curve | 10 | v0.2 | — | Not in brief's v0.1 list |
 | Point | 10 | v0.1 M1 | **app** | |
-| Text (font, height, alignment) | 10 | v0.1 M5 | **app** + scripts: built-in Inter or a font file, size as an expression, angle, centred on a draggable point; edit by double-click (D-014). Installed fonts by family name and style (e.g. "DejaVu Sans Bold"; a Font choice in the Text tool); several lines with `\n`, each centred (B-020) | Fonts spike (5.4f) |
+| Text (font, height, alignment) | 10 | v0.1 M5 | **app** + scripts: built-in Inter or a font file, size as an expression, angle, centred on a draggable point; edit by double-click (D-014). Installed fonts by family name and style (e.g. "DejaVu Sans Bold"; a Font choice in the Text tool); several lines with `\n`, each centred (B-020); shaped by HarfBuzz (joined and right-to-left scripts, ligatures) | Fonts spike (5.4f) |
 | Text on path | 10 | v0.2 (done early) | **app** + scripts (`along=`): text follows any sketch curve, reading upright | |
 | Sketch mirror, circular and rectangular pattern | 10 | v0.1 M1 | **app** + scripts: Mirror (held symmetric); Grid and Ring copy, linked: the copies follow the original and their spacing or angle | |
 | Project / Include, Intersect | 10 | v0.1 M5 (Project); Intersect v0.2 | **app** + scripts (`project`): an edge, or a face's whole outline, of an earlier body, as fixed lines, circles and arcs that follow the body when it changes (`linked=no` for a plain copy); slanted circles refused | Brief lists Project/Include |

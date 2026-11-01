@@ -10,6 +10,8 @@ dependencies:
   - libboost-headers
   - nlohmann_json
   - freetype
+  - harfbuzz
+  - pkg-config
   - gtest
   - cmake
   - ninja

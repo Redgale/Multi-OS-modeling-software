@@ -1666,6 +1666,35 @@ TEST(Text, InstalledFontsByFamilyName)
     EXPECT_TRUE(byName->status(0).message.find("not available") == std::string::npos) << byName->status(0).message;
 }
 
+TEST(Text, JoinedScriptsAreShaped)
+{
+    // Arabic letters take joined forms, lam + alef become one ligature and the line reads
+    // right to left; DejaVu Sans has these forms (skipped where it is not installed)
+    const auto font = findFont("DejaVu Sans");
+    if (!font) {
+        GTEST_SKIP() << "DejaVu Sans is not installed";
+    }
+    auto shape = [&](const std::string& text) {
+        SketchText t;
+        t.text = text;
+        t.font = "DejaVu Sans";
+        t.heightValue = 10;
+        auto r = textFaces(t, 0, 0, gp_Ax3());
+        EXPECT_TRUE(r.ok());
+        return r ? r.value() : TextOutline {};
+    };
+    const auto word = shape("\u0633\u0644\u0627\u0645");  // salaam: seen, lam, alef, meem
+    if (!word.shaped) {
+        GTEST_SKIP() << "built without HarfBuzz";
+    }
+    EXPECT_FALSE(word.faces.empty());
+    const unsigned seen = shape("\u0633").glyphs.at(0), meem = shape("\u0645").glyphs.at(0);
+    ASSERT_EQ(word.glyphs.size(), 3u);  // seen, the lam-alef ligature, meem
+    EXPECT_NE(word.glyphs.back(), seen);  // the first letter, rightmost, in its joining form
+    // the last letter is leftmost (right to left), on its own as Arabic writes it after alef
+    EXPECT_EQ(word.glyphs.front(), meem);
+}
+
 TEST(Text, SeveralLinesStackAndCentre)
 {
     // two lines ("\n" as typed): taller than one, as wide as the wider line, centred

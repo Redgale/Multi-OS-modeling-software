@@ -1200,6 +1200,7 @@ private slots:
             QVERIFY(r.runText("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=10 h=10\nextrude id=e1 sketch=s1 distance=10\n"
                               "sketch id=s2 plane=XY\nrect sketch=s2 center=40,0 w=10 h=10\nextrude id=e2 sketch=s2 distance=10 op=new\n").ok());
         }
+        w.refreshAll();  // the bodies are shown now, not when something else refreshes the window
         Viewport* view = w.viewport();
         w.runCommand("solid.move");
         auto* mv = qobject_cast<MovePanel*>(w.featurePanel());
@@ -1208,13 +1209,14 @@ private slots:
         view->fitAll();
         view->viewTop();
         QTRY_VERIFY(view->meshesReady());
+        QTRY_COMPARE(view->meshedBodyCount(), 2);
         // settled: from above, the second block is under its centre
         QString seen;
         QTRY_VERIFY2([&] {
             const QPoint at = view->project(QVector3D(40, 0, 10)).toPoint();
             auto f = view->pickFaceAt(at);
             seen = QString("at %1,%2 of %3x%4, bodies %5, hit %6 cam %7")
-                       .arg(at.x()).arg(at.y()).arg(view->width()).arg(view->height()).arg(view->bodyCount())
+                       .arg(at.x()).arg(at.y()).arg(view->width()).arg(view->height()).arg(view->meshedBodyCount())
                        .arg(f ? QString::fromStdString(f->body) : QString("none"))
                        .arg(QString::fromStdString(view->camera().dump()));
             return f && f->body == "e2";

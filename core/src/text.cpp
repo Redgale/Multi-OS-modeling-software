@@ -23,6 +23,9 @@
 #include <ft2build.h>
 #include FT_FREETYPE_H
 #include FT_OUTLINE_H
+#ifdef JIG_HAVE_HARFBUZZ
+#include <hb.h>
+#endif
 
 #include "jig/kernel.hpp"
 
@@ -423,7 +426,10 @@ Result<TextOutline> textFaces(const SketchText& t, double x, double y, const gp_
     }
     TextOutline result;
     FT_Face face = nullptr;
+    std::string facePath;  // where the face came from, for the shaper (empty: the built-in font)
+    int faceIndex = 0;
     if (!t.font.empty() && std::filesystem::exists(t.font)) {
+        facePath = t.font;
         if (FT_New_Face(lib, t.font.c_str(), 0, &face) != 0) {
             face = nullptr;
             result.note = fmt("The font file %1 could not be read; using the built-in font (Inter).", {t.font});
@@ -435,9 +441,17 @@ Result<TextOutline> textFaces(const SketchText& t, double x, double y, const gp_
         if (found && FT_New_Face(lib, found->path.c_str(), found->index, &face) != 0) {
             face = nullptr;
         }
+        if (face) {
+            facePath = found->path;
+            faceIndex = found->index;
+        }
         if (!face) {
             result.note = fmt("The font '%1' is not available here; using the built-in font (Inter).", {t.font});
         }
+    }
+    if (!face) {
+        facePath.clear();
+        faceIndex = 0;
     }
     if (!face && FT_New_Memory_Face(lib, jig_font_inter_regular, FT_Long(jig_font_inter_regular_size), 0, &face) != 0) {
         return makeError("text.font", "The built-in font could not be loaded.");
@@ -472,67 +486,136 @@ Result<TextOutline> textFaces(const SketchText& t, double x, double y, const gp_
     const double lineStep = face->height > 0 ? double(face->height) : 1.2 * double(face->units_per_EM);
     std::vector<std::pair<double, double>> lineX;  // per line: leftmost and rightmost outline point
     double ymin = 1e300, ymax = -1e300;
-    FT_UInt prev = 0;
-    const bool kerning = FT_HAS_KERNING(face);
     // "\n" (a backslash and n, as typed in a one-line field or a script) starts a new line too
     std::string text = t.text;
     for (size_t at = text.find("\\n"); at != std::string::npos; at = text.find("\\n", at)) {
         text.replace(at, 2, "\n");
     }
+    // Each line as glyphs with their advances and offsets, in font units, left to right as seen.
+    struct Placed
+    {
+        FT_UInt gi;
+        double advance, dx, dy;
+    };
+    std::vector<std::vector<Placed>> lines;
+    std::vector<std::string> lineTexts;
+    for (size_t from = 0;;) {
+        const size_t nl = text.find('\n', from);
+        lineTexts.push_back(text.substr(from, nl == std::string::npos ? std::string::npos : nl - from));
+        if (nl == std::string::npos) {
+            break;
+        }
+        from = nl + 1;
+    }
+#ifdef JIG_HAVE_HARFBUZZ
+    hb_blob_t* blob = facePath.empty()
+                          ? hb_blob_create(reinterpret_cast<const char*>(jig_font_inter_regular),
+                                           unsigned(jig_font_inter_regular_size), HB_MEMORY_MODE_READONLY, nullptr,
+                                           nullptr)
+                          : hb_blob_create_from_file(facePath.c_str());
+    hb_face_t* hface = hb_face_create(blob, unsigned(faceIndex));
+    hb_font_t* hfont = hb_font_create(hface);
+    hb_font_set_scale(hfont, int(face->units_per_EM), int(face->units_per_EM));  // font units
+    const bool canShape = hb_face_get_glyph_count(hface) > 0;
+    for (const std::string& lt : lineTexts) {
+        std::vector<Placed> row;
+        if (canShape) {
+            hb_buffer_t* buf = hb_buffer_create();
+            hb_buffer_add_utf8(buf, lt.c_str(), int(lt.size()), 0, int(lt.size()));
+            hb_buffer_guess_segment_properties(buf);  // script, language, direction from the text
+            hb_shape(hfont, buf, nullptr, 0);
+            unsigned n = 0;
+            const hb_glyph_info_t* info = hb_buffer_get_glyph_infos(buf, &n);
+            const hb_glyph_position_t* pos = hb_buffer_get_glyph_positions(buf, &n);
+            for (unsigned i = 0; i < n; ++i) {
+                row.push_back({FT_UInt(info[i].codepoint), double(pos[i].x_advance), double(pos[i].x_offset),
+                               double(pos[i].y_offset)});
+            }
+            hb_buffer_destroy(buf);
+        }
+        lines.push_back(std::move(row));
+    }
+    hb_font_destroy(hfont);
+    hb_face_destroy(hface);
+    hb_blob_destroy(blob);
+    result.shaped = canShape;
+#else
+    const bool canShape = false;
+#endif
+    if (!canShape) {
+        // letters one by one, with the font's pair kerning
+        lines.clear();
+        const bool kerning = FT_HAS_KERNING(face);
+        for (const std::string& lt : lineTexts) {
+            std::vector<Placed> row;
+            FT_UInt prev = 0;
+            for (char32_t cp : utf8(lt)) {
+                const FT_UInt gi = FT_Get_Char_Index(face, FT_ULong(cp));
+                if (kerning && prev && gi && !row.empty()) {
+                    FT_Vector k;
+                    if (FT_Get_Kerning(face, prev, gi, FT_KERNING_UNSCALED, &k) == 0) {
+                        row.back().advance += double(k.x);
+                    }
+                }
+                prev = gi;
+                double adv = 0;
+                if (FT_Load_Glyph(face, gi, FT_LOAD_NO_SCALE | FT_LOAD_NO_HINTING | FT_LOAD_NO_BITMAP) == 0) {
+                    adv = double(face->glyph->advance.x);
+                }
+                row.push_back({gi, adv, 0, 0});
+            }
+            lines.push_back(std::move(row));
+        }
+    }
     lineX.push_back({1e300, -1e300});
-    for (char32_t cp : utf8(text)) {
-        if (cp == U'\n') {
+    for (const auto& row : lines) {
+        if (&row != &lines.front()) {
             pen = 0;
             penY -= lineStep;
             ++line;
-            prev = 0;
             lineX.push_back({1e300, -1e300});
-            continue;
         }
-        const FT_UInt gi = FT_Get_Char_Index(face, FT_ULong(cp));
-        if (kerning && prev && gi) {
-            FT_Vector k;
-            if (FT_Get_Kerning(face, prev, gi, FT_KERNING_UNSCALED, &k) == 0) {
-                pen += double(k.x);
+        for (const Placed& pl : row) {
+            const FT_UInt gi = pl.gi;
+            result.glyphs.push_back(unsigned(gi));
+            const double gx = pen + pl.dx, gy = penY + pl.dy;
+            pen += pl.advance;  // (the glyph sits at gx, gy)
+            if (FT_Load_Glyph(face, gi, FT_LOAD_NO_SCALE | FT_LOAD_NO_HINTING | FT_LOAD_NO_BITMAP) != 0) {
+                continue;
+            }
+            if (face->glyph->format == FT_GLYPH_FORMAT_OUTLINE) {
+                Decomposer d;
+                FT_Outline_Decompose(&face->glyph->outline, &funcs, &d);
+                Glyph g {{}, gx, gy, line};
+                for (auto& c : d.contours) {
+                    if (c.segments.empty()) {
+                        continue;
+                    }
+                    // close the contour if the font left it open
+                    if ((c.segments.back().back() - c.segments.front().front()).Modulus() > 1e-9) {
+                        c.segments.push_back({c.segments.back().back(), c.segments.front().front()});
+                    }
+                    double a = 0;
+                    for (size_t i = 0, j = c.poly.size() - 1; i < c.poly.size(); j = i++) {
+                        a += c.poly[j].X() * c.poly[i].Y() - c.poly[i].X() * c.poly[j].Y();
+                    }
+                    c.area = a / 2;
+                    if (std::abs(c.area) < 1e-6 || c.poly.size() < 3) {
+                        continue;
+                    }
+                    for (auto& p : c.poly) {
+                        lineX[size_t(line)].first = std::min(lineX[size_t(line)].first, p.X() + gx);
+                        lineX[size_t(line)].second = std::max(lineX[size_t(line)].second, p.X() + gx);
+                        ymin = std::min(ymin, p.Y() + gy);
+                        ymax = std::max(ymax, p.Y() + gy);
+                    }
+                    g.contours.push_back(std::move(c));
+                }
+                if (!g.contours.empty()) {
+                    glyphs.push_back(std::move(g));
+                }
             }
         }
-        prev = gi;
-        if (FT_Load_Glyph(face, gi, FT_LOAD_NO_SCALE | FT_LOAD_NO_HINTING | FT_LOAD_NO_BITMAP) != 0) {
-            continue;
-        }
-        if (face->glyph->format == FT_GLYPH_FORMAT_OUTLINE) {
-            Decomposer d;
-            FT_Outline_Decompose(&face->glyph->outline, &funcs, &d);
-            Glyph g {{}, pen, penY, line};
-            for (auto& c : d.contours) {
-                if (c.segments.empty()) {
-                    continue;
-                }
-                // close the contour if the font left it open
-                if ((c.segments.back().back() - c.segments.front().front()).Modulus() > 1e-9) {
-                    c.segments.push_back({c.segments.back().back(), c.segments.front().front()});
-                }
-                double a = 0;
-                for (size_t i = 0, j = c.poly.size() - 1; i < c.poly.size(); j = i++) {
-                    a += c.poly[j].X() * c.poly[i].Y() - c.poly[i].X() * c.poly[j].Y();
-                }
-                c.area = a / 2;
-                if (std::abs(c.area) < 1e-6 || c.poly.size() < 3) {
-                    continue;
-                }
-                for (auto& p : c.poly) {
-                    lineX[size_t(line)].first = std::min(lineX[size_t(line)].first, p.X() + pen);
-                    lineX[size_t(line)].second = std::max(lineX[size_t(line)].second, p.X() + pen);
-                    ymin = std::min(ymin, p.Y() + penY);
-                    ymax = std::max(ymax, p.Y() + penY);
-                }
-                g.contours.push_back(std::move(c));
-            }
-            if (!g.contours.empty()) {
-                glyphs.push_back(std::move(g));
-            }
-        }
-        pen += double(face->glyph->advance.x);
     }
     if (glyphs.empty()) {
         return result;  // empty or whitespace-only text: no areas

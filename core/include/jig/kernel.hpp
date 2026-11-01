@@ -281,6 +281,8 @@ struct TextOutline
 {
     std::vector<TopoDS_Face> faces;
     std::string note;  // set when the requested font was not available
+    std::vector<unsigned> glyphs;  // the font's glyphs placed, line by line, left to right as seen
+    bool shaped = false;           // laid out by HarfBuzz (joined letters, ligatures, right to left)
 };
 Result<TextOutline> textFaces(const SketchText& t, double x, double y, const gp_Ax3& frame);
 

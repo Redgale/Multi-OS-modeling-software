@@ -358,6 +358,17 @@ the square of the size, save/load round trip, font fallback warning. Cross-check
 against a prototype using OCCT's builder (option a) on "Jigsmith 8" at size 10 with Inter:
 both give 11 faces and 106.146 mm² of area. Inter's CFF outlines and DejaVu's TrueType outlines both produce valid faces.
 
+**Update (2026-11-01): option (d) added.** Each line is now shaped by HarfBuzz (from the
+same font file, or the built-in font's memory) when the build finds it through pkg-config:
+letters that join (Arabic), right-to-left reading, ligatures and the font's own kerning
+(GPOS). HarfBuzz is MIT ("Old MIT"), dynamically linked, and optional at build time; without
+it the old one-by-one placement is used. A line is one run with the direction HarfBuzz
+guesses from its first letters: mixed right-to-left and left-to-right text in one line
+(which needs the Unicode bidirectional algorithm, e.g. FriBidi) is not reordered yet.
+Evidence: `Text.JoinedScriptsAreShaped` (Arabic "salaam" in DejaVu Sans: three glyphs, with
+lam and alef as one ligature, the first letter rightmost in its joining form); the
+existing `Text.*` tests give the same results with shaping.
+
 **Consequences.** New dependency FreeType (FTL, dynamic; every target platform packages
 it). Text is not split by other sketch curves, and text does not wrap around curved faces
 (Emboss, v0.2). System font enumeration by family name is not implemented yet (B-020).

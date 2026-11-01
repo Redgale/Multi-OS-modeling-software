@@ -236,6 +236,7 @@ void Viewport::setBodies(std::vector<BodyInput> bodies)
         // Nothing to mesh: clear now.
         makeCurrent();
         meshes_.clear();
+        meshGeneration_ = gen;
         doneCurrent();
         hover_.reset();
         selected_.reset();
@@ -1003,8 +1004,10 @@ void Viewport::paintGL()
         }
         jig::DisplayMesh m = it->mesh.get();
         if (it->generation == generation_) {
-            if (!changed) {
-                // first result of a new generation replaces the old meshes
+            if (meshGeneration_ != generation_) {
+                // the first result of a new generation replaces the old meshes (later ones,
+                // even in later frames, are added to it)
+                meshGeneration_ = generation_;
                 meshes_.clear();
                 hover_.reset();
                 selected_.reset();
