@@ -932,7 +932,8 @@ void MainWindow::buildToolbar()
     const std::pair<const char*, std::vector<const char*>> variants[] = {
         {"sketch.rectangle", {"sketch.rect3"}},
         {"sketch.circle", {"sketch.circle2", "sketch.circle3", "sketch.circle_tangent"}},
-        {"sketch.arc", {"sketch.arc_tangent"}}};
+        {"sketch.arc", {"sketch.arc_tangent"}},
+        {"sketch.spline", {"sketch.spline_control"}}};
     for (const auto& [base, more] : variants) {
         if (auto* b = qobject_cast<QToolButton*>(sketchBar_->widgetForAction(registryAction(base)))) {
             auto* m = new QMenu(b);
@@ -1965,7 +1966,11 @@ void MainWindow::runCommand(const QString& id)
             {"constraint.tangent", CT::Tangent},       {"constraint.equal", CT::Equal},
             {"constraint.midpoint", CT::Midpoint},     {"constraint.symmetric", CT::Symmetric},
             {"constraint.fix", CT::Fix}};
-        if (auto t = tools.find(id); t != tools.end()) {
+        if (id == "sketch.spline" || id == "sketch.spline_control") {
+            sketch_->setSplineControl(id == "sketch.spline_control");
+            sketch_->setTool(SketchEditor::Tool::Spline);
+        }
+        else if (auto t = tools.find(id); t != tools.end()) {
             sketch_->setTool(t->second);
         }
         else if (auto c = cons.find(id); c != cons.end()) {

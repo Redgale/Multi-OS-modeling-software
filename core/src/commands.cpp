@@ -97,6 +97,7 @@ CommandRegistry::CommandRegistry()
     add({"sketch.ellipse", "Ellipse", "Ellipse", "SKETCH CREATE", "Draw an oval from its center and two axes.", "", {"oval"}, false, false, true, m1});
     add({"sketch.slot", "Slot", "Slot", "SKETCH CREATE", "Draw a rounded-end slot, ideal for adjustable screws.", "", {"oblong", "obround"}, false, false, true, m1});
     add({"sketch.spline", "Smooth curve", "Fit Point Spline", "SKETCH CREATE", "Draw a smooth curve through the points you click.", "", {"spline", "freeform", "organic"}, false, false, true, m1});
+    add({"sketch.spline_control", "Control-point spline", "Control Point Spline", "SKETCH CREATE", "A smooth curve shaped by the points you click, like pulling it towards them; it passes through the first and last only.", "", {"bezier", "b-spline", "control polygon", "cv spline"}, false, false, true, m1});
     add({"sketch.point", "Point", "Point", "SKETCH CREATE", "Place a reference point, e.g. for a hole center.", "", {"marker"}, false, false, false, m1});
     add({"sketch.text", "Text", "Text", "SKETCH CREATE", "Add lettering you can extrude or cut, e.g. a name plate.", "", {"label", "letters", "engrave", "name"}, false, false, false, m5});
     add({"sketch.mirror", "Mirror (sketch)", "Sketch Mirror", "SKETCH CREATE", "Copy the selected sketch curves across a line; the copies stay mirrored.", "", {"symmetric copy", "flip"}, false, false, true, m1});
@@ -179,7 +180,7 @@ CommandRegistry::CommandRegistry()
     // shell, revolve, hole, patterns, mirror, parameters). Everything else above keeps its "coming in" note.
     static const std::set<std::string> inApp {
         "sketch.create", "sketch.finish", "sketch.line", "sketch.rectangle", "sketch.circle", "sketch.point",
-        "sketch.arc", "sketch.arc3", "sketch.arc_tangent", "sketch.circle2", "sketch.circle_tangent", "sketch.circle3", "sketch.rect3", "sketch.slot", "sketch.polygon", "sketch.ellipse", "sketch.spline", "sketch.text", "sketch.trim", "sketch.offset", "sketch.fillet", "sketch.project", "sketch.extend", "sketch.break", "sketch.mirror", "sketch.move", "sketch.scale", "sketch.pattern_rect", "sketch.pattern_circ",
+        "sketch.arc", "sketch.arc3", "sketch.arc_tangent", "sketch.circle2", "sketch.circle_tangent", "sketch.circle3", "sketch.rect3", "sketch.slot", "sketch.polygon", "sketch.ellipse", "sketch.spline", "sketch.spline_control", "sketch.text", "sketch.trim", "sketch.offset", "sketch.fillet", "sketch.project", "sketch.extend", "sketch.break", "sketch.mirror", "sketch.move", "sketch.scale", "sketch.pattern_rect", "sketch.pattern_circ",
         "sketch.dimension", "sketch.construction", "constraint.coincident", "constraint.collinear", "constraint.concentric",
         "constraint.midpoint", "constraint.fix",
         "constraint.parallel", "constraint.perpendicular", "constraint.horizontal", "constraint.tangent",
@@ -1225,7 +1226,7 @@ Result<bool> ScriptRunner::runLineUnchecked(std::string_view rawLine)
     }
     if (a.verb == "ellipse" || a.verb == "spline") {
         // ellipse [sketch=s1] center=x,y a=<len> b=<len> [angle=<angle>]   (a, b = the two radii; dimensioned)
-        // spline [sketch=s1] points=x,y;x,y;… [closed=yes]                 (a smooth curve through them)
+        // spline [sketch=s1] points=x,y;x,y;… [closed=yes] [control=yes]   (through them, or shaped by them)
         const std::string sid = a.get("sketch", last_);
         return editSketch(a.verb == "ellipse" ? "Ellipse" : "Smooth curve", sid,
                           [&](Sketch& s, const Document&) -> Result<bool> {
@@ -1250,7 +1251,7 @@ Result<bool> ScriptRunner::runLineUnchecked(std::string_view rawLine)
                     return makeError("script.args", closed ? "A closed smooth curve needs at least 3 points."
                                                            : "A smooth curve needs at least 2 points.");
                 }
-                s.addSpline(pts, closed);
+                s.addSpline(pts, closed, a.get("control", "no") == "yes");
                 return true;
             }
             auto pe = parsePairExpr(a.get("center", "0,0"));

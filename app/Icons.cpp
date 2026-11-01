@@ -59,6 +59,7 @@ const std::map<QString, QString>& icons()
         {"sketch.ellipse", "E12 12 9 5.5 f O12 12 1.4"},
         {"sketch.slot", "M8 8 L16 8 A16 12 4 90 -180 L8 16 A8 12 4 270 -180 Z f O8 12 1.3 O16 12 1.3"},
         {"sketch.spline", "M3 17 C7 3 12 21 21 6 f O3 17 1.6 O12 12 1.6 O21 6 1.6"},
+        {"sketch.spline_control", "M4 18 Q12 2 20 18 d M4 18 L12 4 L20 18 f O12 4 1.6"},
         {"sketch.point", "M12 5 L12 9 M12 15 L12 19 M5 12 L9 12 M15 12 L19 12 f O12 12 2"},
         {"sketch.text", "M5 5 L19 5 M12 5 L12 20 M9 20 L15 20 a M5 5 L5 7.5 M19 5 L19 7.5"},
         {"sketch.mirror", "M9 6 L3 18 L9 18 Z a M15 6 L21 18 L15 18 Z d M12 3 L12 21"},

@@ -43,6 +43,7 @@ struct SketchEntity
     bool internal = false;  // point owned by a curve (hidden in the UI)
     std::vector<int> pts;   // spline fit points, in order
     bool closed = false;    // spline: runs back to its first point
+    bool control = false;   // spline: the points are its control polygon (it passes through the ends only)
 };
 
 // A spline's shape as cubic Bézier pieces (each: start, two handles, end), one per pair of
@@ -158,7 +159,8 @@ public:
     // Ellipse from its centre, the end of its major axis and the minor radius.
     int addEllipse(double cx, double cy, double ax, double ay, double minor);
     // Smooth curve through the given points (at least two; three for a closed one).
-    int addSpline(const std::vector<std::pair<double, double>>& points, bool closed = false);
+    // `control`: the points shape the curve as a control polygon instead of lying on it.
+    int addSpline(const std::vector<std::pair<double, double>>& points, bool closed = false, bool control = false);
     std::vector<Bezier2> splinePieces(int splineId) const;
     // Points along any curve, for drawing and picking (a line gives its two ends).
     std::vector<std::pair<double, double>> curvePoints(int entityId, int perPiece = 24) const;

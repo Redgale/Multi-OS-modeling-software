@@ -212,12 +212,13 @@ int Sketch::addEllipse(double cx, double cy, double ax, double ay, double minor)
     return e.id;
 }
 
-int Sketch::addSpline(const std::vector<std::pair<double, double>>& points, bool closed)
+int Sketch::addSpline(const std::vector<std::pair<double, double>>& points, bool closed, bool control)
 {
     SketchEntity e;
     e.id = nextId_++;
     e.type = EntityType::Spline;
     e.closed = closed && points.size() >= 3;
+    e.control = control;
     for (auto [x, y] : points) {
         e.pts.push_back(addPoint(x, y, true));
     }
@@ -235,7 +236,7 @@ std::vector<Bezier2> Sketch::splinePieces(int splineId) const
     for (int pid : e->pts) {
         P.push_back(pointXY(pid));
     }
-    return detail::catmullRom(P, e->closed);
+    return e->control ? detail::bsplinePieces(P, e->closed) : detail::catmullRom(P, e->closed);
 }
 
 std::vector<std::pair<double, double>> Sketch::curvePoints(int entityId, int perPiece) const
@@ -774,7 +775,7 @@ int Sketch::attachedPoint(int entityId, double px, double py)
                 for (size_t k = 4; k + 1 < v.size(); k += 2) {
                     size = std::max(size, std::hypot(v[k] - v[k - 2], v[k + 1] - v[k - 1]));
                 }
-                if (std::abs(detail::pointOnSmooth(v, e.closed)) < 1e-3 * std::max(size, 1.0)) {
+                if (std::abs(detail::pointOnSmooth(v, e.closed, e.control)) < 1e-3 * std::max(size, 1.0)) {
                     dist = 0;
                 }
             }
@@ -1666,9 +1667,9 @@ SolveReport Sketch::runSolver(const ParamLookup& lookup, const int* dragPoint, d
                         ps.push_back(pts[q].x);
                         ps.push_back(pts[q].y);
                     }
-                    const bool closed = f->closed;
-                    auto* con = new detail::FuncConstraint(std::move(ps), [closed](const auto& v) {
-                        return detail::pointOnSmooth(v, closed);
+                    const bool closed = f->closed, control = f->control;
+                    auto* con = new detail::FuncConstraint(std::move(ps), [closed, control](const auto& v) {
+                        return detail::pointOnSmooth(v, closed, control);
                     });
                     con->setTag(tag);
                     sys.addConstraint(con);
@@ -2233,6 +2234,9 @@ nlohmann::json Sketch::toJson() const
                 if (e.closed) {
                     j["closed"] = true;
                 }
+                if (e.control) {
+                    j["control"] = true;
+                }
                 break;
         }
         ents.push_back(j);
@@ -2369,6 +2373,7 @@ Result<Sketch> Sketch::fromJson(const nlohmann::json& j)
             e.a1 = je.value("a1", 0.0);
             e.pts = je.value("points", std::vector<int> {});
             e.closed = je.value("closed", false);
+            e.control = je.value("control", false);
             s.entities_[e.id] = e;
         }
         // every curve's points must be points of this sketch (a damaged file could name others)

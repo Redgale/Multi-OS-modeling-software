@@ -18,6 +18,9 @@ using Cubic = std::array<Pt, 4>;
 
 // The cubic pieces of a smooth curve through P (Catmull-Rom; open ends mirror their neighbour).
 std::vector<Cubic> catmullRom(const std::vector<Pt>& P, bool closed);
+// The cubic pieces of a uniform cubic B-spline with control points P (open: ends reflected so
+// the curve starts at the first point and ends at the last; closed: wraps round).
+std::vector<Cubic> bsplinePieces(const std::vector<Pt>& P, bool closed);
 
 // A constraint whose error is any function of its parameters' values; the gradient is
 // worked out by small steps, so the function only has to be smooth where it is zero.
@@ -37,7 +40,7 @@ private:
 double pointOnEllipse(const std::vector<double>& v, double minor);  // px py cx cy ax ay
 double lineTangentToEllipse(const std::vector<double>& v, double minor);  // l1 l2 c a
 double circleTangentToEllipse(const std::vector<double>& v, double minor);  // ccx ccy r c a
-double pointOnSmooth(const std::vector<double>& v, bool closed);  // px py, then the fit points
+double pointOnSmooth(const std::vector<double>& v, bool closed, bool control = false);  // px py, then the points
 // Two directions at a shared point running the same way (or straight back):
 // each is 4 values (from, to); `perp` turns one a quarter turn (an arc: its radius).
 double sameDirection(const std::vector<double>& v, bool perpA, bool perpB);

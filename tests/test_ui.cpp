@@ -3432,6 +3432,40 @@ private slots:
         QVERIFY(std::abs(w.document().state().sketches.at("s1")->profiles.regions.at(0).area - 240) < 1e-6);
     }
 
+    // The control-point spline tool: clicks shape the curve; it is closed by clicking the first point.
+    void controlPointSpline()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        Viewport* view = w.viewport();
+        QVERIFY(w.createSketchOn("XY"));
+        SketchEditor* sk = w.sketchEditor();
+        auto click = [&](double x, double y) {
+            QTest::mouseMove(view, sk->screenOf(x, y));
+            QTest::mouseClick(view, Qt::LeftButton, Qt::NoModifier, sk->screenOf(x, y));
+        };
+        w.runCommand("sketch.spline_control");
+        QVERIFY(sk->splineControl());
+        click(-10, -10);
+        click(10, -10);
+        click(10, 10);
+        click(-10, 10);
+        click(-10, -10);
+        QVERIFY2(sk->message().isEmpty(), qPrintable(sk->message()));
+        const auto regions = w.document().state().sketches.begin()->second->profiles.regions;
+        QCOMPARE(int(regions.size()), 1);
+        QVERIFY(regions[0].area < 400 && regions[0].area > 200);  // inside its control square
+        bool control = false;
+        for (auto& [id, e] : sk->sketch().entities()) {
+            control = control || (e.type == jig::EntityType::Spline && e.control && e.closed);
+        }
+        QVERIFY(control);
+        w.runCommand("sketch.spline");
+        QVERIFY(!sk->splineControl());
+    }
+
     // Areas of a sketch are picked by clicking them in the 3D view: a square with a circle in it
     // can become a round post (the circle) or a block with a hole (the ring), not only a block.
     void clickAreasToExtrude()

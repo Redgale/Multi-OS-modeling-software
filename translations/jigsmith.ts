@@ -365,6 +365,16 @@
     </message>
     <message>
         <location line="+1"/>
+        <source>Control-point spline</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>A smooth curve shaped by the points you click, like pulling it towards them; it passes through the first and last only.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>Point</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1304,6 +1314,11 @@
     <message>
         <location line="+1"/>
         <source>Draw a smooth curve through the points you click.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>A smooth curve shaped by the points you click, like pulling it towards them; it passes through the first and last only.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -6549,14 +6564,14 @@
     <message>
         <location line="+9"/>
         <location line="+763"/>
-        <location line="+775"/>
-        <location line="+976"/>
+        <location line="+776"/>
+        <location line="+980"/>
         <location line="+27"/>
         <source>Sketch</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2539"/>
+        <location line="-2544"/>
         <source>Extrude</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6677,12 +6692,12 @@
     </message>
     <message>
         <location line="+2"/>
-        <location line="+1795"/>
+        <location line="+1800"/>
         <source>Scale</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1793"/>
+        <location line="-1798"/>
         <source>Thread</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6763,12 +6778,12 @@
     </message>
     <message>
         <location line="+4"/>
-        <location line="+891"/>
+        <location line="+892"/>
         <source>&lt;p&gt;Nothing selected.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-880"/>
+        <location line="-881"/>
         <source>&lt;h3&gt;Body&lt;/h3&gt;&lt;p&gt;&lt;b&gt;Name:&lt;/b&gt; %1&lt;br&gt;&lt;b&gt;Volume:&lt;/b&gt; %2&lt;br&gt;&lt;b&gt;Size:&lt;/b&gt; %3 × %4 × %5&lt;br&gt;&lt;b&gt;Faces:&lt;/b&gt; %6&lt;/p&gt;&lt;p&gt;Right-click it in the Browser to hide, isolate or rename it.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6854,12 +6869,12 @@
     </message>
     <message>
         <location line="+2"/>
-        <location line="+1690"/>
+        <location line="+1695"/>
         <source>Mouse and trackpad</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1688"/>
+        <location line="-1693"/>
         <source>Default (middle-drag pans, Shift+middle orbits)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6880,30 +6895,30 @@
     </message>
     <message>
         <location line="+11"/>
-        <location line="+1663"/>
+        <location line="+1668"/>
         <source>Theme</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1661"/>
-        <location line="+1616"/>
+        <location line="-1666"/>
+        <location line="+1621"/>
         <source>Light</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1616"/>
-        <location line="+1615"/>
+        <location line="-1621"/>
+        <location line="+1620"/>
         <source>Dark</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1614"/>
-        <location line="+1616"/>
+        <location line="-1619"/>
+        <location line="+1621"/>
         <source>High contrast</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1608"/>
+        <location line="-1613"/>
         <source>&amp;Help</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6974,7 +6989,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+28"/>
+        <location line="+29"/>
         <source>CONSTRAIN</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7020,12 +7035,12 @@
     </message>
     <message>
         <location line="+2"/>
-        <location line="+2549"/>
+        <location line="+2553"/>
         <source>Rename…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2546"/>
+        <location line="-2550"/>
         <source>Delete body</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7041,13 +7056,13 @@
     </message>
     <message>
         <location line="+5"/>
-        <location line="+1670"/>
+        <location line="+1674"/>
         <location line="+60"/>
         <source>Properties</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1724"/>
+        <location line="-1728"/>
         <source>Properties and help</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7133,12 +7148,12 @@
     </message>
     <message>
         <location line="+18"/>
-        <location line="+2428"/>
+        <location line="+2432"/>
         <source>Move rollback marker</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2226"/>
+        <location line="-2230"/>
         <source>Start here: every part begins as a flat sketch.
 Click Sketch on the toolbar, then click a plane.
 Or open the phone stand sample (File ▸ Open a sample).</source>
@@ -7231,7 +7246,7 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1237"/>
+        <location line="-1238"/>
         <source>Fastener</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7241,7 +7256,7 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+671"/>
+        <location line="+672"/>
         <source>Tick to show, untick to hide. Right-click to isolate or rename.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7347,12 +7362,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+0"/>
-        <location line="+435"/>
+        <location line="+439"/>
         <source>Jigsmith designs (*.jig)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-388"/>
+        <location line="-392"/>
         <source>Save view</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7383,12 +7398,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+6"/>
-        <location line="+1330"/>
+        <location line="+1334"/>
         <source>Insert mesh</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1329"/>
+        <location line="-1333"/>
         <source>Meshes (*.stl *.obj *.3mf)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7413,7 +7428,7 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+38"/>
+        <location line="+42"/>
         <source>Scale the selected curves by (2 doubles, 0.5 halves):</source>
         <translation type="unfinished"></translation>
     </message>

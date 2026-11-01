@@ -3149,3 +3149,41 @@ TEST(SketchScale, CurvesAndTheirDimensionsScale)
         EXPECT_FALSE(r.runText(bad).ok()) << bad;
     }
 }
+
+TEST(SketchCurves, ControlPointSplines)
+{
+    // a closed control-point spline on a square's corners: inside the square (it only touches
+    // the control polygon's shape), symmetric, and an area that extrudes
+    auto doc = build("sketch id=s1 plane=XY\nspline sketch=s1 points=-10,-10;10,-10;10,10;-10,10 closed=yes control=yes\n"
+                     "extrude id=e1 sketch=s1 distance=5mm\n");
+    expectAllOk(*doc);
+    auto p = props(*doc);
+    EXPECT_TRUE(p.valid);
+    EXPECT_NEAR(p.xmax, -p.xmin, 1e-6);
+    EXPECT_GT(p.volume, 5 * 200);  // still mostly the square
+    // a uniform cubic B-spline is widest halfway along a side: (-10 + 23·10 + 23·10 - 10) / 48
+    EXPECT_NEAR(p.xmax, 440.0 / 48, 1e-6);
+    // an open one starts and ends on its end points, but misses the middle one
+    auto open = build("sketch id=s1 plane=XY\nspline sketch=s1 points=0,0;10,10;20,0 control=yes\n");
+    const Sketch& s = open->state().sketches.at("s1")->solved;
+    int id = 0;
+    for (auto& [eid, e] : s.entities()) {
+        if (e.type == EntityType::Spline) {
+            id = eid;
+            EXPECT_TRUE(e.control);
+        }
+    }
+    const auto pieces = s.splinePieces(id);
+    ASSERT_EQ(pieces.size(), 2u);
+    EXPECT_NEAR(pieces.front()[0].first, 0, 1e-12);
+    EXPECT_NEAR(pieces.back()[3].first, 20, 1e-12);
+    EXPECT_LT(pieces.front()[3].second, 10 - 1);  // the curve passes below the middle control point
+    // kept when saved, and a point can be held on it
+    auto back = Document::fromJson(open->toJson());
+    ASSERT_TRUE(back.ok());
+    bool control = false;
+    for (auto& [eid, e] : (*back)->state().sketches.at("s1")->solved.entities()) {
+        control = control || (e.type == EntityType::Spline && e.control);
+    }
+    EXPECT_TRUE(control);
+}

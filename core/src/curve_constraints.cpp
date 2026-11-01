@@ -39,6 +39,36 @@ std::vector<Cubic> catmullRom(const std::vector<Pt>& P, bool closed)
     return out;
 }
 
+std::vector<Cubic> bsplinePieces(const std::vector<Pt>& P, bool closed)
+{
+    std::vector<Cubic> out;
+    const int n = int(P.size());
+    if (n < 2) {
+        return out;
+    }
+    std::vector<Pt> E;
+    if (closed) {
+        E = P;
+        E.push_back(P[0]);
+        E.push_back(P[size_t(1 % n)]);
+        E.insert(E.begin(), P[size_t(n - 1)]);
+    }
+    else {
+        E.push_back({2 * P[0].first - P[1].first, 2 * P[0].second - P[1].second});
+        E.insert(E.end(), P.begin(), P.end());
+        E.push_back({2 * P[size_t(n - 1)].first - P[size_t(n - 2)].first, 2 * P[size_t(n - 1)].second - P[size_t(n - 2)].second});
+    }
+    auto mix = [](const Pt& a, double wa, const Pt& b, double wb, const Pt& c, double wc) {
+        return Pt {a.first * wa + b.first * wb + c.first * wc, a.second * wa + b.second * wb + c.second * wc};
+    };
+    for (size_t j = 0; j + 3 < E.size(); ++j) {
+        const Pt &q0 = E[j], &q1 = E[j + 1], &q2 = E[j + 2], &q3 = E[j + 3];
+        out.push_back({mix(q0, 1.0 / 6, q1, 4.0 / 6, q2, 1.0 / 6), mix(q1, 2.0 / 3, q2, 1.0 / 3, q3, 0),
+                       mix(q1, 1.0 / 3, q2, 2.0 / 3, q3, 0), mix(q1, 1.0 / 6, q2, 4.0 / 6, q3, 1.0 / 6)});
+    }
+    return out;
+}
+
 FuncConstraint::FuncConstraint(std::vector<double*> params, Fn fn)
     : fn_(std::move(fn))
 {
@@ -146,13 +176,13 @@ double circleTangentToEllipse(const std::vector<double>& v, double minor)
     return best - v[2];
 }
 
-double pointOnSmooth(const std::vector<double>& v, bool closed)
+double pointOnSmooth(const std::vector<double>& v, bool closed, bool control)
 {
     std::vector<Pt> P;
     for (size_t i = 2; i + 1 < v.size(); i += 2) {
         P.emplace_back(v[i], v[i + 1]);
     }
-    const auto pieces = catmullRom(P, closed);
+    const auto pieces = control ? bsplinePieces(P, closed) : catmullRom(P, closed);
     if (pieces.empty()) {
         return 0;
     }

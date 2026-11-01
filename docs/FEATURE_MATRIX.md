@@ -60,7 +60,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Ellipse | 10 | v0.1 M1 | **app** + scripts (`ellipse`): radii as dimensions; point-on and tangent (line, circle, arc) constraints along it (our own solver constraints) | Solver sees its centre and axis end; the minor radius is set before solving (D-015) |
 | Slot (center-to-center, overall, arc slots) | 10 | v0.1 M1 (arc slots v0.2) | **app** + scripts: center-to-center | |
 | Fit-point spline | 10 | v0.1 M1 | **app** + scripts (`spline`): open or closed, drag points to reshape; no tangent handles or constraints along it yet | |
-| Control-point spline | 10 | v0.2 | — | Not in brief's v0.1 list |
+| Control-point spline | 10 | v0.2 | **app** (Sketch ▸ Control-point spline, beside the smooth curve) + scripts (`spline … control=yes`): uniform cubic B-spline, open or closed; trims and offsets like smooth curves | |
 | Conic curve | 10 | v0.2 | — | Not in brief's v0.1 list |
 | Point | 10 | v0.1 M1 | **app** | |
 | Text (font, height, alignment) | 10 | v0.1 M5 | **app** + scripts: built-in Inter or a font file, size as an expression, angle, centred on a draggable point; edit by double-click (D-014). Installed fonts by family name and style (e.g. "DejaVu Sans Bold"; a Font choice in the Text tool); several lines with `\n`, each centred (B-020); shaped by HarfBuzz (joined and right-to-left scripts, ligatures) | Fonts spike (5.4f) |

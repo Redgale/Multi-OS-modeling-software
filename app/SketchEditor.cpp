@@ -2293,7 +2293,7 @@ void SketchEditor::finishSpline(bool closed)
     for (auto& p : splinePts_) {
         pts.emplace_back(p.local.x(), p.local.y());
     }
-    const int c = s.addSpline(pts, closed);
+    const int c = s.addSpline(pts, closed, splineControl_);
     const jig::SketchEntity S = *s.entity(c);
     for (size_t i = 0; i < splinePts_.size() && i < S.pts.size(); ++i) {
         if (splinePts_[i].point) {  // clicked on an existing point: start or pass there
@@ -2832,7 +2832,7 @@ void SketchEditor::rebuildOverlay()
                 pts.emplace_back(q.local.x(), q.local.y());
             }
             pts.emplace_back(b.x(), b.y());
-            const int c = tmp.addSpline(pts, false);
+            const int c = tmp.addSpline(pts, false, splineControl_);
             addPoly(polyline(tmp, *tmp.entity(c)), kAccent, false);
         }
         else if (tool_ == Tool::Ellipse) {

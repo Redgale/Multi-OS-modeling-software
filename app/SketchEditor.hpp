@@ -123,6 +123,15 @@ public:
     }
     // Every visible curve (not the points curves own).
     void selectAll();
+    // The spline tool draws through its points (false) or shapes the curve by them (true).
+    void setSplineControl(bool on)
+    {
+        splineControl_ = on;
+    }
+    bool splineControl() const
+    {
+        return splineControl_;
+    }
     const jig::Sketch& sketch() const
     {
         return work_;
@@ -237,6 +246,7 @@ private:
     bool cursorValid_ = false;
     int hover_ = 0;
     std::set<int> selection_;
+    bool splineControl_ = false;
     int dimFirst_ = 0;               // dimension tool: first picked entity
     int dimTarget_ = 0, dimSecond_ = 0;
 
