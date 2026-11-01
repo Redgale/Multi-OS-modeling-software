@@ -89,6 +89,7 @@ const std::map<QString, QString>& icons()
         {"solid.extrude", "M3 18 L8 14 L20 14 L15 18 Z f M8 14 L8 7 L20 7 L20 14 Z a M13 12 L13 3 M10 5.5 L13 2.5 L16 5.5"},
         {"solid.sweep", "M4 18 L4 14 L8 14 L8 18 Z a M6 14 L6 9 A12 9 6 180 -90 L18 3"},
         {"solid.pipe", "M4 21 L4 12 Q4 5 11 5 L20 5 M9 21 L9 12 Q9 10 11 10 L20 10 f E20 7.5 1.5 2.5"},
+        {"solid.coil", "E12 4 7 2 E12 9 7 2 E12 14 7 2 E12 19 7 2"},
         {"solid.loft", "M5 19 L19 19 L16 13 L8 13 Z M8 13 L10 5 L14 5 L16 13"},
         {"solid.revolve", "M8 4 L8 20 d M12 3 L12 21 a M17 9 A12 12 5 0 -270 M12 7 L15 6"},
         {"solid.hole", "M3 9 L9 5 L21 5 L15 9 Z M3 9 L3 19 L15 19 L15 9 M15 19 L21 15 L21 5 f E12 7 3 1.2 a M9 9 L9 16 M15 9 L15 16"},

@@ -104,7 +104,8 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Loft | 15 | v0.2 | **app** + scripts (`loft`): through two or more sketches' closed areas, smooth or straight, new/join/cut/intersect; outer outlines only (holes in sections are filled, with a warning) | |
 | Sweep | 15 | v0.2 | **app** + scripts (`sweep`): closed areas along a path of sketch curves (corrected Frenet), holes kept, new/join/cut/intersect; no twist or scale along the path yet | |
 | Pipe | 15 | v0.2 | **app** + scripts (`pipe`): round rod or hollow tube along sketch curves (open or closed), diameter and wall by expression, new/join/cut/intersect | |
-| Rib, Web, Emboss, Coil | 15 | v0.2 (Web v0.3+) | — | Brief v0.2 list |
+| Coil | 15 | v0.2 | **app** + scripts (`coil`): round or square wire, diameter, pitch, turns (fractional), right/left hand, on any plane at a centre, new/join/cut/intersect | Spiral (flat) and tapered coils not yet |
+| Rib, Web, Emboss | 15 | v0.2 (Web v0.3+) | — | Brief v0.2 list |
 | Thicken, Boundary fill | 15 | v0.3+ | — | Surface workflows |
 | Derive, Insert into design | 13, 22 | v0.3+ | — | Multi-file projects |
 | Primitives (box, cylinder, sphere, torus) | 13 | v0.2 | — | Sketch+extrude teaches better; low cost later |

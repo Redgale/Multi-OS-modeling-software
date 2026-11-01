@@ -2469,3 +2469,55 @@ TEST(Pipe, RodsTubesBendsRingsAndLimits)
     ASSERT_TRUE(back.ok());
     EXPECT_NEAR(props(**back).volume, pi * 9 * 50, 1e-3);
 }
+
+TEST(Coil, SpringsBothHandsSquareSectionsAndLimits)
+{
+    // a round 2 mm wire, 20 mm across (to the wire's middle), 4 turns at a 5 mm pitch: the
+    // section screws around the axis, so the volume is its area times 2 pi R times the turns
+    auto spring = build("coil id=co1 plane=XY diameter=20mm pitch=5mm turns=4 size=2mm\n");
+    expectAllOk(*spring);
+    const double want = pi * 1 * (2 * pi * 10) * 4;
+    auto pr = props(*spring);
+    EXPECT_TRUE(pr.valid);
+    EXPECT_EQ(pr.solids, 1);
+    EXPECT_NEAR(pr.volume, want, want * 1e-3);
+    // it stands on the plane and climbs about 4 turns x 5 mm (plus the wire's thickness)
+    EXPECT_NEAR(pr.zmax - pr.zmin, 4 * 5 + 2, 0.05);
+    EXPECT_NEAR(pr.xmax - pr.xmin, 22, 0.05);
+    const auto& body = *spring->state().bodies.at("co1");
+    for (const char* name : {"co1/start", "co1/end", "co1/outside"}) {
+        EXPECT_GE(body.findFaces(name).size(), 1u) << name;
+    }
+    // left-handed, flipped below the plane, at a centre, with half a turn: same volume rule
+    auto left = build("coil id=co1 plane=XY center=30,0 diameter=20mm pitch=5mm turns=2.5 size=2mm hand=left flip=yes\n");
+    expectAllOk(*left);
+    auto pl = props(*left);
+    EXPECT_NEAR(pl.volume, pi * (2 * pi * 10) * 2.5, pi * (2 * pi * 10) * 2.5 * 1e-3);
+    EXPECT_LT(pl.zmax, 1.01);
+    EXPECT_NEAR((pl.xmax + pl.xmin) / 2, 30, 0.5);
+    // the two hands really turn opposite ways: the end of a quarter turn is on opposite sides
+    auto qr = build("coil id=co1 plane=XY diameter=20mm pitch=5mm turns=0.25 size=2mm\n");
+    auto ql = build("coil id=co1 plane=XY diameter=20mm pitch=5mm turns=0.25 size=2mm hand=left\n");
+    EXPECT_GT(props(*qr).ymax, 9);
+    EXPECT_LT(props(*ql).ymin, -9);
+    // a square section (a flat-wire spring), on the side plane, following a parameter
+    auto sq = build("param p = 6 mm\ncoil id=co1 plane=YZ diameter=30mm pitch=p turns=3 size=3mm section=square\n");
+    expectAllOk(*sq);
+    EXPECT_NEAR(props(*sq).volume, 9 * (2 * pi * 15) * 3, 9 * (2 * pi * 15) * 3 * 1e-3);
+    EXPECT_NEAR(props(*sq).xmax - props(*sq).xmin, 3 * 6 + 3, 0.05);
+    EXPECT_GE(sq->state().bodies.at("co1")->findFaces("co1/side1").size(), 1u);
+    // turns that run into each other, a section reaching the middle and no turns are explained
+    for (const char* bad : {"coil id=co1 plane=XY diameter=20mm pitch=2mm turns=3 size=2mm\n",
+                            "coil id=co1 plane=XY diameter=2mm pitch=5mm turns=3 size=2mm\n",
+                            "coil id=co1 plane=XY diameter=20mm pitch=5mm turns=0 size=2mm\n"}) {
+        auto doc = std::make_unique<Document>();
+        ScriptRunner r(*doc);
+        r.strict = false;
+        ASSERT_TRUE(r.runText(bad).ok());
+        EXPECT_EQ(doc->status(0).level, StatusLevel::Error) << bad;
+        EXPECT_FALSE(doc->status(0).message.empty());
+    }
+    auto back = Document::fromJson(spring->toJson());
+    ASSERT_TRUE(back.ok());
+    EXPECT_NEAR(props(**back).volume, want, want * 1e-3);
+}

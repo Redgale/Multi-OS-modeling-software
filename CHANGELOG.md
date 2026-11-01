@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Pipe: a round rod or hollow tube along sketch curves, with no circle to draw.
+- Coil: springs with round or square wire, either hand, on any plane.
 
 ## 0.1.0 (2026-11-01)
 

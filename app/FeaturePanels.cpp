@@ -3773,6 +3773,119 @@ QString PipePanel::title() const
     return tr("pipe");
 }
 
+// ---------------------------------------------------------------- Coil
+
+CoilPanel::CoilPanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent)
+    : FeaturePanel(doc, view, std::move(editId), parent)
+{
+    form_->addWidget(heading(this, tr("Coil"),
+                             tr("A spring: wire wound around an axis that stands on a plane.")));
+    plane_ = combo(this, {{tr("Floor plane (XY): stands upright"), "XY"},
+                          {tr("Front plane (XZ): lies front to back"), "XZ"},
+                          {tr("Side plane (YZ): lies left to right"), "YZ"}});
+    centerX_ = new ExprField(doc, jig::Dim::len(), this);
+    centerY_ = new ExprField(doc, jig::Dim::len(), this);
+    diameter_ = new ExprField(doc, jig::Dim::len(), this);
+    pitch_ = new ExprField(doc, jig::Dim::len(), this);
+    turns_ = new ExprField(doc, jig::Dim::none(), this);
+    size_ = new ExprField(doc, jig::Dim::len(), this);
+    section_ = combo(this, {{tr("Round wire"), "round"}, {tr("Square wire"), "square"}});
+    hand_ = combo(this, {{tr("Right-handed (like most screws)"), "right"}, {tr("Left-handed"), "left"}});
+    flip_ = new QCheckBox(tr("Grow the other way from the plane"), this);
+    op_ = combo(this, {{tr("New body"), "new"},
+                       {tr("Join: add to the body"), "join"},
+                       {tr("Cut: remove material"), "cut"},
+                       {tr("Intersect: keep the overlap"), "intersect"}});
+    addRow(tr("Plane"), plane_);
+    addRow(tr("Centre across the plane"), centerX_);
+    addRow(tr("Centre up the plane"), centerY_);
+    addRow(tr("Diameter (to the wire's middle)"), diameter_);
+    bindParam("diameter", diameter_);
+    addRow(tr("Pitch (rise per turn)"), pitch_);
+    bindParam("pitch", pitch_);
+    addRow(tr("Turns"), turns_);
+    bindParam("turns", turns_);
+    addRow(tr("Wire size"), size_);
+    bindParam("size", size_);
+    addRow(tr("Wire shape"), section_);
+    addRow(tr("Winding"), hand_);
+    form_->addWidget(flip_);
+    addRow(tr("Operation"), op_);
+    const auto before = stateBefore();
+    for (int i = 0; i < insertIndex(); ++i) {
+        const auto& f = doc_.model().features[size_t(i)];
+        if (f.kind == jig::FeatureKind::Plane && before->planes.count(f.id)) {
+            plane_->addItem(q(f.name), q(f.id));
+        }
+    }
+    auto rem = [&](const char* key, double mm, double in) {
+        return remembered().count(key) ? remembered()[key] : q(doc_.defaultLength(mm, in));
+    };
+    if (const jig::Feature* edit = editId_.empty() ? nullptr : doc_.feature(editId_)) {
+        const auto& p = edit->params;
+        const nlohmann::json pl = p.value("plane", nlohmann::json("XY"));
+        select(plane_, pl.is_string() ? pl.get<std::string>() : std::string("XY"));
+        const nlohmann::json c = p.value("center", nlohmann::json::array({"0 mm", "0 mm"}));
+        auto str = [](const nlohmann::json& v) { return v.is_string() ? v.get<std::string>() : v.dump(); };
+        centerX_->setText(q(c.is_array() && c.size() == 2 ? str(c[0]) : std::string("0 mm")));
+        centerY_->setText(q(c.is_array() && c.size() == 2 ? str(c[1]) : std::string("0 mm")));
+        diameter_->setText(q(p.value("diameter", std::string("20 mm"))));
+        pitch_->setText(q(p.value("pitch", std::string("5 mm"))));
+        turns_->setText(q(p.value("turns", std::string("5"))));
+        size_->setText(q(p.value("size", std::string("2 mm"))));
+        select(section_, p.value("section", std::string("round")));
+        select(hand_, p.value("hand", std::string("right")));
+        flip_->setChecked(p.value("flip", false));
+        select(op_, p.value("op", std::string("new")));
+    }
+    else {
+        centerX_->setText(q(doc_.defaultLength(0, 0)));
+        centerY_->setText(q(doc_.defaultLength(0, 0)));
+        diameter_->setText(rem("coil.diameter", 20, 0.75));
+        pitch_->setText(rem("coil.pitch", 5, 0.2));
+        turns_->setText(remembered().count("coil.turns") ? remembered()["coil.turns"] : QString("5"));
+        size_->setText(rem("coil.size", 2, 0.08));
+    }
+    for (auto* e : {centerX_, centerY_, diameter_, pitch_, turns_, size_}) {
+        connect(e, &ExprField::changed, this, [this] { schedulePreview(); });
+    }
+    for (auto* c : {plane_, section_, hand_, op_}) {
+        connect(c, &QComboBox::currentIndexChanged, this, [this] { schedulePreview(); });
+    }
+    connect(flip_, &QCheckBox::toggled, this, [this] { schedulePreview(); });
+    schedulePreview();
+}
+
+jig::Feature CoilPanel::draft() const
+{
+    jig::Feature f = startDraft(doc_, editId_, "co", tr("Coil"));
+    f.kind = jig::FeatureKind::Coil;
+    f.params = {{"plane", current(plane_)},
+                {"center", {centerX_->text().toStdString(), centerY_->text().toStdString()}},
+                {"diameter", diameter_->text().toStdString()},
+                {"pitch", pitch_->text().toStdString()},
+                {"turns", turns_->text().toStdString()},
+                {"size", size_->text().toStdString()},
+                {"section", current(section_)},
+                {"hand", current(hand_)},
+                {"flip", flip_->isChecked()},
+                {"op", current(op_)}};
+    return f;
+}
+
+void CoilPanel::rememberValues()
+{
+    remembered()["coil.diameter"] = diameter_->text();
+    remembered()["coil.pitch"] = pitch_->text();
+    remembered()["coil.turns"] = turns_->text();
+    remembered()["coil.size"] = size_->text();
+}
+
+QString CoilPanel::title() const
+{
+    return tr("coil");
+}
+
 // ---------------------------------------------------------------- Move
 
 // Three arrows (X, Y, Z) from the bodies' centre; drag a grip to move along that axis.

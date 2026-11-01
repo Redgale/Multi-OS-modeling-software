@@ -54,6 +54,7 @@ QT_TRANSLATE_NOOP("Core", "Spin a profile around an axis, like a lathe: knobs, c
 QT_TRANSLATE_NOOP("Core", "Blend between closed areas on two or more sketches, e.g. a square base into a round top.")
 QT_TRANSLATE_NOOP("Core", "Push a closed area along a path of sketch curves: handles, pipes, rims.")
 QT_TRANSLATE_NOOP("Core", "A round tube or rod along sketch curves, without drawing its circle: wires, rails, handles.")
+QT_TRANSLATE_NOOP("Core", "A spring: a round or square section wound around an axis, with a diameter, pitch and number of turns.")
 QT_TRANSLATE_NOOP("Core", "Drill a plain, counterbored or countersunk hole for a screw.")
 QT_TRANSLATE_NOOP("Core", "Copy a body across a plane, e.g. to make a symmetric part.")
 QT_TRANSLATE_NOOP("Core", "Repeat a feature in rows and columns.")
@@ -229,6 +230,12 @@ QT_TRANSLATE_NOOP("Core", "Check that the path's curves meet end to end.")
 QT_TRANSLATE_NOOP("Core", "The inside of this pipe could not follow the path.")
 QT_TRANSLATE_NOOP("Core", "The inside of this pipe could not be hollowed out.")
 QT_TRANSLATE_NOOP("Core", "This pipe has an unknown operation.")
+QT_TRANSLATE_NOOP("Core", "The number of turns must be more than 0 and at most 500 (halves are fine).")
+QT_TRANSLATE_NOOP("Core", "The coil's section size must be more than zero.")
+QT_TRANSLATE_NOOP("Core", "The coil is too narrow for its section: the section would reach the middle.")
+QT_TRANSLATE_NOOP("Core", "This coil could not be made.")
+QT_TRANSLATE_NOOP("Core", "Try fewer turns, a larger pitch or a smaller section.")
+QT_TRANSLATE_NOOP("Core", "This coil has an unknown operation.")
 QT_TRANSLATE_NOOP("Core", "The body of the face to push or pull no longer exists.")
 QT_TRANSLATE_NOOP("Core", "Edit the step and click a face.")
 QT_TRANSLATE_NOOP("Core", "The face to push or pull no longer exists.")
@@ -529,6 +536,9 @@ inline const char* const kCorePatterns[] = {
     QT_TRANSLATE_NOOP("Core", "The sketch with this sweep's path (%1) is missing or comes later."),
     QT_TRANSLATE_NOOP("Core", "The sketch with this pipe's path (%1) is missing or comes later."),
     QT_TRANSLATE_NOOP("Core", "A wall of %1 fills the whole pipe."),
+    QT_TRANSLATE_NOOP("Core", "Use a diameter larger than %1."),
+    QT_TRANSLATE_NOOP("Core", "A pitch of %1 makes each turn run into the next."),
+    QT_TRANSLATE_NOOP("Core", "Use a pitch larger than the section size (%1)."),
     QT_TRANSLATE_NOOP("Core", "The body this pattern repeats (%1) no longer exists."),
     QT_TRANSLATE_NOOP("Core", "The step this pattern repeats (%1) is missing, after the pattern, or has a problem."),
     QT_TRANSLATE_NOOP("Core", "The sketch with this pattern's path (%1) is missing or comes later."),

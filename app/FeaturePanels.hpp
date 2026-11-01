@@ -761,6 +761,52 @@ private:
     QCheckBox* hollow_;
 };
 
+// Create ▸ Coil: a spring, a round or square section wound around an axis on a plane.
+class CoilPanel : public FeaturePanel
+{
+    Q_OBJECT
+public:
+    CoilPanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent = nullptr);
+    QComboBox* plane() const
+    {
+        return plane_;
+    }
+    ExprField* diameter() const
+    {
+        return diameter_;
+    }
+    ExprField* pitch() const
+    {
+        return pitch_;
+    }
+    ExprField* turns() const
+    {
+        return turns_;
+    }
+    ExprField* size() const
+    {
+        return size_;
+    }
+    QComboBox* section() const
+    {
+        return section_;
+    }
+    QComboBox* hand() const
+    {
+        return hand_;
+    }
+
+protected:
+    jig::Feature draft() const override;
+    QString title() const override;
+    void rememberValues() override;
+
+private:
+    QComboBox *plane_, *section_, *hand_, *op_;
+    ExprField *centerX_, *centerY_, *diameter_, *pitch_, *turns_, *size_;
+    QCheckBox* flip_;
+};
+
 class MoveHandle;
 
 // Move / copy bodies: shift along X, Y, Z and turn around an origin axis.

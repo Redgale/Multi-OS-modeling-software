@@ -549,6 +549,16 @@
     </message>
     <message>
         <location line="+1" />
+        <source>Coil</source>
+        <translation>[Çöîl~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>A spring: a round or square section wound around an axis, with a diameter, pitch and number of turns.</source>
+        <translation>[Á sprîñg: á röüñd ör sqüáré séçtîöñ wöüñd áröüñd áñ áxîs, wîth á dîámétér, pîtçh áñd ñümbér öf türñs.~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
         <source>Hole</source>
         <translation>[Hölé~]</translation>
     </message>
@@ -1179,6 +1189,11 @@
         <location line="+1" />
         <source>A round tube or rod along sketch curves, without drawing its circle: wires, rails, handles.</source>
         <translation>[Á röüñd tübé ör röd álöñg skétçh çürvés, wîthöüt dráwîñg îts çîrçlé: wîrés, ráîls, háñdlés.~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>A spring: a round or square section wound around an axis, with a diameter, pitch and number of turns.</source>
+        <translation>[Á sprîñg: á röüñd ör sqüáré séçtîöñ wöüñd áröüñd áñ áxîs, wîth á dîámétér, pîtçh áñd ñümbér öf türñs.~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <location line="+1" />
@@ -2014,6 +2029,36 @@
         <location line="+1" />
         <source>This pipe has an unknown operation.</source>
         <translation>[Thîs pîpé hás áñ üñkñöwñ öpérátîöñ.~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The number of turns must be more than 0 and at most 500 (halves are fine).</source>
+        <translation>[Thé ñümbér öf türñs müst bé möré tháñ 0 áñd át möst 500 (hálvés áré fîñé).~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The coil's section size must be more than zero.</source>
+        <translation>[Thé çöîl's séçtîöñ sîzé müst bé möré tháñ zérö.~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The coil is too narrow for its section: the section would reach the middle.</source>
+        <translation>[Thé çöîl îs töö ñárröw för îts séçtîöñ: thé séçtîöñ wöüld réáçh thé mîddlé.~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>This coil could not be made.</source>
+        <translation>[Thîs çöîl çöüld ñöt bé mádé.~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Try fewer turns, a larger pitch or a smaller section.</source>
+        <translation>[Trý féwér türñs, á lárgér pîtçh ör á smállér séçtîöñ.~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>This coil has an unknown operation.</source>
+        <translation>[Thîs çöîl hás áñ üñkñöwñ öpérátîöñ.~~~~~~~~~]</translation>
     </message>
     <message>
         <location line="+1" />
@@ -2882,6 +2927,21 @@
     </message>
     <message>
         <location line="+1" />
+        <source>Use a diameter larger than %1.</source>
+        <translation>[Üsé á dîámétér lárgér tháñ %1.~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>A pitch of %1 makes each turn run into the next.</source>
+        <translation>[Á pîtçh öf %1 mákés éáçh türñ rüñ îñtö thé ñéxt.~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Use a pitch larger than the section size (%1).</source>
+        <translation>[Üsé á pîtçh lárgér tháñ thé séçtîöñ sîzé (%1).~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
         <source>The body this pattern repeats (%1) no longer exists.</source>
         <translation>[Thé bödý thîs páttérñ répéáts (%1) ñö löñgér éxîsts.~~~~~~~~~~~~~]</translation>
     </message>
@@ -2931,7 +2991,7 @@
         <translation>[%1 édgés wéré ré-áttáçhéd bý shápé sîmîlárîtý áftér áñ éárlîér çháñgé. Çhéçk thé résült.~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="-42" />
+        <location line="-45" />
         <source>The id '%1' is already used.</source>
         <translation>[Thé îd '%1' îs álréádý üséd.~~~~~~]</translation>
     </message>
@@ -2941,7 +3001,7 @@
         <translation>[Thîs SVG hás ñö shápés, öütlîñés ör téxt tö brîñg îñ.~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+58" />
+        <location line="+61" />
         <source>A wall of %1 does not fit this outline.</source>
         <translation>[Á wáll öf %1 döés ñöt fît thîs öütlîñé.~~~~~~~~~]</translation>
     </message>
@@ -3016,12 +3076,12 @@
         <translation>[Thé föñt '%1' îs ñöt áváîláblé héré; üsîñg thé büîlt-îñ föñt (Îñtér).~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="-231" />
+        <location line="-234" />
         <source>There is nothing to export yet.</source>
         <translation>[Théré îs ñöthîñg tö éxpört ýét.~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="-201" />
+        <location line="-207" />
         <source>This DXF has no lines, circles, arcs, curves, text or blocks to bring in.</source>
         <translation>[Thîs DXF hás ñö lîñés, çîrçlés, árçs, çürvés, téxt ör blöçks tö brîñg îñ.~~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -3061,7 +3121,7 @@
         <translation>[Thát fáçé îs lévél wîth thé skétçh, sö théré îs ñö wáý tö téll whîçh wáý tö éxtrüdé.~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+128" />
+        <location line="+134" />
         <source>The 3MF file could not be created.</source>
         <translation>[Thé 3MF fîlé çöüld ñöt bé çréátéd.~~~~~~~~]</translation>
     </message>
@@ -3664,7 +3724,7 @@
 <context>
     <name>CoreWords</name>
     <message>
-        <location line="+94" />
+        <location line="+97" />
         <source>ball face (sphere)</source>
         <translation>[báll fáçé (sphéré)~~~~]</translation>
     </message>
@@ -3737,7 +3797,7 @@
 <context>
     <name>MainWindow</name>
     <message>
-        <location filename="../app/MainWindow.cpp" line="+517" />
+        <location filename="../app/MainWindow.cpp" line="+519" />
         <source>Rebuilding the design…</source>
         <translation>[Rébüîldîñg thé désîgñ…~~~~~~]</translation>
     </message>
@@ -3984,9 +4044,138 @@
     </message>
 </context>
 <context>
+    <name>jigapp::CoilPanel</name>
+    <message>
+        <location line="+717" />
+        <location line="+80" />
+        <source>Coil</source>
+        <translation>[Çöîl~]</translation>
+    </message>
+    <message>
+        <location line="-79" />
+        <source>A spring: wire wound around an axis that stands on a plane.</source>
+        <translation>[Á sprîñg: wîré wöüñd áröüñd áñ áxîs thát stáñds öñ á pláñé.~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Floor plane (XY): stands upright</source>
+        <translation>[Flöör pláñé (XÝ): stáñds üprîght~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Front plane (XZ): lies front to back</source>
+        <translation>[Fröñt pláñé (XZ): lîés fröñt tö báçk~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Side plane (YZ): lies left to right</source>
+        <translation>[Sîdé pláñé (ÝZ): lîés léft tö rîght~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+7" />
+        <source>Round wire</source>
+        <translation>[Röüñd wîré~~~]</translation>
+    </message>
+    <message>
+        <location line="+0" />
+        <source>Square wire</source>
+        <translation>[Sqüáré wîré~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Right-handed (like most screws)</source>
+        <translation>[Rîght-háñdéd (lîké möst sçréws)~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+0" />
+        <source>Left-handed</source>
+        <translation>[Léft-háñdéd~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Grow the other way from the plane</source>
+        <translation>[Gröw thé öthér wáý fröm thé pláñé~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>New body</source>
+        <translation>[Ñéw bödý~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Join: add to the body</source>
+        <translation>[Jöîñ: ádd tö thé bödý~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Cut: remove material</source>
+        <translation>[Çüt: rémövé mátérîál~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Intersect: keep the overlap</source>
+        <translation>[Îñtérséçt: kéép thé övérláp~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Plane</source>
+        <translation>[Pláñé~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Centre across the plane</source>
+        <translation>[Çéñtré áçröss thé pláñé~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Centre up the plane</source>
+        <translation>[Çéñtré üp thé pláñé~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Diameter (to the wire's middle)</source>
+        <translation>[Dîámétér (tö thé wîré's mîddlé)~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+2" />
+        <source>Pitch (rise per turn)</source>
+        <translation>[Pîtçh (rîsé pér türñ)~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+2" />
+        <source>Turns</source>
+        <translation>[Türñs~]</translation>
+    </message>
+    <message>
+        <location line="+2" />
+        <source>Wire size</source>
+        <translation>[Wîré sîzé~~]</translation>
+    </message>
+    <message>
+        <location line="+2" />
+        <source>Wire shape</source>
+        <translation>[Wîré shápé~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Winding</source>
+        <translation>[Wîñdîñg~~]</translation>
+    </message>
+    <message>
+        <location line="+2" />
+        <source>Operation</source>
+        <translation>[Öpérátîöñ~~~]</translation>
+    </message>
+    <message>
+        <location line="+73" />
+        <source>coil</source>
+        <translation>[çöîl~]</translation>
+    </message>
+</context>
+<context>
     <name>jigapp::CombinePanel</name>
     <message>
-        <location line="+259" />
+        <location line="-563" />
         <location line="+56" />
         <source>Combine</source>
         <translation>[Çömbîñé~~]</translation>
@@ -4743,7 +4932,7 @@
 <context>
     <name>jigapp::MainWindow</name>
     <message>
-        <location filename="../app/MainWindow.cpp" line="-150" />
+        <location filename="../app/MainWindow.cpp" line="-152" />
         <source>OK</source>
         <translation>[ÖK~]</translation>
     </message>
@@ -4769,15 +4958,15 @@
     </message>
     <message>
         <location line="+9" />
-        <location line="+737" />
+        <location line="+739" />
         <location line="+738" />
-        <location line="+904" />
+        <location line="+907" />
         <location line="+27" />
         <source>Sketch</source>
         <translation>[Skétçh~~]</translation>
     </message>
     <message>
-        <location line="-2404" />
+        <location line="-2409" />
         <source>Extrude</source>
         <translation>[Éxtrüdé~~]</translation>
     </message>
@@ -4870,6 +5059,11 @@
         <location line="+2" />
         <source>Pipe</source>
         <translation>[Pîpé~]</translation>
+    </message>
+    <message>
+        <location line="+2" />
+        <source>Coil</source>
+        <translation>[Çöîl~]</translation>
     </message>
     <message>
         <location line="+2" />
@@ -5029,12 +5223,12 @@
     </message>
     <message>
         <location line="+2" />
-        <location line="+1581" />
+        <location line="+1584" />
         <source>Mouse and trackpad</source>
         <translation>[Möüsé áñd tráçkpád~~~~~]</translation>
     </message>
     <message>
-        <location line="-1579" />
+        <location line="-1582" />
         <source>Default (middle-drag pans, Shift+middle orbits)</source>
         <translation>[Défáült (mîddlé-drág páñs, Shîft+mîddlé örbîts)~~~~~~~~~~~~]</translation>
     </message>
@@ -5055,30 +5249,30 @@
     </message>
     <message>
         <location line="+11" />
-        <location line="+1554" />
+        <location line="+1557" />
         <source>Theme</source>
         <translation>[Thémé~]</translation>
     </message>
     <message>
-        <location line="-1552" />
-        <location line="+1507" />
+        <location line="-1555" />
+        <location line="+1510" />
         <source>Light</source>
         <translation>[Lîght~]</translation>
     </message>
     <message>
-        <location line="-1507" />
-        <location line="+1506" />
+        <location line="-1510" />
+        <location line="+1509" />
         <source>Dark</source>
         <translation>[Dárk~]</translation>
     </message>
     <message>
-        <location line="-1505" />
-        <location line="+1507" />
+        <location line="-1508" />
+        <location line="+1510" />
         <source>High contrast</source>
         <translation>[Hîgh çöñtrást~~~~]</translation>
     </message>
     <message>
-        <location line="-1499" />
+        <location line="-1502" />
         <source>&amp;Help</source>
         <translation>[&amp;Hélp~]</translation>
     </message>
@@ -5195,12 +5389,12 @@
     </message>
     <message>
         <location line="+2" />
-        <location line="+2139" />
+        <location line="+2154" />
         <source>Rename…</source>
         <translation>[Réñámé…~~]</translation>
     </message>
     <message>
-        <location line="-2136" />
+        <location line="-2151" />
         <source>Delete body</source>
         <translation>[Délété bödý~~~]</translation>
     </message>
@@ -5216,13 +5410,13 @@
     </message>
     <message>
         <location line="+5" />
-        <location line="+1561" />
+        <location line="+1564" />
         <location line="+58" />
         <source>Properties</source>
         <translation>[Pröpértîés~~~]</translation>
     </message>
     <message>
-        <location line="-1613" />
+        <location line="-1616" />
         <source>Properties and help</source>
         <translation>[Pröpértîés áñd hélp~~~~~]</translation>
     </message>
@@ -5308,12 +5502,12 @@
     </message>
     <message>
         <location line="+18" />
-        <location line="+2025" />
+        <location line="+2040" />
         <source>Move rollback marker</source>
         <translation>[Mövé röllbáçk márkér~~~~~~]</translation>
     </message>
     <message>
-        <location line="-1853" />
+        <location line="-1868" />
         <source>Start here: every part begins as a flat sketch.
 Click Sketch on the toolbar, then click a plane.
 Or open the phone stand sample (File ▸ Open a sample).</source>
@@ -5514,12 +5708,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+0" />
-        <location line="+366" />
+        <location line="+369" />
         <source>Jigsmith designs (*.jig)</source>
         <translation>[Jîgsmîth désîgñs (*.jîg)~~~~~~]</translation>
     </message>
     <message>
-        <location line="-319" />
+        <location line="-322" />
         <source>Save view</source>
         <translation>[Sávé vîéw~~]</translation>
     </message>
@@ -5534,7 +5728,7 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
         <translation>[Vîéw %1~]</translation>
     </message>
     <message>
-        <location line="+80" />
+        <location line="+83" />
         <source>Import STEP</source>
         <translation>[Împört STÉP~~~]</translation>
     </message>
@@ -5682,12 +5876,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+0" />
-        <location line="+949" />
+        <location line="+958" />
         <source>There is no 3D body yet.</source>
         <translation>[Théré îs ñö 3D bödý ýét.~~~~~]</translation>
     </message>
     <message>
-        <location line="-946" />
+        <location line="-955" />
         <source>STL mesh for slicers (*.stl)</source>
         <translation>[STL mésh för slîçérs (*.stl)~~~~~~]</translation>
     </message>
@@ -5958,7 +6152,7 @@ An empty design with the origin ready</source>
         <translation>[Théré îs ñö 3D bödý ýét: skétçh áñd éxtrüdé fîrst.~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+110" />
+        <location line="+119" />
         <source>That face was made by %1: change its size here.</source>
         <translation>[Thát fáçé wás mádé bý %1: çháñgé îts sîzé héré.~~~~~~~~~~~]</translation>
     </message>
@@ -6070,7 +6264,7 @@ An empty design with the origin ready</source>
         <translation>[Áñ împörtéd sölîd hás ñö séttîñgs tö çháñgé. Tö üsé á ñéwér çöpý öf thé fîlé, délété thîs stép áñd împört ît ágáîñ.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+36" />
+        <location line="+39" />
         <source>Edit…</source>
         <translation>[Édît…~]</translation>
     </message>
@@ -6385,7 +6579,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
 <context>
     <name>jigapp::MovePanel</name>
     <message>
-        <location line="+1385" />
+        <location line="+1498" />
         <source>free %1</source>
         <translation>[fréé %1~]</translation>
     </message>
@@ -6576,7 +6770,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
 <context>
     <name>jigapp::PatternPanel</name>
     <message>
-        <location line="-2105" />
+        <location line="-2218" />
         <location line="+154" />
         <source>Pattern</source>
         <translation>[Páttérñ~~]</translation>

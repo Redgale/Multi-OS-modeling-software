@@ -57,6 +57,8 @@ const char* toString(FeatureKind k)
             return "sweep";
         case FeatureKind::Pipe:
             return "pipe";
+        case FeatureKind::Coil:
+            return "coil";
     }
     return "sketch";
 }
@@ -79,7 +81,7 @@ std::optional<FeatureKind> featureKindFromString(std::string_view s)
         return FeatureKind::Shell;
     }
     for (auto k : {FeatureKind::Revolve, FeatureKind::Hole, FeatureKind::Pattern, FeatureKind::Mirror, FeatureKind::Plane,
-                   FeatureKind::Combine, FeatureKind::Split, FeatureKind::Move, FeatureKind::Axis, FeatureKind::PressPull, FeatureKind::Point, FeatureKind::Import, FeatureKind::Remove, FeatureKind::Loft, FeatureKind::Sweep, FeatureKind::Pipe}) {
+                   FeatureKind::Combine, FeatureKind::Split, FeatureKind::Move, FeatureKind::Axis, FeatureKind::PressPull, FeatureKind::Point, FeatureKind::Import, FeatureKind::Remove, FeatureKind::Loft, FeatureKind::Sweep, FeatureKind::Pipe, FeatureKind::Coil}) {
         if (s == toString(k)) {
             return k;
         }

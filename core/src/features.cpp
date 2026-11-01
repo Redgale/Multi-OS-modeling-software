@@ -34,6 +34,9 @@
 #include <Bnd_Box.hxx>
 #include <TopExp_Explorer.hxx>
 #include <TopoDS.hxx>
+#include <BRepLib.hxx>
+#include <Geom2d_Line.hxx>
+#include <Geom_CylindricalSurface.hxx>
 #include <gp_Ax2.hxx>
 #include <gp_Lin.hxx>
 #include <gp_Pln.hxx>
@@ -1348,6 +1351,138 @@ FeatureOutcome applyPipe(const Document& doc, const Feature& f, const std::share
     }
 }
 
+// ---------------------------------------------------------------- coil
+
+// A spring or thread-like helix: a round or square section turned around an axis while it
+// climbs. No sketch is needed: the axis stands on a plane at a centre point. The diameter is
+// measured to the middle of the section.
+FeatureOutcome applyCoil(const Document& doc, const Feature& f, const std::shared_ptr<const ModelState>& in)
+{
+    const auto& p = f.params;
+    FeatureStatus status;
+    auto frame = planeFrame(p.value("plane", nlohmann::json("XY")), in, status);
+    if (!frame) {
+        return failed(frame.error());
+    }
+    double cx = 0, cy = 0;
+    const nlohmann::json cj = p.value("center", nlohmann::json::array());
+    if (cj.is_array() && cj.size() == 2) {
+        for (int i = 0; i < 2; ++i) {
+            auto v = doc.evalLength(cj[size_t(i)].is_string() ? cj[size_t(i)].get<std::string>() : cj[size_t(i)].dump());
+            if (!v) {
+                return failed(v.error());
+            }
+            (i == 0 ? cx : cy) = v.value();
+        }
+    }
+    auto len = [&](const char* key, const char* def) { return doc.evalLength(p.value(key, std::string(def))); };
+    auto d = len("diameter", "20 mm");
+    auto pitch = len("pitch", "5 mm");
+    auto size = len("size", "2 mm");
+    for (const auto* r : {&d, &pitch, &size}) {
+        if (!*r) {
+            return failed(r->error());
+        }
+    }
+    auto turns = evaluate(p.value("turns", std::string("5")), doc.lookup());
+    if (!turns || !(turns->dim == Dim::none()) || !(turns->value > 0) || turns->value > 500) {
+        return failed("The number of turns must be more than 0 and at most 500 (halves are fine).");
+    }
+    const double R = d.value() / 2, h = pitch.value(), s = size.value(), n = turns->value;
+    if (s <= 1e-6) {
+        return failed("The coil's section size must be more than zero.");
+    }
+    if (R <= s / 2 + 1e-6) {
+        return failed("The coil is too narrow for its section: the section would reach the middle.",
+                      {fmt("Use a diameter larger than %1.", {formatLength(s, doc.units())})});
+    }
+    if (h <= s + 1e-6) {
+        return failed(fmt("A pitch of %1 makes each turn run into the next.", {formatLength(h, doc.units())}),
+                      {fmt("Use a pitch larger than the section size (%1).", {formatLength(s, doc.units())})});
+    }
+    const bool square = p.value("section", std::string("round")) == "square";
+    const bool left = p.value("hand", std::string("right")) == "left";
+    const bool flip = p.value("flip", false);
+    try {
+        const gp_Ax3& fr = frame.value();
+        const gp_Pnt c = fr.Location().Translated(gp_Vec(fr.XDirection()) * cx + gp_Vec(fr.YDirection()) * cy);
+        gp_Dir up = fr.Direction();
+        if (flip) {
+            up.Reverse();
+        }
+        // turning right-handed around `up` (or left-handed): the frame's y direction says which way
+        gp_Ax3 axis(c, up, fr.XDirection());
+        if (left) {
+            axis.YReverse();
+        }
+        Handle(Geom_CylindricalSurface) cyl = new Geom_CylindricalSurface(axis, R);
+        const gp_Dir2d dir(2 * std::numbers::pi, h);
+        Handle(Geom2d_Line) line = new Geom2d_Line(gp_Pnt2d(0, 0), dir);
+        const double length = n * std::hypot(2 * std::numbers::pi, h);
+        TopoDS_Edge helix = BRepBuilderAPI_MakeEdge(line, cyl, 0, length).Edge();
+        BRepLib::BuildCurves3d(helix, 1e-7, GeomAbs_C2, 14, 400);
+        const TopoDS_Wire spine = BRepBuilderAPI_MakeWire(helix).Wire();
+        // the section stands in the plane through the axis, at the start of the helix
+        const gp_Pnt start = c.Translated(gp_Vec(axis.XDirection()) * R);
+        const gp_Dir radial = axis.XDirection();
+        TopoDS_Wire section;
+        if (square) {
+            const gp_Vec a = gp_Vec(radial) * (s / 2), b = gp_Vec(up) * (s / 2);
+            const gp_Pnt q[4] = {start.Translated(-a - b), start.Translated(a - b), start.Translated(a + b),
+                                 start.Translated(-a + b)};
+            BRepBuilderAPI_MakeWire w;
+            for (int i = 0; i < 4; ++i) {
+                w.Add(BRepBuilderAPI_MakeEdge(q[i], q[(i + 1) % 4]).Edge());
+            }
+            section = w.Wire();
+        }
+        else {
+            const gp_Circ circ(gp_Ax2(start, axis.YDirection(), radial), s / 2);
+            section = BRepBuilderAPI_MakeWire(BRepBuilderAPI_MakeEdge(circ).Edge()).Wire();
+        }
+        BRepOffsetAPI_MakePipeShell pipe(spine);
+        pipe.SetMode(up);  // the section keeps its place around the axis: a true screw motion
+        pipe.Add(section, false, false);
+        pipe.Build();
+        if (!pipe.IsDone() || !pipe.MakeSolid()) {
+            return failed("This coil could not be made.", {"Try fewer turns, a larger pitch or a smaller section."});
+        }
+        std::vector<std::pair<TopoDS_Shape, std::string>> names;
+        names.emplace_back(pipe.FirstShape(), f.id + "/start");
+        names.emplace_back(pipe.LastShape(), f.id + "/end");
+        int k = 0;
+        for (TopExp_Explorer ex(section, TopAbs_EDGE); ex.More(); ex.Next()) {
+            ++k;
+            const auto& made = pipe.Generated(ex.Current());
+            if (!made.IsEmpty()) {
+                names.emplace_back(made.First(), square ? f.id + "/side" + std::to_string(k) : f.id + "/outside");
+            }
+        }
+        NamedShape tool(pipe.Shape());
+        int other = 0;
+        for (int i = 0; i < tool.faceCount(); ++i) {
+            std::string name;
+            for (const auto& [face, nm] : names) {
+                if (!face.IsNull() && tool.face(i).IsSame(face)) {
+                    name = nm;
+                    break;
+                }
+            }
+            tool.setFaceName(i, name.empty() ? f.id + "/face" + std::to_string(++other) : name);
+        }
+        auto op = opFromString(p.value("op", std::string("new")));
+        if (!op) {
+            return failed("This coil has an unknown operation.");
+        }
+        return applyTool(f, *op, std::move(tool), in, status);
+    }
+    catch (const Standard_Failure& e) {
+        const char* m = e.GetMessageString();
+        return failed("This coil could not be made.", {"Try fewer turns, a larger pitch or a smaller section."},
+                      m ? m : "");
+    }
+}
+
 // ---------------------------------------------------------------- press pull
 
 // Pushes or pulls a flat face straight along its normal: out adds material, in removes it.
@@ -2380,6 +2515,8 @@ FeatureOutcome applyFeature(const Document& doc, const Feature& f, const std::sh
                 return applySweep(doc, f, in);
             case FeatureKind::Pipe:
                 return applyPipe(doc, f, in);
+            case FeatureKind::Coil:
+                return applyCoil(doc, f, in);
             case FeatureKind::Hole:
                 return applyHole(doc, f, in);
             case FeatureKind::Pattern:

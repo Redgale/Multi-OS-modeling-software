@@ -2805,6 +2805,51 @@ private slots:
         pp->cancel();
     }
 
+    // Coil from the panel: no sketch needed; sizes typed; a pitch too small is explained.
+    void coilPanel()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        w.runCommand("solid.coil");
+        auto* cp = qobject_cast<CoilPanel*>(w.featurePanel());
+        QVERIFY(cp);
+        QCOMPARE(cp->plane()->currentData().toString(), QString("XY"));
+        cp->diameter()->setText("20 mm");
+        cp->pitch()->setText("5 mm");
+        cp->turns()->setText("4");
+        cp->size()->setText("2 mm");
+        QTRY_VERIFY(cp->previewOk());
+        // a pitch no larger than the wire: the panel says why, OK waits
+        cp->pitch()->setText("1.5 mm");
+        QTRY_VERIFY(cp->statusText().contains("run into the next"));
+        QVERIFY(!cp->previewOk());
+        cp->pitch()->setText("5 mm");
+        QTRY_VERIFY(cp->previewOk());
+        w.viewport()->homeView();
+        QTRY_VERIFY(w.viewport()->meshesReady());
+        QTest::qWait(200);
+        w.grab().save(shotPath("coil-panel"));
+        QVERIFY(cp->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        const double want = std::numbers::pi * (2 * std::numbers::pi * 10) * 4;
+        const auto& st = w.document().state();
+        QCOMPARE(int(st.bodies.size()), 1);
+        QVERIFY(std::abs(jig::massProperties(st.bodies.begin()->second->shape()).volume - want) < want * 1e-3);
+        // editing it shows the saved values; a square wire changes the volume to s^2 x 2 pi R x turns
+        w.editFeature(0);
+        cp = qobject_cast<CoilPanel*>(w.featurePanel());
+        QVERIFY(cp);
+        QCOMPARE(cp->turns()->text(), QString("4"));
+        cp->section()->setCurrentIndex(cp->section()->findData("square"));
+        QTRY_VERIFY(cp->previewOk());
+        QVERIFY(cp->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        const double sq = 4 * (2 * std::numbers::pi * 10) * 4;
+        QVERIFY(std::abs(jig::massProperties(w.document().state().bodies.begin()->second->shape()).volume - sq) < sq * 1e-3);
+    }
+
     // Areas of a sketch are picked by clicking them in the 3D view: a square with a circle in it
     // can become a round post (the circle) or a block with a hole (the ring), not only a block.
     void clickAreasToExtrude()

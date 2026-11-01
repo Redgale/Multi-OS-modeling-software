@@ -168,6 +168,8 @@ QString kindWord(jig::FeatureKind k)
             return MainWindow::tr("Sweep");
         case jig::FeatureKind::Pipe:
             return MainWindow::tr("Pipe");
+        case jig::FeatureKind::Coil:
+            return MainWindow::tr("Coil");
         case jig::FeatureKind::Move:
             return MainWindow::tr("Move");
     }
@@ -1744,6 +1746,9 @@ void MainWindow::runCommand(const QString& id)
     else if (id == "solid.loft") {
         openLoft({});
     }
+    else if (id == "solid.coil") {
+        openCoil({});
+    }
     else if (id == "solid.pipe") {
         openPipe({});
     }
@@ -2754,6 +2759,15 @@ void MainWindow::openPipe(const std::string& editId)
     showPanel(new PipePanel(*doc_, view_, editId, panelHost_));
 }
 
+void MainWindow::openCoil(const std::string& editId)
+{
+    if (sketch_) {
+        exitSketch();
+    }
+    cancelPicker();
+    showPanel(new CoilPanel(*doc_, view_, editId, panelHost_));
+}
+
 void MainWindow::openLoft(const std::string& editId)
 {
     if (sketch_) {
@@ -3107,6 +3121,9 @@ void MainWindow::editFeature(int index)
             break;
         case jig::FeatureKind::Pipe:
             openPipe(f.id);
+            break;
+        case jig::FeatureKind::Coil:
+            openCoil(f.id);
             break;
         case jig::FeatureKind::Sweep:
             openSweep(f.id);
