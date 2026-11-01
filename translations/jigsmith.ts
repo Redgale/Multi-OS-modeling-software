@@ -3493,7 +3493,7 @@
 <context>
     <name>MainWindow</name>
     <message>
-        <location filename="../app/MainWindow.cpp" line="+509"/>
+        <location filename="../app/MainWindow.cpp" line="+511"/>
         <source>Rebuilding the design…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4463,15 +4463,15 @@
     </message>
     <message>
         <location line="+9"/>
-        <location line="+722"/>
+        <location line="+729"/>
         <location line="+738"/>
-        <location line="+835"/>
+        <location line="+875"/>
         <location line="+27"/>
         <source>Sketch</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2320"/>
+        <location line="-2367"/>
         <source>Extrude</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4556,7 +4556,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+375"/>
+        <location line="+376"/>
         <source>Jigsmith</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4617,12 +4617,12 @@
     </message>
     <message>
         <location line="+4"/>
-        <location line="+840"/>
+        <location line="+846"/>
         <source>&lt;p&gt;Nothing selected.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-829"/>
+        <location line="-835"/>
         <source>&lt;h3&gt;Body&lt;/h3&gt;&lt;p&gt;&lt;b&gt;Name:&lt;/b&gt; %1&lt;br&gt;&lt;b&gt;Volume:&lt;/b&gt; %2&lt;br&gt;&lt;b&gt;Size:&lt;/b&gt; %3 × %4 × %5&lt;br&gt;&lt;b&gt;Faces:&lt;/b&gt; %6&lt;/p&gt;&lt;p&gt;Right-click it in the Browser to hide, isolate or rename it.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4632,7 +4632,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+62"/>
+        <location line="+68"/>
         <source>Key: %1</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4708,12 +4708,12 @@
     </message>
     <message>
         <location line="+2"/>
-        <location line="+1512"/>
+        <location line="+1552"/>
         <source>Mouse and trackpad</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1510"/>
+        <location line="-1550"/>
         <source>Default (middle-drag pans, Shift+middle orbits)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4734,30 +4734,30 @@
     </message>
     <message>
         <location line="+11"/>
-        <location line="+1485"/>
+        <location line="+1525"/>
         <source>Theme</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1483"/>
-        <location line="+1438"/>
+        <location line="-1523"/>
+        <location line="+1478"/>
         <source>Light</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1438"/>
-        <location line="+1437"/>
+        <location line="-1478"/>
+        <location line="+1477"/>
         <source>Dark</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1436"/>
-        <location line="+1438"/>
+        <location line="-1476"/>
+        <location line="+1478"/>
         <source>High contrast</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1430"/>
+        <location line="-1470"/>
         <source>&amp;Help</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4874,12 +4874,12 @@
     </message>
     <message>
         <location line="+2"/>
-        <location line="+2034"/>
+        <location line="+2074"/>
         <source>Rename…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2031"/>
+        <location line="-2071"/>
         <source>Delete body</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4895,13 +4895,13 @@
     </message>
     <message>
         <location line="+5"/>
-        <location line="+1492"/>
+        <location line="+1532"/>
         <location line="+58"/>
         <source>Properties</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1544"/>
+        <location line="-1584"/>
         <source>Properties and help</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4987,12 +4987,12 @@
     </message>
     <message>
         <location line="+18"/>
-        <location line="+1920"/>
+        <location line="+1960"/>
         <source>Move rollback marker</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1748"/>
+        <location line="-1788"/>
         <source>Start here: every part begins as a flat sketch.
 Click Sketch on the toolbar, then click a plane.
 Or open the phone stand sample (File ▸ Open a sample).</source>
@@ -5350,12 +5350,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+0"/>
-        <location line="+882"/>
+        <location line="+922"/>
         <source>There is no 3D body yet.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-879"/>
+        <location line="-919"/>
         <source>STL mesh for slicers (*.stl)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5395,7 +5395,7 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+40"/>
+        <location line="+75"/>
         <source>Recover your work?</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5405,7 +5405,7 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+29"/>
+        <location line="+34"/>
         <source>Welcome to Jigsmith</source>
         <translation type="unfinished"></translation>
     </message>

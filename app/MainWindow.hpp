@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 
+class QLockFile;
+
 #include <map>
 #include <memory>
 
@@ -67,6 +69,11 @@ public:
     }
     // Offers to restore an autosave left by a session that did not end cleanly.
     void checkRecovery();
+    // Each window autosaves to its own file, held by a lock file while it runs; these are the
+    // autosaves whose program is no longer running (a crash), newest first.
+    QStringList leftoverSessions() const;
+    static QString recoveryDir();
+    void autosave();  // (every minute; public for tests)
 
     // ---- modelling workflow (also used by UI tests)
     jig::Document& document()
@@ -199,8 +206,8 @@ private:
     bool save(bool askPath);
     void exportAs(const QString& format);
     bool maybeKeepChanges();
-    void autosave();
-    QString recoveryPath() const;
+    QString recoveryPath() const;  // this window's autosave
+    void holdSessionLock();
     void setDocument(std::unique_ptr<jig::Document> doc, const QString& path);
     QAction* registryAction(const char* id);
 
@@ -220,6 +227,8 @@ private:
     QLabel* statusSel_ = nullptr;
     QLabel* statusInfo_ = nullptr;
     QTimer* autosaveTimer_ = nullptr;
+    QString sessionId_;                       // names this window's autosave and lock files
+    std::unique_ptr<QLockFile> sessionLock_;  // held while the window runs
     std::map<QString, QAction*> actions_;
     SketchEditor* sketch_ = nullptr;
     ToolPanel* panel_ = nullptr;

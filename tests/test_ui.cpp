@@ -23,6 +23,7 @@
 #include <QTreeWidget>
 #include <QtTest>
 #include <QProgressDialog>
+#include <QSysInfo>
 
 #include "FeaturePanels.hpp"
 #include "InspectPanels.hpp"
@@ -2542,6 +2543,43 @@ private slots:
         }
         for (int i = 0; i < int(doc.model().features.size()); ++i) {
             QVERIFY(doc.status(i).level == jig::StatusLevel::Ok);
+        }
+    }
+
+    // Two windows at once: each autosaves to its own file under its own lock, so neither
+    // takes the other's for a crash; a session that died (its lock's process is gone) is found.
+    void recoveryPerWindow()
+    {
+        auto w1 = std::make_unique<MainWindow>();
+        auto w2 = std::make_unique<MainWindow>();
+        {
+            jig::ScriptRunner r(w1->document());
+            QVERIFY(r.runText("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=10 h=10\n").ok());
+        }
+        w1->autosave();
+        const QDir dir(MainWindow::recoveryDir());
+        const QStringList mine = dir.entryList({"autosave-*.jig"});
+        QVERIFY(!mine.isEmpty());
+        for (const QString& f : w2->leftoverSessions()) {
+            QVERIFY2(!mine.contains(QFileInfo(f).fileName()), qPrintable(f));  // w1 is running
+        }
+        // a session that crashed: its autosave, and a lock naming a process that is gone
+        const QString dead = dir.filePath("autosave-deadbeef.jig");
+        QVERIFY(QFile::copy(dir.filePath(mine.front()), dead));
+        {
+            QFile lock(dir.filePath("autosave-deadbeef.lock"));
+            QVERIFY(lock.open(QIODevice::WriteOnly));
+            lock.write(QByteArray::number(4194301) + "\n" + QCoreApplication::applicationName().toUtf8() + "\n" +
+                       QSysInfo::machineHostName().toUtf8() + "\n" + QSysInfo::machineUniqueId() + "\n" +
+                       QSysInfo::bootUniqueId() + "\n");
+        }
+        QVERIFY(w2->leftoverSessions().contains(dead));
+        QFile::remove(dead);
+        QFile::remove(dir.filePath("autosave-deadbeef.lock"));
+        // a window that ends normally takes its autosave with it
+        w1.reset();
+        for (const QString& f : mine) {
+            QVERIFY2(!dir.exists(f), qPrintable(f));
         }
     }
 

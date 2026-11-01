@@ -8,6 +8,8 @@
 
 #include <QAction>
 #include <QLocale>
+#include <QLockFile>
+#include <QUuid>
 #include <QDialogButtonBox>
 #include <QComboBox>
 #include <QFormLayout>
@@ -536,6 +538,7 @@ MainWindow::MainWindow()
 {
     initJigResources();
     installRecomputeRunner();
+    sessionId_ = QUuid::createUuid().toString(QUuid::WithoutBraces).left(8);
     setWindowTitle(tr("Jigsmith"));
     setObjectName("MainWindow");
     view_ = new Viewport(this);
@@ -658,7 +661,13 @@ MainWindow::MainWindow()
     connect(esc, &QShortcut::activated, this, &MainWindow::escape);
 }
 
-MainWindow::~MainWindow() = default;
+MainWindow::~MainWindow()
+{
+    // ended without a crash: this window's autosave is not needed (a crash never gets here)
+    if (sessionLock_) {
+        QFile::remove(recoveryPath());
+    }
+}
 
 QAction* MainWindow::registryAction(const char* id)
 {
@@ -2020,7 +2029,7 @@ void MainWindow::exportAs(const QString& format)
     if (p.isEmpty()) {
         return;
     }
-    if (!p.contains('.')) {
+    if (QFileInfo(p).suffix().isEmpty()) {  // (a dot in a folder name is not an extension)
         p += "." + format;
     }
     jig::Result<bool> r = true;
@@ -2060,11 +2069,26 @@ bool MainWindow::maybeKeepChanges()
 
 // ---------------------------------------------------------------- autosave & recovery
 
-QString MainWindow::recoveryPath() const
+QString MainWindow::recoveryDir()
 {
     const QString dir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/recovery";
     QDir().mkpath(dir);
-    return dir + "/autosave.jig";
+    return dir;
+}
+
+QString MainWindow::recoveryPath() const
+{
+    return recoveryDir() + "/autosave-" + sessionId_ + ".jig";
+}
+
+void MainWindow::holdSessionLock()
+{
+    if (sessionLock_) {
+        return;
+    }
+    sessionLock_ = std::make_unique<QLockFile>(recoveryDir() + "/autosave-" + sessionId_ + ".lock");
+    sessionLock_->setStaleLockTime(0);  // only a lock whose program has died is stale
+    sessionLock_->tryLock(0);
 }
 
 void MainWindow::autosave()
@@ -2073,33 +2097,59 @@ void MainWindow::autosave()
         doc_->revision() == savedRevision_) {
         return;
     }
+    holdSessionLock();
     if (jig::saveDocument(*doc_, recoveryPath().toStdString())) {
         autosavedRevision_ = doc_->revision();
     }
 }
 
+QStringList MainWindow::leftoverSessions() const
+{
+    QStringList out;
+    const QDir dir(recoveryDir());
+    for (const QFileInfo& fi : dir.entryInfoList({"autosave-*.jig"}, QDir::Files, QDir::Time)) {
+        if (fi.absoluteFilePath() == QFileInfo(recoveryPath()).absoluteFilePath()) {
+            continue;  // this window's own
+        }
+        // still locked by a running Jigsmith (another window): not left over
+        QLockFile probe(fi.absolutePath() + "/" + fi.completeBaseName() + ".lock");
+        probe.setStaleLockTime(0);
+        if (probe.tryLock(0)) {
+            probe.unlock();
+            out << fi.absoluteFilePath();
+        }
+    }
+    // the single autosave of versions before 2026-11-01
+    if (QFile::exists(dir.filePath("session.lock")) && QFile::exists(dir.filePath("autosave.jig"))) {
+        out << dir.filePath("autosave.jig");
+    }
+    return out;
+}
+
 void MainWindow::checkRecovery()
 {
-    const QString lock = QFileInfo(recoveryPath()).absolutePath() + "/session.lock";
-    const bool crashed = QFile::exists(lock);
-    QFile lf(lock);
-    if (lf.open(QIODevice::WriteOnly)) {
-        lf.write(QByteArray::number(QCoreApplication::applicationPid()));
-    }
-    if (!crashed || !QFile::exists(recoveryPath())) {
+    holdSessionLock();
+    const QStringList left = leftoverSessions();
+    if (left.isEmpty()) {
         return;
     }
-    const auto when = QFileInfo(recoveryPath()).lastModified();
+    const auto when = QFileInfo(left.front()).lastModified();
     auto b = QMessageBox::question(this, tr("Recover your work?"),
                                    tr("Jigsmith did not close normally last time. A copy of your design "
                                       "from %1 was kept. Restore it?")
                                        .arg(QLocale().toString(when, QLocale::ShortFormat)));
     if (b == QMessageBox::Yes) {
-        openFile(recoveryPath());
+        openFile(left.front());
         path_.clear();             // recovered work is unsaved until the user saves it
         savedRevision_ = 0;
         refreshAll();
     }
+    // asked once: the copies of sessions that crashed are not offered again
+    for (const QString& f : left) {
+        QFile::remove(f);
+        QFile::remove(QFileInfo(f).absolutePath() + "/" + QFileInfo(f).completeBaseName() + ".lock");
+    }
+    QFile::remove(QDir(recoveryDir()).filePath("session.lock"));
 }
 
 void MainWindow::closeEvent(QCloseEvent* e)
@@ -2109,9 +2159,8 @@ void MainWindow::closeEvent(QCloseEvent* e)
         return;
     }
     QSettings().setValue("geometry", saveGeometry());
-    const QString dir = QFileInfo(recoveryPath()).absolutePath();
-    QFile::remove(dir + "/session.lock");
-    QFile::remove(recoveryPath());
+    QFile::remove(recoveryPath());  // closed cleanly: this window's autosave is not needed
+    sessionLock_.reset();           // (unlocks and removes the lock file)
     e->accept();
 }
 
