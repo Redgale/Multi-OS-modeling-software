@@ -4811,7 +4811,8 @@ JointPanel::JointPanel(jig::Document& doc, Viewport* view, std::string editId, Q
                          {tr("Slider: slides"), "slider"},
                          {tr("Cylindrical: turns and slides"), "cylindrical"},
                          {tr("Ball: turns any way"), "ball"},
-                         {tr("Planar: slides on a surface"), "planar"}});
+                         {tr("Planar: slides on a surface"), "planar"},
+                         {tr("Pin in a slot: turns and slides along"), "pinslot"}});
     fromLabel_ = new QLabel(this);
     toLabel_ = new QLabel(this);
     fromLabel_->setWordWrap(true);
@@ -4847,6 +4848,25 @@ JointPanel::JointPanel(jig::Document& doc, Viewport* view, std::string editId, Q
         connect(e, &ExprField::changed, this, [this] { schedulePreview(); });
     }
     addRow(tr("Try the motion"), try_);
+    // Animate: the slider runs between the limits (or a full turn / 100) and back
+    animate_ = new QPushButton(tr("Animate"), this);
+    animate_->setCheckable(true);
+    form_->addWidget(animate_);
+    animation_ = new QTimer(this);
+    animation_->setInterval(60);
+    connect(animate_, &QPushButton::toggled, this, [this](bool on) {
+        animate_->setText(on ? tr("Stop") : tr("Animate"));
+        on ? animation_->start() : animation_->stop();
+    });
+    connect(animation_, &QTimer::timeout, this, [this] {
+        const int lo = try_->minimum(), hi = try_->maximum(), step = std::max(1, (hi - lo) / 60);
+        int v = try_->value() + animStep_ * step;
+        if (v >= hi || v <= lo) {
+            animStep_ = -animStep_;
+            v = std::clamp(v, lo, hi);
+        }
+        try_->setValue(v);
+    });
     form_->addWidget(flip_);
     if (const jig::Feature* edit = editId_.empty() ? nullptr : doc_.feature(editId_)) {
         const auto& p = edit->params;
@@ -4963,8 +4983,8 @@ void JointPanel::showPicks()
 void JointPanel::showFields()
 {
     const std::string k = current(kind_);
-    const bool turns = k == "revolute" || k == "cylindrical" || k == "ball";
-    const bool slides = k == "slider" || k == "cylindrical" || k == "planar";
+    const bool turns = k == "revolute" || k == "cylindrical" || k == "ball" || k == "pinslot";
+    const bool slides = k == "slider" || k == "cylindrical" || k == "planar" || k == "pinslot";
     auto show = [this](QWidget* w, bool on) {
         w->setVisible(on);
         const int i = form_->indexOf(w);
@@ -4983,6 +5003,7 @@ void JointPanel::showFields()
     show(fields_["distance_min"], slides);
     show(fields_["distance_max"], slides);
     show(try_, turns || slides);
+    animate_->setVisible(turns || slides);
     try_->setRange(0, slides && !turns ? 100 : 360);
 }
 

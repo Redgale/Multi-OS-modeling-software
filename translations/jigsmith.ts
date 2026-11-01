@@ -3478,6 +3478,11 @@
     </message>
     <message>
         <location line="+1"/>
+        <source>This mesh has holes in it that could not be closed, so it does not enclose a solid.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>This mesh has holes in it, so it does not enclose a solid.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3778,6 +3783,11 @@
     </message>
     <message>
         <location line="+1"/>
+        <source>The mesh had %1 hole(s); Jigsmith closed them with flat or smooth patches. Check them.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>The point &apos;%1&apos; is missing or comes later in the timeline.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3957,7 +3967,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-56"/>
+        <location line="-57"/>
         <source>The id &apos;%1&apos; is already used.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3967,7 +3977,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+72"/>
+        <location line="+73"/>
         <source>A wall of %1 does not fit this outline.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4052,7 +4062,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-280"/>
+        <location line="-282"/>
         <source>There is nothing to export yet.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4387,7 +4397,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+34"/>
+        <location line="+35"/>
         <source>Use M2 to M12, or #4, #6, #8, #10, 1/4&quot;, 5/16&quot;, 3/8&quot;, 1/2&quot;.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4700,7 +4710,7 @@
 <context>
     <name>CoreWords</name>
     <message>
-        <location line="+110"/>
+        <location line="+111"/>
         <source>ball face (sphere)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5740,7 +5750,7 @@
 <context>
     <name>jigapp::FastenerPanel</name>
     <message>
-        <location line="+3727"/>
+        <location line="+3748"/>
         <source>Screw, nut or washer</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5853,7 +5863,7 @@
 <context>
     <name>jigapp::FeaturePanel</name>
     <message>
-        <location line="-4608"/>
+        <location line="-4629"/>
         <source>OK</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6223,12 +6233,12 @@
     <name>jigapp::JointPanel</name>
     <message>
         <location line="+2649"/>
-        <location line="+197"/>
+        <location line="+218"/>
         <source>Joint</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-196"/>
+        <location line="-217"/>
         <source>Click an edge or face on the part that moves (a hole&apos;s edge, the bottom of a lid), then one on the part it attaches to. They meet face to face; then the joint lets it turn or slide.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6260,6 +6270,11 @@
     <message>
         <location line="+1"/>
         <source>Planar: slides on a surface</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Pin in a slot: turns and slides along</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -6344,7 +6359,18 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+67"/>
+        <location line="+10"/>
+        <location line="+6"/>
+        <source>Animate</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Stop</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+70"/>
         <source>A joint needs parts: make at least one body first.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6379,7 +6405,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+32"/>
+        <location line="+33"/>
         <source>Click an edge or face of the part that moves.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6397,7 +6423,7 @@
 <context>
     <name>jigapp::LoftPanel</name>
     <message>
-        <location line="-1448"/>
+        <location line="-1469"/>
         <location line="+50"/>
         <source>Loft</source>
         <translation type="unfinished"></translation>
@@ -8339,7 +8365,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::MovePanel</name>
     <message>
-        <location line="+2733"/>
+        <location line="+2754"/>
         <source>free %1</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8582,7 +8608,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::PatternPanel</name>
     <message>
-        <location line="-3533"/>
+        <location line="-3554"/>
         <location line="+154"/>
         <source>Pattern</source>
         <translation type="unfinished"></translation>

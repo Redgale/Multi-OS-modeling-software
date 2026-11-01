@@ -3477,6 +3477,11 @@
     </message>
     <message>
         <location line="+1" />
+        <source>This mesh has holes in it that could not be closed, so it does not enclose a solid.</source>
+        <translation>[Thîs mésh hás hölés îñ ît thát çöüld ñöt bé çlöséd, sö ît döés ñöt éñçlösé á sölîd.~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
         <source>This mesh has holes in it, so it does not enclose a solid.</source>
         <translation>[Thîs mésh hás hölés îñ ît, sö ît döés ñöt éñçlösé á sölîd.~~~~~~~~~~~~~~]</translation>
     </message>
@@ -3777,6 +3782,11 @@
     </message>
     <message>
         <location line="+1" />
+        <source>The mesh had %1 hole(s); Jigsmith closed them with flat or smooth patches. Check them.</source>
+        <translation>[Thé mésh hád %1 hölé(s); Jîgsmîth çlöséd thém wîth flát ör smööth pátçhés. Çhéçk thém.~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
         <source>The point '%1' is missing or comes later in the timeline.</source>
         <translation>[Thé pöîñt '%1' îs mîssîñg ör çömés látér îñ thé tîmélîñé.~~~~~~~~~~~~~~]</translation>
     </message>
@@ -3956,7 +3966,7 @@
         <translation>[%1 édgés wéré ré-áttáçhéd bý shápé sîmîlárîtý áftér áñ éárlîér çháñgé. Çhéçk thé résült.~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="-56" />
+        <location line="-57" />
         <source>The id '%1' is already used.</source>
         <translation>[Thé îd '%1' îs álréádý üséd.~~~~~~]</translation>
     </message>
@@ -3966,7 +3976,7 @@
         <translation>[Thîs SVG hás ñö shápés, öütlîñés ör téxt tö brîñg îñ.~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+72" />
+        <location line="+73" />
         <source>A wall of %1 does not fit this outline.</source>
         <translation>[Á wáll öf %1 döés ñöt fît thîs öütlîñé.~~~~~~~~~]</translation>
     </message>
@@ -4051,7 +4061,7 @@
         <translation>[Thé föñt '%1' îs ñöt áváîláblé héré; üsîñg thé büîlt-îñ föñt (Îñtér).~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="-280" />
+        <location line="-282" />
         <source>There is nothing to export yet.</source>
         <translation>[Théré îs ñöthîñg tö éxpört ýét.~~~~~~~~]</translation>
     </message>
@@ -4386,7 +4396,7 @@
         <translation>[Thé çüt çöüld ñöt bé wörkéd öüt för thîs shápé.~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+34" />
+        <location line="+35" />
         <source>Use M2 to M12, or #4, #6, #8, #10, 1/4", 5/16", 3/8", 1/2".</source>
         <translation>[Üsé M2 tö M12, ör #4, #6, #8, #10, 1/4", 5/16", 3/8", 1/2".~~~]</translation>
     </message>
@@ -4699,7 +4709,7 @@
 <context>
     <name>CoreWords</name>
     <message>
-        <location line="+110" />
+        <location line="+111" />
         <source>ball face (sphere)</source>
         <translation>[báll fáçé (sphéré)~~~~]</translation>
     </message>
@@ -5737,7 +5747,7 @@
 <context>
     <name>jigapp::FastenerPanel</name>
     <message>
-        <location line="+3727" />
+        <location line="+3748" />
         <source>Screw, nut or washer</source>
         <translation>[Sçréw, ñüt ör wáshér~~~~~]</translation>
     </message>
@@ -5850,7 +5860,7 @@
 <context>
     <name>jigapp::FeaturePanel</name>
     <message>
-        <location line="-4608" />
+        <location line="-4629" />
         <source>OK</source>
         <translation>[ÖK~]</translation>
     </message>
@@ -6218,12 +6228,12 @@
     <name>jigapp::JointPanel</name>
     <message>
         <location line="+2649" />
-        <location line="+197" />
+        <location line="+218" />
         <source>Joint</source>
         <translation>[Jöîñt~]</translation>
     </message>
     <message>
-        <location line="-196" />
+        <location line="-217" />
         <source>Click an edge or face on the part that moves (a hole's edge, the bottom of a lid), then one on the part it attaches to. They meet face to face; then the joint lets it turn or slide.</source>
         <translation>[Çlîçk áñ édgé ör fáçé öñ thé párt thát mövés (á hölé's édgé, thé böttöm öf á lîd), théñ öñé öñ thé párt ît áttáçhés tö. Théý méét fáçé tö fáçé; théñ thé jöîñt léts ît türñ ör slîdé.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -6256,6 +6266,11 @@
         <location line="+1" />
         <source>Planar: slides on a surface</source>
         <translation>[Pláñár: slîdés öñ á sürfáçé~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Pin in a slot: turns and slides along</source>
+        <translation>[Pîñ îñ á slöt: türñs áñd slîdés álöñg~~~~~~~~~]</translation>
     </message>
     <message>
         <location line="+5" />
@@ -6339,7 +6354,18 @@
         <translation>[Dîstáñçé át möst~~~~]</translation>
     </message>
     <message>
-        <location line="+67" />
+        <location line="+10" />
+        <location line="+6" />
+        <source>Animate</source>
+        <translation>[Áñîmáté~~]</translation>
+    </message>
+    <message>
+        <location line="+0" />
+        <source>Stop</source>
+        <translation>[Stöp~]</translation>
+    </message>
+    <message>
+        <location line="+70" />
         <source>A joint needs parts: make at least one body first.</source>
         <translation>[Á jöîñt ñééds párts: máké át léást öñé bödý fîrst.~~~~~~~~~~~~~]</translation>
     </message>
@@ -6374,7 +6400,7 @@
         <translation>[— çlîçk áñ édgé ör fáçé öñ thé öthér párt~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+32" />
+        <location line="+33" />
         <source>Click an edge or face of the part that moves.</source>
         <translation>[Çlîçk áñ édgé ör fáçé öf thé párt thát mövés.~~~~~~~~~~~]</translation>
     </message>
@@ -6392,7 +6418,7 @@
 <context>
     <name>jigapp::LoftPanel</name>
     <message>
-        <location line="-1448" />
+        <location line="-1469" />
         <location line="+50" />
         <source>Loft</source>
         <translation>[Löft~]</translation>
@@ -8333,7 +8359,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
 <context>
     <name>jigapp::MovePanel</name>
     <message>
-        <location line="+2733" />
+        <location line="+2754" />
         <source>free %1</source>
         <translation>[fréé %1~]</translation>
     </message>
@@ -8574,7 +8600,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
 <context>
     <name>jigapp::PatternPanel</name>
     <message>
-        <location line="-3533" />
+        <location line="-3554" />
         <location line="+154" />
         <source>Pattern</source>
         <translation>[Páttérñ~~]</translation>

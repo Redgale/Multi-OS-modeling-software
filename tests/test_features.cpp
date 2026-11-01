@@ -2865,9 +2865,20 @@ TEST(MeshImport, StlObjAnd3mfBecomeSolids)
              "f 1 4 3 2\nf 5 6 7 8\nf 1 2 6 5\nf 2 3 7 6\nf 3 4 8 7\n";
     }
     auto d = std::make_unique<Document>();
+    // without repair it is refused; with repair (the default) the missing side is closed
+    auto openMesh = readMeshFile((dir / "open.obj").string());
+    ASSERT_TRUE(openMesh.ok());
+    auto refused = solidFromMesh(*openMesh, 20000, false);
+    ASSERT_FALSE(refused.ok());
+    EXPECT_NE(refused.error().message.find("holes"), std::string::npos) << refused.error().message;
+    int holes = 0;
+    auto mended = solidFromMesh(*openMesh, 20000, true, &holes);
+    ASSERT_TRUE(mended.ok()) << mended.error().message;
+    EXPECT_EQ(holes, 1);
+    EXPECT_NEAR(massProperties(mended.value()).volume, 1, 1e-9);
     auto open = insertMesh(*d, (dir / "open.obj").string());
-    ASSERT_FALSE(open.ok());
-    EXPECT_NE(open.error().message.find("holes"), std::string::npos) << open.error().message;
+    ASSERT_TRUE(open.ok());
+    EXPECT_NE(d->status(0).message.find("1 hole"), std::string::npos) << d->status(0).message;
     EXPECT_FALSE(insertMesh(*d, (dir / "part.step").string()).ok());
     auto mesh = readMeshFile(stl);
     ASSERT_TRUE(mesh.ok());
@@ -3088,4 +3099,17 @@ TEST(Fastener, ScrewsNutsAndWashersAtTheirStandardSizes)
         ASSERT_TRUE(r.runText(bad).ok());
         EXPECT_EQ(d->status(0).level, StatusLevel::Error) << bad;
     }
+}
+
+TEST(Joint, PinInASlotTurnsAndSlides)
+{
+    const std::string parts = "box id=a length=40mm width=40mm height=10mm\n"
+                              "box id=b center=100,0 length=10mm width=20mm height=6mm op=new\n";
+    // slides 8 mm along the top's x and turns a quarter
+    auto doc = build(parts + "joint id=j1 kind=pinslot from=face:b/bottom to=face:a/top distance=8mm angle=90deg\n");
+    expectAllOk(*doc);
+    auto bb = massProperties(doc->state().bodies.at("b")->shape());
+    EXPECT_NEAR(std::abs((bb.xmin + bb.xmax) / 2) + std::abs((bb.ymin + bb.ymax) / 2), 8, 1e-6);
+    EXPECT_NEAR(bb.zmin, 10, 1e-6);
+    EXPECT_NEAR(std::max(bb.xmax - bb.xmin, bb.ymax - bb.ymin), 20, 1e-6);
 }

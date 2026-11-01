@@ -541,6 +541,7 @@ QT_TRANSLATE_NOOP("Core", "The file could not be read (it is missing, unreadable
 QT_TRANSLATE_NOOP("Core", "This mesh has no triangles.")
 QT_TRANSLATE_NOOP("Core", "Reduce the mesh in another program first (for example, decimate it in a slicer or mesh editor), then insert it again.")
 QT_TRANSLATE_NOOP("Core", "This mesh is too small to close into a solid.")
+QT_TRANSLATE_NOOP("Core", "This mesh has holes in it that could not be closed, so it does not enclose a solid.")
 QT_TRANSLATE_NOOP("Core", "This mesh has holes in it, so it does not enclose a solid.")
 QT_TRANSLATE_NOOP("Core", "Repair the mesh in another program (close its holes), then insert it again.")
 QT_TRANSLATE_NOOP("Core", "This mesh's triangles do not join into a closed skin.")
@@ -669,6 +670,7 @@ inline const char* const kCorePatterns[] = {
     QT_TRANSLATE_NOOP("Core", "Only a circle or an arc has a centre; this is a %1."),
     QT_TRANSLATE_NOOP("Core", "A point on an edge sits at its start, end, middle or centre, not at '%1'."),
     QT_TRANSLATE_NOOP("Core", "The body this step removes (%1) no longer exists."),
+    QT_TRANSLATE_NOOP("Core", "The mesh had %1 hole(s); Jigsmith closed them with flat or smooth patches. Check them."),
     QT_TRANSLATE_NOOP("Core", "The point '%1' is missing or comes later in the timeline."),
     QT_TRANSLATE_NOOP("Core", "The sketch with this plane's path (%1) is missing or comes later."),
     QT_TRANSLATE_NOOP("Core", "%1 line ends are not connected."),

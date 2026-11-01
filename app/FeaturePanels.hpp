@@ -1111,6 +1111,10 @@ public:
     {
         return try_;
     }
+    QPushButton* animate() const
+    {
+        return animate_;
+    }
     QCheckBox* flip() const
     {
         return flip_;
@@ -1131,6 +1135,9 @@ private:
     std::map<std::string, ExprField*> fields_;  // angle2 distance2 offset and the limits
     QSlider* try_;
     QCheckBox* flip_;
+    QPushButton* animate_ = nullptr;
+    QTimer* animation_ = nullptr;
+    int animStep_ = 1;
 };
 
 // Insert ▸ Screw, nut or washer: standard metric hardware placed on a plane.

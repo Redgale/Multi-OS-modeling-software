@@ -20,6 +20,9 @@
 #include <BRepGProp.hxx>
 #include <GProp_GProps.hxx>
 #include <ShapeFix_Solid.hxx>
+#include <TopoDS_Wire.hxx>
+#include <BRepFill_Filling.hxx>
+#include <ShapeAnalysis_FreeBounds.hxx>
 #include <ShapeUpgrade_UnifySameDomain.hxx>
 #include <Standard_Failure.hxx>
 #include <TopExp_Explorer.hxx>
@@ -269,7 +272,7 @@ Result<Mesh> readMeshFile(const std::string& path)
     return ext == ".stl" ? readStl(*data) : ext == ".obj" ? readObj(*data) : read3mf(*data);
 }
 
-Result<TopoDS_Shape> solidFromMesh(const Mesh& mesh, size_t maxTriangles)
+Result<TopoDS_Shape> solidFromMesh(const Mesh& mesh, size_t maxTriangles, bool repair, int* holesClosed)
 {
     const size_t n = mesh.triangles.size() / 3;
     if (n == 0) {
@@ -309,13 +312,53 @@ Result<TopoDS_Shape> solidFromMesh(const Mesh& mesh, size_t maxTriangles)
             return makeError("mesh.open", "This mesh is too small to close into a solid.");
         }
         sew.Perform();
-        const TopoDS_Shape sewn = sew.SewedShape();
+        TopoDS_Shape sewn = sew.SewedShape();
+        // repair: each hole (a closed loop of free edges) gets a face across it, then sew again
+        if (holesClosed) {
+            *holesClosed = 0;
+        }
+        bool open = false;
+        for (TopExp_Explorer ex(sewn, TopAbs_SHELL); ex.More(); ex.Next()) {
+            open = open || !(ex.Current().Closed() || BRep_Tool::IsClosed(ex.Current()));
+        }
+        if (open && repair) {
+            ShapeAnalysis_FreeBounds bounds(sewn, std::max(1e-6, size * 1e-6), false, false);
+            BRepBuilderAPI_Sewing again(std::max(1e-6, size * 1e-6));
+            again.Add(sewn);
+            int patched = 0;
+            for (TopExp_Explorer w(bounds.GetClosedWires(), TopAbs_WIRE); w.More(); w.Next()) {
+                const TopoDS_Wire loop = TopoDS::Wire(w.Current());
+                BRepBuilderAPI_MakeFace flat(loop, true);
+                if (flat.IsDone()) {
+                    again.Add(flat.Face());
+                    ++patched;
+                    continue;
+                }
+                BRepFill_Filling fill;  // a hole that is not flat: a smooth patch across it
+                for (TopExp_Explorer e(loop, TopAbs_EDGE); e.More(); e.Next()) {
+                    fill.Add(TopoDS::Edge(e.Current()), GeomAbs_C0);
+                }
+                fill.Build();
+                if (fill.IsDone()) {
+                    again.Add(fill.Face());
+                    ++patched;
+                }
+            }
+            if (patched > 0) {
+                again.Perform();
+                sewn = again.SewedShape();
+                if (holesClosed) {
+                    *holesClosed = patched;
+                }
+            }
+        }
         TopoDS_Shape result;
         BRepBuilderAPI_MakeSolid solid;
         int shells = 0;
         for (TopExp_Explorer ex(sewn, TopAbs_SHELL); ex.More(); ex.Next()) {
             if (!ex.Current().Closed() && !BRep_Tool::IsClosed(ex.Current())) {
-                return makeError("mesh.open", "This mesh has holes in it, so it does not enclose a solid.",
+                return makeError("mesh.open", repair ? "This mesh has holes in it that could not be closed, so it does not enclose a solid."
+                                                     : "This mesh has holes in it, so it does not enclose a solid.",
                                  {"Repair the mesh in another program (close its holes), then insert it again."});
             }
             solid.Add(TopoDS::Shell(ex.Current()));
@@ -359,7 +402,8 @@ Result<std::string> insertMesh(Document& doc, const std::string& path, double un
     for (double& v : mesh->xyz) {
         v *= unitMm;
     }
-    auto solid = solidFromMesh(*mesh);
+    int closed = 0;
+    auto solid = solidFromMesh(*mesh, 20000, true, &closed);
     if (!solid) {
         return solid.error();
     }
@@ -378,6 +422,9 @@ Result<std::string> insertMesh(Document& doc, const std::string& path, double un
         f.name = file;
         f.kind = FeatureKind::Import;
         f.params = {{"file", file}, {"from", "mesh"}, {"triangles", mesh->triangles.size() / 3}, {"brep", brep}};
+        if (closed > 0) {
+            f.params["holes_closed"] = closed;  // said in the step's status
+        }
         id = f.id;
         Document::insertAtMarker(m, std::move(f));
         return true;

@@ -3268,6 +3268,21 @@ private slots:
         QTRY_VERIFY(w.featurePanel() == nullptr);
         QVERIFY(w.document().status(2).level == jig::StatusLevel::Warning);  // stopped at 45
         QVERIFY(w.showInterference().contains("overlap by"));
+        // Animate runs the motion until stopped, and Cancel leaves the design as it was
+        w.editFeature(2);
+        jp = qobject_cast<JointPanel*>(w.featurePanel());
+        QVERIFY(jp);
+        const int start = jp->tryIt()->value();
+        jp->animate()->setChecked(true);
+        QTRY_VERIFY(jp->tryIt()->value() != start);
+        QTest::qWait(300);
+        jp->animate()->setChecked(false);
+        const int stopped = jp->tryIt()->value();
+        QTest::qWait(200);
+        QCOMPARE(jp->tryIt()->value(), stopped);
+        jp->cancel();
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        QVERIFY(w.document().status(2).level == jig::StatusLevel::Warning);
     }
 
     // Appearance: a body turns red and glossy in the view, is saved with the design and its

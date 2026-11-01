@@ -423,7 +423,12 @@ FeatureOutcome applyImport(const Feature& f, const std::shared_ptr<const ModelSt
         const std::string id = bodies->size() == 1 ? f.id : f.id + "." + std::to_string(k + 1);
         out->bodies[id] = std::make_shared<NamedShape>(std::move((*bodies)[k]));
     }
-    return {out, {}};
+    FeatureStatus status;
+    if (const int holes = f.params.value("holes_closed", 0); holes > 0) {
+        status.message = fmt("The mesh had %1 hole(s); Jigsmith closed them with flat or smooth patches. Check them.",
+                             {std::to_string(holes)});
+    }
+    return {out, status};
 }
 
 const SketchState* findSketch(const std::shared_ptr<const ModelState>& in, const std::string& id);
@@ -2945,7 +2950,7 @@ FeatureOutcome applyJoint(const Document& doc, const Feature& f, const std::shar
         return failed("A joint connects two different parts.", {"Pick the second edge or face on another part."});
     }
     const std::string kind = p.value("kind", std::string("rigid"));
-    static const std::set<std::string> kinds {"rigid", "revolute", "slider", "cylindrical", "ball", "planar"};
+    static const std::set<std::string> kinds {"rigid", "revolute", "slider", "cylindrical", "ball", "planar", "pinslot"};
     if (!kinds.count(kind)) {
         return failed(fmt("Jigsmith has no joint called '%1'.", {kind}));
     }
@@ -2976,8 +2981,8 @@ FeatureOutcome applyJoint(const Document& doc, const Feature& f, const std::shar
         return std::nullopt;
     };
     double angle = 0, angle2 = 0, dist = 0, dist2 = 0, offset = 0;
-    const bool turns = kind == "revolute" || kind == "cylindrical" || kind == "ball";
-    const bool slides = kind == "slider" || kind == "cylindrical" || kind == "planar";
+    const bool turns = kind == "revolute" || kind == "cylindrical" || kind == "ball" || kind == "pinslot";
+    const bool slides = kind == "slider" || kind == "cylindrical" || kind == "planar" || kind == "pinslot";
     if (turns) {
         if (auto bad = value("angle", true, angle)) {
             return *bad;
@@ -3021,6 +3026,9 @@ FeatureOutcome applyJoint(const Document& doc, const Feature& f, const std::shar
     }
     if (kind == "planar") {
         goal.Translate(gp_Vec(to.XDirection()) * dist + gp_Vec(to.YDirection()) * dist2);
+    }
+    if (kind == "pinslot") {  // a pin in a slot: slides along the slot (the target's x) and turns
+        goal.Translate(gp_Vec(to.XDirection()) * dist);
     }
     if (turns) {
         goal.Rotate(gp_Ax1(goal.Location(), goal.Direction()), angle);
