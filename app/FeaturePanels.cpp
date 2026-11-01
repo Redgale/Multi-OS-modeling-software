@@ -3095,10 +3095,10 @@ void SplitPanel::useFace(const std::string& body, const std::string& name)
         return;
     }
     auto hits = it->second->findFaces(name);
-    if (hits.empty() || jig::measureItem(it->second->face(hits[0])).kind != "flat face") {
-        status_->setText("<b>✕ " + tr("Click a flat face to split along it.") + "</b>");
+    if (hits.empty()) {
         return;
     }
+    // a flat face splits along its plane; a curved one (of another body) where it reaches through
     const QString key = q(nlohmann::json {{"face", it->second->faceRef(body, hits[0]).toJson()}}.dump());
     if (plane_->findData(key) < 0) {
         plane_->addItem(tr("Face %1").arg(q(name)), key);

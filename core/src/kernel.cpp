@@ -872,6 +872,51 @@ void pathAt(const SketchPath& path, double s, gp_Pnt& point, gp_Vec& tangent)
     }
 }
 
+Result<std::vector<NamedShape>> splitByFace(const NamedShape& body, const TopoDS_Face& tool, const std::string& featureId)
+{
+    try {
+        BRepAlgoAPI_Splitter split;
+        TopTools_ListOfShape args, tools;
+        args.Append(body.shape());
+        tools.Append(tool);
+        split.SetArguments(args);
+        split.SetTools(tools);
+        split.Build();
+        if (!split.IsDone()) {
+            return makeError("split.failed", "The body could not be cut with that face.");
+        }
+        std::vector<std::pair<double, NamedShape>> pieces;
+        for (TopExp_Explorer ex(split.Shape(), TopAbs_SOLID); ex.More(); ex.Next()) {
+            NamedShape piece(ex.Current());
+            propagateFaceNames(split, {&body}, piece);
+            std::vector<TopoDS_Shape> cut;
+            for (int i = 0; i < piece.faceCount(); ++i) {
+                if (piece.faceName(i).empty()) {
+                    cut.push_back(piece.face(i));
+                }
+            }
+            assignNames(piece, cut, featureId + "/split");
+            piece.deriveEdgeNames();
+            GProp_GProps g;
+            BRepGProp::VolumeProperties(ex.Current(), g);
+            pieces.emplace_back(g.Mass(), std::move(piece));
+        }
+        if (pieces.size() < 2) {
+            return makeError("split.misses", "That face does not cut all the way through this body, so there is nothing to split.",
+                             {"Pick a face that reaches right across the body, or a plane."});
+        }
+        std::stable_sort(pieces.begin(), pieces.end(), [](auto& a, auto& b) { return a.first > b.first; });
+        std::vector<NamedShape> out;
+        for (auto& [v, ns] : pieces) {
+            out.push_back(std::move(ns));
+        }
+        return out;
+    }
+    catch (const Standard_Failure& f) {
+        return makeError("split.failed", "The body could not be cut with that face.", {}, kernelText(f));
+    }
+}
+
 Result<NamedShape> trimToFace(const NamedShape& body, const TopoDS_Face& target, const TopoDS_Shape& start,
                               const std::string& featureId, const std::string& endName)
 {

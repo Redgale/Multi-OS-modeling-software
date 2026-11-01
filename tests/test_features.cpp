@@ -1727,3 +1727,48 @@ TEST(Pattern, AlongAPath)
         EXPECT_NEAR(along, 4, 1e-6) << id;
     }
 }
+
+TEST(Bodies, SplitWithACurvedFace)
+{
+    // a 40 x 30 x 10 block cut by the underside of a lying cylinder (radius 25, axis along Y
+    // at z = 30): a channel-shaped piece comes off the top
+    auto doc = build("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=40 h=30\nextrude id=e1 sketch=s1 distance=10\n"
+                     "sketch id=c plane=XZ\ncircle sketch=c center=0,30 d=50\nextrude id=cyl sketch=c distance=40 direction=symmetric op=new\n");
+    std::string round;
+    const auto& cyl = *doc->state().bodies.at("cyl");
+    for (int i = 0; i < cyl.faceCount(); ++i) {
+        if (measureItem(cyl.face(i)).radius) {
+            round = cyl.faceName(i);
+        }
+    }
+    ASSERT_FALSE(round.empty());
+    run(*doc, "split id=sp1 body=e1 plane=face:" + round);
+    expectAllOk(*doc);
+    const double big = massProperties(doc->state().bodies.at("e1")->shape()).volume;
+    const double cap = massProperties(doc->state().bodies.at("sp1")->shape()).volume;
+    EXPECT_NEAR(big + cap, 12000, 1e-3);
+    // the cap: 30 long, its section the part of the circle below z = 10 inside the block
+    const double section = (300 + 625 * std::asin(0.6)) - 600;
+    EXPECT_NEAR(cap, 30 * section, 1e-3);
+    int cut = 0;
+    const auto& b = *doc->state().bodies.at("sp1");
+    for (int i = 0; i < b.faceCount(); ++i) {
+        cut += b.faceName(i).rfind("sp1/split", 0) == 0;
+    }
+    EXPECT_GE(cut, 1);
+    // a curved face that does not reach across is explained
+    auto miss = std::make_unique<Document>();
+    ScriptRunner r(*miss);
+    r.runText("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=40 h=30\nextrude id=e1 sketch=s1 distance=10\n"
+              "sketch id=c plane=XY\ncircle sketch=c center=0,0 d=4\nextrude id=pin sketch=c distance=5 op=new\n");
+    std::string pin;
+    const auto& pb = *miss->state().bodies.at("pin");
+    for (int i = 0; i < pb.faceCount(); ++i) {
+        if (measureItem(pb.face(i)).radius) {
+            pin = pb.faceName(i);
+        }
+    }
+    r.runText("split id=sp1 body=e1 plane=face:" + pin + "\n");
+    EXPECT_NE(miss->status(int(miss->model().features.size()) - 1).message.find("all the way"), std::string::npos)
+        << miss->status(int(miss->model().features.size()) - 1).message;
+}

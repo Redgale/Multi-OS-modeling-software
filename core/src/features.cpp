@@ -1085,7 +1085,30 @@ FeatureOutcome applySplit(const Document&, const Feature& f, const std::shared_p
     if (bit == in->bodies.end()) {
         return failed("The body to split no longer exists.", {"Edit the step and choose a body."});
     }
-    auto fr = planeFrame(p.value("plane", nlohmann::json("YZ")), in, status);
+    const nlohmann::json pref = p.value("plane", nlohmann::json("YZ"));
+    if (pref.is_object() && pref.contains("face")) {
+        // a curved face cuts the body where it reaches through it
+        ShapeRef ref = ShapeRef::fromJson(pref["face"]);
+        auto fb = in->bodies.find(ref.body);
+        Resolution r = fb == in->bodies.end() ? Resolution {} : resolve(*fb->second, ref);
+        if (fb == in->bodies.end() || r.status == ResolveStatus::Missing || r.status == ResolveStatus::Ambiguous) {
+            return failed("The face to split with no longer exists.", {"Edit the step and click a face again."});
+        }
+        const TopoDS_Face face = TopoDS::Face(fb->second->face(r.index));
+        if (!measureItem(face).normal) {
+            auto pieces = splitByFace(*bit->second, face, f.id);
+            if (!pieces) {
+                return failed(pieces.error());
+            }
+            auto out = copyState(in);
+            out->bodies[bodyId] = std::make_shared<NamedShape>(std::move((*pieces)[0]));  // the biggest keeps the name
+            for (size_t k = 1; k < pieces->size(); ++k) {
+                out->bodies[k == 1 ? f.id : f.id + "." + std::to_string(k)] = std::make_shared<NamedShape>(std::move((*pieces)[k]));
+            }
+            return {out, status};
+        }
+    }
+    auto fr = planeFrame(pref, in, status);
     if (!fr) {
         return failed(fr.error());
     }

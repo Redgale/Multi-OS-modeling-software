@@ -636,6 +636,40 @@ private slots:
         QTRY_VERIFY(w.featurePanel() == nullptr);
     }
 
+    // Split with a curved face: the underside of a lying cylinder takes a channel off a block.
+    void splitWithCurvedFace()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        {
+            jig::ScriptRunner r(w.document());
+            QVERIFY(r.runText("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=40 h=30\nextrude id=e1 sketch=s1 distance=10\n"
+                              "sketch id=c plane=XZ\ncircle sketch=c center=0,30 d=50\n"
+                              "extrude id=cyl sketch=c distance=40 direction=symmetric op=new\n").ok());
+        }
+        std::string round;
+        const auto& cyl = *w.document().state().bodies.at("cyl");
+        for (int i = 0; i < cyl.faceCount(); ++i) {
+            if (jig::measureItem(cyl.face(i)).radius) {
+                round = cyl.faceName(i);
+            }
+        }
+        w.runCommand("solid.split");
+        auto* sp = qobject_cast<SplitPanel*>(w.featurePanel());
+        QVERIFY(sp);
+        sp->body()->setCurrentIndex(sp->body()->findData("e1"));
+        sp->useFace("cyl", round);
+        QTest::qWait(300);
+        QTRY_VERIFY2(sp->previewOk(), qPrintable(sp->statusText()));
+        QVERIFY(sp->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        QCOMPARE(int(w.document().state().bodies.size()), 3);  // the two pieces and the cylinder
+        const double cap = jig::massProperties(w.document().state().bodies.at(w.document().model().features.back().id)->shape()).volume;
+        QVERIFY2(std::abs(cap - 30 * ((300 + 625 * std::asin(0.6)) - 600)) < 1e-3, qPrintable(QString::number(cap)));
+    }
+
     // Section view: the cut side disappears and the inside shows in the inside colour.
     void sectionView()
     {

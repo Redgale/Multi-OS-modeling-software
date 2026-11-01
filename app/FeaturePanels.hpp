@@ -614,6 +614,10 @@ public:
     {
         return plane_;
     }
+    QComboBox* body() const
+    {
+        return body_;
+    }
 
 protected:
     jig::Feature draft() const override;

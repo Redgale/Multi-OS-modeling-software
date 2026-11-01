@@ -1903,6 +1903,16 @@
     </message>
     <message>
         <location line="+1"/>
+        <source>The face to split with no longer exists.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Edit the step and click a face again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>The split plane does not cross this body, so there is nothing to split.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2284,6 +2294,21 @@
     <message>
         <location line="+1"/>
         <source>The path could not be followed.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The body could not be cut with that face.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>That face does not cut all the way through this body, so there is nothing to split.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Pick a face that reaches right across the body, or a plane.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -2687,12 +2712,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-209"/>
+        <location line="-212"/>
         <source>There is nothing to export yet.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-96"/>
+        <location line="-98"/>
         <source>The face this extrude goes up to no longer exists.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2717,7 +2742,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+93"/>
+        <location line="+95"/>
         <source>The 3MF file could not be created.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2757,7 +2782,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+9"/>
+        <location line="+12"/>
         <source>Pick at least one closed area (profile) to extrude.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7860,12 +7885,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+19"/>
-        <source>Click a flat face to split along it.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+5"/>
+        <location line="+24"/>
         <source>Face %1</source>
         <translation type="unfinished"></translation>
     </message>

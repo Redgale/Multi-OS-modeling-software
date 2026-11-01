@@ -1902,6 +1902,16 @@
     </message>
     <message>
         <location line="+1" />
+        <source>The face to split with no longer exists.</source>
+        <translation>[Thé fáçé tö splît wîth ñö löñgér éxîsts.~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Edit the step and click a face again.</source>
+        <translation>[Édît thé stép áñd çlîçk á fáçé ágáîñ.~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
         <source>The split plane does not cross this body, so there is nothing to split.</source>
         <translation>[Thé splît pláñé döés ñöt çröss thîs bödý, sö théré îs ñöthîñg tö splît.~~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -2284,6 +2294,21 @@
         <location line="+1" />
         <source>The path could not be followed.</source>
         <translation>[Thé páth çöüld ñöt bé föllöwéd.~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The body could not be cut with that face.</source>
+        <translation>[Thé bödý çöüld ñöt bé çüt wîth thát fáçé.~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>That face does not cut all the way through this body, so there is nothing to split.</source>
+        <translation>[Thát fáçé döés ñöt çüt áll thé wáý thröügh thîs bödý, sö théré îs ñöthîñg tö splît.~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Pick a face that reaches right across the body, or a plane.</source>
+        <translation>[Pîçk á fáçé thát réáçhés rîght áçröss thé bödý, ör á pláñé.~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <location line="+1" />
@@ -2686,12 +2711,12 @@
         <translation>[Thé föñt '%1' îs ñöt áváîláblé héré; üsîñg thé büîlt-îñ föñt (Îñtér).~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="-209" />
+        <location line="-212" />
         <source>There is nothing to export yet.</source>
         <translation>[Théré îs ñöthîñg tö éxpört ýét.~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="-96" />
+        <location line="-98" />
         <source>The face this extrude goes up to no longer exists.</source>
         <translation>[Thé fáçé thîs éxtrüdé göés üp tö ñö löñgér éxîsts.~~~~~~~~~~~~~]</translation>
     </message>
@@ -2716,7 +2741,7 @@
         <translation>[Thát fáçé îs lévél wîth thé skétçh, sö théré îs ñö wáý tö téll whîçh wáý tö éxtrüdé.~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+93" />
+        <location line="+95" />
         <source>The 3MF file could not be created.</source>
         <translation>[Thé 3MF fîlé çöüld ñöt bé çréátéd.~~~~~~~~]</translation>
     </message>
@@ -2756,7 +2781,7 @@
         <translation>[Thé skétçh shápé çöüld ñöt bé pröçésséd.~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+9" />
+        <location line="+12" />
         <source>Pick at least one closed area (profile) to extrude.</source>
         <translation>[Pîçk át léást öñé çlöséd áréá (pröfîlé) tö éxtrüdé.~~~~~~~~~~~~~]</translation>
     </message>
@@ -7848,12 +7873,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
         <translation>[Théré îs ñö bödý tö splît ýét.~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+19" />
-        <source>Click a flat face to split along it.</source>
-        <translation>[Çlîçk á flát fáçé tö splît álöñg ît.~~~~~~~~~]</translation>
-    </message>
-    <message>
-        <location line="+5" />
+        <location line="+24" />
         <source>Face %1</source>
         <translation>[Fáçé %1~]</translation>
     </message>

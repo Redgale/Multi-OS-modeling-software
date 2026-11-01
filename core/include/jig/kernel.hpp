@@ -329,6 +329,11 @@ void pathAt(const SketchPath& path, double s, gp_Pnt& point, gp_Vec& tangent);
 // face is extended to a whole plane), keeping the piece that touches `start` (the sketch's
 // profile). The cut face is named `endName`. Refused when the face does not cross the
 // whole body.
+// Cuts a body into pieces with a face (curved or flat, used as it is: a curved face must reach
+// across the body). Faces keep their names; the cut faces are "<feature>/split". The pieces
+// come biggest first; refused when the face does not divide the body.
+Result<std::vector<NamedShape>> splitByFace(const NamedShape& body, const TopoDS_Face& tool, const std::string& featureId);
+
 Result<NamedShape> trimToFace(const NamedShape& body, const TopoDS_Face& target, const TopoDS_Shape& start,
                               const std::string& featureId, const std::string& endName);
 
