@@ -112,7 +112,8 @@ TEST(Document, RecomputeCanRunOnAnotherThread)
             work();
             done = true;
         });
-        while (!done) {
+        // at least one look, even when a fast machine finishes the work before the first
+        do {
             if (watched) {
                 seen.push_back(watched->recomputeProgress());
                 if (volumeDuring < 0 && !watched->state().bodies.empty()) {
@@ -120,7 +121,7 @@ TEST(Document, RecomputeCanRunOnAnotherThread)
                 }
             }
             std::this_thread::sleep_for(std::chrono::microseconds(200));
-        }
+        } while (!done);
         t.join();
     });
     auto doc = buildSample("phone_stand.jigs");
