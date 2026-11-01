@@ -966,6 +966,76 @@ void Viewport::resizeEvent(QResizeEvent* e)
 
 // ---------------------------------------------------------------- picking
 
+std::vector<PickResult> Viewport::facesInBox(const QRectF& box, bool crossing)
+{
+    std::vector<PickResult> out;
+    if (!glReady_ || meshes_.empty()) {
+        return out;
+    }
+    // what the pick buffer shows inside the box: the faces seen there
+    makeCurrent();
+    const qreal dpr = devicePixelRatioF();
+    const QSize sz(int(width() * dpr), int(height() * dpr));
+    if (!pickFbo_ || pickFbo_->size() != sz) {
+        pickFbo_ = std::make_unique<QOpenGLFramebufferObject>(sz, QOpenGLFramebufferObject::Depth);
+    }
+    pickFbo_->bind();
+    glViewport(0, 0, sz.width(), sz.height());
+    glClearColor(0, 0, 0, 0);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glDisable(GL_BLEND);
+    drawScene(true);
+    const QRect r = QRect(QPoint(int(box.left() * dpr), int(box.top() * dpr)), QPoint(int(box.right() * dpr), int(box.bottom() * dpr)))
+                        .intersected(QRect(QPoint(0, 0), sz));
+    std::vector<unsigned char> px(size_t(std::max(0, r.width() * r.height() * 4)));
+    if (!r.isEmpty()) {
+        glReadPixels(r.left(), sz.height() - 1 - r.bottom(), r.width(), r.height(), GL_RGBA, GL_UNSIGNED_BYTE, px.data());
+    }
+    pickFbo_->release();
+    doneCurrent();
+    // a face counts when some pixel of it has the same face on all four sides: one-pixel
+    // slivers along silhouette edges (hidden faces peeking through) do not
+    std::set<int> seen;
+    const int W = r.width(), H = r.height();
+    auto idAt = [&](int x, int y) {
+        const size_t i = (size_t(y) * size_t(W) + size_t(x)) * 4;
+        return int(px[i]) | (int(px[i + 1]) << 8) | (int(px[i + 2]) << 16);
+    };
+    for (int y = 1; y + 1 < H; ++y) {
+        for (int x = 1; x + 1 < W; ++x) {
+            const int id = idAt(x, y);
+            if (id && !seen.count(id) && idAt(x - 1, y) == id && idAt(x + 1, y) == id && idAt(x, y - 1) == id &&
+                idAt(x, y + 1) == id) {
+                seen.insert(id);
+            }
+        }
+    }
+    for (auto& m : meshes_) {
+        for (int f = 0; f < m->shape->faceCount(); ++f) {
+            if (!seen.count(m->pickBase + f + 1)) {
+                continue;
+            }
+            bool inside = true;
+            if (!crossing) {  // window: every corner of the face's triangles inside the box
+                for (size_t t = 0; t < m->triFace.size() && inside; ++t) {
+                    if (int(m->triFace[t]) != f) {
+                        continue;
+                    }
+                    for (int k = 0; k < 3 && inside; ++k) {
+                        const uint32_t v = m->indices[t * 3 + size_t(k)];
+                        const QVector3D p(m->positions[v * 3], m->positions[v * 3 + 1], m->positions[v * 3 + 2]);
+                        inside = box.adjusted(-1, -1, 1, 1).contains(project(p));
+                    }
+                }
+            }
+            if (inside) {
+                out.push_back({m->body, f});
+            }
+        }
+    }
+    return out;
+}
+
 std::optional<PickResult> Viewport::pickAt(const QPoint& pos)
 {
     if (!glReady_ || meshes_.empty()) {
@@ -1170,7 +1240,8 @@ void Viewport::mousePressEvent(QMouseEvent* e)
             interactor_->mousePress(e);
         }
         // a press on empty space while picking edges may become a selection box
-        boxArmed_ = !interactor_ && pickMode_ == PickMode::Edges && !pickEdgeAt(lastPos_);
+        boxArmed_ = !interactor_ && ((pickMode_ == PickMode::Edges && !pickEdgeAt(lastPos_)) ||
+                                     (pickMode_ == PickMode::Faces && faceBoxing_ && !pickAt(lastPos_)));
         boxStart_ = boxEnd_ = lastPos_;
         boxing_ = false;
     }
@@ -1275,6 +1346,26 @@ void Viewport::mouseReleaseEvent(QMouseEvent* e)
         boxEnd_ = e->position().toPoint();
         overlay_->update();
         const bool crossing = boxEnd_.x() < boxStart_.x();
+        if (pickMode_ == PickMode::Faces) {
+            const auto faces = facesInBox(QRectF(boxStart_, boxEnd_).normalized(), crossing);
+            if (!faces.empty()) {
+                const std::string body = faces.front().body;
+                for (auto& m : meshes_) {
+                    if (m->body != body) {
+                        continue;
+                    }
+                    QStringList names;
+                    for (auto& f : faces) {
+                        if (f.body == body && f.face < m->shape->faceCount()) {
+                            names << QString::fromStdString(m->shape->faceName(f.face));
+                        }
+                    }
+                    emit facesBoxed(QString::fromStdString(body), names, e->modifiers());
+                    break;
+                }
+            }
+            return;
+        }
         const auto hits = edgesInBox(QRectF(boxStart_, boxEnd_).normalized(), crossing);
         if (!hits.empty()) {
             // one body per box: the first one met (fillets work on one body at a time)

@@ -1033,6 +1033,53 @@ private slots:
         }
     }
 
+    // Box selection of faces (Shell): only the faces seen in the box are picked.
+    void boxSelectFaces()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        {
+            jig::ScriptRunner r(w.document());
+            QVERIFY(r.runText("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=40 h=30\nextrude id=e1 sketch=s1 distance=10\n").ok());
+        }
+        Viewport* view = w.viewport();
+        w.runCommand("solid.shell");
+        auto* sh = qobject_cast<ShellPanel*>(w.featurePanel());
+        QVERIFY(sh);
+        QTRY_VERIFY(view->meshesReady());
+        QTest::qWait(300);  // the preview has settled (it may frame the view)
+        {
+            // from the angled view: the top and two sides, never the hidden bottom
+            view->homeView();
+            QTest::qWait(100);
+            const auto angled = view->facesInBox(QRectF(QPointF(0, 0), QSizeF(view->size())), true);
+            QCOMPARE(int(angled.size()), 3);  // of six: the three facing the camera
+        }
+        view->viewTop();
+        QTest::qWait(100);
+        // from above only the top shows: the whole-view box picks it and nothing else
+        const QRectF all(QPointF(0, 0), QSizeF(view->size()));
+        const auto seen = view->facesInBox(all, true);
+        QCOMPARE(int(seen.size()), 1);
+        const QPoint a(4, 4), b(view->width() - 4, view->height() - 4);
+        QVERIFY(!view->pickFaceAt(a));
+        QTest::mousePress(view, Qt::LeftButton, Qt::NoModifier, a);
+        QTest::mouseMove(view, QPoint(200, 200));
+        QTest::mouseMove(view, b);
+        QVERIFY(view->boxing());
+        QTest::mouseRelease(view, Qt::LeftButton, Qt::NoModifier, b);
+        QCOMPARE(int(sh->faceCount()), 1);
+        sh->thickness()->setText("2 mm");
+        QTest::qWait(300);
+        QTRY_VERIFY(sh->previewOk());
+        QVERIFY(sh->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        const double v = jig::massProperties(w.document().state().bodies.at("e1")->shape()).volume;
+        QVERIFY2(std::abs(v - (12000 - 36.0 * 26 * 8)) < 1e-3, qPrintable(QString::number(v)));  // open at the top
+    }
+
     // Window selection in 3D: a box dragged over empty space picks edges for a fillet.
     void boxSelectEdges()
     {

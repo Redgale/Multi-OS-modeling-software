@@ -1294,6 +1294,10 @@ ShellPanel::ShellPanel(jig::Document& doc, Viewport* view, std::string editId, Q
     connect(view_.data(), &Viewport::faceClicked, this, [this](const QString& body, const QString& name, Qt::KeyboardModifiers) {
         toggleFaceByName(body.toStdString(), name.toStdString());
     });
+    connect(view_.data(), &Viewport::facesBoxed, this, [this](const QString& body, const QStringList& names, Qt::KeyboardModifiers m) {
+        addFacesByName(body.toStdString(), names, m & Qt::ControlModifier);
+    });
+    view_->setFaceBoxing(true);
     const jig::Feature* edit = editId_.empty() ? nullptr : doc_.feature(editId_);
     const auto before = stateBefore();
     if (edit) {
@@ -1326,7 +1330,29 @@ ShellPanel::~ShellPanel()
 {
     if (view_) {
         view_->setFaceHighlight({}, {});
+        view_->setFaceBoxing(false);
     }
+}
+
+void ShellPanel::addFacesByName(const std::string& body, const QStringList& names, bool remove)
+{
+    const auto before = stateBefore();
+    auto bit = before->bodies.find(body);
+    if (bit == before->bodies.end()) {
+        return;
+    }
+    if (!faces_.empty() && body != body_) {
+        status_->setText("<b>✕ " + tr("Pick faces of one body at a time.") + "</b>");
+        return;
+    }
+    for (const QString& n : names) {
+        auto hits = bit->second->findFaces(n.toStdString());
+        if (hits.size() == 1) {
+            remove ? (void)faces_.erase(hits[0]) : (void)faces_.insert(hits[0]);
+        }
+    }
+    body_ = faces_.empty() ? std::string {} : body;
+    refreshFaces();
 }
 
 void ShellPanel::toggleFaceByName(const std::string& body, const std::string& name)

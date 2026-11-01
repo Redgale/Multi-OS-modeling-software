@@ -54,8 +54,8 @@ timeline edit/rename/suppress/roll back/delete with dependents warning, Paramete
 - ~~B-017~~ done: drag handle, two sides, up to a face, taper, thin (incl. open curves).
 - B-018 done (reorder; Browser visibility, isolate, rename, find in timeline, timeline groups,
   visibility and folded groups saved with the design).
-- B-019 (sketch window selection, selection filter, Select Other, 3D box selection of edges done)
-  box selection of faces and bodies.
+- B-019 (sketch window selection, selection filter, Select Other, 3D box selection of edges and faces done)
+  box selection of whole bodies.
 
 - B-020 Text (installed fonts by family and style, several lines done): HarfBuzz shaping for
   complex scripts, text along a path.

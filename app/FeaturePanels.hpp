@@ -267,6 +267,8 @@ public:
     ~ShellPanel() override;
     void toggleFace(const std::string& body, int face);       // face of the body before this step
     void toggleFaceByName(const std::string& body, const std::string& name);  // a click in the view
+    // a selection box: leave all these faces open (Ctrl held: close them again)
+    void addFacesByName(const std::string& body, const QStringList& names, bool remove);
     ExprField* thickness() const
     {
         return thickness_;
