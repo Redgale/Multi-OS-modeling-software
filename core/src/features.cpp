@@ -544,6 +544,9 @@ FeatureOutcome applySketch(const Document& doc, const Feature& f, const std::sha
     st->solved = std::move(sk.value());
     // projected edges follow the model as it is before this sketch
     for (const auto& link : st->solved.links()) {
+        if (!link.contains("ref")) {
+            continue;  // not a projection (an offset that follows its source, say)
+        }
         ShapeRef ref = ShapeRef::fromJson(link.value("ref", nlohmann::json::object()));
         auto bit = in->bodies.find(ref.body);
         Resolution r = bit == in->bodies.end() ? Resolution {} : resolve(*bit->second, ref);

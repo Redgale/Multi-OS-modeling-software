@@ -1814,3 +1814,46 @@ TEST(SketchProject, CopiesFollowTheModel)
     run(*fixedCopy, "param w = 60 mm");
     EXPECT_NEAR(massProperties(fixedCopy->state().bodies.at("e2")->shape()).volume, 40 * 20 * 3, 1e-3);
 }
+
+TEST(SketchOffset, CopiesFollowTheirSource)
+{
+    auto areas = [](const Document& d) {
+        std::vector<double> a;
+        for (auto& r : d.state().sketches.at("s1")->profiles.regions) {
+            a.push_back(r.area);
+        }
+        std::sort(a.begin(), a.end());
+        return a;
+    };
+    auto total = [&](const Document& d) {
+        double t = 0;
+        for (double a : areas(d)) {
+            t += a;
+        }
+        return t;
+    };
+    // a frame 3 mm outside a rectangle; both the rectangle and the gap are parameters
+    auto doc = build("param w = 40 mm\nparam gap = 3 mm\nsketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=w h=20\n"
+                     "offset sketch=s1 at=20,0 distance=gap\n");
+    EXPECT_NEAR(total(*doc), 46 * 26, 1e-6);
+    const int dof = doc->state().sketches.at("s1")->report.dof;
+    run(*doc, "param w = 60 mm");  // the source changes: the copy follows
+    expectAllOk(*doc);
+    EXPECT_NEAR(total(*doc), 66 * 26, 1e-6);
+    run(*doc, "param gap = 5 mm");  // and its distance
+    expectAllOk(*doc);
+    EXPECT_NEAR(total(*doc), 70 * 30, 1e-6);
+    EXPECT_EQ(doc->state().sketches.at("s1")->report.dof, dof);  // the copy adds no freedom
+    // kept with the design
+    const auto path = (tempDir() / "linked-offset.jig").string();
+    ASSERT_TRUE(saveDocument(*doc, path).ok());
+    auto back = loadDocument(path);
+    ASSERT_TRUE(back.ok());
+    run(**back, "param w = 50 mm");
+    EXPECT_NEAR(total(**back), 60 * 30, 1e-6);
+    // linked=no: a plain copy that stays where it was put
+    auto plain = build("param w = 40 mm\nsketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=w h=20\n"
+                       "offset sketch=s1 at=20,0 distance=3 linked=no\n");
+    run(*plain, "param w = 60 mm");
+    EXPECT_NE(total(*plain), 66 * 26);
+}

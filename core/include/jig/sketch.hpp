@@ -284,6 +284,10 @@ public:
     {
         links_.push_back(std::move(link));
     }
+    // An offset copy that follows its source: rebuilt after every solve from the source curves
+    // and the distance expression, held by fixed points (it adds no freedom). Returns the copy.
+    Result<std::vector<int>> offsetLinked(const std::vector<int>& curves, const std::string& distanceExpr,
+                                          const ParamLookup& lookup);
     // Moves a fixed point (its Fix constraint) to (x, y); false if it has none.
     bool moveFixedPoint(int pointId, double x, double y);
     // Changes a dimension's value text (a projected circle's radius).
@@ -294,6 +298,8 @@ public:
 
 private:
     std::vector<nlohmann::json> links_;
+    // Rebuilds linked offsets from their sources' solved places; true if any was rebuilt.
+    bool rebuildOffsets(const ParamLookup& lookup);
     SolveReport runSolver(const ParamLookup& lookup, const int* dragPoint, double dx, double dy,
                           const std::vector<int>& skip = {});
     void syncCurvePoints();

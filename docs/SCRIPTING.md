@@ -47,7 +47,7 @@ nothing is committed.
 | `line [sketch=s1] p1=x,y p2=x,y [construction=yes] [name=<n>]` | One line, ends dimensioned. Name it to use it as a revolve axis (`axis=line:<n>`) |
 | `point [sketch=s1] at=x,y` | A point (hole centres) |
 | `text [sketch=s1] center=x,y height=<len> text="…" [font=<font file or installed family, e.g. "DejaVu Sans Bold">] [angle=<angle>]` | Lettering centred on a point; `\n` in the text starts a new line. `height` is the font size (capitals are about 0.73 of it). Each letter outline is a closed area (keys `T<id>.<n>`). Built-in font: Inter |
-| `offset [sketch=s1] at=x,y distance=<len>` | Copy the curve nearest (x, y), or its whole closed outline, at a distance (positive: outward, or to the left of a single line) |
+| `offset [sketch=s1] at=x,y distance=<len> [linked=no]` | Copy the curve nearest (x, y), or its whole closed outline, at a distance (positive: outward, or to the left of a single line). The copy follows its source and its distance (an expression) when they change; `linked=no` makes a plain copy |
 | `round [sketch=s1] at=x,y r=<len>` | Round the corner where two lines meet nearest (x, y) with a tangent arc |
 | `project edge:<name>\|face:<name> [sketch=s1] [linked=no]` | Bring a body edge, or every edge of a face, into the sketch as fixed curves that follow the edge when the model changes (`linked=no`: a plain copy that stays put) |
 | `extend [sketch=s1] at=x,y` | Lengthen the line or arc nearest (x, y), at its loose end nearest (x, y), until it meets the next curve |

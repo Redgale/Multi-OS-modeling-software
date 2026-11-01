@@ -7203,12 +7203,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
         <translation>[Çlîçk thé çéñtré tö répéát thé séléçtéd çürvés áröüñd.~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+2" />
-        <source>Click an edge of a body (or a face, for its whole outline) to bring it into the sketch. The copy is fixed in place; it does not follow later changes yet.</source>
-        <translation>[Çlîçk áñ édgé öf á bödý (ör á fáçé, för îts whölé öütlîñé) tö brîñg ît îñtö thé skétçh. Thé çöpý îs fîxéd îñ pláçé; ît döés ñöt föllöw látér çháñgés ýét.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
-    </message>
-    <message>
-        <location line="+3" />
+        <location line="+5" />
         <source>Click the first line the circle touches.</source>
         <translation>[Çlîçk thé fîrst lîñé thé çîrçlé töüçhés.~~~~~~~~~~~]</translation>
     </message>
@@ -7417,7 +7412,12 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
         <translation>[Çlîçk thé éñd, ör týpé á léñgth (Táb: áñglé) áñd préss Éñtér. Drág fröm thé lást pöîñt för á táñgéñt árç. Çlîçk thé fîrst pöîñt tö çlösé. Ésç éñds.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+87" />
+        <location line="+83" />
+        <source>Click an edge of a body (or a face, for its whole outline) to bring it into the sketch. The copy is fixed in place and follows the body when it changes.</source>
+        <translation>[Çlîçk áñ édgé öf á bödý (ör á fáçé, för îts whölé öütlîñé) tö brîñg ît îñtö thé skétçh. Thé çöpý îs fîxéd îñ pláçé áñd föllöws thé bödý whéñ ît çháñgés.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+4" />
         <source>Click the second line. The circle goes in the corner between the parts you clicked.</source>
         <translation>[Çlîçk thé séçöñd lîñé. Thé çîrçlé göés îñ thé çörñér bétwééñ thé párts ýöü çlîçkéd.~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>

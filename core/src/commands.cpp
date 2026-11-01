@@ -900,7 +900,9 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
             if (!near || near->second > 1.0) {
                 return makeError("script.args", "There is no curve near that point to offset.");
             }
-            auto r = offsetCurves(s, s.chainOf(near->first), d.value());
+            // linked (the default): the copy follows its source when that changes
+            auto r = a.get("linked", "yes") == "no" ? offsetCurves(s, s.chainOf(near->first), d.value())
+                                                    : s.offsetLinked(s.chainOf(near->first), a.get("distance", "2 mm"), doc.lookup());
             if (!r) {
                 return r.error();
             }

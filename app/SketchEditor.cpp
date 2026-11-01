@@ -869,7 +869,7 @@ void SketchEditor::placeSecond(const Snap& cur, const QStringList& rawTyped)
             return;
         }
         jig::Sketch s = work_;
-        auto made = jig::offsetCurves(s, offsetChain_, d.value());
+        auto made = s.offsetLinked(offsetChain_, typed[0].toStdString(), doc_.lookup());  // follows its source
         if (!made) {
             message_ = coreText(made.error().message);
             emit stateChanged();

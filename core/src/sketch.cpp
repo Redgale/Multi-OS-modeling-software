@@ -11,6 +11,8 @@
 
 #include <planegcs/GCS.h>
 
+#include "jig/kernel.hpp"  // offsetCurves, for offsets that follow their source
+
 namespace jig
 {
 namespace
@@ -1107,12 +1109,109 @@ SolveReport Sketch::solve(const ParamLookup& lookup)
         }
         el->r = k.type == ConstraintType::Diameter ? q->value / 2 : q->value;
     }
-    return runSolver(lookup, nullptr, 0, 0);
+    SolveReport rep = runSolver(lookup, nullptr, 0, 0);
+    if (rebuildOffsets(lookup)) {
+        rep = runSolver(lookup, nullptr, 0, 0);  // the copies are fixed where they were rebuilt
+    }
+    return rep;
 }
 
 SolveReport Sketch::drag(int pointId, double x, double y, const ParamLookup& lookup)
 {
-    return runSolver(lookup, &pointId, x, y);
+    SolveReport rep = runSolver(lookup, &pointId, x, y);
+    if (rebuildOffsets(lookup)) {
+        rep = runSolver(lookup, nullptr, 0, 0);
+    }
+    return rep;
+}
+
+namespace
+{
+// The offset copy made by offsetCurves, re-held by fixed points (and a circle's radius).
+void holdInPlace(Sketch& s, const std::vector<int>& made, const std::set<int>& keepConstraints)
+{
+    std::vector<int> added;
+    for (auto& [cid, c] : s.constraints()) {
+        if (!keepConstraints.count(cid)) {
+            added.push_back(cid);
+        }
+    }
+    for (int cid : added) {
+        s.removeConstraint(cid);
+    }
+    std::set<int> fixed;
+    for (int id : made) {
+        const SketchEntity* e = s.entity(id);
+        if (!e) {
+            continue;
+        }
+        for (int p : {e->p1, e->p2, e->center}) {
+            if (p && fixed.insert(p).second) {
+                s.addConstraint(ConstraintType::Fix, p);
+            }
+        }
+        if (e->type == EntityType::Circle) {
+            s.addConstraint(ConstraintType::Radius, id, 0, 0, std::to_string(e->r) + " mm");
+        }
+    }
+}
+}  // namespace
+
+Result<std::vector<int>> Sketch::offsetLinked(const std::vector<int>& curves, const std::string& distanceExpr,
+                                              const ParamLookup& lookup)
+{
+    auto d = evaluate(distanceExpr, lookup, Dim::len());
+    if (!d) {
+        return d.error();
+    }
+    std::set<int> keep;
+    for (auto& [cid, c] : constraints_) {
+        keep.insert(cid);
+    }
+    auto made = offsetCurves(*this, curves, d->value);
+    if (!made) {
+        return made;
+    }
+    holdInPlace(*this, made.value(), keep);
+    links_.push_back({{"kind", "offset"}, {"source", curves}, {"distance", distanceExpr}, {"made", made.value()}});
+    return made;
+}
+
+bool Sketch::rebuildOffsets(const ParamLookup& lookup)
+{
+    bool any = false;
+    for (auto& link : links_) {
+        if (link.value("kind", std::string {}) != "offset") {
+            continue;
+        }
+        const auto source = link.value("source", std::vector<int> {});
+        bool whole = !source.empty();
+        for (int id : source) {
+            whole = whole && entity(id);
+        }
+        if (!whole) {
+            link["kind"] = "offset-unlinked";  // its source is gone: the copy stays as it is
+            continue;
+        }
+        auto d = evaluate(link.value("distance", std::string("1 mm")), lookup, Dim::len());
+        if (!d) {
+            continue;
+        }
+        for (int id : link.value("made", std::vector<int> {})) {
+            remove(id);
+        }
+        std::set<int> keep;
+        for (auto& [cid, c] : constraints_) {
+            keep.insert(cid);
+        }
+        auto made = offsetCurves(*this, source, d->value);
+        link["made"] = made ? made.value() : std::vector<int> {};
+        if (made) {
+            holdInPlace(*this, made.value(), keep);
+        }
+        any = true;
+    }
+    return any;
 }
 
 SolveReport Sketch::runSolver(const ParamLookup& lookup, const int* dragPoint, double dx, double dy,
