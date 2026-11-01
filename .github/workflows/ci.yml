@@ -14,6 +14,11 @@ on:
   schedule:
     - cron: "17 4 * * 1"
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Publish a release with this tag (e.g. v0.1.0) from this run; empty: no release"
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -426,7 +431,7 @@ jobs:
     # Rolling pre-release with the latest green build for every platform, downloadable
     # without a GitHub account: https://github.com/<owner>/<repo>/releases/tag/continuous
     name: Publish builds (a version tag's release, or the continuous pre-release)
-    if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || contains(github.event.head_commit.message, '[full ci]')) }}
+    if: ${{ (github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || contains(github.event.head_commit.message, '[full ci]'))) || (github.event_name == 'workflow_dispatch' && inputs.release_tag != '') }}
     needs: [linux, macos, macos-universal, windows]
     runs-on: ubuntu-24.04
     permissions:
@@ -447,20 +452,22 @@ jobs:
           cp artifacts/jigsmith-linux/screenshot-linux.png upload/ || true
           ls -la upload
       - name: Publish the release for this version tag
-        if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+        # a pushed v* tag, or a run started by hand with a release tag (the tag is made here, at
+        # this run's commit)
+        if: ${{ startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.release_tag != '') }}
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ inputs.release_tag != '' && inputs.release_tag || github.ref_name }}
         run: |
           # the notes: this version's section of CHANGELOG.md (checked out at the tag)
           version="${TAG#v}"
           awk -v v="## $version" '$0 ~ "^"v {on=1; next} on && /^## / {exit} on {print}' CHANGELOG.md > notes.md
           test -s notes.md
           gh release delete "$TAG" --yes || true
-          gh release create "$TAG" upload/* --title "Jigsmith $version" --notes-file notes.md --verify-tag
+          gh release create "$TAG" upload/* --title "Jigsmith $version" --notes-file notes.md --target "${{ github.sha }}"
       - name: Replace the continuous pre-release
-        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') && github.event_name == 'push' }}
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
