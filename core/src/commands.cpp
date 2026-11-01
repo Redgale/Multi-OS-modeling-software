@@ -2,6 +2,7 @@
 #include "jig/commands.hpp"
 
 #include <algorithm>
+#include <filesystem>
 #include <cctype>
 #include <cmath>
 #include <fstream>
@@ -63,6 +64,8 @@ CommandRegistry::CommandRegistry()
     add({"file.open", "Open…", "Open", "FILE", "Open a Jigsmith design (.jig) from your computer.", "Ctrl+O", {"load"}, true, true, false, ""});
     add({"file.save", "Save", "Save", "FILE", "Save your design to a .jig file on your computer.", "Ctrl+S", {"store", "keep"}, true, true, true, ""});
     add({"file.save_as", "Save as…", "Save As", "FILE", "Save a copy under a new name, e.g. for a size variant.", "Ctrl+Shift+S", {"copy", "variant"}, false, true, false, ""});
+    add({"file.save_version", "Save version…", "Save Version", "FILE", "Keep a named snapshot of this design inside its file.", "", {"snapshot", "milestone", "history", "backup"}, true, true, false, ""});
+    add({"file.versions", "Versions…", "Versions", "FILE", "See the snapshots saved in this file and restore one.", "", {"history", "go back", "restore", "snapshot"}, true, true, false, ""});
     add({"file.export_stl", "Export STL…", "Export STL", "FILE", "Save a triangle mesh for your 3D-printer slicer.", "", {"3d print", "slicer", "mesh", "print"}, true, true, true, ""});
     add({"file.export_step", "Export STEP…", "Export STEP", "FILE", "Save an exact solid that other CAD programs can open.", "", {"cad exchange", "stp", "share"}, false, true, true, ""});
     add({"file.export_3mf", "Export 3MF…", "Export 3MF", "FILE", "Save a modern print file that remembers units.", "", {"3d print", "slicer", "print"}, false, false, false, m6});
@@ -71,6 +74,7 @@ CommandRegistry::CommandRegistry()
     add({"edit.palette", "Find a tool…", "Command Search", "EDIT", "Type what you want to do and pick the tool.", "Ctrl+K", {"search", "find", "command", "help"}, true, true, false, ""});
     add({"view.fit", "Fit to view", "Fit", "VIEW", "Zoom so the whole design fits on screen. Use it whenever you feel lost.", "F6", {"zoom all", "lost", "see everything"}, true, true, false, ""});
     add({"view.home", "Home view", "Home", "VIEW", "Return to the default angled view.", "Home", {"reset view", "isometric"}, true, true, false, ""});
+    add({"view.save_named", "Save view…", "Named View", "VIEW", "Keep the current view of the design under a name, to come back to it from the Browser.", "", {"camera", "bookmark view", "named view"}, false, true, false, ""});
     add({"view.projection", "Perspective / orthographic", "Projection", "VIEW", "Switch between a natural view and a measured, parallel view.", "", {"ortho", "perspective", "camera"}, false, true, false, ""});
 
     // Sketch.
@@ -80,23 +84,29 @@ CommandRegistry::CommandRegistry()
     add({"sketch.rectangle", "Rectangle", "Rectangle", "SKETCH CREATE", "Draw a rectangle from corner to corner or from its center.", "R", {"box", "square"}, true, false, true, m1});
     add({"sketch.circle", "Circle", "Circle", "SKETCH CREATE", "Draw a circle from its center and diameter.", "C", {"round", "hole outline", "disc"}, true, false, true, m1});
     add({"sketch.arc", "Arc", "Arc", "SKETCH CREATE", "Draw part of a circle from its center, start and end.", "", {"curve", "bend"}, false, false, false, m1});
+    add({"sketch.arc3", "3-point arc", "3-Point Arc", "SKETCH CREATE", "Draw an arc through its two ends and one point on it.", "", {"curve through points", "bend"}, false, false, false, m1});
+    add({"sketch.arc_tangent", "Tangent arc", "Tangent Arc", "SKETCH CREATE", "Continue from the end of a line or arc with an arc that leaves it smoothly.", "", {"smooth turn", "continue curve"}, false, false, false, m1});
+    add({"sketch.circle_tangent", "Tangent circle", "2-Tangent Circle", "SKETCH CREATE", "Draw a circle that touches two lines: click both, then type its radius.", "", {"circle touching lines", "inscribed circle"}, false, false, false, m1});
+    add({"sketch.circle2", "2-point circle", "2-Point Circle", "SKETCH CREATE", "Draw a circle across its diameter by clicking both ends.", "", {"circle by diameter"}, false, false, false, m1});
+    add({"sketch.circle3", "3-point circle", "3-Point Circle", "SKETCH CREATE", "Draw a circle through three points.", "", {"circle through points"}, false, false, false, m1});
+    add({"sketch.rect3", "3-point rectangle", "3-Point Rectangle", "SKETCH CREATE", "Draw a rectangle at any angle: one side, then its depth.", "", {"rotated rectangle", "angled box"}, false, false, false, m1});
     add({"sketch.polygon", "Polygon", "Polygon", "SKETCH CREATE", "Draw a shape with equal sides, like a hex nut.", "", {"hexagon", "nut"}, false, false, false, m1});
-    add({"sketch.ellipse", "Ellipse", "Ellipse", "SKETCH CREATE", "Draw an oval from its center and two axes.", "", {"oval"}, false, false, false, m1});
+    add({"sketch.ellipse", "Ellipse", "Ellipse", "SKETCH CREATE", "Draw an oval from its center and two axes.", "", {"oval"}, false, false, true, m1});
     add({"sketch.slot", "Slot", "Slot", "SKETCH CREATE", "Draw a rounded-end slot, ideal for adjustable screws.", "", {"oblong", "obround"}, false, false, true, m1});
-    add({"sketch.spline", "Smooth curve", "Fit Point Spline", "SKETCH CREATE", "Draw a smooth curve through the points you click.", "", {"spline", "freeform", "organic"}, false, false, false, m1});
+    add({"sketch.spline", "Smooth curve", "Fit Point Spline", "SKETCH CREATE", "Draw a smooth curve through the points you click.", "", {"spline", "freeform", "organic"}, false, false, true, m1});
     add({"sketch.point", "Point", "Point", "SKETCH CREATE", "Place a reference point, e.g. for a hole center.", "", {"marker"}, false, false, false, m1});
     add({"sketch.text", "Text", "Text", "SKETCH CREATE", "Add lettering you can extrude or cut, e.g. a name plate.", "", {"label", "letters", "engrave", "name"}, false, false, false, m5});
-    add({"sketch.mirror", "Mirror (sketch)", "Sketch Mirror", "SKETCH CREATE", "Copy sketch shapes across a line to make them symmetric.", "", {"symmetric copy", "flip"}, false, false, false, m1});
-    add({"sketch.pattern_rect", "Grid copy (sketch)", "Sketch Rectangular Pattern", "SKETCH CREATE", "Repeat sketch shapes in rows and columns.", "", {"array", "grid", "repeat"}, false, false, false, m1});
-    add({"sketch.pattern_circ", "Ring copy (sketch)", "Sketch Circular Pattern", "SKETCH CREATE", "Repeat sketch shapes around a center, e.g. a bolt circle.", "", {"array", "bolt circle", "repeat around"}, false, false, false, m1});
-    add({"sketch.project", "Project / include", "Project", "SKETCH CREATE", "Bring edges of a body into this sketch as linked references.", "P", {"reference", "copy edges", "include"}, false, false, false, m5});
+    add({"sketch.mirror", "Mirror (sketch)", "Sketch Mirror", "SKETCH CREATE", "Copy the selected sketch curves across a line; the copies stay mirrored.", "", {"symmetric copy", "flip"}, false, false, true, m1});
+    add({"sketch.pattern_rect", "Grid copy (sketch)", "Sketch Rectangular Pattern", "SKETCH CREATE", "Repeat the selected sketch curves in rows and columns.", "", {"array", "grid", "repeat"}, false, false, true, m1});
+    add({"sketch.pattern_circ", "Ring copy (sketch)", "Sketch Circular Pattern", "SKETCH CREATE", "Repeat the selected sketch curves around a center, e.g. a bolt circle.", "", {"array", "bolt circle", "repeat around"}, false, false, true, m1});
+    add({"sketch.project", "Project / include", "Project", "SKETCH CREATE", "Bring edges of a body into this sketch as fixed references.", "P", {"reference", "copy edges", "include"}, false, false, false, m5});
     add({"sketch.dimension", "Dimension", "Sketch Dimension", "SKETCH CREATE", "Set an exact size: click a line, circle or two items, then type.", "D", {"measure", "size", "length", "distance"}, true, false, true, m1});
     add({"sketch.trim", "Trim", "Trim", "SKETCH MODIFY", "Delete the piece of a curve between its nearest crossings.", "T", {"cut line", "delete part", "clean up"}, true, false, false, m1});
-    add({"sketch.extend", "Extend", "Extend", "SKETCH MODIFY", "Lengthen a curve until it meets the next one.", "", {"lengthen", "stretch"}, false, false, false, m1});
-    add({"sketch.break", "Break", "Break", "SKETCH MODIFY", "Split a curve where other curves cross it.", "", {"split curve"}, false, false, false, m1});
+    add({"sketch.extend", "Extend", "Extend", "SKETCH MODIFY", "Lengthen a line or arc until it meets the next curve.", "", {"lengthen", "stretch"}, false, false, true, m1});
+    add({"sketch.break", "Break", "Break", "SKETCH MODIFY", "Split a curve where other curves cross it.", "", {"split curve"}, false, false, true, m1});
     add({"sketch.offset", "Offset", "Offset", "SKETCH MODIFY", "Make a parallel copy at a set distance, e.g. a wall or clearance.", "O", {"parallel copy", "wall thickness", "clearance"}, true, false, false, m1});
     add({"sketch.fillet", "Round corner (sketch)", "Sketch Fillet", "SKETCH MODIFY", "Round a sharp corner between two sketch curves.", "", {"round corner", "radius"}, false, false, false, m1});
-    add({"sketch.move", "Move / copy (sketch)", "Sketch Move/Copy", "SKETCH MODIFY", "Move or copy sketch shapes by a distance or angle.", "M", {"translate", "rotate", "duplicate"}, false, false, false, m1});
+    add({"sketch.move", "Move / copy (sketch)", "Sketch Move/Copy", "SKETCH MODIFY", "Move the selected sketch curves, or copy them (hold Ctrl).", "M", {"translate", "rotate", "duplicate"}, false, false, true, m1});
     add({"sketch.construction", "Construction line", "Construction", "SKETCH MODIFY", "Turn a curve into a guide that is ignored when extruding.", "X", {"guide", "helper line", "centerline"}, true, false, false, m1});
     const char* cons[][3] = {
         {"coincident", "Coincident", "make points touch"}, {"collinear", "Collinear", "same line"},
@@ -117,7 +127,7 @@ CommandRegistry::CommandRegistry()
     add({"solid.mirror", "Mirror", "Mirror", "CREATE", "Copy a body across a plane, e.g. to make a symmetric part.", "", {"symmetric", "flip copy"}, false, false, false, m3});
     add({"solid.pattern_rect", "Grid copy", "Rectangular Pattern", "CREATE", "Repeat a feature in rows and columns.", "", {"array", "grid", "repeat"}, false, false, false, m3});
     add({"solid.pattern_circ", "Ring copy", "Circular Pattern", "CREATE", "Repeat a feature around an axis.", "", {"array", "repeat around", "spokes"}, true, false, false, m3});
-    add({"solid.presspull", "Press pull", "Press Pull", "MODIFY", "Drag a face to push or pull it; adapts to what you pick.", "Q", {"push", "pull", "drag face"}, false, false, false, m3});
+    add({"solid.presspull", "Press pull", "Press Pull", "MODIFY", "Push or pull a flat face by a distance; on a rounded edge or hole it opens the step that made it.", "Q", {"push", "pull", "drag face"}, false, false, true, m3});
     add({"solid.fillet", "Fillet", "Fillet", "MODIFY", "Round off edges so parts look finished and are comfortable to hold.", "F", {"round the edges", "round", "soften", "radius"}, true, false, true, m3});
     add({"solid.chamfer", "Chamfer", "Chamfer", "MODIFY", "Cut a flat bevel on edges; great for the bottom of 3D prints.", "", {"bevel", "angled edge", "elephant foot"}, true, false, true, m3});
     add({"solid.shell", "Shell", "Shell", "MODIFY", "Hollow out a solid, leaving walls of a set thickness.", "", {"hollow", "wall", "empty inside", "cup"}, true, false, true, m3});
@@ -127,30 +137,31 @@ CommandRegistry::CommandRegistry()
     add({"construct.offset_plane", "Offset plane", "Offset Plane", "CONSTRUCT", "A plane parallel to a face or plane at a set distance.", "", {"parallel plane", "work plane"}, true, false, true, m4});
     add({"construct.angle_plane", "Plane at angle", "Plane at Angle", "CONSTRUCT", "A plane tilted around an edge or axis.", "", {"tilted plane", "slanted"}, false, false, false, m4});
     add({"construct.midplane", "Midplane", "Midplane", "CONSTRUCT", "A plane halfway between two faces or planes.", "", {"middle plane", "center plane"}, false, false, false, m4});
-    add({"construct.axis", "Axis", "Axis", "CONSTRUCT", "A reference axis for revolves and patterns.", "", {"center line", "rotation axis"}, false, false, false, m4});
-    add({"construct.point", "Reference point", "Construction Point", "CONSTRUCT", "A reference point in 3D.", "", {"work point"}, false, false, false, m4});
+    add({"construct.axis", "Axis", "Axis", "CONSTRUCT", "A reference axis for revolves, patterns and turning bodies: along an edge, through a hole or where two planes meet.", "", {"center line", "rotation axis"}, false, false, true, m4});
+    add({"construct.point", "Reference point", "Construction Point", "CONSTRUCT", "A reference point: typed coordinates, the end or centre of an edge, or the centre of a face.", "", {"work point", "reference point"}, false, false, true, m4});
     add({"inspect.measure", "Measure", "Measure", "INSPECT", "Read distances, angles, lengths and areas.", "I", {"distance", "how big", "ruler", "size"}, true, false, false, m6});
     add({"inspect.section", "Section view", "Section Analysis", "INSPECT", "Slice the view to look inside walls and holes.", "", {"cut view", "cross section", "inside"}, false, false, false, m6});
     add({"inspect.properties", "Properties", "Properties", "INSPECT", "Volume, area, weight and center of mass of a body.", "", {"volume", "weight", "mass", "filament"}, true, false, true, m6});
-    add({"insert.step", "Import STEP…", "Insert STEP", "INSERT", "Bring in a solid from another CAD program.", "", {"stp", "import solid"}, false, false, true, m6});
+    add({"insert.step", "Import STEP…", "Insert STEP", "INSERT", "Bring in a solid from another CAD program.", "", {"stp", "import solid"}, false, true, true, m6});
     add({"insert.svg", "Import SVG…", "Insert SVG", "INSERT", "Bring vector artwork into a sketch, e.g. a logo.", "", {"logo", "vector", "artwork"}, false, false, false, m5});
     add({"insert.dxf", "Import DXF…", "Insert DXF", "INSERT", "Bring a 2D drawing or laser-cut file into a sketch.", "", {"laser", "2d drawing"}, false, false, false, m5});
     add({"modify.parameters", "Parameters", "Change Parameters", "MODIFY", "Name sizes like width or wall and use them in any field.", "", {"variables", "named values", "change size"}, true, false, true, m5});
-    add({"help.tutorial", "Your first part (15 min)", "Tutorial", "HELP", "A guided tour that builds a phone stand with you.", "", {"learn", "tutorial", "getting started", "help"}, true, false, false, m7});
+    add({"help.tutorial", "Your first part (10 min)", "Tutorial", "HELP", "A guided tour that builds your first part with you.", "", {"learn", "tutorial", "getting started", "help"}, true, false, false, m7});
     // clang-format on
 
     // Usable from the desktop app as of milestone M1/M2/M3 (sketching, extrude, fillet,
     // shell, revolve, hole, patterns, mirror, parameters). Everything else above keeps its "coming in" note.
     static const std::set<std::string> inApp {
         "sketch.create", "sketch.finish", "sketch.line", "sketch.rectangle", "sketch.circle", "sketch.point",
-        "sketch.arc", "sketch.slot", "sketch.polygon", "sketch.text",
-        "sketch.dimension", "sketch.construction", "constraint.coincident", "constraint.midpoint", "constraint.fix",
+        "sketch.arc", "sketch.arc3", "sketch.arc_tangent", "sketch.circle2", "sketch.circle_tangent", "sketch.circle3", "sketch.rect3", "sketch.slot", "sketch.polygon", "sketch.ellipse", "sketch.spline", "sketch.text", "sketch.trim", "sketch.offset", "sketch.fillet", "sketch.project", "sketch.extend", "sketch.break", "sketch.mirror", "sketch.move", "sketch.pattern_rect", "sketch.pattern_circ",
+        "sketch.dimension", "sketch.construction", "constraint.coincident", "constraint.collinear", "constraint.concentric",
+        "constraint.midpoint", "constraint.fix",
         "constraint.parallel", "constraint.perpendicular", "constraint.horizontal", "constraint.tangent",
         "constraint.symmetric", "constraint.equal", "solid.extrude", "solid.fillet", "solid.chamfer", "solid.shell",
         "solid.revolve", "solid.hole", "solid.mirror", "solid.pattern_rect", "solid.pattern_circ", "modify.parameters",
         "inspect.measure", "inspect.properties", "file.export_3mf", "construct.offset_plane", "construct.angle_plane",
-        "construct.midplane", "solid.combine", "solid.split", "solid.move",
-        "inspect.section"};
+        "construct.midplane", "construct.axis", "construct.point", "solid.presspull", "solid.combine", "solid.split", "solid.move",
+        "inspect.section", "insert.dxf", "insert.svg", "help.tutorial"};
     for (auto& c : commands_) {
         if (inApp.count(c.id)) {
             c.available = true;
@@ -360,6 +371,14 @@ Result<std::pair<std::string, std::string>> parsePairExpr(const std::string& s)
     return std::pair {parts[0], parts[1]};
 }
 
+// "Extrude 3" for e3; a custom id keeps its whole self ("Extrude cyl", not "Extrude yl").
+std::string stepName(const std::string& label, const std::string& id, const std::string& prefix)
+{
+    const bool numbered = id.size() > prefix.size() && id.compare(0, prefix.size(), prefix) == 0 &&
+                          std::all_of(id.begin() + long(prefix.size()), id.end(), [](char c) { return std::isdigit(static_cast<unsigned char>(c)); });
+    return label + " " + (numbered ? id.substr(prefix.size()) : id);
+}
+
 Feature* findFeature(Model& m, const std::string& id)
 {
     return Document::findFeature(m, id);
@@ -444,11 +463,45 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
     if (!ta) {
         return ta.error();
     }
-    const Args& a = ta.value();
+    Args& a = ta.value();
     if (a.verb.empty()) {
         return true;
     }
     Document& doc = doc_;
+    // In a design that is not in millimetres, plain numbers in size and position arguments
+    // are in the design's unit ("rect w=2" in an inch design is 2 in). They are stored with
+    // the unit written out, so changing the design's unit later never rescales anything.
+    if (doc.units() != LengthUnit::Millimetre) {
+        static const std::set<std::string> lengthKeys {
+            "w", "h", "d", "r", "width", "height", "distance", "depth", "diameter", "thickness", "radius",
+            "offset", "dx", "dy", "dz", "distance2", "to_offset", "thin", "r", "radius", "radius2", "spacing1", "spacing2", "cbore_diameter", "cbore_depth", "csink_diameter",
+            "center", "corner", "points", "c1", "c2", "p1", "p2", "at", "by", "about", "spacing", "axis"};
+        for (auto& [k, v] : a.kv) {
+            const bool ellipseRadius = a.verb == "ellipse" && (k == "a" || k == "b");
+            if (!lengthKeys.count(k) && !ellipseRadius) {
+                continue;
+            }
+            std::string out, tok;
+            auto flush = [&] {
+                std::string t = tok;
+                const auto b = t.find_first_not_of(' '), e = t.find_last_not_of(' ');
+                t = b == std::string::npos ? "" : t.substr(b, e - b + 1);
+                out += t.empty() ? tok : withLengthUnit(t, doc.units(), doc.lookup());
+                tok.clear();
+            };
+            for (char c : v) {
+                if (c == ',' || c == ';') {
+                    flush();
+                    out += c;
+                }
+                else {
+                    tok += c;
+                }
+            }
+            flush();
+            v = out;
+        }
+    }
 
     // After a feature-creating edit: fail when the new/edited feature errors (strict mode).
     auto checkFeature = [&](const std::string& id) -> Result<bool> {
@@ -490,6 +543,17 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
     auto len = [&](const std::string& e) { return doc.evalLength(e); };
 
     // ---- parameters
+    if (a.verb == "units") {
+        // units mm|cm|m|in|ft : how this design shows sizes and reads plain numbers
+        auto u = lengthUnitFromString(a.positional.empty() ? "" : a.positional[0]);
+        if (!u) {
+            return makeError("script.args", "Use: units mm|cm|m|in|ft");
+        }
+        return doc.transact("Units", [&](Model& m) -> Result<bool> {
+            m.units = *u;
+            return true;
+        });
+    }
     if (a.verb == "param") {
         // param name = expr [kind=angle|number] [comment="..."]
         std::string rest = line.substr(line.find("param") + 5);
@@ -534,6 +598,9 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
             if (kind) {
                 target->kind = *kind;  // an existing parameter keeps its kind unless told otherwise
             }
+            if (target->kind == ParamKind::Length && m.units != LengthUnit::Millimetre) {
+                target->expr = withLengthUnit(expr, m.units);  // "2" in an inch design is 2 in
+            }
             // Reject the change (nothing is committed) if the value does not work.
             auto v = Document::evalParamIn(m, name);
             if (!v) {
@@ -564,7 +631,7 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
             if (findFeature(m, f.id)) {
                 return makeError("script.args", "The id '" + f.id + "' is already used.");
             }
-            f.name = a.get("name", "Sketch " + f.id.substr(1));
+            f.name = a.get("name", stepName("Sketch", f.id, "s"));
             f.kind = FeatureKind::Sketch;
             if (a.has("on")) {
                 // on=<face name> : sketch on a named face of a body
@@ -663,6 +730,9 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
             s.addConstraint(ConstraintType::Diameter, c, 0, 0, de);
             s.addConstraint(ConstraintType::DistanceX, cp, 0, 0, pe->first);
             s.addConstraint(ConstraintType::DistanceY, cp, 0, 0, pe->second);
+            if (a.get("construction", "no") == "yes") {
+                s.setConstruction(c, true);  // a guide (a path for text or copies), not an outline
+            }
             return true;
         });
     }
@@ -728,7 +798,11 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
             return true;
         });
     }
-    if (a.verb == "line" || a.verb == "point" || a.verb == "arc") {
+    // "point" with three coordinates or through= is a construction point in 3D (below)
+    const std::string atText = a.get("at", "");
+    const bool point3d = a.verb == "point" && !a.has("sketch")
+                         && (a.has("through") || std::count(atText.begin(), atText.end(), ',') == 2);
+    if (a.verb == "line" || (a.verb == "point" && !point3d) || a.verb == "arc") {
         // line p1=x,y p2=x,y [construction=yes] [name=axis]
         // point at=x,y [name=..]                       (hole centres)
         // arc center=x,y r=<len> from=<angle> to=<angle> [chord=yes] [name=..]   (counter-clockwise)
@@ -796,7 +870,7 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
         return res;
     }
     if (a.verb == "text") {
-        // text center=x,y height=<len> text="ABC" [font=<file or name>] [angle=<angle>]
+        // text center=x,y height=<len> text="ABC" [font=<file or name>] [angle=<angle>] [along=x,y]
         const std::string sid = a.get("sketch", last_);
         return editSketch("Text", sid, [&](Sketch& s, const Document&) -> Result<bool> {
             auto pe = parsePairExpr(a.get("center", "0,0"));
@@ -817,6 +891,338 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
             const int anchor = s.texts().at(id).anchor;
             s.addConstraint(ConstraintType::DistanceX, anchor, 0, 0, pe->first);
             s.addConstraint(ConstraintType::DistanceY, anchor, 0, 0, pe->second);
+            if (a.has("along")) {  // bend along the circle or arc nearest this point
+                auto ae = parsePairExpr(a.get("along"));
+                auto qx = ae ? len(ae->first) : Result<double>(0.0), qy = ae ? len(ae->second) : Result<double>(0.0);
+                auto near = ae && qx && qy ? s.curveNear(qx.value(), qy.value(), true) : std::nullopt;
+                const SketchEntity* c = near ? s.entity(near->first) : nullptr;
+                if (!c || (c->type != EntityType::Circle && c->type != EntityType::Arc)) {
+                    return makeError("script.args", "along= needs a point on a circle or arc of the sketch.");
+                }
+                s.text(id)->path = near->first;
+            }
+            return true;
+        });
+    }
+    if (a.verb == "offset") {
+        // offset [sketch=s1] at=x,y distance=<len> : the curve nearest (x, y), or its closed outline
+        const std::string sid = a.get("sketch", last_);
+        return editSketch("Offset", sid, [&](Sketch& s, const Document&) -> Result<bool> {
+            auto pe = parsePairExpr(a.get("at", "0,0"));
+            if (!pe) {
+                return pe.error();
+            }
+            auto px = len(pe->first), py = len(pe->second);
+            auto d = len(a.get("distance", "2 mm"));
+            if (!px || !py || !d) {
+                return makeError("script.args", "Offset needs at=x,y distance=<len>.");
+            }
+            auto near = s.curveNear(px.value(), py.value());
+            if (!near || near->second > 1.0) {
+                return makeError("script.args", "There is no curve near that point to offset.");
+            }
+            // linked (the default): the copy follows its source when that changes
+            auto r = a.get("linked", "yes") == "no" ? offsetCurves(s, s.chainOf(near->first), d.value())
+                                                    : s.offsetLinked(s.chainOf(near->first), a.get("distance", "2 mm"), doc.lookup());
+            if (!r) {
+                return r.error();
+            }
+            return true;
+        });
+    }
+    if (a.verb == "round") {
+        // round [sketch=s1] at=x,y r=<len> : a tangent arc in the corner where two lines meet
+        const std::string sid = a.get("sketch", last_);
+        return editSketch("Round corner", sid, [&](Sketch& s, const Document&) -> Result<bool> {
+            auto pe = parsePairExpr(a.get("at", "0,0"));
+            if (!pe) {
+                return pe.error();
+            }
+            auto px = len(pe->first), py = len(pe->second);
+            const std::string re = a.get("r", "2 mm");
+            auto r = len(re);
+            if (!px || !py || !r) {
+                return makeError("script.args", "Round needs at=x,y r=<len>.");
+            }
+            auto arc = s.filletCorner(px.value(), py.value(), r.value(), re);
+            if (!arc) {
+                return arc.error();
+            }
+            return true;
+        });
+    }
+    if (a.verb == "project") {
+        // project [sketch=s1] edge:<name> | face:<name>   (a face brings in its whole outline)
+        if (a.positional.empty()) {
+            return makeError("script.args", "Use: project edge:<name> | face:<name> [sketch=s1]");
+        }
+        const std::string what = a.positional[0];
+        const ModelState& st = doc.state();
+        std::vector<TopoDS_Shape> edges;
+        std::vector<nlohmann::json> refs;  // so the copies follow the edges
+        for (auto& [bid, body] : st.bodies) {
+            if (what.rfind("edge:", 0) == 0) {
+                for (int i : body->findEdges(what.substr(5))) {
+                    edges.push_back(body->edge(i));
+                    refs.push_back(body->edgeRef(bid, i).toJson());
+                }
+            }
+            else if (what.rfind("face:", 0) == 0) {
+                for (int f : body->findFaces(what.substr(5))) {
+                    for (int e : body->edgesOfFace(f)) {
+                        edges.push_back(body->edge(e));
+                        refs.push_back(body->edgeRef(bid, e).toJson());
+                    }
+                }
+            }
+        }
+        if (edges.empty()) {
+            return makeError("script.args", "Nothing called '" + what + "' to project.");
+        }
+        const std::string sid = a.get("sketch", last_);
+        auto sst = st.sketches.find(sid);
+        if (sst == st.sketches.end()) {
+            return makeError("script.args", "The sketch '" + sid + "' is not available to project into.");
+        }
+        const gp_Ax3 frame = sst->second->frame;
+        return editSketch("Project", sid, [&](Sketch& s, const Document&) -> Result<bool> {
+            for (size_t k = 0; k < edges.size(); ++k) {
+                auto r = projectEdge(s, frame, edges[k], a.get("linked", "yes") == "no" ? nlohmann::json() : refs[k]);
+                if (!r) {
+                    return r.error();
+                }
+            }
+            return true;
+        });
+    }
+    if (a.verb == "trim") {
+        // trim [sketch=s1] at=x,y : remove the piece of the curve nearest (x, y) between its crossings
+        const std::string sid = a.get("sketch", last_);
+        return editSketch("Trim", sid, [&](Sketch& s, const Document&) -> Result<bool> {
+            auto pe = parsePairExpr(a.get("at", "0,0"));
+            if (!pe) {
+                return pe.error();
+            }
+            auto px = len(pe->first), py = len(pe->second);
+            if (!px || !py) {
+                return !px ? px.error() : py.error();
+            }
+            auto near = s.curveNear(px.value(), py.value());
+            if (!near || near->second > 1.0) {
+                return makeError("script.args", "There is no curve near that point to trim.");
+            }
+            s.trim(near->first, px.value(), py.value());
+            return true;
+        });
+    }
+    // (a sketch mirror names a line with axis=; a body mirror names a plane)
+    const bool sketchMove = (a.verb == "move" || a.verb == "copy") && a.has("at");
+    if (a.verb == "extend" || a.verb == "break" || (a.verb == "mirror" && a.has("axis")) || sketchMove ||
+        a.verb == "grid" || a.verb == "ring") {
+        // extend|break [sketch=s1] at=x,y : the curve nearest (x, y)
+        // mirror [sketch=s1] at=x,y;x,y;… axis=x,y : the curves nearest each point, across the line nearest axis
+        const std::string sid = a.get("sketch", last_);
+        // move|copy [sketch=s1] at=x,y;… [by=dx,dy] [angle=<angle> about=x,y]
+        // grid [sketch=s1] at=x,y;… count=n1[,n2] spacing=<len>[,<len>]   (columns along X, rows along Y)
+        // ring [sketch=s1] at=x,y;… center=x,y count=<n> [angle=360 deg]
+        static const std::map<std::string, std::string> titles {
+            {"extend", "Extend"}, {"break", "Break"}, {"mirror", "Mirror"}, {"move", "Move"},
+            {"copy", "Copy"},     {"grid", "Grid copy"}, {"ring", "Ring copy"}};
+        const std::string title = titles.at(a.verb);
+        return editSketch(title, sid, [&](Sketch& s, const Document&) -> Result<bool> {
+            auto curveAt = [&](const std::string& text, bool construction = false)
+                -> Result<std::pair<int, std::pair<double, double>>> {
+                auto pe = parsePairExpr(text);
+                if (!pe) {
+                    return pe.error();
+                }
+                auto px = len(pe->first), py = len(pe->second);
+                if (!px || !py) {
+                    return !px ? px.error() : py.error();
+                }
+                auto near = s.curveNear(px.value(), py.value(), construction);
+                if (!near || near->second > 1.0) {
+                    return makeError("script.args", "There is no curve near " + text + ".");
+                }
+                return std::pair {near->first, std::pair {px.value(), py.value()}};
+            };
+            if (a.verb == "mirror") {
+                auto axis = curveAt(a.get("axis", ""), true);
+                if (!axis) {
+                    return axis.error();
+                }
+                std::vector<int> ids;
+                std::string list = a.get("at", "");
+                for (size_t from = 0; from <= list.size();) {
+                    const size_t semi = std::min(list.find(';', from), list.size());
+                    auto c = curveAt(list.substr(from, semi - from));
+                    if (!c) {
+                        return c.error();
+                    }
+                    ids.push_back(c->first);
+                    from = semi + 1;
+                }
+                auto r = s.mirror(ids, axis->first);
+                if (!r) {
+                    return r.error();
+                }
+                return true;
+            }
+            auto pairOf = [&](const std::string& key, const std::string& def) -> Result<std::pair<double, double>> {
+                auto pe = parsePairExpr(a.get(key, def));
+                if (!pe) {
+                    return pe.error();
+                }
+                auto px = len(pe->first), py = len(pe->second);
+                if (!px || !py) {
+                    return !px ? px.error() : py.error();
+                }
+                return std::pair {px.value(), py.value()};
+            };
+            if (a.verb != "extend" && a.verb != "break") {
+                std::vector<int> ids;
+                const std::string list = a.get("at", "");
+                for (size_t from = 0; from <= list.size();) {
+                    const size_t semi = std::min(list.find(';', from), list.size());
+                    auto c = curveAt(list.substr(from, semi - from));
+                    if (!c) {
+                        return c.error();
+                    }
+                    ids.push_back(c->first);
+                    from = semi + 1;
+                }
+                if (a.verb == "move" || a.verb == "copy") {
+                    auto by = pairOf("by", "0,0");
+                    auto about = pairOf("about", "0,0");
+                    auto ang = doc.evalAngle(a.get("angle", "0 deg"));
+                    if (!by || !about || !ang) {
+                        return !by ? by.error() : !about ? about.error() : ang.error();
+                    }
+                    if (a.verb == "move") {
+                        auto r = s.moveCurves(ids, by->first, by->second, ang.value(), about->first, about->second);
+                        if (!r) {
+                            return r.error();
+                        }
+                        return true;
+                    }
+                    auto r = s.copyCurves(ids, by->first, by->second, ang.value(), about->first, about->second);
+                    if (!r) {
+                        return r.error();
+                    }
+                    return true;
+                }
+                // counts: "3" or "3,2"
+                const std::string cs = a.get("count", "2");
+                const size_t comma = cs.find(',');
+                auto n1 = evaluate(cs.substr(0, comma), doc.lookup());
+                auto n2 = comma == std::string::npos ? Result<Quantity>(Quantity {1, Dim::none()})
+                                                     : evaluate(cs.substr(comma + 1), doc.lookup());
+                if (!n1 || !n2) {
+                    return makeError("script.args", "count must be a number, or two numbers like 3,2.");
+                }
+                const int c1 = int(std::lround(n1->value)), c2 = int(std::lround(n2->value));
+                if (a.verb == "grid") {
+                    const std::string sp = a.get("spacing", "10 mm");
+                    const size_t k = sp.find(',');
+                    auto s1 = len(sp.substr(0, k));
+                    auto s2 = k == std::string::npos ? s1 : len(sp.substr(k + 1));
+                    if (!s1 || !s2) {
+                        return !s1 ? s1.error() : s2.error();
+                    }
+                    // linked (the default): the copies follow the original and the spacing
+                    auto r = a.get("linked", "yes") == "no"
+                                 ? s.patternRect(ids, c1, s1.value(), 0, c2, 0, s2.value())
+                                 : s.patternLinked(ids, {{"kind", "grid"}, {"n1", c1}, {"n2", c2}, {"s1", sp.substr(0, k)},
+                                                         {"s2", k == std::string::npos ? sp : sp.substr(k + 1)}},
+                                                   doc.lookup());
+                    if (!r) {
+                        return r.error();
+                    }
+                    return true;
+                }
+                auto center = pairOf("center", "0,0");
+                auto total = doc.evalAngle(a.get("angle", "360 deg"));
+                if (!center || !total) {
+                    return !center ? center.error() : total.error();
+                }
+                auto r = a.get("linked", "yes") == "no"
+                             ? s.patternCircular(ids, center->first, center->second, c1, total.value())
+                             : s.patternLinked(ids, {{"kind", "ring"}, {"n", c1}, {"angle", a.get("angle", "360 deg")},
+                                                     {"center", {center->first, center->second}}},
+                                               doc.lookup());
+                if (!r) {
+                    return r.error();
+                }
+                return true;
+            }
+            auto c = curveAt(a.get("at", "0,0"));
+            if (!c) {
+                return c.error();
+            }
+            const auto [x, y] = c->second;
+            if (a.verb == "extend") {
+                auto r = s.extend(c->first, x, y);
+                if (!r) {
+                    return r.error();
+                }
+                return true;
+            }
+            auto r = s.breakAt(c->first, x, y);
+            if (!r) {
+                return r.error();
+            }
+            return true;
+        });
+    }
+    if (a.verb == "ellipse" || a.verb == "spline") {
+        // ellipse [sketch=s1] center=x,y a=<len> b=<len> [angle=<angle>]   (a, b = the two radii; dimensioned)
+        // spline [sketch=s1] points=x,y;x,y;… [closed=yes]                 (a smooth curve through them)
+        const std::string sid = a.get("sketch", last_);
+        return editSketch(a.verb == "ellipse" ? "Ellipse" : "Smooth curve", sid,
+                          [&](Sketch& s, const Document&) -> Result<bool> {
+            if (a.verb == "spline") {
+                std::vector<std::pair<double, double>> pts;
+                const std::string list = a.get("points", "");
+                for (size_t from = 0; from < list.size();) {
+                    const size_t semi = std::min(list.find(';', from), list.size());
+                    auto pe = parsePairExpr(list.substr(from, semi - from));
+                    if (!pe) {
+                        return pe.error();
+                    }
+                    auto px = len(pe->first), py = len(pe->second);
+                    if (!px || !py) {
+                        return !px ? px.error() : py.error();
+                    }
+                    pts.emplace_back(px.value(), py.value());
+                    from = semi + 1;
+                }
+                const bool closed = a.get("closed", "no") == "yes";
+                if (pts.size() < (closed ? 3u : 2u)) {
+                    return makeError("script.args", closed ? "A closed smooth curve needs at least 3 points."
+                                                           : "A smooth curve needs at least 2 points.");
+                }
+                s.addSpline(pts, closed);
+                return true;
+            }
+            auto pe = parsePairExpr(a.get("center", "0,0"));
+            if (!pe) {
+                return pe.error();
+            }
+            auto cx = len(pe->first), cy = len(pe->second);
+            const std::string ae = a.get("a", "10 mm"), be = a.get("b", "5 mm");
+            auto ra = len(ae), rb = len(be);
+            auto ang = doc.evalAngle(a.get("angle", "0 deg"));
+            if (!cx || !cy || !ra || !rb || !ang) {
+                return makeError("script.args", "Ellipse needs center=x,y a=<len> b=<len> with valid values.");
+            }
+            if (!(ra.value() > 0) || !(rb.value() > 0)) {
+                return makeError("script.args", "Both radii of an ellipse must be larger than zero.");
+            }
+            const int el = s.addEllipse(cx.value(), cy.value(), cx.value() + ra.value() * std::cos(ang.value()),
+                                        cy.value() + ra.value() * std::sin(ang.value()), rb.value());
+            const SketchEntity E = *s.entity(el);
+            s.addConstraint(ConstraintType::Distance, E.center, E.p1, 0, ae);
+            s.addConstraint(ConstraintType::Radius, el, 0, 0, be);
             return true;
         });
     }
@@ -871,7 +1277,7 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
             if (findFeature(m, f.id)) {
                 return makeError("script.args", "The id '" + f.id + "' is already used.");
             }
-            f.name = a.get("name", "Extrude " + f.id.substr(1));
+            f.name = a.get("name", stepName("Extrude", f.id, "e"));
             f.kind = FeatureKind::Extrude;
             f.params["sketch"] = a.get("sketch");
             if (a.has("profiles") && a.get("profiles") != "all") {
@@ -883,6 +1289,27 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
             f.params["extent"] = a.get("extent", "distance");
             f.params["distance"] = a.get("distance", "10 mm");
             f.params["direction"] = a.get("direction", "one");
+            for (const char* key : {"distance2", "taper", "thin", "thin_side", "to_offset"}) {
+                if (a.has(key)) {
+                    f.params[key] = a.get(key);
+                }
+            }
+            if (a.has("to")) {  // extent=to to=XY|<plane id>|face:<name>
+                const std::string to = a.get("to");
+                f.params["to"] = to;
+                if (to.rfind("face:", 0) == 0) {
+                    f.params["to"] = nullptr;
+                    for (auto& [bid, body] : doc.state().bodies) {
+                        auto hits = body->findFaces(to.substr(5));
+                        if (hits.size() == 1) {
+                            f.params["to"] = {{"face", body->faceRef(bid, hits[0]).toJson()}};
+                        }
+                    }
+                    if (f.params["to"].is_null()) {
+                        return makeError("script.args", "There is no single face called '" + to.substr(5) + "'.");
+                    }
+                }
+            }
             f.params["op"] = a.get("op", "new");
             if (a.has("target")) {
                 f.params["target"] = a.get("target");
@@ -973,7 +1400,7 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
             if (findFeature(m, f.id)) {
                 return makeError("script.args", "The id '" + f.id + "' is already used.");
             }
-            f.name = a.get("name", (isChamfer ? "Chamfer " : "Fillet ") + f.id.substr(1));
+            f.name = a.get("name", stepName(isChamfer ? "Chamfer" : "Fillet", f.id, isChamfer ? "c" : "f"));
             f.kind = isChamfer ? FeatureKind::Chamfer : FeatureKind::Fillet;
             if (isChamfer) {
                 f.params["distance"] = a.get("distance", "1 mm");
@@ -986,6 +1413,14 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
                 refs.push_back(body.edgeRef(bodyId, e).toJson());
             }
             f.params["edges"] = refs;
+            for (const char* key : {"type", "distance2", "angle", "radius2"}) {
+                if (a.has(key)) {
+                    f.params[key] = a.get(key);
+                }
+            }
+            if (a.get("flip", "no") == "yes") {
+                f.params["flip"] = true;
+            }
             id = f.id;
             insertFeature(m, std::move(f));
             return true;
@@ -996,7 +1431,8 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
         return checkFeature(id);
     }
     if (a.verb == "shell") {
-        // shell faces="face:<name>;face:<name>" thickness=2mm [body=e1]   (faces=none: closed hollow)
+        // shell faces="face:<name>;face:<name>" thickness=2mm [body=e1] [direction=inside|outside]
+        //       (faces=none: closed hollow)
         const ModelState& st = doc.state();
         std::string bodyId = a.get("body");
         if (bodyId.empty()) {
@@ -1031,9 +1467,39 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
             if (findFeature(m, f.id)) {
                 return makeError("script.args", "The id '" + f.id + "' is already used.");
             }
-            f.name = a.get("name", "Shell " + f.id.substr(2));
+            f.name = a.get("name", stepName("Shell", f.id, "sh"));
             f.kind = FeatureKind::Shell;
             f.params = {{"faces", refs}, {"thickness", a.get("thickness", "2 mm")}, {"body", bodyId}};
+            if (a.get("direction", "inside") == "outside") {
+                f.params["direction"] = "outside";
+            }
+            id = f.id;
+            insertFeature(m, std::move(f));
+            return true;
+        });
+        if (!r) {
+            return r;
+        }
+        return checkFeature(id);
+    }
+    if (a.verb == "remove") {
+        // remove bodies="<body>;…"   (delete bodies from here on in the timeline)
+        const auto bodies = split(a.get("bodies"), ';');
+        for (const auto& b : bodies) {
+            if (!doc.state().bodies.count(b)) {
+                return makeError("script.args", fmt("There is no body called '%1'.", {b}));
+            }
+        }
+        std::string id;
+        auto r = doc.transact("Remove", [&](Model& m) -> Result<bool> {
+            Feature f;
+            f.id = a.get("id", Document::newId(m, "rm"));
+            if (findFeature(m, f.id)) {
+                return makeError("script.args", fmt("The id '%1' is already used.", {f.id}));
+            }
+            f.name = a.get("name", stepName("Remove", f.id, "rm"));
+            f.kind = FeatureKind::Remove;
+            f.params = {{"bodies", bodies}};
             id = f.id;
             insertFeature(m, std::move(f));
             return true;
@@ -1046,7 +1512,7 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
     if (a.verb == "combine" || a.verb == "split" || a.verb == "move") {
         // combine target=<body> tools="<body>;<body>" [op=join|cut|intersect] [keep=yes]
         // split body=<body> plane=XY|XZ|YZ|<plane id>|face:<name>
-        // move bodies="<body>;…" [dx= dy= dz=] [axis=X|Y|Z angle=<angle>] [copy=yes]
+        // move bodies="<body>;…" [dx= dy= dz=] [axis=X|Y|Z angle=<angle>] [from=<point> to=<point>] [copy=yes]
         nlohmann::json params = nlohmann::json::object();
         FeatureKind kind = FeatureKind::Combine;
         std::string prefix = "cb";
@@ -1077,7 +1543,7 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
             kind = FeatureKind::Move;
             prefix = "mv";
             params = {{"bodies", split(a.get("bodies"), ';')}, {"copy", a.get("copy", "no") == "yes"}};
-            for (const char* key : {"dx", "dy", "dz", "axis", "angle"}) {
+            for (const char* key : {"dx", "dy", "dz", "axis", "angle", "from", "to"}) {
                 if (a.has(key)) {
                     params[key] = a.get(key);
                 }
@@ -1092,7 +1558,7 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
             if (findFeature(m, f.id)) {
                 return makeError("script.args", "The id '" + f.id + "' is already used.");
             }
-            f.name = a.get("name", label + " " + f.id.substr(prefix.size()));
+            f.name = a.get("name", stepName(label, f.id, prefix));
             f.kind = kind;
             f.params = params;
             id = f.id;
@@ -1104,9 +1570,62 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
         }
         return checkFeature(id);
     }
-    if (a.verb == "plane") {
+    if (a.verb == "group") {
+        // group name="Base" steps=s1;e1   (an empty name takes the steps out of their group)
+        const std::string name = a.get("name");
+        const auto steps = split(a.get("steps"), ';');
+        return doc.transact(name.empty() ? "Ungroup" : "Group", [&](Model& m) -> Result<bool> {
+            for (const auto& id : steps) {
+                Feature* f = findFeature(m, id);
+                if (!f) {
+                    return makeError("script.args", "There is no step called '" + id + "'.");
+                }
+                f->group = name;
+            }
+            return true;
+        });
+    }
+    if (a.verb == "presspull") {
+        // presspull [id=pp1] face=<name> distance=<len>   (positive pulls out, negative pushes in)
+        nlohmann::json face;
+        for (auto& [bid, body] : doc.state().bodies) {
+            auto hits = body->findFaces(a.get("face"));
+            if (hits.size() == 1) {
+                face = body->faceRef(bid, hits[0]).toJson();
+            }
+        }
+        if (face.is_null()) {
+            return makeError("script.args", "There is no single face called '" + a.get("face") + "'.");
+        }
+        std::string id;
+        auto r = doc.transact("Press pull", [&](Model& m) -> Result<bool> {
+            Feature f;
+            f.id = a.get("id", Document::newId(m, "pp"));
+            if (findFeature(m, f.id)) {
+                return makeError("script.args", "The id '" + f.id + "' is already used.");
+            }
+            f.name = a.get("name", stepName("Press pull", f.id, "pp"));
+            f.kind = FeatureKind::PressPull;
+            f.params = {{"face", face}, {"distance", a.get("distance", "5 mm")}};
+            id = f.id;
+            insertFeature(m, std::move(f));
+            return true;
+        });
+        if (!r) {
+            return r;
+        }
+        return checkFeature(id);
+    }
+    if (a.verb == "plane" || a.verb == "axis" || a.verb == "point") {
         // plane id=pl1 [kind=offset|angle|midplane] base=XY|<plane id>|face:<name>
-        //       [distance=<len>] [axis=X|Y|Z|edge:<name> angle=<angle>] [base2=…]
+        //       [distance=<len>] [axis=X|Y|Z|<axis id>|edge:<name> angle=<angle>] [base2=…]
+        // axis id=a1 through=edge:<name>|face:<name>   (along a straight edge, through a round one)
+        // axis id=a1 base=<plane> base2=<plane>       (where two planes or flat faces meet)
+        // axis id=a1 from=<point id>|O to=<point id>|O (through two points)
+        // axis id=a1 normal=<plane>|face:<name> [at=<point id>|O] (square to a plane, through a point)
+        // point id=pt1 at=x,y,z | through=edge:<name> [end=start|end|mid|center] | through=face:<name>
+        // point id=pt1 through=edge:<name> plane=<plane>|face:<name>  (where the edge crosses it)
+        const bool isAxis = a.verb == "axis", isPoint = a.verb == "point";
         const ModelState& st = doc.state();
         auto ref = [&](const std::string& v) -> Result<nlohmann::json> {
             for (const char* pre : {"face:", "edge:"}) {
@@ -1126,8 +1645,27 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
             }
             return nlohmann::json(v);
         };
-        nlohmann::json params {{"kind", a.get("kind", "offset")}};
-        for (const char* key : {"base", "base2", "axis"}) {
+        nlohmann::json params = isAxis || isPoint ? nlohmann::json::object() : nlohmann::json {{"kind", a.get("kind", "offset")}};
+        if (isPoint && a.has("at")) {
+            auto parts = nlohmann::json::array();
+            std::stringstream ss(a.get("at"));
+            for (std::string c; std::getline(ss, c, ',');) {
+                parts.push_back(c);
+            }
+            if (parts.size() != 3) {
+                return makeError("script.args", "A point's at= needs three coordinates, like at=10,0,5.");
+            }
+            params["at"] = parts;
+        }
+        for (const char* key : {"end", "from", "to"}) {
+            if (a.has(key)) {
+                params[key] = a.get(key);
+            }
+        }
+        if (isAxis && a.has("at")) {
+            params["at"] = a.get("at");  // the point a square-on axis runs through
+        }
+        for (const char* key : {"base", "base2", "axis", "through", "plane", "normal"}) {
             if (a.has(key)) {
                 auto r = ref(a.get(key));
                 if (!r) {
@@ -1142,14 +1680,15 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
             }
         }
         std::string id;
-        auto r = doc.transact("Construction plane", [&](Model& m) -> Result<bool> {
+        const char* label = isPoint ? "Construction point" : isAxis ? "Construction axis" : "Construction plane";
+        auto r = doc.transact(label, [&](Model& m) -> Result<bool> {
             Feature f;
-            f.id = a.get("id", Document::newId(m, "pl"));
+            f.id = a.get("id", Document::newId(m, isPoint ? "pt" : isAxis ? "ax" : "pl"));
             if (findFeature(m, f.id)) {
                 return makeError("script.args", "The id '" + f.id + "' is already used.");
             }
-            f.name = a.get("name", "Plane " + f.id.substr(2));
-            f.kind = FeatureKind::Plane;
+            f.name = a.get("name", stepName(isPoint ? "Point" : isAxis ? "Axis" : "Plane", f.id, isPoint ? "pt" : isAxis ? "ax" : "pl"));
+            f.kind = isPoint ? FeatureKind::Point : isAxis ? FeatureKind::Axis : FeatureKind::Plane;
             f.params = params;
             id = f.id;
             insertFeature(m, std::move(f));
@@ -1161,12 +1700,14 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
         return checkFeature(id);
     }
     if (a.verb == "revolve" || a.verb == "hole" || a.verb == "pattern" || a.verb == "mirror") {
-        // revolve sketch=s1 axis=X|Y|Z|line:<name> [angle=360deg] [op=new|join|cut|intersect] [profiles=…]
+        // revolve sketch=s1 axis=X|Y|Z|line:<name> [angle=360deg | extent=to to=<plane>|face:<name>]
+        //         [op=new|join|cut|intersect] [profiles=…]
         // hole sketch=s2 diameter=3.4mm (depth=10mm | extent=all) [type=simple|counterbore|countersink]
-        //      [cbore_diameter= cbore_depth= | csink_diameter= csink_angle=]
+        //      [cbore_diameter= cbore_depth= | csink_diameter= csink_angle=] [size=M3|#6|1/4 [fit=close|normal|loose]] [tip=118deg]
         // pattern feature=e2 kind=circular axis=Z count=12 [angle=360deg]
         // pattern feature=h1 kind=rectangular dir1=X count1=3 spacing1=20mm [dir2=Y count2=2 spacing2=15mm]
-        // mirror [body=e1] plane=YZ|XZ|XY [op=join|new]
+        // mirror [body=e1 | feature=e2] plane=YZ|XZ|XY|<plane id>|face:<name> [op=join|new]
+        // pattern body=e1 … [op=new|join]   (whole bodies; dir1/dir2/axis may be construction axes)
         static const std::map<std::string, std::pair<FeatureKind, std::string>> kinds {
             {"revolve", {FeatureKind::Revolve, "r"}}, {"hole", {FeatureKind::Hole, "h"}},
             {"pattern", {FeatureKind::Pattern, "p"}}, {"mirror", {FeatureKind::Mirror, "m"}}};
@@ -1176,6 +1717,28 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
             if (k != "id" && k != "name") {
                 params[k] = v;
             }
+        }
+        // a face named as a plane: the mirror plane, or the face a revolve turns up to
+        const char* faceKey = a.verb == "mirror" ? "plane" : a.verb == "revolve" ? "to" : nullptr;
+        if (faceKey && a.get(faceKey, "").rfind("face:", 0) == 0) {
+            const std::string name = a.get(faceKey).substr(5);
+            params[faceKey] = nullptr;
+            for (auto& [bid, body] : doc.state().bodies) {
+                auto hits = body->findFaces(name);
+                if (hits.size() == 1) {
+                    params[faceKey] = {{"face", body->faceRef(bid, hits[0]).toJson()}};
+                }
+            }
+            if (params[faceKey].is_null()) {
+                return makeError("script.args", "There is no single face called '" + name + "'.");
+            }
+        }
+        if (a.verb == "pattern" && a.get("kind") == "path") {
+            // pattern feature=e2|body=e1 kind=path path=<sketch> count=5 [spacing=<len>] [orient=same|follow]
+            if (!doc.state().sketches.count(a.get("path"))) {
+                return makeError("script.args", fmt("There is no sketch called '%1' to use as the path.", {a.get("path")}));
+            }
+            params["path"] = {{"sketch", a.get("path")}, {"curves", "all"}};
         }
         if (a.verb == "revolve") {
             const std::string ax = a.get("axis", "Z");
@@ -1187,8 +1750,11 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
                 }
                 params["axis"] = {{"line", it->second}};
             }
-            else {
+            else if (ax == "X" || ax == "Y" || ax == "Z") {
                 params["axis"] = {{"origin", ax}};
+            }
+            else {
+                params["axis"] = {{"axis", ax}};  // a construction axis
             }
             params["profiles"] = a.has("profiles") && a.get("profiles") != "all" ? nlohmann::json(split(a.get("profiles"), ';'))
                                                                                   : nlohmann::json("all");
@@ -1202,7 +1768,7 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
             if (findFeature(m, f.id)) {
                 return makeError("script.args", "The id '" + f.id + "' is already used.");
             }
-            f.name = a.get("name", label + " " + f.id.substr(prefix.size()));
+            f.name = a.get("name", stepName(label, f.id, prefix));
             f.kind = kind;
             f.params = params;
             id = f.id;
@@ -1213,6 +1779,30 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
             return r;
         }
         return checkFeature(id);
+    }
+    if (a.verb == "reorder") {
+        // reorder <id> before=<id> | after=<id> | to=<index>
+        if (a.positional.empty()) {
+            return makeError("script.args", "Use: reorder <id> before=<id> | after=<id>");
+        }
+        const std::string id = a.positional[0];
+        int to = -1;
+        const int from = doc.featureIndex(id);
+        if (a.has("before")) {
+            const int k = doc.featureIndex(a.get("before"));
+            to = k < 0 ? -1 : (from < k ? k - 1 : k);
+        }
+        else if (a.has("after")) {
+            const int k = doc.featureIndex(a.get("after"));
+            to = k < 0 ? -1 : (from < k ? k : k + 1);
+        }
+        else if (a.has("to")) {
+            to = std::stoi(a.get("to"));
+        }
+        if (from < 0 || to < 0) {
+            return makeError("script.args", "Unknown step in reorder.");
+        }
+        return doc.moveFeature(id, to);
     }
     if (a.verb == "set") {
         // set <feature> key=value ...  (edit feature parameters)
@@ -1370,6 +1960,88 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
     if (a.verb == "report") {
         output_.push_back(reportJson(doc).dump(2));
         return true;
+    }
+    if (a.verb == "import") {
+        // import dxf <path> [sketch=s1] [units=mm|in|…] [at=x,y]
+        // import svg <path> [sketch=s1] [width=<len>] [at=x,y]
+        // import step <path> [id=im1]                 (solids, kept inside the design)
+        if (a.positional.size() >= 2 && (lower(a.positional[0]) == "step" || lower(a.positional[0]) == "stp")) {
+            auto id = insertStep(doc, a.positional[1], a.get("id"));
+            if (!id) {
+                return id.error();
+            }
+            return checkFeature(id.value());
+        }
+        if (a.positional.size() >= 2 && lower(a.positional[0]) == "svg") {
+            auto art = readSvg(a.positional[1]);
+            if (!art) {
+                return art.error();
+            }
+            const std::string sid = a.get("sketch", last_);
+            return editSketch("Import SVG", sid, [&](Sketch& s, const Document&) -> Result<bool> {
+                double x = 0, y = 0;
+                if (a.has("at")) {
+                    auto pe = parsePairExpr(a.get("at"));
+                    if (!pe) {
+                        return pe.error();
+                    }
+                    auto px = len(pe->first), py = len(pe->second);
+                    if (!px || !py) {
+                        return !px ? px.error() : py.error();
+                    }
+                    x = px.value();
+                    y = py.value();
+                }
+                std::string we = a.get("width");
+                double wv = art->width;
+                if (!we.empty()) {
+                    auto w = len(we);
+                    if (!w) {
+                        return w.error();
+                    }
+                    wv = w.value();
+                }
+                const std::string name = std::filesystem::path(a.positional[1]).stem().string();
+                const int id = s.addArtwork(x, y, art->contours, art->width, we, wv, name);
+                const int anchor = s.artworks().at(id).anchor;
+                s.addConstraint(ConstraintType::DistanceX, anchor, 0, 0, std::to_string(x));
+                s.addConstraint(ConstraintType::DistanceY, anchor, 0, 0, std::to_string(y));
+                return true;
+            });
+        }
+        if (a.positional.size() < 2 || lower(a.positional[0]) != "dxf") {
+            return makeError("script.args", "Use: import dxf|svg|step <path> [sketch=s1] …");
+        }
+        auto dwg = readDxf(a.positional[1]);
+        if (!dwg) {
+            return dwg.error();
+        }
+        double scale = dwg->unitScale;
+        if (a.has("units")) {
+            auto u = lengthUnitFromString(a.get("units"));
+            if (!u) {
+                return makeError("script.args", "Unknown unit '" + a.get("units") + "'.");
+            }
+            scale = millimetresPer(*u);
+        }
+        const std::string sid = a.get("sketch", last_);
+        return editSketch("Import DXF", sid, [&](Sketch& s, const Document&) -> Result<bool> {
+            double dx = 0, dy = 0;
+            if (a.has("at")) {
+                auto pe = parsePairExpr(a.get("at"));
+                if (!pe) {
+                    return pe.error();
+                }
+                auto x = len(pe->first), y = len(pe->second);
+                if (!x || !y) {
+                    return !x ? x.error() : y.error();
+                }
+                dx = x.value();
+                dy = y.value();
+            }
+            addDxfToSketch(s, dwg.value(), scale, dx, dy);
+            return true;
+        });
     }
     if (a.verb == "export") {
         if (a.positional.size() < 2) {

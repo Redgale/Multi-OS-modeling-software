@@ -13,6 +13,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -59,7 +60,12 @@ enum class FeatureKind
     Plane,  // construction plane (offset, at an angle, midplane)
     Combine,
     Split,
-    Move
+    Move,
+    Axis,  // construction axis (along an edge, through a round face, where two planes meet)
+    PressPull,  // push or pull a flat face of a body
+    Point,      // construction point (typed position, end or centre of an edge, centre of a face)
+    Import,     // a solid brought in from a STEP file, kept inside the design
+    Remove      // bodies taken out of the design from here on (delete a body)
 };
 
 const char* toString(FeatureKind k);
@@ -71,6 +77,7 @@ struct Feature
     std::string name;  // user-visible, renameable: "Base sketch"
     FeatureKind kind = FeatureKind::Sketch;
     bool suppressed = false;
+    std::string group;  // timeline group ("Base", "Mounting holes"); empty = none
     nlohmann::json params = nlohmann::json::object();  // kind-specific, see features.cpp
     nlohmann::json extra = nlohmann::json::object();   // unknown fields, preserved on save
 };
@@ -81,6 +88,7 @@ struct Model
     std::vector<Feature> features;
     int rollback = -1;  // number of active features; -1 = all
     std::map<std::string, int> counters;  // next id number per prefix
+    LengthUnit units = LengthUnit::Millimetre;  // how sizes are shown and typed (geometry is always mm)
     nlohmann::json extra = nlohmann::json::object();
 };
 
@@ -99,6 +107,7 @@ struct FeatureStatus
     std::string message;
     std::vector<std::string> suggestions;
     std::string detail;
+    std::vector<Fix> fixes;  // one-click repairs (set a parameter of this step)
 };
 
 struct SketchState
@@ -125,6 +134,8 @@ struct ModelState
     std::map<std::string, std::shared_ptr<const SketchState>> sketches;
     std::map<std::string, ToolRecord> tools;
     std::map<std::string, gp_Ax3> planes;  // construction planes by feature id
+    std::map<std::string, gp_Ax1> axes;    // construction axes by feature id
+    std::map<std::string, gp_Pnt> points;  // construction points by feature id
 };
 
 class Document
@@ -147,6 +158,19 @@ public:
     // Evaluates a parameter of a model that is not (yet) the document's own.
     static Result<Quantity> evalParamIn(const Model& m, const std::string& name);
     Result<double> evalLength(const std::string& expr) const;
+    LengthUnit units() const
+    {
+        return model_.units;
+    }
+    // Typed input made explicit in the design's unit (see withLengthUnit).
+    std::string lengthInput(const std::string& expr) const;
+    std::string fmtLength(double mm) const
+    {
+        return formatLength(mm, model_.units);
+    }
+    // A sensible starting value for a size field: the millimetre value in metric
+    // designs, the inch value (already a round number) in inch and foot designs.
+    std::string defaultLength(double mm, double inches) const;
     Result<double> evalAngle(const std::string& expr) const;
 
     // ---- transactions -----------------------------------------------------
@@ -179,6 +203,10 @@ public:
     // Ids of later features that refer to `id` (by sketch id, body id or face names
     // made by it). Used to warn before deleting or reordering.
     std::vector<std::string> dependents(const std::string& id) const;
+    // Moves a step to position `to` in the timeline (as one undoable change). Refused,
+    // with an explanation, when the step would come before something it uses, after
+    // something that uses it, or when any step that worked would stop working.
+    Result<bool> moveFeature(const std::string& id, int to);
 
     // ---- recompute --------------------------------------------------------
     void recompute();
@@ -198,6 +226,33 @@ public:
     {
         return revision_;
     }
+
+    // ---- how the design is shown (saved with it, never an undo step) -------
+    // Bodies hidden in the view and timeline groups shown folded. Changing them bumps
+    // revision() so the change counts as unsaved, but the model and its results stay.
+    const std::set<std::string>& hiddenBodies() const
+    {
+        return hidden_;
+    }
+    void setHiddenBodies(std::set<std::string> ids);
+    const std::set<std::string>& foldedGroups() const
+    {
+        return folded_;
+    }
+    void setFoldedGroups(std::set<std::string> groups);
+    // Sketches a later step uses are hidden by default; these were shown again by hand.
+    const std::set<std::string>& shownSketches() const
+    {
+        return shownSketches_;
+    }
+    void setShownSketches(std::set<std::string> ids);
+    // Camera positions saved under a name (what is stored is up to the app); a null value
+    // removes one.
+    const std::map<std::string, nlohmann::json>& namedViews() const
+    {
+        return views_;
+    }
+    void setNamedView(const std::string& name, nlohmann::json camera);
 
     // ---- files ------------------------------------------------------------
     nlohmann::json toJson() const;
@@ -232,6 +287,8 @@ private:
     int recomputed_ = 0;
     double lastMs_ = 0;
     uint64_t revision_ = 0;
+    std::set<std::string> hidden_, folded_, shownSketches_;
+    std::map<std::string, nlohmann::json> views_;
 };
 
 // Applies one feature to `in`. Implemented in features.cpp. Never throws.

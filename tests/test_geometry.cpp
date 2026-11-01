@@ -5,6 +5,14 @@
 #include <filesystem>
 
 #include <gtest/gtest.h>
+#include <map>
+
+#include <BRepAlgoAPI_Cut.hxx>
+#include <BRepGProp.hxx>
+#include <BRepPrimAPI_MakeBox.hxx>
+#include <BRepPrimAPI_MakeCylinder.hxx>
+#include <GProp_GProps.hxx>
+#include <gp_Pln.hxx>
 
 #include <map>
 
@@ -332,4 +340,100 @@ TEST(Shell, ClosedHollowKeepsOuterNames)
     EXPECT_EQ(body.findFaces("e1/start").size(), 1u);
     EXPECT_EQ(body.findFaces("sh1/inner:e1/end").size(), 1u);
     EXPECT_NEAR(props(*doc).volume, 60 * 40 * 20 - 56 * 36 * 16, 1e-3);
+}
+
+TEST(Shell, OutsideWallsGrowAroundThePart)
+{
+    // open at the top: the block becomes the cavity, walls 2 mm outside it (sharp corners)
+    auto open = build("sketch id=s1\nrect center=0,0 w=60 h=40\nextrude sketch=s1 distance=20\n"
+                      "shell id=sh1 faces=face:e1/end thickness=2mm direction=outside\n");
+    expectAllOk(*open);
+    auto p = props(*open);
+    EXPECT_NEAR(p.volume, 64.0 * 44 * 22 - 60.0 * 40 * 20, 1e-3);
+    EXPECT_NEAR(p.xmin, -32, 1e-6);
+    EXPECT_NEAR(p.zmin, -2, 1e-6);
+    EXPECT_NEAR(p.zmax, 20, 1e-6);
+    // closed: a sealed box around the part
+    auto closed = build("sketch id=s1\nrect center=0,0 w=60 h=40\nextrude sketch=s1 distance=20\n"
+                        "shell id=sh1 faces=none thickness=2mm direction=outside\n");
+    expectAllOk(*closed);
+    EXPECT_NEAR(props(*closed).volume, 64.0 * 44 * 24 - 60.0 * 40 * 20, 1e-3);
+    const auto& body = *closed->state().bodies.begin()->second;
+    int outer = 0;
+    for (int i = 0; i < body.faceCount(); ++i) {
+        outer += body.faceName(i).rfind("sh1/outer:", 0) == 0;
+    }
+    EXPECT_EQ(outer, 6);  // the new outside faces are named after the faces they grew from
+}
+
+TEST(Section, CapsKeepHoles)
+{
+    // a 40 x 30 x 10 block with a 10 mm hole through it, cut at half height: 1200 - 25 pi
+    BRepPrimAPI_MakeBox box(gp_Pnt(-20, -15, 0), 40, 30, 10);
+    BRepPrimAPI_MakeCylinder cyl(gp_Ax2(gp_Pnt(0, 0, -1), gp_Dir(0, 0, 1)), 5, 12);
+    BRepAlgoAPI_Cut cut(box.Shape(), cyl.Shape());
+    auto cap = jig::sectionFaces(cut.Shape(), gp_Pln(gp_Pnt(0, 0, 5), gp_Dir(0, 0, 1)));
+    ASSERT_TRUE(cap.ok());
+    GProp_GProps g;
+    BRepGProp::SurfaceProperties(cap.value(), g);
+    EXPECT_NEAR(g.Mass(), 1200 - 25 * M_PI, 1e-6);
+    // a plane that misses the part gives nothing
+    auto miss = jig::sectionFaces(cut.Shape(), gp_Pln(gp_Pnt(0, 0, 50), gp_Dir(0, 0, 1)));
+    ASSERT_TRUE(miss.ok());
+    GProp_GProps g2;
+    BRepGProp::SurfaceProperties(miss.value(), g2);
+    EXPECT_NEAR(g2.Mass(), 0, 1e-9);
+}
+
+TEST(Interchange, StepImportIsATimelineStep)
+{
+    // two separate blocks written to STEP, brought back as an Import step
+    auto src = build("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=40 h=30\nextrude id=e1 sketch=s1 distance=10\n"
+                     "sketch id=s2 plane=XY\nrect sketch=s2 center=60,0 w=10 h=10\nextrude id=e2 sketch=s2 distance=5 op=new\n");
+    const auto step = (tempDir() / "two-blocks.step").string();
+    ASSERT_TRUE(exportStep(src->combinedShape(), step).ok());
+    auto doc = std::make_unique<Document>();
+    ScriptRunner r(*doc);
+    auto ok = r.runText("import step " + step + " id=im1\n");
+    ASSERT_TRUE(ok.ok()) << ok.error().message;
+    expectAllOk(*doc);
+    const auto& st = doc->state();
+    ASSERT_EQ(st.bodies.size(), 2u);  // one body per solid
+    double v = 0;
+    for (auto& [id, b] : st.bodies) {
+        v += massProperties(b->shape()).volume;
+        EXPECT_EQ(id.rfind("im1.", 0), 0u);
+        EXPECT_EQ(b->faceName(0).rfind("im1/face:", 0), 0u);  // faces named for later steps
+    }
+    EXPECT_NEAR(v, 40 * 30 * 10 + 10 * 10 * 5, 1e-3);
+    // the solid lives in the design: it reopens without the STEP file
+    std::filesystem::remove(step);
+    const auto path = (tempDir() / "imported.jig").string();
+    ASSERT_TRUE(saveDocument(*doc, path).ok());
+    auto back = loadDocument(path);
+    ASSERT_TRUE(back.ok()) << back.error().message;
+    EXPECT_EQ((*back)->state().bodies.size(), 2u);
+    EXPECT_EQ((*back)->model().features[0].name, "two-blocks.step");
+    // later steps work on it by face name: fillet the big block's top edges
+    std::string top;
+    for (auto& [id, b] : (*back)->state().bodies) {
+        for (int i = 0; i < b->faceCount(); ++i) {
+            if (std::abs(massProperties(b->shape()).volume - 12000) < 1e-3) {
+                GProp_GProps g;
+                BRepGProp::SurfaceProperties(b->face(i), g);
+                if (std::abs(g.CentreOfMass().Z() - 10) < 1e-6) {
+                    top = id + " " + b->faceName(i);
+                }
+            }
+        }
+    }
+    ASSERT_FALSE(top.empty());
+    const std::string body = top.substr(0, top.find(' ')), face = top.substr(top.find(' ') + 1);
+    run(**back, "fillet id=f1 edges=face:" + face + " radius=2mm body=" + body);
+    expectAllOk(**back);
+    // a file that is not STEP is explained
+    auto bad = std::make_unique<Document>();
+    ScriptRunner rb(*bad);
+    auto no = rb.runText("import step " + path + "\n");
+    EXPECT_FALSE(no.ok());
 }

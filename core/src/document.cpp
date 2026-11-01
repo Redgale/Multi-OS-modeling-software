@@ -41,6 +41,16 @@ const char* toString(FeatureKind k)
             return "split";
         case FeatureKind::Move:
             return "move";
+        case FeatureKind::Axis:
+            return "axis";
+        case FeatureKind::PressPull:
+            return "presspull";
+        case FeatureKind::Point:
+            return "point";
+        case FeatureKind::Import:
+            return "import";
+        case FeatureKind::Remove:
+            return "remove";
     }
     return "sketch";
 }
@@ -63,7 +73,7 @@ std::optional<FeatureKind> featureKindFromString(std::string_view s)
         return FeatureKind::Shell;
     }
     for (auto k : {FeatureKind::Revolve, FeatureKind::Hole, FeatureKind::Pattern, FeatureKind::Mirror, FeatureKind::Plane,
-                   FeatureKind::Combine, FeatureKind::Split, FeatureKind::Move}) {
+                   FeatureKind::Combine, FeatureKind::Split, FeatureKind::Move, FeatureKind::Axis, FeatureKind::PressPull, FeatureKind::Point, FeatureKind::Import, FeatureKind::Remove}) {
         if (s == toString(k)) {
             return k;
         }
@@ -168,11 +178,11 @@ Result<Quantity> evalParamImpl(const Model& m, const std::string& name, std::set
         }
     }
     if (!p) {
-        return makeError("param.unknown", "There is no parameter called '" + name + "'.");
+        return makeError("param.unknown", fmt("There is no parameter called '%1'.", {name}));
     }
     if (!visiting.insert(name).second) {
         return makeError("param.cycle",
-                         "Parameter '" + name + "' depends on itself.",
+                         fmt("Parameter '%1' depends on itself.", {name}),
                          {"Change one of the expressions so they don't refer to each other in a loop."});
     }
     std::optional<Error> innerError;  // the real reason a referenced parameter failed
@@ -238,6 +248,25 @@ Result<double> Document::evalLength(const std::string& expr) const
     return r->value;
 }
 
+std::string Document::lengthInput(const std::string& expr) const
+{
+    return model_.units == LengthUnit::Millimetre ? expr : withLengthUnit(expr, model_.units, lookup());
+}
+
+std::string Document::defaultLength(double mm, double inches) const
+{
+    switch (model_.units) {
+        case LengthUnit::Inch:
+            return formatLength(inches * 25.4, LengthUnit::Inch);
+        case LengthUnit::Foot:
+            return formatLength(inches * 25.4, LengthUnit::Inch);  // feet are too coarse for part sizes
+        case LengthUnit::Centimetre:
+            return formatLength(mm, LengthUnit::Centimetre);
+        default:
+            return formatLength(mm, LengthUnit::Millimetre);
+    }
+}
+
 Result<double> Document::evalAngle(const std::string& expr) const
 {
     auto r = evaluate(expr, lookup(), Dim::ang());
@@ -278,6 +307,21 @@ Feature* Document::findFeature(Model& m, const std::string& id)
     return nullptr;
 }
 
+namespace
+{
+// True when a feature's parameters refer to `id`: by id, or through names of faces and
+// edges it made ("e1/end", "E[e1/end|…]", "f1/fillet:…").
+bool mentions(const Feature& f, const std::string& id)
+{
+    const std::string d = f.params.dump();
+    const std::string quoted = "\"" + id + "\"", prefix = "\"" + id + "/", inName = "|" + id + "/",
+                      inEdge = "[" + id + "/", inFillet = ":" + id + "/";
+    return d.find(quoted) != std::string::npos || d.find(prefix) != std::string::npos ||
+           d.find(inName) != std::string::npos || d.find(inEdge) != std::string::npos ||
+           d.find(inFillet) != std::string::npos;
+}
+}  // namespace
+
 std::vector<std::string> Document::dependents(const std::string& id) const
 {
     std::vector<std::string> out;
@@ -285,17 +329,79 @@ std::vector<std::string> Document::dependents(const std::string& id) const
     if (i < 0) {
         return out;
     }
-    const std::string quoted = "\"" + id + "\"", prefix = "\"" + id + "/", inName = "|" + id + "/",
-                      inEdge = "[" + id + "/", inFillet = ":" + id + "/";
     for (size_t k = size_t(i) + 1; k < model_.features.size(); ++k) {
-        const std::string d = model_.features[k].params.dump();
-        if (d.find(quoted) != std::string::npos || d.find(prefix) != std::string::npos
-            || d.find(inName) != std::string::npos || d.find(inEdge) != std::string::npos
-            || d.find(inFillet) != std::string::npos) {
+        if (mentions(model_.features[k], id)) {
             out.push_back(model_.features[k].id);
         }
     }
     return out;
+}
+
+Result<bool> Document::moveFeature(const std::string& id, int to)
+{
+    const int from = featureIndex(id);
+    const int n = int(model_.features.size());
+    if (from < 0) {
+        return makeError("move.missing", "That step no longer exists.");
+    }
+    to = std::clamp(to, 0, n - 1);
+    if (to == from) {
+        return true;
+    }
+    const Feature& f = model_.features[size_t(from)];
+    if (to < from) {
+        for (int k = to; k < from; ++k) {
+            const Feature& other = model_.features[size_t(k)];
+            if (mentions(f, other.id)) {
+                return makeError("move.order", fmt("“%1” uses “%2”, so it must stay after it.", {f.name, other.name}),
+                                 {fmt("Move it to a place after “%1”.", {other.name})});
+            }
+        }
+    }
+    else {
+        for (int k = from + 1; k <= to; ++k) {
+            const Feature& other = model_.features[size_t(k)];
+            if (mentions(other, f.id)) {
+                return makeError("move.order", fmt("“%1” uses “%2”, so “%2” must stay before it.", {other.name, f.name}),
+                                 {fmt("Move it to a place before “%1”.", {other.name})});
+            }
+        }
+    }
+    // remember which steps work now, so a move that breaks one can be refused
+    std::set<std::string> okBefore;
+    for (int k = 0; k < n; ++k) {
+        if (status(k).level != StatusLevel::Error) {
+            okBefore.insert(model_.features[size_t(k)].id);
+        }
+    }
+    const std::string name = f.name;
+    auto r = transact("Move " + name, [&](Model& m) -> Result<bool> {
+        Feature moved = m.features[size_t(from)];
+        m.features.erase(m.features.begin() + from);
+        m.features.insert(m.features.begin() + to, std::move(moved));
+        return true;
+    });
+    if (!r) {
+        return r;
+    }
+    std::vector<std::string> broken;
+    for (int k = 0; k < n; ++k) {
+        const Feature& g = model_.features[size_t(k)];
+        if (status(k).level == StatusLevel::Error && okBefore.count(g.id)) {
+            broken.push_back(g.name);
+        }
+    }
+    if (!broken.empty()) {
+        undo();
+        redo_.clear();  // the refused move is not something to redo
+        std::string list;
+        for (auto& b : broken) {
+            list += (list.empty() ? "“" : ", “") + b + "”";
+        }
+        return makeError("move.breaks", fmt("Moving “%1” there would stop %2 from working.", {name, list}),
+                         {"Try another place in the timeline."});
+    }
+    return true;
 }
 
 Result<bool> Document::transact(const std::string& label, const Edit& edit)
@@ -433,6 +539,25 @@ void Document::recompute()
         prev = it->second.after;
         prevKey = key;
     }
+    // A sketch of open curves is not a problem when a later step builds a wall along them.
+    for (int i = 0; i < n; ++i) {
+        const Feature& f = model_.features[size_t(i)];
+        if (f.kind != FeatureKind::Sketch || statuses_[size_t(i)].level != StatusLevel::Warning ||
+            statuses_[size_t(i)].message.rfind("This sketch has no closed area yet", 0) != 0) {
+            continue;
+        }
+        for (int j = i + 1; j < n; ++j) {
+            const auto& g = model_.features[size_t(j)];
+            const auto prof = g.params.value("profiles", nlohmann::json("all"));
+            if (g.kind == FeatureKind::Extrude && g.params.value("sketch", std::string {}) == f.id &&
+                (prof == nlohmann::json("open") || prof == nlohmann::json::array({"open"})) &&
+                statuses_[size_t(j)].level == StatusLevel::Ok) {
+                statuses_[size_t(i)] = {};
+                statuses_[size_t(i)].message = fmt("Open curves, used as a wall by %1.", {g.name});
+                break;
+            }
+        }
+    }
     std::erase_if(cache_, [&](const auto& kv) { return !live.count(kv.first); });
     lastMs_ = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
 }
@@ -472,13 +597,51 @@ TopoDS_Shape Document::combinedShape() const
     return c;
 }
 
+// ---------------------------------------------------------------- view
+
+void Document::setHiddenBodies(std::set<std::string> ids)
+{
+    if (ids != hidden_) {
+        hidden_ = std::move(ids);
+        ++revision_;
+    }
+}
+
+void Document::setShownSketches(std::set<std::string> ids)
+{
+    if (ids != shownSketches_) {
+        shownSketches_ = std::move(ids);
+        ++revision_;
+    }
+}
+
+void Document::setFoldedGroups(std::set<std::string> groups)
+{
+    if (groups != folded_) {
+        folded_ = std::move(groups);
+        ++revision_;
+    }
+}
+
+void Document::setNamedView(const std::string& name, nlohmann::json camera)
+{
+    if (camera.is_null()) {
+        if (views_.erase(name)) {
+            ++revision_;
+        }
+        return;
+    }
+    views_[name] = std::move(camera);
+    ++revision_;
+}
+
 // ---------------------------------------------------------------- json
 
 nlohmann::json Document::toJson() const
 {
     nlohmann::json j = model_.extra;
     j["format_version"] = kFormatVersion;
-    j["units"] = "mm";
+    j["units"] = unitSymbol(model_.units);
     j["up_axis"] = "Z";
     nlohmann::json params = nlohmann::json::array();
     for (auto& p : model_.parameters) {
@@ -498,12 +661,24 @@ nlohmann::json Document::toJson() const
         if (f.suppressed) {
             jf["suppressed"] = true;
         }
+        if (!f.group.empty()) {
+            jf["group"] = f.group;
+        }
         jf["params"] = f.params;
         feats.push_back(jf);
     }
     j["features"] = feats;
     j["rollback"] = model_.rollback;
     j["counters"] = model_.counters;
+    if (!hidden_.empty() || !folded_.empty() || !views_.empty() || !shownSketches_.empty()) {
+        j["view"] = {{"hidden_bodies", hidden_}, {"folded_groups", folded_}};
+        if (!shownSketches_.empty()) {
+            j["view"]["shown_sketches"] = shownSketches_;
+        }
+        if (!views_.empty()) {
+            j["view"]["named_views"] = views_;
+        }
+    }
     return j;
 }
 
@@ -525,7 +700,7 @@ Result<std::unique_ptr<Document>> Document::fromJson(const nlohmann::json& input
         }
         Model m;
         static const std::set<std::string> known {"format_version", "units", "up_axis", "parameters",
-                                                  "features", "rollback", "counters"};
+                                                  "features", "rollback", "counters", "view"};
         for (auto& [k, val] : j.items()) {
             if (!known.count(k)) {
                 m.extra[k] = val;
@@ -539,7 +714,7 @@ Result<std::unique_ptr<Document>> Document::fromJson(const nlohmann::json& input
             p.comment = jp.value("comment", std::string {});
             m.parameters.push_back(p);
         }
-        static const std::set<std::string> fknown {"id", "name", "kind", "suppressed", "params"};
+        static const std::set<std::string> fknown {"id", "name", "kind", "suppressed", "group", "params"};
         for (auto& jf : j.at("features")) {
             Feature f;
             f.id = jf.at("id").get<std::string>();
@@ -547,12 +722,13 @@ Result<std::unique_ptr<Document>> Document::fromJson(const nlohmann::json& input
             auto k = featureKindFromString(jf.at("kind").get<std::string>());
             if (!k) {
                 return makeError("file.feature",
-                                 "This design uses a feature this version of Jigsmith doesn't know ("
-                                     + jf.at("kind").get<std::string>() + ").",
+                                 fmt("This design uses a feature this version of Jigsmith doesn't know (%1).",
+                                     {jf.at("kind").get<std::string>()}),
                                  {"Update Jigsmith to open it."});
             }
             f.kind = *k;
             f.suppressed = jf.value("suppressed", false);
+            f.group = jf.value("group", std::string {});
             f.params = jf.value("params", nlohmann::json::object());
             for (auto& [key, val] : jf.items()) {
                 if (!fknown.count(key)) {
@@ -561,10 +737,23 @@ Result<std::unique_ptr<Document>> Document::fromJson(const nlohmann::json& input
             }
             m.features.push_back(std::move(f));
         }
+        if (auto u = lengthUnitFromString(j.value("units", std::string("mm")))) {
+            m.units = *u;
+        }
         m.rollback = j.value("rollback", -1);
         m.counters = j.value("counters", std::map<std::string, int> {});
         auto doc = std::make_unique<Document>();
         doc->resetModel(std::move(m));
+        if (j.contains("view") && j["view"].is_object()) {
+            doc->hidden_ = j["view"].value("hidden_bodies", std::set<std::string> {});
+            doc->folded_ = j["view"].value("folded_groups", std::set<std::string> {});
+            doc->shownSketches_ = j["view"].value("shown_sketches", std::set<std::string> {});
+            if (j["view"].contains("named_views") && j["view"]["named_views"].is_object()) {
+                for (auto& [k, v] : j["view"]["named_views"].items()) {
+                    doc->views_[k] = v;
+                }
+            }
+        }
         return doc;
     }
     catch (const nlohmann::json::exception& ex) {

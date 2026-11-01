@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "Viewport.hpp"
 
+#include <array>
 #include <chrono>
 #include <cmath>
 #include <future>
@@ -14,7 +15,11 @@
 #include <QOpenGLFramebufferObject>
 #include <QPainter>
 #include <QResizeEvent>
+#include <QOpenGLContext>
 #include <QTimer>
+
+#include <IntCurvesFace_ShapeIntersector.hxx>
+#include <gp_Lin.hxx>
 #include <QWheelEvent>
 
 namespace jigapp
@@ -181,6 +186,13 @@ Viewport::Viewport(QWidget* parent)
                QColor(255, 196, 92), QColor(66, 140, 255), QColor(214, 218, 224), QColor(190, 196, 205),
                QColor(60, 64, 72)});
     // Finished tessellations are collected on the UI thread (no cross-thread callbacks).
+    longPress_ = new QTimer(this);
+    longPress_->setSingleShot(true);
+    longPress_->setInterval(600);
+    connect(longPress_, &QTimer::timeout, this, [this] {
+        longPressed_ = true;
+        emit selectOtherRequested(lastPos_);
+    });
     auto* poll = new QTimer(this);
     poll->setInterval(25);
     connect(poll, &QTimer::timeout, this, [this] {
@@ -211,6 +223,7 @@ void Viewport::setColors(const ViewColors& c)
 void Viewport::setBodies(std::vector<BodyInput> bodies)
 {
     const int gen = ++generation_;
+    shownBodies_ = int(bodies.size());
     auto& js = jobs(this);
     for (auto& b : bodies) {
         auto shape = b.shape;
@@ -297,34 +310,130 @@ void Viewport::uploadMesh(const std::string& body, std::shared_ptr<const jig::Na
     meshes_.push_back(std::move(g));
 }
 
+double Viewport::sketchGridStep() const
+{
+    const double raw = 12 * worldPerPixel();
+    if (units_ == jig::LengthUnit::Inch || units_ == jig::LengthUnit::Foot) {
+        for (double in : {1.0 / 64, 1.0 / 32, 1.0 / 16, 1.0 / 8, 1.0 / 4, 1.0 / 2, 1.0, 3.0, 6.0, 12.0, 36.0, 120.0}) {
+            if (raw <= in * 25.4) {
+                return in * 25.4;
+            }
+        }
+        return 360 * 25.4;
+    }
+    const double p = std::pow(10.0, std::floor(std::log10(std::max(raw, 1e-6))));
+    for (double m : {1.0, 2.0, 5.0, 10.0}) {
+        if (raw <= m * p) {
+            return m * p;
+        }
+    }
+    return 10 * p;
+}
+
+int Viewport::sketchGridPerMajor() const
+{
+    const double step = sketchGridStep();
+    if (units_ == jig::LengthUnit::Inch || units_ == jig::LengthUnit::Foot) {
+        const double in = step / 25.4;
+        return in < 1 - 1e-9 ? 4 : in < 3 - 1e-9 ? 3 : in < 12 - 1e-9 ? 2 : 3;  // ¼ → 1 in, 1 → 3 in, 6 → 1 ft
+    }
+    // 1 → 5, 2 → 10, 5 → 10: heavier lines at round sizes
+    const double lead = step / std::pow(10.0, std::floor(std::log10(step) + 1e-9));
+    return lead > 4 ? 2 : 5;
+}
+
+void Viewport::setSketchGrid(std::optional<gp_Ax3> frame)
+{
+    sketchFrame_ = std::move(frame);
+    builtStep_ = 0;
+    if (glReady_) {
+        makeCurrent();
+        buildGrid();
+        doneCurrent();
+    }
+    update();
+}
+
 void Viewport::buildGrid()
 {
     std::vector<float> v;
-    const float ext = 500, minor = 10, major = 50;
+    if (sketchFrame_) {
+        // the sketch's plane: around where the view is looking, wide enough to fill it
+        const gp_Ax3& f = *sketchFrame_;
+        const double step = sketchGridStep();
+        const int perMajor = sketchGridPerMajor();
+        const double major = step * perMajor;
+        const gp_Vec rel(f.Location(), gp_Pnt(target_.x(), target_.y(), target_.z()));
+        const double cu = std::round(rel.Dot(gp_Vec(f.XDirection())) / major) * major;
+        const double cv = std::round(rel.Dot(gp_Vec(f.YDirection())) / major) * major;
+        const double span = std::max(width(), height()) * worldPerPixel() * 1.5;
+        const int n = std::min(400, int(std::ceil(span / major)) * perMajor);
+        // a hair towards the viewer's side of the plane, so faces the sketch lies on do not hide it
+        const gp_XYZ lift = f.Direction().XYZ() * (0.2 * worldPerPixel());
+        auto at = [&](double u, double w) {
+            const gp_XYZ p = f.Location().XYZ() + f.XDirection().XYZ() * u + f.YDirection().XYZ() * w + lift;
+            return std::array<float, 3> {float(p.X()), float(p.Y()), float(p.Z())};
+        };
+        auto seg = [&](double u1, double w1, double u2, double w2) {
+            const auto a = at(u1, w1), b = at(u2, w2);
+            v.insert(v.end(), {a[0], a[1], a[2], b[0], b[1], b[2]});
+        };
+        const double ext = step * n;
+        for (int pass = 0; pass < 2; ++pass) {
+            for (int i = -n; i <= n; ++i) {
+                if ((i % perMajor == 0) != (pass == 1)) {
+                    continue;
+                }
+                const double t = step * i;
+                seg(cu + t, cv - ext, cu + t, cv + ext);
+                seg(cu - ext, cv + t, cu + ext, cv + t);
+            }
+            if (pass == 0) {
+                gridMinorCount_ = int(v.size() / 3);
+            }
+        }
+        gridMajorCount_ = int(v.size() / 3) - gridMinorCount_;
+        builtStep_ = step;
+        builtCentre_ = QPointF(cu, cv);
+    }
     auto line = [&](float x1, float y1, float z1, float x2, float y2, float z2) {
         v.insert(v.end(), {x1, y1, z1, x2, y2, z2});
     };
-    for (float t = -ext; t <= ext + 0.1f; t += minor) {
-        if (std::fmod(std::abs(t), major) < 0.01f) {
-            continue;
+    if (!sketchFrame_) {
+        // the floor: metric designs 10 mm squares, a heavier line every 50 mm; inch and foot
+        // designs quarter-inch squares, a heavier line every inch
+        const bool inch = units_ == jig::LengthUnit::Inch || units_ == jig::LengthUnit::Foot;
+        const float minor = inch ? 6.35f : 10.0f;
+        const int perMajor = inch ? 4 : 5, n = inch ? 80 : 50;  // about ±500 mm either way
+        const float ext = minor * float(n);
+        for (int i = -n; i <= n; ++i) {
+            if (i % perMajor == 0) {
+                continue;
+            }
+            const float t = minor * float(i);
+            line(t, -ext, 0, t, ext, 0);
+            line(-ext, t, 0, ext, t, 0);
         }
-        line(t, -ext, 0, t, ext, 0);
-        line(-ext, t, 0, ext, t, 0);
+        gridMinorCount_ = int(v.size() / 3);
+        for (int i = -n; i <= n; i += perMajor) {
+            const float t = minor * float(i);
+            line(t, -ext, 0, t, ext, 0);
+            line(-ext, t, 0, ext, t, 0);
+        }
+        gridMajorCount_ = int(v.size() / 3) - gridMinorCount_;
     }
-    gridMinorCount_ = int(v.size() / 3);
-    for (float t = -ext; t <= ext + 0.1f; t += major) {
-        line(t, -ext, 0, t, ext, 0);
-        line(-ext, t, 0, ext, t, 0);
-    }
-    gridMajorCount_ = int(v.size() / 3) - gridMinorCount_;
     // origin axes X, Y, Z (also labelled in the gizmo: never colour alone)
     line(0, 0, 0, 60, 0, 0);
     line(0, 0, 0, 0, 60, 0);
     line(0, 0, 0, 0, 0, 60);
     axisCount_ = 6;
-    gridVao_.create();
+    if (!gridVao_.isCreated()) {
+        gridVao_.create();
+    }
     gridVao_.bind();
-    gridVbo_.create();
+    if (!gridVbo_.isCreated()) {
+        gridVbo_.create();
+    }
     gridVbo_.bind();
     gridVbo_.allocate(v.data(), int(v.size() * sizeof(float)));
     glEnableVertexAttribArray(0);
@@ -336,7 +445,20 @@ void Viewport::buildGrid()
 
 void Viewport::initializeGL()
 {
-    initializeOpenGLFunctions();
+    // Without OpenGL 3.3 core the function table below is empty: calling it would crash.
+    const QSurfaceFormat got = context() ? context()->format() : QSurfaceFormat();
+    const bool versionOk = got.majorVersion() > 3 || (got.majorVersion() == 3 && got.minorVersion() >= 3);
+    if (!context() || !versionOk || !initializeOpenGLFunctions()) {
+        glFailed_ = true;
+        const QString have = context() ? QString("%1.%2").arg(got.majorVersion()).arg(got.minorVersion()) : tr("none");
+        QTimer::singleShot(0, this, [this, have] {
+            emit graphicsProblem(tr("The 3D view needs OpenGL 3.3, and this computer's graphics driver offers %1. "
+                                    "Updating the graphics driver usually fixes this. Designs still open, save "
+                                    "and export; only the view stays empty.")
+                                     .arg(have));
+        });
+        return;
+    }
     meshProg_ = std::make_unique<QOpenGLShaderProgram>();
     meshProg_->addShaderFromSourceCode(QOpenGLShader::Vertex, kMeshVs);
     meshProg_->addShaderFromSourceCode(QOpenGLShader::Fragment, kMeshFs);
@@ -482,9 +604,29 @@ void Viewport::setOverlay(SceneOverlay o)
     update();
 }
 
+void Viewport::setUnits(jig::LengthUnit u)
+{
+    const bool wasInch = units_ == jig::LengthUnit::Inch || units_ == jig::LengthUnit::Foot;
+    units_ = u;
+    const bool inch = u == jig::LengthUnit::Inch || u == jig::LengthUnit::Foot;
+    if (wasInch != inch && glReady_) {
+        makeCurrent();
+        buildGrid();
+        doneCurrent();
+        update();
+    }
+}
+
 void Viewport::setSection(std::optional<QVector4D> plane)
 {
     section_ = plane;
+    update();
+}
+
+void Viewport::setSketchLines(SceneOverlay lines)
+{
+    sketchLines_ = std::move(lines);
+    overlayDirty_ = true;
     update();
 }
 
@@ -544,7 +686,12 @@ void Viewport::uploadOverlay()
         v.insert(v.end(), {p.x(), p.y(), p.z(), float(c.redF()), float(c.greenF()), float(c.blueF()),
                            float(c.alphaF())});
     };
-    // highlighted (selected) edges, then the hovered edge, then the tool's overlay
+    // finished sketches first (drawn with depth), then highlighted (selected) edges, the
+    // hovered edge and the tool's overlay (drawn on top)
+    for (auto& ov : sketchLines_.lines) {
+        push(ov.p, ov.c);
+    }
+    ovSketchCount_ = int(v.size() / 7);
     auto edgeSegs = [&](const std::string& body, int edge, const QColor& c) {
         for (auto& m : meshes_) {
             if (m->body != body) {
@@ -623,13 +770,20 @@ void Viewport::drawOverlay()
     glEnable(GL_BLEND);
     // blend colour only: the widget composites its framebuffer, so its alpha must stay 1
     glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ZERO, GL_ONE);
+    // Finished sketches with depth (the model hides their far side; faces are drawn pushed
+    // back a little, so a sketch on a face still shows)
+    glDepthFunc(GL_LEQUAL);
+    glDepthRange(0.0, 0.9998);  // a hair towards the viewer: edges the sketch lies on do not hide it
+    glDrawArrays(GL_LINES, 0, ovSketchCount_);
+    glDepthRange(0.0, 1.0);
+    glDepthFunc(GL_LESS);
     // Tool geometry is drawn on top so sketches on faces never disappear into them.
     glDisable(GL_DEPTH_TEST);
     glDepthMask(GL_FALSE);
     if (ovTriCount_ > 0) {
         glDrawArrays(GL_TRIANGLES, ovLineCount_, ovTriCount_);
     }
-    glDrawArrays(GL_LINES, 0, ovLineCount_);
+    glDrawArrays(GL_LINES, ovSketchCount_, ovLineCount_ - ovSketchCount_);
     glDepthMask(GL_TRUE);
     glEnable(GL_DEPTH_TEST);
     glDisable(GL_BLEND);
@@ -646,6 +800,31 @@ void Viewport::ray(const QPointF& px, QVector3D& origin, QVector3D& dir) const
     QVector3D a = inv.map(QVector3D(nx, ny, -1)), b = inv.map(QVector3D(nx, ny, 1));
     origin = a;
     dir = (b - a).normalized();
+}
+
+nlohmann::json Viewport::camera() const
+{
+    return {{"target", {target_.x(), target_.y(), target_.z()}},
+            {"distance", distance_},
+            {"yaw", yaw_},
+            {"pitch", pitch_},
+            {"perspective", perspective_}};
+}
+
+void Viewport::setCamera(const nlohmann::json& c)
+{
+    if (!c.is_object()) {
+        return;
+    }
+    const auto t = c.value("target", nlohmann::json::array({0, 0, 0}));
+    if (t.is_array() && t.size() == 3) {
+        target_ = QVector3D(t[0].get<float>(), t[1].get<float>(), t[2].get<float>());
+    }
+    distance_ = std::clamp(c.value("distance", distance_), 0.5f, 50000.0f);
+    yaw_ = c.value("yaw", yaw_);
+    pitch_ = std::clamp(c.value("pitch", pitch_), -89.9f, 89.9f);
+    setPerspective(c.value("perspective", perspective_));
+    update();
 }
 
 QPointF Viewport::project(const QVector3D& w) const
@@ -673,6 +852,50 @@ void Viewport::lookAlong(const QVector3D& normal, const QVector3D& up, const QVe
     }
     target_ = center;
     update();
+}
+
+std::vector<EdgePick> Viewport::edgesInBox(const QRectF& box, bool crossing) const
+{
+    std::vector<EdgePick> out;
+    if (!glReady_) {
+        return out;
+    }
+    for (auto& m : meshes_) {
+        // per edge: did any segment touch the box, did every segment lie inside it
+        std::map<int, std::pair<bool, bool>> seen;  // edge -> (any, all)
+        for (size_t s = 0; s < m->segEdge.size(); ++s) {
+            const float* f = &m->edgeLines[s * 6];
+            const QVector3D a(f[0], f[1], f[2]), b(f[3], f[4], f[5]);
+            const QVector3D mid = (a + b) * 0.5f;
+            if (section_ && QVector3D::dotProduct(section_->toVector3D(), mid) > section_->w()) {
+                continue;
+            }
+            const QPointF pa = project(a), pb = project(b);
+            const bool inA = box.contains(pa), inB = box.contains(pb);
+            bool touches = inA || inB;
+            if (!touches) {
+                // a segment can cross the box with both ends outside
+                const QLineF seg(pa, pb);
+                const QLineF sides[4] = {{box.topLeft(), box.topRight()}, {box.topRight(), box.bottomRight()},
+                                         {box.bottomRight(), box.bottomLeft()}, {box.bottomLeft(), box.topLeft()}};
+                for (auto& side : sides) {
+                    if (seg.intersects(side) == QLineF::BoundedIntersection) {
+                        touches = true;
+                        break;
+                    }
+                }
+            }
+            auto [it, fresh] = seen.try_emplace(int(m->segEdge[s]), false, true);
+            it->second.first = it->second.first || touches;
+            it->second.second = it->second.second && inA && inB;
+        }
+        for (auto& [edge, st] : seen) {
+            if (crossing ? st.first : st.second) {
+                out.push_back({m->body, edge});
+            }
+        }
+    }
+    return out;
 }
 
 std::optional<EdgePick> Viewport::pickEdgeAt(const QPoint& pos)
@@ -749,6 +972,25 @@ void Viewport::keyPressEvent(QKeyEvent* e)
 
 void Viewport::paintGL()
 {
+    if (glFailed_) {
+        // nothing can be drawn: let finished tessellations go, keep the rest of the app working
+        auto& js = jobs(this);
+        std::erase_if(js, [](auto& j) { return j.mesh.wait_for(std::chrono::seconds(0)) == std::future_status::ready; });
+        pending_ = int(js.size());
+        return;
+    }
+    if (sketchFrame_) {
+        // the sketch grid follows the zoom (finer or coarser) and where the view looks
+        const double step = sketchGridStep();
+        const gp_Ax3& f = *sketchFrame_;
+        const gp_Vec rel(f.Location(), gp_Pnt(target_.x(), target_.y(), target_.z()));
+        const QPointF c(rel.Dot(gp_Vec(f.XDirection())), rel.Dot(gp_Vec(f.YDirection())));
+        const double major = step * sketchGridPerMajor();
+        if (std::abs(step - builtStep_) > 1e-12 || std::abs(c.x() - builtCentre_.x()) > 2 * major ||
+            std::abs(c.y() - builtCentre_.y()) > 2 * major) {
+            buildGrid();
+        }
+    }
     // Collect finished tessellations.
     auto& js = jobs(this);
     bool changed = false;
@@ -799,6 +1041,20 @@ void Viewport::paintOverlay(QPainter& p)
         }
         p.restore();
     }
+    if (boxing_) {
+        // solid for "wholly inside", dashed for "anything it touches" (not colour alone)
+        const bool crossing = boxEnd_.x() < boxStart_.x();
+        const QRectF r = QRectF(boxStart_, boxEnd_).normalized();
+        p.save();
+        p.setPen(QPen(colors_.selected, 1.2, crossing ? Qt::DashLine : Qt::SolidLine));
+        QColor fill = colors_.selected;
+        fill.setAlpha(28);
+        p.setBrush(fill);
+        p.drawRect(r);
+        p.setPen(colors_.text);
+        p.drawText(r.bottomLeft() + QPointF(4, 14), crossing ? tr("touching") : tr("inside"));
+        p.restore();
+    }
     drawGizmo(p);
     if (meshes_.empty() && !emptyHint_.isEmpty() && pending_ == 0) {
         QFont f = font();
@@ -826,6 +1082,76 @@ void Viewport::resizeEvent(QResizeEvent* e)
 }
 
 // ---------------------------------------------------------------- picking
+
+std::vector<PickResult> Viewport::facesInBox(const QRectF& box, bool crossing)
+{
+    std::vector<PickResult> out;
+    if (!glReady_ || meshes_.empty()) {
+        return out;
+    }
+    // what the pick buffer shows inside the box: the faces seen there
+    makeCurrent();
+    const qreal dpr = devicePixelRatioF();
+    const QSize sz(int(width() * dpr), int(height() * dpr));
+    if (!pickFbo_ || pickFbo_->size() != sz) {
+        pickFbo_ = std::make_unique<QOpenGLFramebufferObject>(sz, QOpenGLFramebufferObject::Depth);
+    }
+    pickFbo_->bind();
+    glViewport(0, 0, sz.width(), sz.height());
+    glClearColor(0, 0, 0, 0);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glDisable(GL_BLEND);
+    drawScene(true);
+    const QRect r = QRect(QPoint(int(box.left() * dpr), int(box.top() * dpr)), QPoint(int(box.right() * dpr), int(box.bottom() * dpr)))
+                        .intersected(QRect(QPoint(0, 0), sz));
+    std::vector<unsigned char> px(size_t(std::max(0, r.width() * r.height() * 4)));
+    if (!r.isEmpty()) {
+        glReadPixels(r.left(), sz.height() - 1 - r.bottom(), r.width(), r.height(), GL_RGBA, GL_UNSIGNED_BYTE, px.data());
+    }
+    pickFbo_->release();
+    doneCurrent();
+    // a face counts when some pixel of it has the same face on all four sides: one-pixel
+    // slivers along silhouette edges (hidden faces peeking through) do not
+    std::set<int> seen;
+    const int W = r.width(), H = r.height();
+    auto idAt = [&](int x, int y) {
+        const size_t i = (size_t(y) * size_t(W) + size_t(x)) * 4;
+        return int(px[i]) | (int(px[i + 1]) << 8) | (int(px[i + 2]) << 16);
+    };
+    for (int y = 1; y + 1 < H; ++y) {
+        for (int x = 1; x + 1 < W; ++x) {
+            const int id = idAt(x, y);
+            if (id && !seen.count(id) && idAt(x - 1, y) == id && idAt(x + 1, y) == id && idAt(x, y - 1) == id &&
+                idAt(x, y + 1) == id) {
+                seen.insert(id);
+            }
+        }
+    }
+    for (auto& m : meshes_) {
+        for (int f = 0; f < m->shape->faceCount(); ++f) {
+            if (!seen.count(m->pickBase + f + 1)) {
+                continue;
+            }
+            bool inside = true;
+            if (!crossing) {  // window: every corner of the face's triangles inside the box
+                for (size_t t = 0; t < m->triFace.size() && inside; ++t) {
+                    if (int(m->triFace[t]) != f) {
+                        continue;
+                    }
+                    for (int k = 0; k < 3 && inside; ++k) {
+                        const uint32_t v = m->indices[t * 3 + size_t(k)];
+                        const QVector3D p(m->positions[v * 3], m->positions[v * 3 + 1], m->positions[v * 3 + 2]);
+                        inside = box.adjusted(-1, -1, 1, 1).contains(project(p));
+                    }
+                }
+            }
+            if (inside) {
+                out.push_back({m->body, f});
+            }
+        }
+    }
+    return out;
+}
 
 std::optional<PickResult> Viewport::pickAt(const QPoint& pos)
 {
@@ -867,9 +1193,9 @@ QString Viewport::describe(const PickResult& r) const
     for (auto& m : meshes_) {
         if (m->body == r.body) {
             auto fp = m->shape->faceFingerprint(r.face);
-            return tr("Face “%1” · %2 · %3 mm²")
-                .arg(QString::fromStdString(m->shape->faceName(r.face)), QString::fromStdString(fp.type))
-                .arg(fp.size, 0, 'f', 1);
+            return tr("Face “%1” · %2 · %3")
+                .arg(QString::fromStdString(m->shape->faceName(r.face)), QString::fromStdString(fp.type),
+                     QString::fromStdString(jig::formatArea(fp.size, units_)));
         }
     }
     return {};
@@ -961,8 +1287,8 @@ void Viewport::drawGizmo(QPainter& p)
 
 void Viewport::orbit(const QPoint& d)
 {
-    yaw_ -= d.x() * 0.4f;
-    pitch_ = std::clamp(pitch_ + d.y() * 0.4f, -89.9f, 89.9f);
+    yaw_ -= d.x() * 0.4f * orbitSpeed_;
+    pitch_ = std::clamp(pitch_ + d.y() * 0.4f * orbitSpeed_, -89.9f, 89.9f);
     update();
 }
 
@@ -1019,9 +1345,20 @@ void Viewport::mousePressEvent(QMouseEvent* e)
     // Universal fallback for people without a middle button: right-drag orbits.
     if (e->button() == Qt::RightButton) {
         drag_ = shift ? Drag::Pan : Drag::Orbit;
+        rightPress_ = lastPos_;
+        rightMoved_ = false;
     }
-    if (drag_ == Drag::None && e->button() == Qt::LeftButton && gizmoHit(lastPos_) < 0 && interactor_) {
-        interactor_->mousePress(e);
+    longPressed_ = false;
+    if (drag_ == Drag::None && e->button() == Qt::LeftButton && gizmoHit(lastPos_) < 0) {
+        if (!interactor_ && (pickMode_ == PickMode::Faces || pickMode_ == PickMode::Any) && !meshes_.empty()) {
+            longPress_->start();
+        }
+        const bool taken = interactor_ && interactor_->mousePress(e);
+        // a press on empty space while picking edges, faces or bodies may become a selection box
+        boxArmed_ = !taken && ((pickMode_ == PickMode::Edges && !pickEdgeAt(lastPos_)) ||
+                               (pickMode_ == PickMode::Faces && (faceBoxing_ || bodyBoxing_) && !pickAt(lastPos_)));
+        boxStart_ = boxEnd_ = lastPos_;
+        boxing_ = false;
     }
 }
 
@@ -1030,6 +1367,22 @@ void Viewport::mouseMoveEvent(QMouseEvent* e)
     const QPoint pos = e->position().toPoint();
     const QPoint d = pos - lastPos_;
     lastPos_ = pos;
+    if ((e->buttons() & Qt::RightButton) && (pos - rightPress_).manhattanLength() > 4) {
+        rightMoved_ = true;
+    }
+    if (longPress_->isActive() && d.manhattanLength() > 2) {
+        longPress_->stop();  // moving is not a long press
+    }
+    if (boxArmed_ && (e->buttons() & Qt::LeftButton)) {
+        if (!boxing_ && (pos - boxStart_).manhattanLength() > 4) {
+            boxing_ = true;
+        }
+        if (boxing_) {
+            boxEnd_ = pos;
+            overlay_->update();
+            return;
+        }
+    }
     if (drag_ == Drag::Orbit) {
         orbit(d);
         return;
@@ -1091,6 +1444,90 @@ void Viewport::mouseMoveEvent(QMouseEvent* e)
 
 void Viewport::mouseReleaseEvent(QMouseEvent* e)
 {
+    longPress_->stop();
+    if (e->button() == Qt::LeftButton && longPressed_) {
+        longPressed_ = false;  // the menu of hidden faces took this press
+        return;
+    }
+    if (e->button() == Qt::RightButton) {
+        drag_ = Drag::None;
+        if (!rightMoved_) {
+            emit menuRequested(e->position().toPoint());
+        }
+        return;
+    }
+    if (e->button() == Qt::LeftButton && boxing_) {
+        boxArmed_ = boxing_ = false;
+        boxEnd_ = e->position().toPoint();
+        overlay_->update();
+        const bool crossing = boxEnd_.x() < boxStart_.x();
+        if (pickMode_ == PickMode::Faces && !faceBoxing_) {
+            // whole bodies: any of it seen in the box, or (window) all of it inside
+            const QRectF box = QRectF(boxStart_, boxEnd_).normalized();
+            std::set<std::string> touched;
+            for (auto& f : facesInBox(box, true)) {
+                touched.insert(f.body);
+            }
+            QStringList ids;
+            for (auto& m : meshes_) {
+                if (!touched.count(m->body)) {
+                    continue;
+                }
+                bool inside = true;
+                if (!crossing) {
+                    for (size_t v = 0; v * 3 + 2 < m->positions.size() && inside; ++v) {
+                        inside = box.adjusted(-1, -1, 1, 1).contains(
+                            project(QVector3D(m->positions[v * 3], m->positions[v * 3 + 1], m->positions[v * 3 + 2])));
+                    }
+                }
+                if (inside) {
+                    ids << QString::fromStdString(m->body);
+                }
+            }
+            emit bodiesBoxed(ids, e->modifiers());
+            return;
+        }
+        if (pickMode_ == PickMode::Faces) {
+            const auto faces = facesInBox(QRectF(boxStart_, boxEnd_).normalized(), crossing);
+            if (!faces.empty()) {
+                const std::string body = faces.front().body;
+                for (auto& m : meshes_) {
+                    if (m->body != body) {
+                        continue;
+                    }
+                    QStringList names;
+                    for (auto& f : faces) {
+                        if (f.body == body && f.face < m->shape->faceCount()) {
+                            names << QString::fromStdString(m->shape->faceName(f.face));
+                        }
+                    }
+                    emit facesBoxed(QString::fromStdString(body), names, e->modifiers());
+                    break;
+                }
+            }
+            return;
+        }
+        const auto hits = edgesInBox(QRectF(boxStart_, boxEnd_).normalized(), crossing);
+        if (!hits.empty()) {
+            // one body per box: the first one met (fillets work on one body at a time)
+            const std::string body = hits.front().body;
+            for (auto& m : meshes_) {
+                if (m->body != body) {
+                    continue;
+                }
+                QStringList names;
+                for (auto& h : hits) {
+                    if (h.body == body && h.edge < m->shape->edgeCount()) {
+                        names << QString::fromStdString(m->shape->edgeName(h.edge));
+                    }
+                }
+                emit edgesBoxed(QString::fromStdString(body), names, e->modifiers());
+                break;
+            }
+        }
+        return;
+    }
+    boxArmed_ = false;
     if (e->button() == Qt::LeftButton && drag_ == Drag::None) {
         const QPoint pos = e->position().toPoint();
         switch (gizmoHit(pos)) {
@@ -1175,7 +1612,7 @@ void Viewport::wheelEvent(QWheelEvent* e)
         }
         return;
     }
-    const double steps = e->angleDelta().y() / 120.0;
+    const double steps = e->angleDelta().y() / 120.0 * (zoomInverted_ ? -1 : 1);
     zoomAt(std::pow(0.85, steps), e->position().toPoint());
 }
 
@@ -1184,7 +1621,7 @@ bool Viewport::event(QEvent* e)
     if (e->type() == QEvent::NativeGesture) {
         auto* g = static_cast<QNativeGestureEvent*>(e);
         if (g->gestureType() == Qt::ZoomNativeGesture) {
-            zoomAt(1.0 / (1.0 + g->value()), g->position().toPoint());
+            zoomAt(zoomInverted_ ? 1.0 + g->value() : 1.0 / (1.0 + g->value()), g->position().toPoint());
             return true;
         }
     }
@@ -1197,6 +1634,53 @@ void Viewport::leaveEvent(QEvent*)
         hover_.reset();
         emit hovered({});
         update();
+    }
+}
+
+std::vector<PickResult> Viewport::facesUnder(const QPoint& px) const
+{
+    QVector3D o, d;
+    ray(px, o, d);
+    const gp_Lin line(gp_Pnt(o.x(), o.y(), o.z()), gp_Dir(d.x(), d.y(), d.z()));
+    std::vector<std::pair<double, PickResult>> hits;
+    for (auto& m : meshes_) {
+        IntCurvesFace_ShapeIntersector inter;
+        inter.Load(m->shape->shape(), 1e-6);
+        inter.Perform(line, 0, 1e9);
+        for (int i = 1; i <= inter.NbPnt(); ++i) {
+            const TopoDS_Face& f = inter.Face(i);
+            for (int k = 0; k < m->shape->faceCount(); ++k) {
+                if (m->shape->face(k).IsSame(f)) {
+                    bool dup = false;
+                    for (auto& h : hits) {
+                        dup |= h.second.body == m->body && h.second.face == k;
+                    }
+                    if (!dup) {
+                        hits.push_back({inter.WParameter(i), PickResult {m->body, k}});
+                    }
+                }
+            }
+        }
+    }
+    std::sort(hits.begin(), hits.end(), [](auto& a, auto& b) { return a.first < b.first; });
+    std::vector<PickResult> out;
+    for (auto& h : hits) {
+        out.push_back(h.second);
+    }
+    return out;
+}
+
+void Viewport::selectFace(const std::string& body, int face)
+{
+    for (auto& m : meshes_) {
+        if (m->body == body && face >= 0 && face < m->shape->faceCount()) {
+            selected_ = PickResult {body, face};
+            emit selectionChanged(QString::fromStdString(body), face);
+            emit faceClicked(QString::fromStdString(body), QString::fromStdString(m->shape->faceName(face)),
+                             Qt::NoModifier);
+            update();
+            return;
+        }
     }
 }
 

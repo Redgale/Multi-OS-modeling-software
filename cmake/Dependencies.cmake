@@ -11,7 +11,7 @@ if(OpenCASCADE_VERSION VERSION_LESS 7.6)
 endif()
 set(JIG_OCCT_LIBS
     TKernel TKMath TKG2d TKG3d TKGeomBase TKBRep TKGeomAlgo TKTopAlgo TKPrim
-    TKBO TKBool TKFillet TKOffset TKShHealing TKMesh TKXSBase)
+    TKBO TKBool TKFeat TKFillet TKOffset TKShHealing TKMesh TKXSBase)
 if(OpenCASCADE_VERSION VERSION_GREATER_EQUAL 7.8)
     list(APPEND JIG_OCCT_LIBS TKDE TKDESTEP TKDESTL)
 else()

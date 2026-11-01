@@ -1,24 +1,34 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "FeaturePanels.hpp"
+#include "Translations.hpp"
+
+#include "jig/screws.hpp"
 
 #include <cctype>
+#include <functional>
 #include <map>
 #include <regex>
 #include <set>
 
 #include <BRepGProp.hxx>
 #include <GProp_GProps.hxx>
+#include <QAbstractItemView>
+#include <QAbstractSpinBox>
 #include <QCheckBox>
 #include <QComboBox>
 #include <QDialogButtonBox>
 #include <QHBoxLayout>
 #include <QHeaderView>
+#include <QKeyEvent>
 #include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
 #include <QMessageBox>
+#include <QMouseEvent>
+#include <QPainter>
 #include <QPushButton>
 #include <QTableWidget>
+#include <QTextDocumentFragment>
 #include <QTimer>
 #include <QVBoxLayout>
 
@@ -45,6 +55,133 @@ const QColor kPreviewTint(132, 176, 238);
 
 }  // namespace
 
+// ---------------------------------------------------------------- shared helpers
+
+namespace
+{
+
+QLabel* heading(QWidget* parent, const QString& title, const QString& text)
+{
+    auto* l = new QLabel("<h3>" + title + "</h3><p>" + text + "</p>", parent);
+    l->setWordWrap(true);
+    return l;
+}
+
+QComboBox* combo(QWidget* parent, const std::vector<std::pair<QString, QString>>& items)
+{
+    auto* c = new QComboBox(parent);
+    for (auto& [label, data] : items) {
+        c->addItem(label, data);
+    }
+    return c;
+}
+
+void select(QComboBox* c, const std::string& data)
+{
+    const int i = c->findData(q(data));
+    if (i >= 0) {
+        c->setCurrentIndex(i);
+    }
+}
+
+std::string current(const QComboBox* c)
+{
+    return c->currentData().toString().toStdString();
+}
+
+std::string text(const ExprField* f, const char* fallback)
+{
+    return f->text().isEmpty() ? std::string(fallback) : f->text().toStdString();
+}
+
+// Sketches before the insertion point.
+void fillSketches(QComboBox* c, const jig::Document& doc, int limit, const jig::ModelState& before)
+{
+    for (int i = 0; i < limit; ++i) {
+        const auto& f = doc.model().features[size_t(i)];
+        if (f.kind == jig::FeatureKind::Sketch && before.sketches.count(f.id)) {
+            c->addItem(q(f.name), q(f.id));
+        }
+    }
+}
+
+void fillProfileList(QListWidget* list, const jig::SketchState* sk, const nlohmann::json& chosen,
+                     jig::LengthUnit units = jig::LengthUnit::Millimetre)
+{
+    list->blockSignals(true);
+    list->clear();
+    if (sk) {
+        std::set<std::string> keys;
+        if (chosen.is_array()) {
+            for (auto& k : chosen) {
+                keys.insert(k.get<std::string>());
+            }
+        }
+        int n = 1;
+        for (auto& r : sk->profiles.regions) {
+            auto* item = new QListWidgetItem(QObject::tr("Area %1 · %2").arg(n++).arg(q(jig::formatArea(r.area, units))), list);
+            item->setData(Qt::UserRole, q(r.key));
+            item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+            item->setCheckState(keys.empty() || keys.count(r.key) ? Qt::Checked : Qt::Unchecked);
+        }
+        if (sk->profiles.regions.empty()) {
+            new QListWidgetItem(QObject::tr("(no closed areas: the outline has a gap)"), list);
+        }
+    }
+    list->blockSignals(false);
+}
+
+nlohmann::json chosenProfiles(const QListWidget* list)
+{
+    nlohmann::json keys = nlohmann::json::array();
+    bool all = true;
+    for (int i = 0; i < list->count(); ++i) {
+        auto* it = list->item(i);
+        if (it->data(Qt::UserRole).toString().isEmpty()) {
+            continue;
+        }
+        if (it->checkState() == Qt::Checked) {
+            keys.push_back(it->data(Qt::UserRole).toString().toStdString());
+        }
+        else {
+            all = false;
+        }
+    }
+    return all ? nlohmann::json("all") : keys;
+}
+
+// A new feature's id and name, or the edited feature.
+jig::Feature startDraft(const jig::Document& doc, const std::string& editId, const std::string& prefix,
+                        const QString& word)
+{
+    if (!editId.empty()) {
+        return *doc.feature(editId);
+    }
+    jig::Feature f;
+    jig::Model tmp = doc.model();
+    f.id = jig::Document::newId(tmp, prefix);
+    f.name = QString("%1 %2").arg(word, q(f.id.substr(prefix.size()))).toStdString();
+    return f;
+}
+
+const std::vector<std::pair<QString, QString>> kAxes {
+    {QObject::tr("Z axis (up)"), "Z"}, {QObject::tr("X axis"), "X"}, {QObject::tr("Y axis"), "Y"}};
+
+// Construction axes made before step `limit`, added to an axis list; `data` turns an
+// axis id into the list's item data.
+void addConstructionAxes(QComboBox* c, const jig::Document& doc, const jig::ModelState& before, int limit,
+                         const std::function<QString(const std::string&)>& data)
+{
+    for (int i = 0; i < limit && i < int(doc.model().features.size()); ++i) {
+        const auto& f = doc.model().features[size_t(i)];
+        if (f.kind == jig::FeatureKind::Axis && before.axes.count(f.id)) {
+            c->addItem(q(f.name), data(f.id));
+        }
+    }
+}
+
+}  // namespace
+
 // ---------------------------------------------------------------- ExprField
 
 ExprField::ExprField(jig::Document& doc, jig::Dim dim, QWidget* parent)
@@ -56,7 +193,7 @@ ExprField::ExprField(jig::Document& doc, jig::Dim dim, QWidget* parent)
     lay->setContentsMargins(0, 0, 0, 0);
     lay->setSpacing(1);
     edit_ = new QLineEdit(this);
-    edit_->setPlaceholderText(dim == jig::Dim::ang() ? tr("e.g. 45 deg") : tr("e.g. 10 mm, 2 in, width/2"));
+    edit_->setPlaceholderText(dim == jig::Dim::ang() ? tr("e.g. 45 deg") : tr("e.g. 10 mm, 2 in, width/2 (a plain number is in %1)").arg(q(jig::unitSymbol(doc.units()))));
     result_ = new QLabel(this);
     QFont f = result_->font();
     f.setPointSizeF(f.pointSizeF() * 0.9);
@@ -72,7 +209,9 @@ ExprField::ExprField(jig::Document& doc, jig::Dim dim, QWidget* parent)
 
 QString ExprField::text() const
 {
-    return edit_->text().trimmed();
+    // a plain number typed into a size field is in the design's unit: store it explicitly
+    const QString raw = edit_->text().trimmed();
+    return dim_ == jig::Dim::len() ? q(doc_.lengthInput(raw.toStdString())) : raw;
 }
 
 void ExprField::setText(const QString& t)
@@ -97,11 +236,11 @@ void ExprField::evaluate()
     valid_ = r.ok();
     if (valid_) {
         value_ = r->value;
-        result_->setText("= " + q(jig::formatQuantity(r.value())));
+        result_->setText("= " + q(dim_ == jig::Dim::len() ? doc_.fmtLength(r->value) : jig::formatQuantity(r.value())));
         result_->setStyleSheet({});
     }
     else {
-        result_->setText("✕ " + q(r.error().message));
+        result_->setText("✕ " + coreText(r.error().message));
         result_->setStyleSheet("color: #c53030;");
     }
 }
@@ -148,6 +287,84 @@ FeaturePanel::~FeaturePanel()
 {
     if (view_) {
         view_->setModelTint(std::nullopt);
+    }
+}
+
+void FeaturePanel::keyPressEvent(QKeyEvent* e)
+{
+    if ((e->key() == Qt::Key_Return || e->key() == Qt::Key_Enter) && ok_->isEnabled()) {
+        timer_->stop();
+        accept();
+        return;
+    }
+    if (e->key() == Qt::Key_Escape) {
+        cancel();
+        return;
+    }
+    ToolPanel::keyPressEvent(e);
+}
+
+void forgetRememberedValues()
+{
+    remembered().clear();
+}
+
+void nameInputsFromLabels(QWidget* root)
+{
+    auto plain = [](const QLabel* l) { return QTextDocumentFragment::fromHtml(l->text()).toPlainText().trimmed(); };
+    auto isInput = [](QWidget* w) {
+        return qobject_cast<QLineEdit*>(w) || qobject_cast<QComboBox*>(w) || qobject_cast<QAbstractSpinBox*>(w) ||
+               qobject_cast<QAbstractItemView*>(w) || qobject_cast<ExprField*>(w);
+    };
+    auto name = [&](QWidget* w, const QString& text) {
+        if (text.isEmpty()) {
+            return;
+        }
+        if (w->accessibleName().isEmpty()) {
+            w->setAccessibleName(text);
+        }
+        for (auto* e : w->findChildren<QLineEdit*>()) {  // the edit inside a size field
+            if (e->accessibleName().isEmpty()) {
+                e->setAccessibleName(text);
+            }
+        }
+    };
+    for (auto* l : root->findChildren<QLabel*>()) {
+        if (l->buddy()) {
+            name(l->buddy(), plain(l));
+        }
+    }
+    // a label followed by an input in the same layout
+    std::function<void(QLayout*)> walk = [&](QLayout* lay) {
+        QLabel* pending = nullptr;
+        for (int i = 0; i < lay->count(); ++i) {
+            QLayoutItem* it = lay->itemAt(i);
+            if (it->layout()) {
+                walk(it->layout());
+                pending = nullptr;
+                continue;
+            }
+            QWidget* w = it->widget();
+            if (!w) {
+                continue;
+            }
+            if (auto* l = qobject_cast<QLabel*>(w)) {
+                pending = l;
+                continue;
+            }
+            if (pending && isInput(w)) {
+                name(w, plain(pending));
+            }
+            pending = nullptr;
+        }
+    };
+    if (root->layout()) {
+        walk(root->layout());
+    }
+    for (auto* child : root->findChildren<QWidget*>()) {
+        if (child->layout()) {
+            walk(child->layout());
+        }
     }
 }
 
@@ -207,33 +424,49 @@ void FeaturePanel::runPreview()
     if (previewOk_) {
         QString t = "<b>✓ " + tr("Preview") + "</b>";
         if (!o.status.message.empty()) {
-            t += "<br>⚠ " + q(o.status.message).toHtmlEscaped();
+            t += "<br>⚠ " + coreText(o.status.message).toHtmlEscaped();
         }
         status_->setText(t);
     }
     else {
-        QString t = "<b>✕ " + q(o.status.message).toHtmlEscaped() + "</b>";
+        QString t = "<b>✕ " + coreText(o.status.message).toHtmlEscaped() + "</b>";
         status_->setText(t);
+        // sure repairs as buttons; the rest as advice
+        for (const auto& fx : o.status.fixes) {
+            auto it = paramFields_.find(fx.param);
+            if (it == paramFields_.end()) {
+                continue;
+            }
+            // name the field when there is more than one way to fix it ("Counterbore depth: use 2 mm")
+            QString text = fx.param == "op" && fx.value == "new" ? tr("Make it a new body") : tr("Use %1").arg(q(fx.value));
+            if (o.status.fixes.size() > 1 && fx.param != "op") {
+                const int i = form_->indexOf(it->second);
+                auto* item = i > 0 ? form_->itemAt(i - 1) : nullptr;
+                if (auto* label = item ? qobject_cast<QLabel*>(item->widget()) : nullptr) {
+                    text = tr("%1: use %2").arg(label->text(), q(fx.value));
+                }
+            }
+            auto* b = new QPushButton(text, fixes_);
+            b->setToolTip(tr("Changes this step's setting and shows the result."));
+            QWidget* field = it->second;
+            const QString value = q(fx.value);
+            connect(b, &QPushButton::clicked, this, [field, value] {
+                if (auto* e = qobject_cast<ExprField*>(field)) {
+                    e->setText(value);
+                }
+                else if (auto* c = qobject_cast<QComboBox*>(field)) {
+                    c->setCurrentIndex(std::max(0, c->findData(value)));
+                }
+                else if (auto* cb = qobject_cast<QCheckBox*>(field)) {
+                    cb->setChecked(value == "yes");
+                }
+            });
+            fixes_->layout()->addWidget(b);
+        }
         for (auto& sgg : o.status.suggestions) {
-            // "Try 1.8 mm or less." becomes a one-click fix
-            std::smatch m;
-            const std::string s = sgg;
-            if (std::regex_search(s, m, std::regex("^Try ([0-9.]+ ?mm)"))) {
-                auto* b = new QPushButton(tr("Use %1").arg(q(m[1].str())), fixes_);
-                const QString value = q(m[1].str());
-                connect(b, &QPushButton::clicked, this, [this, value] {
-                    for (auto* f : findChildren<ExprField*>()) {
-                        f->setText(value);  // the panel's main size field
-                        break;
-                    }
-                });
-                fixes_->layout()->addWidget(b);
-            }
-            else {
-                auto* l = new QLabel("• " + q(s), fixes_);
-                l->setWordWrap(true);
-                fixes_->layout()->addWidget(l);
-            }
+            auto* l = new QLabel("• " + coreText(sgg), fixes_);
+            l->setWordWrap(true);
+            fixes_->layout()->addWidget(l);
         }
     }
     ok_->setEnabled(previewOk_);
@@ -274,7 +507,7 @@ bool FeaturePanel::accept()
                                return true;
                            });
     if (!r) {
-        status_->setText("<b>✕ " + q(r.error().message).toHtmlEscaped() + "</b>");
+        status_->setText("<b>✕ " + coreText(r.error().message).toHtmlEscaped() + "</b>");
         return false;
     }
     rememberValues();
@@ -295,6 +528,64 @@ void FeaturePanel::cancel()
 
 // ---------------------------------------------------------------- Extrude
 
+// The extrude arrow: drawn from the profile's centre along the extrude direction; drag its
+// round tip to set the distance.
+class ExtrudeHandle : public Interactor
+{
+public:
+    explicit ExtrudeHandle(ExtrudePanel* p)
+        : p_(p)
+    {}
+    bool mousePress(QMouseEvent* e) override
+    {
+        auto tip = p_->handleTip();
+        dragging_ = tip && QLineF(*tip, e->position()).length() <= 12;
+        return dragging_;
+    }
+    bool mouseMove(QMouseEvent* e) override
+    {
+        if (dragging_) {
+            p_->dragHandleTo(e->position());
+            return true;
+        }
+        auto tip = p_->handleTip();
+        const bool over = tip && QLineF(*tip, e->position()).length() <= 12;
+        if (over != hover_ && p_->view_) {
+            hover_ = over;
+            p_->view_->setCursor(over ? Qt::SizeAllCursor : Qt::ArrowCursor);
+            p_->view_->update();
+        }
+        return false;
+    }
+    bool mouseRelease(QMouseEvent*) override
+    {
+        const bool was = dragging_;
+        dragging_ = false;
+        return was;
+    }
+    void paint(QPainter& g) override
+    {
+        auto tip = p_->handleTip();
+        if (!tip || !p_->view_) {
+            return;
+        }
+        const QPointF base = p_->view_->project(*p_->handleBase_);
+        const QColor c(255, 170, 40);
+        g.setRenderHint(QPainter::Antialiasing);
+        g.setPen(QPen(c, 2.5));
+        g.drawLine(base, *tip);
+        // the grip: a ring that fills when the cursor is on it (shape changes, not only colour)
+        g.setBrush(hover_ || dragging_ ? QBrush(c) : QBrush(Qt::NoBrush));
+        g.drawEllipse(*tip, 7, 7);
+        g.setPen(p_->view_->colors().text);
+        g.drawText(*tip + QPointF(12, -8), p_->distance_->text());
+    }
+
+private:
+    ExtrudePanel* p_;
+    bool dragging_ = false, hover_ = false;
+};
+
 ExtrudePanel::ExtrudePanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent)
     : FeaturePanel(doc, view, std::move(editId), parent)
 {
@@ -310,11 +601,26 @@ ExtrudePanel::ExtrudePanel(jig::Document& doc, Viewport* view, std::string editI
     extent_ = new QComboBox(this);
     extent_->addItem(tr("Distance"), "distance");
     extent_->addItem(tr("Through everything"), "all");
+    extent_->addItem(tr("Up to a face or plane"), "to");
+    to_ = new QComboBox(this);
+    to_->addItem(tr("Floor (XY)"), "\"XY\"");
+    to_->addItem(tr("Front (XZ)"), "\"XZ\"");
+    to_->addItem(tr("Side (YZ)"), "\"YZ\"");
+    toOffset_ = new ExprField(doc, jig::Dim::len(), this);
     distance_ = new ExprField(doc, jig::Dim::len(), this);
     direction_ = new QComboBox(this);
     direction_->addItem(tr("One side"), "one");
     direction_->addItem(tr("Other side"), "reverse");
     direction_->addItem(tr("Both sides (symmetric)"), "symmetric");
+    direction_->addItem(tr("Two sides (two distances)"), "two");
+    distance2_ = new ExprField(doc, jig::Dim::len(), this);
+    taper_ = new ExprField(doc, jig::Dim::ang(), this);
+    thinOn_ = new QCheckBox(tr("Thin wall instead of solid"), this);
+    thin_ = new ExprField(doc, jig::Dim::len(), this);
+    thinSide_ = new QComboBox(this);
+    thinSide_->addItem(tr("Centred on the outline"), "center");
+    thinSide_->addItem(tr("Inside the outline"), "inside");
+    thinSide_->addItem(tr("Outside the outline"), "outside");
     op_ = new QComboBox(this);
     op_->addItem(tr("Auto"), "auto");
     op_->addItem(tr("Join: add to the body"), "join");
@@ -324,9 +630,20 @@ ExtrudePanel::ExtrudePanel(jig::Document& doc, Viewport* view, std::string editI
     addRow(tr("Sketch"), sketch_);
     addRow(tr("Closed areas (profiles)"), profiles_);
     addRow(tr("Extent"), extent_);
+    addRow(tr("Up to (click a face)"), to_);
+    addRow(tr("Beyond it by"), toOffset_);
     addRow(tr("Distance"), distance_);
     addRow(tr("Direction"), direction_);
+    addRow(tr("Other side distance"), distance2_);
+    addRow(tr("Taper (narrows as it goes; negative widens)"), taper_);
+    form_->addWidget(thinOn_);
+    addRow(tr("Wall thickness"), thin_);
+    addRow(tr("Wall position"), thinSide_);
     addRow(tr("Operation"), op_);
+    for (auto [param, field] : std::initializer_list<std::pair<const char*, QWidget*>> {
+        {"distance", distance_}, {"taper", taper_}, {"thin", thin_}, {"op", op_}}) {
+        bindParam(param, field);
+    }
 
     // sketches available before the insertion point
     const auto before = stateBefore();
@@ -336,19 +653,42 @@ ExtrudePanel::ExtrudePanel(jig::Document& doc, Viewport* view, std::string editI
         if (f.kind == jig::FeatureKind::Sketch && before->sketches.count(f.id)) {
             sketch_->addItem(q(f.name), q(f.id));
         }
+        if (f.kind == jig::FeatureKind::Plane && before->planes.count(f.id)) {
+            to_->addItem(q(f.name), q(nlohmann::json(f.id).dump()));
+        }
     }
+    toOffset_->setText("0 mm");
     const jig::Feature* edit = editId_.empty() ? nullptr : doc_.feature(editId_);
     if (edit) {
         const auto& p = edit->params;
+        if (p.contains("to")) {
+            const QString key = q(p["to"].dump());
+            if (to_->findData(key) < 0) {
+                to_->addItem(p["to"].is_object() ? tr("Face %1").arg(q(p["to"].value("face", nlohmann::json::object())
+                                                                         .value("name", std::string {})))
+                                                 : key,
+                             key);
+            }
+            to_->setCurrentIndex(to_->findData(key));
+        }
+        toOffset_->setText(q(p.value("to_offset", std::string("0 mm"))));
         sketch_->setCurrentIndex(std::max(0, sketch_->findData(q(p.value("sketch", std::string {})))));
         extent_->setCurrentIndex(std::max(0, extent_->findData(q(p.value("extent", std::string("distance"))))));
         distance_->setText(q(p.value("distance", std::string("10 mm"))));
         direction_->setCurrentIndex(std::max(0, direction_->findData(q(p.value("direction", std::string("one"))))));
+        distance2_->setText(q(p.value("distance2", doc_.defaultLength(10, 0.5))));
+        taper_->setText(q(p.value("taper", std::string("0 deg"))));
+        thinOn_->setChecked(p.contains("thin"));
+        thin_->setText(q(p.value("thin", doc_.defaultLength(2, 0.08))));
+        thinSide_->setCurrentIndex(std::max(0, thinSide_->findData(q(p.value("thin_side", std::string("center"))))));
         op_->setCurrentIndex(std::max(0, op_->findData(q(p.value("op", std::string("join"))))));
     }
     else {
         sketch_->setCurrentIndex(sketch_->count() - 1);
-        distance_->setText(remembered().count("extrude.distance") ? remembered()["extrude.distance"] : "10 mm");
+        distance_->setText(remembered().count("extrude.distance") ? remembered()["extrude.distance"] : q(doc_.defaultLength(10, 0.5)));
+        distance2_->setText(q(doc_.defaultLength(10, 0.5)));
+        taper_->setText("0 deg");
+        thin_->setText(q(doc_.defaultLength(2, 0.08)));
     }
     fillProfiles();
     if (edit && edit->params.contains("profiles") && edit->params["profiles"].is_array()) {
@@ -366,12 +706,36 @@ ExtrudePanel::ExtrudePanel(jig::Document& doc, Viewport* view, std::string editI
         schedulePreview();
     });
     connect(profiles_, &QListWidget::itemChanged, this, [this] { schedulePreview(); });
-    for (auto* c : {extent_, direction_, op_}) {
+    for (auto* c : {extent_, direction_, op_, to_}) {
         connect(c, &QComboBox::currentIndexChanged, this, [this] { schedulePreview(); });
     }
-    connect(extent_, &QComboBox::currentIndexChanged, this,
-            [this] { distance_->setEnabled(extent_->currentData().toString() == "distance"); });
+    connect(toOffset_, &ExprField::changed, this, [this] { schedulePreview(); });
+    connect(extent_, &QComboBox::currentIndexChanged, this, [this] {
+        distance_->setEnabled(extent_->currentData().toString() == "distance");
+        updateVisibility();
+    });
+    if (view_) {
+        connect(view_.data(), &Viewport::faceClicked, this, [this](const QString& b, const QString& n, Qt::KeyboardModifiers) {
+            if (extent_->currentData().toString() == "to") {
+                useFace(b.toStdString(), n.toStdString());
+            }
+        });
+    }
     connect(distance_, &ExprField::changed, this, [this] { schedulePreview(); });
+    for (auto* f : {distance2_, taper_, thin_}) {
+        connect(f, &ExprField::changed, this, [this] { schedulePreview(); });
+    }
+    connect(thinSide_, &QComboBox::currentIndexChanged, this, [this] { schedulePreview(); });
+    connect(direction_, &QComboBox::currentIndexChanged, this, [this] { updateVisibility(); });
+    connect(thinOn_, &QCheckBox::toggled, this, [this] {
+        updateVisibility();
+        schedulePreview();
+    });
+    if (view_) {
+        handle_ = std::make_unique<ExtrudeHandle>(this);
+        view_->setInteractor(handle_.get());
+    }
+    updateVisibility();
     if (sketch_->count() == 0) {
         status_->setText("<b>✕ " + tr("There is no sketch to extrude yet. Create a sketch first.") + "</b>");
         ok_->setEnabled(false);
@@ -383,6 +747,118 @@ ExtrudePanel::ExtrudePanel(jig::Document& doc, Viewport* view, std::string editI
     distance_->edit()->selectAll();
 }
 
+ExtrudePanel::~ExtrudePanel()
+{
+    if (view_ && view_->interactor() == handle_.get()) {
+        view_->setInteractor(nullptr);
+    }
+}
+
+std::optional<QPointF> ExtrudePanel::handleTip() const
+{
+    if (!view_ || !handleBase_ || extent_->currentData().toString() != "distance" || !distance_->valid()) {
+        return std::nullopt;
+    }
+    return view_->project(*handleBase_ + handleDir_ * float(distance_->value()));
+}
+
+void ExtrudePanel::dragHandleTo(const QPointF& screen)
+{
+    if (!view_ || !handleBase_) {
+        return;
+    }
+    // how many pixels one millimetre along the arrow covers on screen
+    const QPointF s0 = view_->project(*handleBase_), s1 = view_->project(*handleBase_ + handleDir_ * 10.0f);
+    const QPointF axis = s1 - s0;
+    const double len2 = QPointF::dotProduct(axis, axis);
+    if (len2 < 1e-6) {
+        return;  // looking straight down the arrow: use the field instead
+    }
+    double d = QPointF::dotProduct(screen - s0, axis) / len2 * 10.0;
+    const bool inch = doc_.units() == jig::LengthUnit::Inch || doc_.units() == jig::LengthUnit::Foot;
+    const double step = inch ? 25.4 / 32 : 0.5;  // snaps: 1/32 in or 0.5 mm
+    d = std::round(d / step) * step;
+    if (std::abs(d) < step) {
+        d = d < 0 ? -step : step;
+    }
+    distance_->setText(QString::fromStdString(doc_.fmtLength(d)));
+}
+
+void ExtrudePanel::previewed(const jig::FeatureOutcome&)
+{
+    // the arrow starts at the centre of the first chosen area, on the sketch plane
+    handleBase_.reset();
+    const auto before = stateBefore();
+    auto it = before->sketches.find(sketch_->currentData().toString().toStdString());
+    if (it != before->sketches.end() && !it->second->profiles.regions.empty()) {
+        const jig::Profile* prof = &it->second->profiles.regions.front();
+        for (int i = 0; i < profiles_->count(); ++i) {
+            if (profiles_->item(i)->checkState() == Qt::Checked) {
+                for (auto& r : it->second->profiles.regions) {
+                    if (q(r.key) == profiles_->item(i)->data(Qt::UserRole).toString()) {
+                        prof = &r;
+                    }
+                }
+                break;
+            }
+        }
+        GProp_GProps g;
+        BRepGProp::SurfaceProperties(prof->face, g);
+        const gp_Pnt c = g.CentreOfMass();
+        gp_Dir n = it->second->frame.Direction();
+        if (direction_->currentData().toString() == "reverse") {
+            n.Reverse();
+        }
+        handleBase_ = QVector3D(float(c.X()), float(c.Y()), float(c.Z()));
+        handleDir_ = QVector3D(float(n.X()), float(n.Y()), float(n.Z()));
+    }
+    if (view_) {
+        view_->update();
+    }
+}
+
+void ExtrudePanel::useFace(const std::string& body, const std::string& name)
+{
+    const auto before = stateBefore();
+    auto it = before->bodies.find(body);
+    if (it == before->bodies.end()) {
+        return;
+    }
+    auto hits = it->second->findFaces(name);
+    if (hits.empty()) {
+        return;
+    }
+    extent_->setCurrentIndex(extent_->findData("to"));  // any face: flat, slanted or curved
+    const QString key = q(nlohmann::json {{"face", it->second->faceRef(body, hits[0]).toJson()}}.dump());
+    int i = to_->findData(key);
+    if (i < 0) {
+        to_->addItem(tr("Face %1").arg(q(name)), key);
+        i = to_->count() - 1;
+    }
+    to_->setCurrentIndex(i);
+}
+
+void ExtrudePanel::updateVisibility()
+{
+    auto show = [this](QWidget* w, bool on) {
+        w->setVisible(on);
+        const int i = form_->indexOf(w);
+        if (i > 0) {
+            if (auto* item = form_->itemAt(i - 1); item && item->widget()) {
+                item->widget()->setVisible(on);
+            }
+        }
+    };
+    const bool upTo = extent_->currentData().toString() == "to";
+    show(to_, upTo);
+    show(toOffset_, upTo);
+    show(distance_, !upTo);
+    show(direction_, !upTo);
+    show(distance2_, !upTo && direction_->currentData().toString() == "two");
+    show(thin_, thinOn_->isChecked());
+    show(thinSide_, thinOn_->isChecked());
+}
+
 void ExtrudePanel::fillProfiles()
 {
     profiles_->blockSignals(true);
@@ -392,12 +868,23 @@ void ExtrudePanel::fillProfiles()
     if (it != before->sketches.end()) {
         int n = 1;
         for (auto& r : it->second->profiles.regions) {
-            auto* item = new QListWidgetItem(tr("Area %1 · %2 mm²").arg(n++).arg(r.area, 0, 'f', 1), profiles_);
+            auto* item = new QListWidgetItem(tr("Area %1 · %2").arg(n++).arg(q(jig::formatArea(r.area, doc_.units()))), profiles_);
             item->setData(Qt::UserRole, q(r.key));
             item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
             item->setCheckState(Qt::Checked);
         }
-        if (it->second->profiles.regions.empty()) {
+        // open curves can still be extruded as a wall
+        const bool open = !it->second->solved.openEndpoints().empty();
+        if (open) {
+            auto* item = new QListWidgetItem(tr("Open curves, as a wall (needs a wall thickness)"), profiles_);
+            item->setData(Qt::UserRole, "open");
+            item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+            item->setCheckState(it->second->profiles.regions.empty() ? Qt::Checked : Qt::Unchecked);
+            if (it->second->profiles.regions.empty()) {
+                thinOn_->setChecked(true);
+            }
+        }
+        else if (it->second->profiles.regions.empty()) {
             new QListWidgetItem(tr("(no closed areas: the outline has a gap)"), profiles_);
         }
     }
@@ -469,9 +956,37 @@ jig::Feature ExtrudePanel::draft() const
         }
     }
     p["profiles"] = all ? nlohmann::json("all") : keys;
+    bool openChecked = false;
+    for (int i = 0; i < profiles_->count(); ++i) {
+        openChecked |= profiles_->item(i)->data(Qt::UserRole).toString() == "open" &&
+                       profiles_->item(i)->checkState() == Qt::Checked;
+    }
+    if (openChecked) {
+        p["profiles"] = "open";  // a wall along the open curves (the closed areas are not used)
+        if (!thinOn_->isChecked()) {
+            p["thin"] = thin_->text().isEmpty() ? std::string("2 mm") : thin_->text().toStdString();
+        }
+    }
     p["extent"] = extent_->currentData().toString().toStdString();
+    if (p["extent"] == "to") {
+        const std::string d = to_->currentData().toString().toStdString();
+        p["to"] = nlohmann::json::parse(d.empty() ? "\"XY\"" : d, nullptr, false);
+        if (toOffset_->valid() && std::abs(toOffset_->value()) > 1e-12) {
+            p["to_offset"] = toOffset_->text().toStdString();
+        }
+    }
     p["distance"] = distance_->text().isEmpty() ? std::string("10 mm") : distance_->text().toStdString();
     p["direction"] = direction_->currentData().toString().toStdString();
+    if (p["direction"] == "two") {
+        p["distance2"] = distance2_->text().isEmpty() ? std::string("10 mm") : distance2_->text().toStdString();
+    }
+    if (taper_->valid() && std::abs(taper_->value()) > 1e-12) {
+        p["taper"] = taper_->text().toStdString();
+    }
+    if (thinOn_->isChecked()) {
+        p["thin"] = thin_->text().isEmpty() ? std::string("2 mm") : thin_->text().toStdString();
+        p["thin_side"] = thinSide_->currentData().toString().toStdString();
+    }
     QString op = op_->currentData().toString();
     if (op == "auto") {
         op = autoOperation();
@@ -515,19 +1030,50 @@ FilletPanel::FilletPanel(jig::Document& doc, Viewport* view, std::string editId,
     addRow(tr("Edges"), count_);
     form_->addWidget(chain_);
     form_->addWidget(clear);
+    type_ = chamfer ? combo(this, {{tr("Equal distance"), "equal"}, {tr("Two distances"), "two"}, {tr("Distance and angle"), "angle"}})
+                    : combo(this, {{tr("Constant radius"), "equal"}, {tr("Variable: one radius at each end"), "variable"}});
+    second_ = new ExprField(doc, jig::Dim::len(), this);
+    angle_ = new ExprField(doc, jig::Dim::ang(), this);
+    flip_ = new QCheckBox(chamfer ? tr("Swap the two sides") : tr("Swap the start and end"), this);
+    addRow(tr("Type"), type_);
     addRow(chamfer ? tr("Distance") : tr("Radius"), radius_);
+    bindParam(chamfer ? "distance" : "radius", radius_);
+    addRow(chamfer ? tr("Second distance") : tr("Radius at the other end"), second_);
+    addRow(tr("Angle from the first face"), angle_);
+    form_->addWidget(flip_);
     connect(clear, &QPushButton::clicked, this, [this] {
         edges_.clear();
         refreshEdges();
     });
     connect(radius_, &ExprField::changed, this, [this] { schedulePreview(); });
+    for (auto* e : {second_, angle_}) {
+        connect(e, &ExprField::changed, this, [this] { schedulePreview(); });
+    }
+    connect(type_, &QComboBox::currentIndexChanged, this, [this] {
+        updateVisibility();
+        schedulePreview();
+    });
+    connect(flip_, &QCheckBox::toggled, this, [this] { schedulePreview(); });
+    second_->setText(q(doc_.defaultLength(chamfer ? 2 : 4, chamfer ? 0.0625 : 0.125)));
+    angle_->setText("45 deg");
     connect(view_.data(), &Viewport::edgeClicked, this, [this](const QString& body, const QString& name, Qt::KeyboardModifiers) {
         toggleEdgeByName(body.toStdString(), name.toStdString());
+    });
+    connect(view_.data(), &Viewport::edgesBoxed, this, [this](const QString& body, const QStringList& names, Qt::KeyboardModifiers mods) {
+        addEdgesByName(body.toStdString(), names, mods & Qt::ControlModifier);
     });
 
     const jig::Feature* edit = editId_.empty() ? nullptr : doc_.feature(editId_);
     if (edit) {
         radius_->setText(q(edit->params.value(chamfer ? "distance" : "radius", std::string("1 mm"))));
+        select(type_, edit->params.value("type", std::string("equal")));
+        if (edit->params.contains(chamfer ? "distance2" : "radius2")) {
+            second_->setText(q(edit->params.value(chamfer ? "distance2" : "radius2", std::string {})));
+        }
+        if (edit->params.contains("angle")) {
+            angle_->setText(q(edit->params.value("angle", std::string("45 deg"))));
+        }
+        flip_->setChecked(edit->params.value("flip", false));
         const auto before = stateBefore();
         for (auto& jr : edit->params.value("edges", nlohmann::json::array())) {
             jig::ShapeRef ref = jig::ShapeRef::fromJson(jr);
@@ -544,10 +1090,29 @@ FilletPanel::FilletPanel(jig::Document& doc, Viewport* view, std::string editId,
     }
     else {
         const QString key = chamfer ? "chamfer.distance" : "fillet.radius";
-        radius_->setText(remembered().count(key) ? remembered()[key] : (chamfer ? "1 mm" : "2 mm"));
+        radius_->setText(remembered().count(key) ? remembered()[key]
+                                                 : (chamfer ? q(doc_.defaultLength(1, 0.03125)) : q(doc_.defaultLength(2, 0.0625))));
     }
     view_->setPickMode(PickMode::Edges);
+    updateVisibility();
     refreshEdges();
+}
+
+void FilletPanel::updateVisibility()
+{
+    const std::string t = current(type_);
+    auto show = [this](QWidget* w, bool on) {
+        w->setVisible(on);
+        const int i = form_->indexOf(w);
+        if (i > 0) {
+            if (auto* item = form_->itemAt(i - 1); item && item->widget()) {
+                item->widget()->setVisible(on);
+            }
+        }
+    };
+    show(second_, t == "two" || t == "variable");
+    show(angle_, t == "angle");
+    flip_->setVisible(t != "equal");
 }
 
 FilletPanel::~FilletPanel()
@@ -570,6 +1135,32 @@ void FilletPanel::toggleEdgeByName(const std::string& body, const std::string& n
         toggleEdge(body, hits[0]);
     }
     // else: the click was on a surface this step itself made; nothing to toggle
+}
+
+void FilletPanel::addEdgesByName(const std::string& body, const QStringList& names, bool remove)
+{
+    const auto before = stateBefore();
+    auto bit = before->bodies.find(body);
+    if (bit == before->bodies.end()) {
+        return;
+    }
+    if (!body_.empty() && body_ != body) {
+        status_->setText("<b>✕ " + tr("Pick edges of one body at a time.") + "</b>");
+        return;
+    }
+    int changed = 0;
+    for (const QString& n : names) {
+        auto hits = bit->second->findEdges(n.toStdString());
+        if (hits.size() != 1) {
+            continue;  // made by this step itself: not an edge of the model before it
+        }
+        changed += remove ? int(edges_.erase(hits[0])) : int(edges_.insert(hits[0]).second);
+    }
+    if (changed == 0) {
+        return;
+    }
+    body_ = edges_.empty() ? std::string {} : body;
+    refreshEdges();
 }
 
 void FilletPanel::toggleEdge(const std::string& body, int e)
@@ -644,6 +1235,19 @@ jig::Feature FilletPanel::draft() const
     }
     f.params = {{"edges", refs},
                 {chamfer_ ? "distance" : "radius", radius_->text().isEmpty() ? std::string("1 mm") : radius_->text().toStdString()}};
+    const std::string t = current(type_);
+    if (t != "equal") {
+        f.params["type"] = t;
+        if (flip_->isChecked()) {
+            f.params["flip"] = true;
+        }
+    }
+    if (t == "two" || t == "variable") {
+        f.params[chamfer_ ? "distance2" : "radius2"] = second_->text().toStdString();
+    }
+    if (t == "angle") {
+        f.params["angle"] = angle_->text().toStdString();
+    }
     return f;
 }
 
@@ -674,6 +1278,11 @@ ShellPanel::ShellPanel(jig::Document& doc, Viewport* view, std::string editId, Q
     addRow(tr("Open faces"), count_);
     form_->addWidget(clear);
     addRow(tr("Wall thickness"), thickness_);
+    bindParam("thickness", thickness_);
+    direction_ = combo(this, {{tr("Inside: the outside stays the same size"), "inside"},
+                              {tr("Outside: the body becomes the hollow"), "outside"}});
+    addRow(tr("Walls"), direction_);
+    connect(direction_, &QComboBox::currentIndexChanged, this, [this] { schedulePreview(); });
     auto* tip = new QLabel(tr("For 3D prints, use at least two nozzle widths (0.8 mm for a 0.4 mm nozzle)."), this);
     tip->setWordWrap(true);
     form_->addWidget(tip);
@@ -685,10 +1294,15 @@ ShellPanel::ShellPanel(jig::Document& doc, Viewport* view, std::string editId, Q
     connect(view_.data(), &Viewport::faceClicked, this, [this](const QString& body, const QString& name, Qt::KeyboardModifiers) {
         toggleFaceByName(body.toStdString(), name.toStdString());
     });
+    connect(view_.data(), &Viewport::facesBoxed, this, [this](const QString& body, const QStringList& names, Qt::KeyboardModifiers m) {
+        addFacesByName(body.toStdString(), names, m & Qt::ControlModifier);
+    });
+    view_->setFaceBoxing(true);
     const jig::Feature* edit = editId_.empty() ? nullptr : doc_.feature(editId_);
     const auto before = stateBefore();
     if (edit) {
         thickness_->setText(q(edit->params.value("thickness", std::string("2 mm"))));
+        select(direction_, edit->params.value("direction", std::string("inside")));
         body_ = edit->params.value("body", std::string {});
         for (auto& jr : edit->params.value("faces", nlohmann::json::array())) {
             jig::ShapeRef ref = jig::ShapeRef::fromJson(jr);
@@ -703,7 +1317,7 @@ ShellPanel::ShellPanel(jig::Document& doc, Viewport* view, std::string editId, Q
         }
     }
     else {
-        thickness_->setText(remembered().count("shell.thickness") ? remembered()["shell.thickness"] : "2 mm");
+        thickness_->setText(remembered().count("shell.thickness") ? remembered()["shell.thickness"] : q(doc_.defaultLength(2, 0.08)));
     }
     if (body_.empty() && !before->bodies.empty()) {
         body_ = before->bodies.begin()->first;
@@ -716,7 +1330,29 @@ ShellPanel::~ShellPanel()
 {
     if (view_) {
         view_->setFaceHighlight({}, {});
+        view_->setFaceBoxing(false);
     }
+}
+
+void ShellPanel::addFacesByName(const std::string& body, const QStringList& names, bool remove)
+{
+    const auto before = stateBefore();
+    auto bit = before->bodies.find(body);
+    if (bit == before->bodies.end()) {
+        return;
+    }
+    if (!faces_.empty() && body != body_) {
+        status_->setText("<b>✕ " + tr("Pick faces of one body at a time.") + "</b>");
+        return;
+    }
+    for (const QString& n : names) {
+        auto hits = bit->second->findFaces(n.toStdString());
+        if (hits.size() == 1) {
+            remove ? (void)faces_.erase(hits[0]) : (void)faces_.insert(hits[0]);
+        }
+    }
+    body_ = faces_.empty() ? std::string {} : body;
+    refreshFaces();
 }
 
 void ShellPanel::toggleFaceByName(const std::string& body, const std::string& name)
@@ -775,6 +1411,9 @@ jig::Feature ShellPanel::draft() const
     f.params = {{"faces", refs},
                 {"thickness", thickness_->text().isEmpty() ? std::string("2 mm") : thickness_->text().toStdString()},
                 {"body", body_}};
+    if (current(direction_) == "outside") {
+        f.params["direction"] = "outside";
+    }
     return f;
 }
 
@@ -788,118 +1427,6 @@ void ShellPanel::rememberValues()
     remembered()["shell.thickness"] = thickness_->text();
 }
 
-// ---------------------------------------------------------------- shared helpers
-
-namespace
-{
-
-QLabel* heading(QWidget* parent, const QString& title, const QString& text)
-{
-    auto* l = new QLabel("<h3>" + title + "</h3><p>" + text + "</p>", parent);
-    l->setWordWrap(true);
-    return l;
-}
-
-QComboBox* combo(QWidget* parent, const std::vector<std::pair<QString, QString>>& items)
-{
-    auto* c = new QComboBox(parent);
-    for (auto& [label, data] : items) {
-        c->addItem(label, data);
-    }
-    return c;
-}
-
-void select(QComboBox* c, const std::string& data)
-{
-    const int i = c->findData(q(data));
-    if (i >= 0) {
-        c->setCurrentIndex(i);
-    }
-}
-
-std::string current(const QComboBox* c)
-{
-    return c->currentData().toString().toStdString();
-}
-
-std::string text(const ExprField* f, const char* fallback)
-{
-    return f->text().isEmpty() ? std::string(fallback) : f->text().toStdString();
-}
-
-// Sketches before the insertion point.
-void fillSketches(QComboBox* c, const jig::Document& doc, int limit, const jig::ModelState& before)
-{
-    for (int i = 0; i < limit; ++i) {
-        const auto& f = doc.model().features[size_t(i)];
-        if (f.kind == jig::FeatureKind::Sketch && before.sketches.count(f.id)) {
-            c->addItem(q(f.name), q(f.id));
-        }
-    }
-}
-
-void fillProfileList(QListWidget* list, const jig::SketchState* sk, const nlohmann::json& chosen)
-{
-    list->blockSignals(true);
-    list->clear();
-    if (sk) {
-        std::set<std::string> keys;
-        if (chosen.is_array()) {
-            for (auto& k : chosen) {
-                keys.insert(k.get<std::string>());
-            }
-        }
-        int n = 1;
-        for (auto& r : sk->profiles.regions) {
-            auto* item = new QListWidgetItem(QObject::tr("Area %1 · %2 mm²").arg(n++).arg(r.area, 0, 'f', 1), list);
-            item->setData(Qt::UserRole, q(r.key));
-            item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
-            item->setCheckState(keys.empty() || keys.count(r.key) ? Qt::Checked : Qt::Unchecked);
-        }
-        if (sk->profiles.regions.empty()) {
-            new QListWidgetItem(QObject::tr("(no closed areas: the outline has a gap)"), list);
-        }
-    }
-    list->blockSignals(false);
-}
-
-nlohmann::json chosenProfiles(const QListWidget* list)
-{
-    nlohmann::json keys = nlohmann::json::array();
-    bool all = true;
-    for (int i = 0; i < list->count(); ++i) {
-        auto* it = list->item(i);
-        if (it->data(Qt::UserRole).toString().isEmpty()) {
-            continue;
-        }
-        if (it->checkState() == Qt::Checked) {
-            keys.push_back(it->data(Qt::UserRole).toString().toStdString());
-        }
-        else {
-            all = false;
-        }
-    }
-    return all ? nlohmann::json("all") : keys;
-}
-
-// A new feature's id and name, or the edited feature.
-jig::Feature startDraft(const jig::Document& doc, const std::string& editId, const std::string& prefix,
-                        const QString& word)
-{
-    if (!editId.empty()) {
-        return *doc.feature(editId);
-    }
-    jig::Feature f;
-    jig::Model tmp = doc.model();
-    f.id = jig::Document::newId(tmp, prefix);
-    f.name = QString("%1 %2").arg(word, q(f.id.substr(prefix.size()))).toStdString();
-    return f;
-}
-
-const std::vector<std::pair<QString, QString>> kAxes {
-    {QObject::tr("Z axis (up)"), "Z"}, {QObject::tr("X axis"), "X"}, {QObject::tr("Y axis"), "Y"}};
-
-}  // namespace
 
 // ---------------------------------------------------------------- Revolve
 
@@ -914,6 +1441,11 @@ RevolvePanel::RevolvePanel(jig::Document& doc, Viewport* view, std::string editI
     profiles_->setMaximumHeight(110);
     axis_ = new QComboBox(this);
     angle_ = new ExprField(doc, jig::Dim::ang(), this);
+    extent_ = combo(this, {{tr("By an angle"), "angle"}, {tr("Up to a face (a curved one, or flat through the axis)"), "to"}});
+    to_ = new QComboBox(this);
+    to_->addItem(tr("Floor (XY)"), "\"XY\"");
+    to_->addItem(tr("Front (XZ)"), "\"XZ\"");
+    to_->addItem(tr("Side (YZ)"), "\"YZ\"");
     op_ = combo(this, {{tr("Join: add to the body"), "join"},
                        {tr("Cut: remove material"), "cut"},
                        {tr("New body"), "new"},
@@ -921,15 +1453,35 @@ RevolvePanel::RevolvePanel(jig::Document& doc, Viewport* view, std::string editI
     addRow(tr("Sketch"), sketch_);
     addRow(tr("Closed areas (profiles)"), profiles_);
     addRow(tr("Axis"), axis_);
+    addRow(tr("Extent"), extent_);
     addRow(tr("Angle"), angle_);
+    addRow(tr("Up to"), to_);
     addRow(tr("Operation"), op_);
+    bindParam("op", op_);
     const auto before = stateBefore();
     fillSketches(sketch_, doc_, insertIndex(), *before);
+    for (int i = 0; i < insertIndex(); ++i) {
+        const auto& f = doc_.model().features[size_t(i)];
+        if (f.kind == jig::FeatureKind::Plane && before->planes.count(f.id)) {
+            to_->addItem(q(f.name), q(nlohmann::json(f.id).dump()));
+        }
+    }
     const jig::Feature* edit = editId_.empty() ? nullptr : doc_.feature(editId_);
     if (edit) {
         select(sketch_, edit->params.value("sketch", std::string {}));
         angle_->setText(q(edit->params.value("angle", std::string("360 deg"))));
         select(op_, edit->params.value("op", std::string("join")));
+        select(extent_, edit->params.value("extent", std::string("angle")));
+        if (edit->params.contains("to")) {
+            const auto& t = edit->params["to"];
+            const QString key = q(t.dump());
+            if (to_->findData(key) < 0) {
+                to_->addItem(t.is_object() ? tr("Face %1").arg(q(t.value("face", nlohmann::json::object()).value("name", std::string {})))
+                                           : key,
+                             key);
+            }
+            to_->setCurrentIndex(to_->findData(key));
+        }
     }
     else {
         sketch_->setCurrentIndex(sketch_->count() - 1);
@@ -942,6 +1494,9 @@ RevolvePanel::RevolvePanel(jig::Document& doc, Viewport* view, std::string editI
         if (ax.contains("line")) {
             select(axis_, "line:" + std::to_string(ax["line"].get<int>()));
         }
+        else if (ax.contains("axis")) {
+            select(axis_, "ax:" + ax.value("axis", std::string {}));
+        }
         else {
             select(axis_, ax.value("origin", std::string("Z")));
         }
@@ -951,10 +1506,21 @@ RevolvePanel::RevolvePanel(jig::Document& doc, Viewport* view, std::string editI
         schedulePreview();
     });
     connect(profiles_, &QListWidget::itemChanged, this, [this] { schedulePreview(); });
-    for (auto* c : {axis_, op_}) {
-        connect(c, &QComboBox::currentIndexChanged, this, [this] { schedulePreview(); });
+    for (auto* c : {axis_, op_, extent_, to_}) {
+        connect(c, &QComboBox::currentIndexChanged, this, [this] {
+            updateVisibility();
+            schedulePreview();
+        });
     }
     connect(angle_, &ExprField::changed, this, [this] { schedulePreview(); });
+    if (view_) {
+        connect(view_.data(), &Viewport::faceClicked, this, [this](const QString& b, const QString& n, Qt::KeyboardModifiers) {
+            if (extent_->currentData().toString() == "to") {
+                useFace(b.toStdString(), n.toStdString());
+            }
+        });
+    }
+    updateVisibility();
     if (sketch_->count() == 0) {
         status_->setText("<b>✕ " + tr("There is no sketch to revolve yet. Create a sketch first.") + "</b>");
         ok_->setEnabled(false);
@@ -964,13 +1530,51 @@ RevolvePanel::RevolvePanel(jig::Document& doc, Viewport* view, std::string editI
     }
 }
 
+void RevolvePanel::useFace(const std::string& body, const std::string& name)
+{
+    const auto before = stateBefore();
+    auto it = before->bodies.find(body);
+    if (it == before->bodies.end()) {
+        return;
+    }
+    auto hits = it->second->findFaces(name);
+    if (hits.empty()) {
+        return;
+    }
+    extent_->setCurrentIndex(extent_->findData("to"));  // a flat face through the axis, or a curved face
+    const QString key = q(nlohmann::json {{"face", it->second->faceRef(body, hits[0]).toJson()}}.dump());
+    int i = to_->findData(key);
+    if (i < 0) {
+        to_->addItem(tr("Face %1").arg(q(name)), key);
+        i = to_->count() - 1;
+    }
+    to_->setCurrentIndex(i);
+}
+
+void RevolvePanel::updateVisibility()
+{
+    auto show = [this](QWidget* w, bool on) {
+        w->setVisible(on);
+        const int i = form_->indexOf(w);
+        if (i > 0) {
+            if (auto* item = form_->itemAt(i - 1); item && item->widget()) {
+                item->widget()->setVisible(on);
+            }
+        }
+    };
+    const bool upTo = extent_->currentData().toString() == "to";
+    show(angle_, !upTo);
+    show(to_, upTo);
+}
+
 void RevolvePanel::fillFromSketch()
 {
     const auto before = stateBefore();
     auto it = before->sketches.find(current(sketch_));
     const jig::SketchState* sk = it == before->sketches.end() ? nullptr : it->second.get();
     const jig::Feature* edit = editId_.empty() ? nullptr : doc_.feature(editId_);
-    fillProfileList(profiles_, sk, edit ? edit->params.value("profiles", nlohmann::json("all")) : nlohmann::json("all"));
+    fillProfileList(profiles_, sk, edit ? edit->params.value("profiles", nlohmann::json("all")) : nlohmann::json("all"),
+                    doc_.units());
     axis_->blockSignals(true);
     axis_->clear();
     // Lines of the sketch first (construction lines are the usual choice), then the origin axes.
@@ -992,6 +1596,7 @@ void RevolvePanel::fillFromSketch()
     for (auto& [label, d] : kAxes) {
         axis_->addItem(label, d);
     }
+    addConstructionAxes(axis_, doc_, *stateBefore(), insertIndex(), [](const std::string& id) { return q("ax:" + id); });
     axis_->setCurrentIndex(firstConstruction >= 0 ? firstConstruction : axis_->findData("Z"));
     axis_->blockSignals(false);
 }
@@ -1002,12 +1607,18 @@ jig::Feature RevolvePanel::draft() const
     f.kind = jig::FeatureKind::Revolve;
     const std::string ax = current(axis_);
     nlohmann::json axis = ax.rfind("line:", 0) == 0 ? nlohmann::json {{"line", std::stoi(ax.substr(5))}}
+                        : ax.rfind("ax:", 0) == 0   ? nlohmann::json {{"axis", ax.substr(3)}}
                                                     : nlohmann::json {{"origin", ax.empty() ? "Z" : ax}};
     f.params = {{"sketch", current(sketch_)},
                 {"profiles", chosenProfiles(profiles_)},
                 {"axis", axis},
                 {"angle", text(angle_, "360 deg")},
                 {"op", current(op_)}};
+    if (current(extent_) == "to") {
+        const std::string d = to_->currentData().toString().toStdString();
+        f.params["extent"] = "to";
+        f.params["to"] = nlohmann::json::parse(d.empty() ? "\"XY\"" : d, nullptr, false);
+    }
     return f;
 }
 
@@ -1030,6 +1641,21 @@ HolePanel::HolePanel(jig::Document& doc, Viewport* view, std::string editId, QWi
                          {tr("Counterbore (screw head sits below the surface)"), "counterbore"},
                          {tr("Countersink (for flat-head screws)"), "countersink"}});
     extent_ = combo(this, {{tr("Depth"), "distance"}, {tr("Through everything"), "all"}});
+    // screw sizes: the design's own system first
+    const bool usFirst = doc.units() == jig::LengthUnit::Inch || doc.units() == jig::LengthUnit::Foot;
+    size_ = new QComboBox(this);
+    size_->addItem(tr("Custom (type the sizes)"), QString());
+    for (bool inch : {usFirst, !usFirst}) {
+        for (auto& sz : jig::screwSizes()) {
+            if (sz.inch == inch) {
+                size_->addItem(tr("%1 screw").arg(q(sz.name)), q(sz.name));
+            }
+        }
+    }
+    fit_ = combo(this, {{tr("Close (snug, accurate)"), "close"},
+                        {tr("Normal"), "normal"},
+                        {tr("Loose (easy to line up)"), "loose"}});
+    bottom_ = combo(this, {{tr("Flat bottom"), "flat"}, {tr("Drill point (118°)"), "118 deg"}});
     diameter_ = new ExprField(doc, jig::Dim::len(), this);
     depth_ = new ExprField(doc, jig::Dim::len(), this);
     cboreDiameter_ = new ExprField(doc, jig::Dim::len(), this);
@@ -1039,14 +1665,26 @@ HolePanel::HolePanel(jig::Document& doc, Viewport* view, std::string editId, QWi
     addRow(tr("Sketch with hole points"), sketch_);
     form_->addWidget(points_);
     addRow(tr("Type"), type_);
+    addRow(tr("Screw size"), size_);
+    addRow(tr("Fit"), fit_);
     addRow(tr("Diameter"), diameter_);
+    bindParam("diameter", diameter_);
     addRow(tr("Extent"), extent_);
     addRow(tr("Depth"), depth_);
+    addRow(tr("Bottom"), bottom_);
+    bindParam("tip", bottom_);
     addRow(tr("Counterbore diameter"), cboreDiameter_);
+    bindParam("cbore_diameter", cboreDiameter_);
     addRow(tr("Counterbore depth"), cboreDepth_);
+    bindParam("cbore_depth", cboreDepth_);
     addRow(tr("Countersink diameter"), csinkDiameter_);
+    bindParam("csink_diameter", csinkDiameter_);
     addRow(tr("Countersink angle"), csinkAngle_);
-    auto* tip = new QLabel(tr("Clearance for an M3 screw: 3.4 mm. Add 0.2–0.4 mm for 3D prints."), this);
+    bindParam("csink_angle", csinkAngle_);
+    auto* tip = new QLabel(tr("Pick a screw size to fill in the clearance hole (and the counterbore or countersink "
+                              "for its head). 3D-printed holes often come out small: use Loose, or Custom and add "
+                              "0.2–0.4 mm."),
+                           this);
     tip->setWordWrap(true);
     form_->addWidget(tip);
     const auto before = stateBefore();
@@ -1067,14 +1705,19 @@ HolePanel::HolePanel(jig::Document& doc, Viewport* view, std::string editId, QWi
     }
     select(type_, value("type", "simple").toStdString());
     select(extent_, value("extent", "distance").toStdString());
-    diameter_->setText(value("diameter", "3.4 mm"));
-    depth_->setText(value("depth", "10 mm"));
-    cboreDiameter_->setText(value("cbore_diameter", "6.5 mm"));
-    cboreDepth_->setText(value("cbore_depth", "3.5 mm"));
-    csinkDiameter_->setText(value("csink_diameter", "6.5 mm"));
+    select(size_, value("size", "").toStdString());
+    select(fit_, value("fit", "normal").toStdString());
+    select(bottom_, value("tip", "flat").toStdString());
+    diameter_->setText(value("diameter", doc_.defaultLength(3.4, 0.13).c_str()));
+    depth_->setText(value("depth", doc_.defaultLength(10, 0.375).c_str()));
+    cboreDiameter_->setText(value("cbore_diameter", doc_.defaultLength(6.5, 0.25).c_str()));
+    cboreDepth_->setText(value("cbore_depth", doc_.defaultLength(3.5, 0.14).c_str()));
+    csinkDiameter_->setText(value("csink_diameter", doc_.defaultLength(6.5, 0.25).c_str()));
     csinkAngle_->setText(value("csink_angle", "90 deg"));
-    for (auto* c : {sketch_, type_, extent_}) {
+    fillFromSize();
+    for (auto* c : {sketch_, type_, extent_, size_, fit_, bottom_}) {
         connect(c, &QComboBox::currentIndexChanged, this, [this] {
+            fillFromSize();
             updateVisibility();
             schedulePreview();
         });
@@ -1106,6 +1749,8 @@ void HolePanel::updateVisibility()
         }
     };
     show(depth_, current(extent_) == "distance");
+    show(bottom_, current(extent_) == "distance");
+    show(fit_, !current(size_).empty());
     show(cboreDiameter_, t == "counterbore");
     show(cboreDepth_, t == "counterbore");
     show(csinkDiameter_, t == "countersink");
@@ -1135,8 +1780,16 @@ jig::Feature HolePanel::draft() const
     f.params = {{"sketch", current(sketch_)},
                 {"type", current(type_)},
                 {"extent", current(extent_)},
-                {"diameter", text(diameter_, "3.4 mm")},
                 {"depth", text(depth_, "10 mm")}};
+    if (current(extent_) == "distance" && current(bottom_) != "flat") {
+        f.params["tip"] = current(bottom_);
+    }
+    if (!current(size_).empty()) {  // the table decides the sizes; they are not stored twice
+        f.params["size"] = current(size_);
+        f.params["fit"] = current(fit_);
+        return f;
+    }
+    f.params["diameter"] = text(diameter_, "3.4 mm");
     if (current(type_) == "counterbore") {
         f.params["cbore_diameter"] = text(cboreDiameter_, "6.5 mm");
         f.params["cbore_depth"] = text(cboreDepth_, "3.5 mm");
@@ -1153,9 +1806,36 @@ QString HolePanel::title() const
     return tr("hole");
 }
 
+void HolePanel::fillFromSize()
+{
+    const std::string size = current(size_);
+    const bool custom = size.empty();
+    for (ExprField* e : {diameter_, cboreDiameter_, cboreDepth_, csinkDiameter_, csinkAngle_}) {
+        e->setEnabled(custom);
+    }
+    if (custom) {
+        return;
+    }
+    auto s = jig::screwSize(size);
+    auto fit = jig::holeFitFromString(current(fit_));
+    if (!s || !fit) {
+        return;
+    }
+    auto d = jig::clearanceDiameter(size, *fit);
+    auto shown = [this](double mm) { return QString::fromStdString(doc_.fmtLength(mm)); };
+    diameter_->setText(d ? shown(d.value()) : tr("no %1 fit in the table").arg(fit_->currentText()));
+    cboreDiameter_->setText(shown(s->cboreDiameter));
+    cboreDepth_->setText(shown(s->cboreDepth));
+    csinkDiameter_->setText(shown(s->csinkDiameter));
+    csinkAngle_->setText(QString("%1 deg").arg(s->csinkAngleDeg));
+}
+
 void HolePanel::rememberValues()
 {
     remembered()["hole.type"] = q(current(type_));
+    remembered()["hole.size"] = q(current(size_));
+    remembered()["hole.fit"] = q(current(fit_));
+    remembered()["hole.tip"] = q(current(bottom_));
     remembered()["hole.extent"] = q(current(extent_));
     remembered()["hole.diameter"] = diameter_->text();
     remembered()["hole.depth"] = depth_->text();
@@ -1171,17 +1851,22 @@ PatternPanel::PatternPanel(jig::Document& doc, Viewport* view, std::string editI
     : FeaturePanel(doc, view, std::move(editId), parent)
 {
     form_->addWidget(heading(this, tr("Pattern"),
-                             tr("Repeat an earlier Extrude, Revolve or Hole around an axis (ring) or in rows and "
-                                "columns (grid). Each copy adds or removes material the same way.")));
+                             tr("Repeat an earlier Extrude, Revolve or Hole, or a whole body, around an axis (ring), "
+                                "in rows and columns (grid) or along the curves of a sketch (path). Each copy of a "
+                                "step adds or removes material the same way.")));
     source_ = new QComboBox(this);
-    kind_ = combo(this, {{tr("Ring (around an axis)"), "circular"}, {tr("Grid (rows and columns)"), "rectangular"}});
-    addRow(tr("Step to repeat"), source_);
+    kind_ = combo(this, {{tr("Ring (around an axis)"), "circular"}, {tr("Grid (rows and columns)"), "rectangular"},
+                         {tr("Along a path (a sketch's curves)"), "path"}});
+    bodyOp_ = combo(this, {{tr("Separate bodies"), "new"}, {tr("Join into one body"), "join"}});
+    addRow(tr("What to repeat"), source_);
+    addRow(tr("Copies of a body"), bodyOp_);
     addRow(tr("Kind"), kind_);
 
     circular_ = new QWidget(this);
     auto* cl = new QVBoxLayout(circular_);
     cl->setContentsMargins(0, 0, 0, 0);
     axis_ = combo(circular_, kAxes);
+    addConstructionAxes(axis_, doc_, *stateBefore(), insertIndex(), [](const std::string& id) { return q(id); });
     count_ = new ExprField(doc, jig::Dim::none(), circular_);
     angle_ = new ExprField(doc, jig::Dim::ang(), circular_);
     for (auto [label, w] : {std::pair<QString, QWidget*> {tr("Axis"), axis_},
@@ -1195,6 +1880,9 @@ PatternPanel::PatternPanel(jig::Document& doc, Viewport* view, std::string editI
     gl->setContentsMargins(0, 0, 0, 0);
     dir1_ = combo(grid_, {{tr("X"), "X"}, {tr("Y"), "Y"}, {tr("Z"), "Z"}});
     dir2_ = combo(grid_, {{tr("Y"), "Y"}, {tr("X"), "X"}, {tr("Z"), "Z"}});
+    for (auto* c : {dir1_, dir2_}) {
+        addConstructionAxes(c, doc_, *stateBefore(), insertIndex(), [](const std::string& id) { return q(id); });
+    }
     count1_ = new ExprField(doc, jig::Dim::none(), grid_);
     spacing1_ = new ExprField(doc, jig::Dim::len(), grid_);
     count2_ = new ExprField(doc, jig::Dim::none(), grid_);
@@ -1208,11 +1896,35 @@ PatternPanel::PatternPanel(jig::Document& doc, Viewport* view, std::string editI
         gl->addWidget(new QLabel("<b>" + label + "</b>", grid_));
         gl->addWidget(w);
     }
+    path_ = new QWidget(this);
+    auto* pl = new QVBoxLayout(path_);
+    pl->setContentsMargins(0, 0, 0, 0);
+    pathSketch_ = new QComboBox(path_);
+    fillSketches(pathSketch_, doc_, insertIndex(), *stateBefore());
+    pathCount_ = new ExprField(doc, jig::Dim::none(), path_);
+    pathSpaced_ = new QCheckBox(tr("A set spacing (instead of spreading them over the whole path)"), path_);
+    pathSpacing_ = new ExprField(doc, jig::Dim::len(), path_);
+    pathOrient_ = combo(path_, {{tr("Keep the same direction"), "same"}, {tr("Turn with the path"), "follow"}});
+    for (auto [label, w] : {std::pair<QString, QWidget*> {tr("Sketch with the path (its curves, joined end to end)"), pathSketch_},
+                            {tr("Number of copies (including the original)"), pathCount_},
+                            {QString(), pathSpaced_},
+                            {tr("Spacing along the path"), pathSpacing_},
+                            {tr("Copies"), pathOrient_}}) {
+        if (!label.isEmpty()) {
+            pl->addWidget(new QLabel("<b>" + label + "</b>", path_));
+        }
+        pl->addWidget(w);
+    }
     form_->addWidget(circular_);
     form_->addWidget(grid_);
+    form_->addWidget(path_);
 
     const auto before = stateBefore();
     const int limit = insertIndex();
+    for (auto& [id, b] : before->bodies) {  // whole bodies first, then the steps
+        const jig::Feature* bf = doc_.feature(id);
+        source_->addItem(tr("Body: %1").arg(bf ? q(bf->name) : q(id)), q("body:" + id));
+    }
     for (int i = 0; i < limit; ++i) {
         const auto& f = doc_.model().features[size_t(i)];
         if (before->tools.count(f.id)) {
@@ -1222,7 +1934,13 @@ PatternPanel::PatternPanel(jig::Document& doc, Viewport* view, std::string editI
     const jig::Feature* edit = editId_.empty() ? nullptr : doc_.feature(editId_);
     auto value = [&](const char* key, const char* def) { return q(edit ? edit->params.value(key, std::string(def)) : def); };
     if (edit) {
-        select(source_, edit->params.value("feature", std::string {}));
+        if (edit->params.contains("body")) {
+            select(source_, "body:" + edit->params.value("body", std::string {}));
+            select(bodyOp_, edit->params.value("op", std::string("new")));
+        }
+        else {
+            select(source_, edit->params.value("feature", std::string {}));
+        }
         select(kind_, edit->params.value("kind", std::string("circular")));
     }
     else {
@@ -1235,21 +1953,32 @@ PatternPanel::PatternPanel(jig::Document& doc, Viewport* view, std::string editI
     select(dir1_, value("dir1", "X").toStdString());
     select(dir2_, value("dir2", "Y").toStdString());
     count1_->setText(value("count1", "3"));
-    spacing1_->setText(value("spacing1", "10 mm"));
+    spacing1_->setText(value("spacing1", doc_.defaultLength(10, 0.5).c_str()));
     count2_->setText(value("count2", "1"));
-    spacing2_->setText(value("spacing2", "10 mm"));
-    for (auto* c : {source_, kind_, axis_, dir1_, dir2_}) {
+    spacing2_->setText(value("spacing2", doc_.defaultLength(10, 0.5).c_str()));
+    pathCount_->setText(value("count", "5"));
+    pathSpaced_->setChecked(edit && edit->params.contains("spacing"));
+    pathSpacing_->setText(value("spacing", doc_.defaultLength(10, 0.5).c_str()));
+    select(pathOrient_, value("orient", "same").toStdString());
+    if (edit && edit->params.contains("path")) {
+        select(pathSketch_, edit->params["path"].value("sketch", std::string {}));
+    }
+    connect(pathSpaced_, &QCheckBox::toggled, this, [this] {
+        updateVisibility();
+        schedulePreview();
+    });
+    for (auto* c : {source_, kind_, axis_, dir1_, dir2_, bodyOp_, pathSketch_, pathOrient_}) {
         connect(c, &QComboBox::currentIndexChanged, this, [this] {
             updateVisibility();
             schedulePreview();
         });
     }
-    for (auto* e : {count_, angle_, count1_, spacing1_, count2_, spacing2_}) {
+    for (auto* e : {count_, angle_, count1_, spacing1_, count2_, spacing2_, pathCount_, pathSpacing_}) {
         connect(e, &ExprField::changed, this, [this] { schedulePreview(); });
     }
     updateVisibility();
     if (source_->count() == 0) {
-        status_->setText("<b>✕ " + tr("There is no Extrude, Revolve or Hole to repeat yet.") + "</b>");
+        status_->setText("<b>✕ " + tr("There is no body or step to repeat yet.") + "</b>");
         ok_->setEnabled(false);
     }
     else {
@@ -1259,17 +1988,40 @@ PatternPanel::PatternPanel(jig::Document& doc, Viewport* view, std::string editI
 
 void PatternPanel::updateVisibility()
 {
-    const bool circ = current(kind_) == "circular";
+    const bool circ = current(kind_) == "circular", path = current(kind_) == "path";
     circular_->setVisible(circ);
-    grid_->setVisible(!circ);
+    grid_->setVisible(!circ && !path);
+    path_->setVisible(path);
+    pathSpacing_->setVisible(pathSpaced_->isChecked());
+    const bool body = current(source_).rfind("body:", 0) == 0;
+    bodyOp_->setVisible(body);
+    if (const int i = form_->indexOf(bodyOp_); i > 0) {
+        if (auto* item = form_->itemAt(i - 1); item && item->widget()) {
+            item->widget()->setVisible(body);
+        }
+    }
 }
 
 jig::Feature PatternPanel::draft() const
 {
     jig::Feature f = startDraft(doc_, editId_, "p", tr("Pattern"));
     f.kind = jig::FeatureKind::Pattern;
-    f.params = {{"feature", current(source_)}, {"kind", current(kind_)}};
-    if (current(kind_) == "circular") {
+    const std::string src = current(source_);
+    if (src.rfind("body:", 0) == 0) {
+        f.params = {{"body", src.substr(5)}, {"op", current(bodyOp_)}, {"kind", current(kind_)}};
+    }
+    else {
+        f.params = {{"feature", src}, {"kind", current(kind_)}};
+    }
+    if (current(kind_) == "path") {
+        f.params["path"] = {{"sketch", current(pathSketch_)}, {"curves", "all"}};
+        f.params["count"] = text(pathCount_, "5");
+        f.params["orient"] = current(pathOrient_);
+        if (pathSpaced_->isChecked()) {
+            f.params["spacing"] = text(pathSpacing_, "10 mm");
+        }
+    }
+    else if (current(kind_) == "circular") {
         f.params["axis"] = current(axis_);
         f.params["count"] = text(count_, "6");
         f.params["angle"] = text(angle_, "360 deg");
@@ -1296,14 +2048,15 @@ MirrorPanel::MirrorPanel(jig::Document& doc, Viewport* view, std::string editId,
     : FeaturePanel(doc, view, std::move(editId), parent)
 {
     form_->addWidget(heading(this, tr("Mirror"),
-                             tr("Copy a body across an origin plane. Model one half up to the plane, then mirror "
-                                "and join for a symmetric part.")));
+                             tr("Copy a body, or one step (an extrude, a hole), across a plane. Model one half up "
+                                "to the plane, then mirror and join for a symmetric part. Click a flat face to "
+                                "mirror across it.")));
     body_ = new QComboBox(this);
     plane_ = combo(this, {{tr("Side plane (YZ): flips left and right"), "YZ"},
                           {tr("Front plane (XZ): flips front and back"), "XZ"},
                           {tr("Floor plane (XY): flips up and down"), "XY"}});
     op_ = combo(this, {{tr("Join to the original"), "join"}, {tr("New body"), "new"}});
-    addRow(tr("Body"), body_);
+    addRow(tr("What to mirror"), body_);
     addRow(tr("Mirror plane"), plane_);
     addRow(tr("Result"), op_);
     const auto before = stateBefore();
@@ -1311,13 +2064,48 @@ MirrorPanel::MirrorPanel(jig::Document& doc, Viewport* view, std::string editId,
         const jig::Feature* bf = doc_.feature(id);
         body_->addItem(bf ? q(bf->name) : q(id), q(id));
     }
-    if (const jig::Feature* edit = editId_.empty() ? nullptr : doc_.feature(editId_)) {
-        select(body_, edit->params.value("body", std::string {}));
-        select(plane_, edit->params.value("plane", std::string("YZ")));
-        select(op_, edit->params.value("op", std::string("join")));
+    for (int i = 0; i < insertIndex(); ++i) {
+        const auto& f = doc_.model().features[size_t(i)];
+        if (before->tools.count(f.id)) {
+            body_->addItem(tr("Step: %1").arg(q(f.name)), q("step:" + f.id));
+        }
+        if (f.kind == jig::FeatureKind::Plane && before->planes.count(f.id)) {
+            plane_->addItem(q(f.name), q(f.id));
+        }
     }
+    if (const jig::Feature* edit = editId_.empty() ? nullptr : doc_.feature(editId_)) {
+        const auto& p = edit->params;
+        select(body_, p.contains("feature") ? "step:" + p.value("feature", std::string {}) : p.value("body", std::string {}));
+        const auto pl = p.value("plane", nlohmann::json("YZ"));
+        if (pl.is_string()) {
+            select(plane_, pl.get<std::string>());
+        }
+        else {
+            plane_->addItem(tr("Face %1").arg(q(pl.value("face", nlohmann::json::object()).value("name", std::string {}))),
+                            q(pl.dump()));
+            plane_->setCurrentIndex(plane_->count() - 1);
+        }
+        select(op_, p.value("op", std::string("join")));
+    }
+    auto sync = [this] {
+        const bool step = current(body_).rfind("step:", 0) == 0;  // a step does what it did: no join/new choice
+        op_->setVisible(!step);
+        if (const int i = form_->indexOf(op_); i > 0) {
+            if (auto* item = form_->itemAt(i - 1); item && item->widget()) {
+                item->widget()->setVisible(!step);
+            }
+        }
+    };
+    sync();
     for (auto* c : {body_, plane_, op_}) {
-        connect(c, &QComboBox::currentIndexChanged, this, [this] { schedulePreview(); });
+        connect(c, &QComboBox::currentIndexChanged, this, [this, sync] {
+            sync();
+            schedulePreview();
+        });
+    }
+    if (view_) {
+        connect(view_.data(), &Viewport::faceClicked, this,
+                [this](const QString& b, const QString& n, Qt::KeyboardModifiers) { useFace(b.toStdString(), n.toStdString()); });
     }
     if (body_->count() == 0) {
         status_->setText("<b>✕ " + tr("There is no body to mirror yet.") + "</b>");
@@ -1328,11 +2116,45 @@ MirrorPanel::MirrorPanel(jig::Document& doc, Viewport* view, std::string editId,
     }
 }
 
+MirrorPanel::~MirrorPanel() = default;
+
+void MirrorPanel::useFace(const std::string& body, const std::string& name)
+{
+    const auto before = stateBefore();
+    auto it = before->bodies.find(body);
+    if (it == before->bodies.end()) {
+        return;
+    }
+    auto hits = it->second->findFaces(name);
+    if (hits.empty()) {
+        return;
+    }
+    if (jig::measureItem(it->second->face(hits[0])).kind != "flat face") {
+        status_->setText("<b>✕ " + tr("That face is curved. Click a flat face to mirror across.") + "</b>");
+        return;
+    }
+    const QString key = q(nlohmann::json {{"face", it->second->faceRef(body, hits[0]).toJson()}}.dump());
+    int i = plane_->findData(key);
+    if (i < 0) {
+        plane_->addItem(tr("Face %1").arg(q(name)), key);
+        i = plane_->count() - 1;
+    }
+    plane_->setCurrentIndex(i);
+}
+
 jig::Feature MirrorPanel::draft() const
 {
     jig::Feature f = startDraft(doc_, editId_, "m", tr("Mirror"));
     f.kind = jig::FeatureKind::Mirror;
-    f.params = {{"body", current(body_)}, {"plane", current(plane_)}, {"op", current(op_)}};
+    const std::string pl = current(plane_);
+    const nlohmann::json plane = !pl.empty() && pl[0] == '{' ? nlohmann::json::parse(pl, nullptr, false) : nlohmann::json(pl);
+    const std::string what = current(body_);
+    if (what.rfind("step:", 0) == 0) {
+        f.params = {{"feature", what.substr(5)}, {"plane", plane}};
+    }
+    else {
+        f.params = {{"body", what}, {"plane", plane}, {"op", current(op_)}};
+    }
     return f;
 }
 
@@ -1355,6 +2177,8 @@ PlanePanel::PlanePanel(jig::Document& doc, Viewport* view, std::string editId, Q
     base_ = new QComboBox(this);
     base2_ = new QComboBox(this);
     axis_ = combo(this, {{tr("X axis"), "\"X\""}, {tr("Y axis"), "\"Y\""}, {tr("Z axis"), "\"Z\""}});
+    addConstructionAxes(axis_, doc_, *stateBefore(), insertIndex(),
+                        [](const std::string& id) { return q(nlohmann::json(id).dump()); });
     distance_ = new ExprField(doc, jig::Dim::len(), this);
     angle_ = new ExprField(doc, jig::Dim::ang(), this);
     addRow(tr("Kind"), kind_);
@@ -1415,7 +2239,7 @@ PlanePanel::PlanePanel(jig::Document& doc, Viewport* view, std::string editId, Q
     }
     else {
         select(kind_, kind);
-        distance_->setText("10 mm");
+        distance_->setText(q(doc_.defaultLength(10, 0.5)));
         angle_->setText("45 deg");
         if (kind == "midplane") {
             base2_->setCurrentIndex(base2_->findData("\"XY\""));
@@ -1579,6 +2403,539 @@ void PlanePanel::previewed(const jig::FeatureOutcome& o)
 QString PlanePanel::title() const
 {
     return tr("construction plane");
+}
+
+// ---------------------------------------------------------------- Press pull
+
+PressPullPanel::PressPullPanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent)
+    : FeaturePanel(doc, view, std::move(editId), parent)
+{
+    form_->addWidget(heading(this, tr("Press pull"),
+                             tr("Click a flat face, or a whole round one (a hole's wall, a round boss), then type how "
+                                "far to pull it out. A negative distance pushes it in. A hole's wall moves into the "
+                                "hole, so pulling it out makes the hole smaller.")));
+    face_ = new QLabel(tr("No face picked yet: click one in the view."), this);
+    face_->setWordWrap(true);
+    distance_ = new ExprField(doc, jig::Dim::len(), this);
+    addRow(tr("Face"), face_);
+    addRow(tr("Distance (out +, in −)"), distance_);
+    if (const jig::Feature* edit = editId_.empty() ? nullptr : doc_.feature(editId_)) {
+        faceRef_ = edit->params.value("face", nlohmann::json());
+        face_->setText(tr("Face %1").arg(q(faceRef_.value("name", std::string {}))));
+        distance_->setText(q(edit->params.value("distance", std::string("5 mm"))));
+    }
+    else {
+        distance_->setText(q(doc_.defaultLength(5, 0.25)));
+    }
+    connect(distance_, &ExprField::changed, this, [this] { schedulePreview(); });
+    if (view_) {
+        connect(view_.data(), &Viewport::faceClicked, this,
+                [this](const QString& b, const QString& n, Qt::KeyboardModifiers) { useFace(b.toStdString(), n.toStdString()); });
+    }
+    if (faceRef_.is_null()) {
+        ok_->setEnabled(false);
+    }
+    else {
+        schedulePreview();
+    }
+}
+
+PressPullPanel::~PressPullPanel()
+{
+    if (view_) {
+        view_->setOverlay({});
+    }
+}
+
+bool PressPullPanel::useFace(const std::string& body, const std::string& name)
+{
+    const auto before = stateBefore();
+    auto it = before->bodies.find(body);
+    if (it == before->bodies.end()) {
+        return false;
+    }
+    auto hits = it->second->findFaces(name);
+    if (hits.empty()) {
+        return false;
+    }
+    faceRef_ = it->second->faceRef(body, hits[0]).toJson();
+    face_->setText(tr("Face %1").arg(q(name)));
+    ok_->setEnabled(true);
+    schedulePreview();
+    return true;
+}
+
+jig::Feature PressPullPanel::draft() const
+{
+    jig::Feature f = startDraft(doc_, editId_, "pp", tr("Press pull"));
+    f.kind = jig::FeatureKind::PressPull;
+    f.params = {{"face", faceRef_}, {"distance", text(distance_, "5 mm")}};
+    return f;
+}
+
+QString PressPullPanel::title() const
+{
+    return tr("press pull");
+}
+
+// ---------------------------------------------------------------- Axis
+
+AxisPanel::AxisPanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent)
+    : FeaturePanel(doc, view, std::move(editId), parent)
+{
+    form_->addWidget(heading(this, tr("Construction axis"),
+                             tr("A straight reference line to revolve, pattern or turn around. Click a straight "
+                                "edge, a round edge or a round face (a hole, a cylinder) in the view.")));
+    kind_ = combo(this, {{tr("Along an edge, or through a round edge or face"), "through"},
+                         {tr("Where two planes meet"), "planes"},
+                         {tr("Through two points"), "points"},
+                         {tr("Square to a plane or flat face, through a point"), "normal"}});
+    through_ = new QComboBox(this);
+    base_ = new QComboBox(this);
+    base2_ = new QComboBox(this);
+    from_ = new QComboBox(this);
+    to_ = new QComboBox(this);
+    addRow(tr("Kind"), kind_);
+    addRow(tr("Through"), through_);
+    addRow(tr("Plane"), base_);
+    addRow(tr("And plane"), base2_);
+    addRow(tr("From point"), from_);
+    addRow(tr("To point"), to_);
+    at_ = new QComboBox(this);
+    addRow(tr("Through point"), at_);
+    for (auto* c : {from_, to_, at_}) {
+        c->addItem(tr("Origin"), "O");
+    }
+    for (auto* c : {base_, base2_}) {
+        c->addItem(tr("Floor (XY)"), "\"XY\"");
+        c->addItem(tr("Front (XZ)"), "\"XZ\"");
+        c->addItem(tr("Side (YZ)"), "\"YZ\"");
+    }
+    const auto before = stateBefore();
+    for (int i = 0; i < insertIndex(); ++i) {
+        const auto& f = doc_.model().features[size_t(i)];
+        if (f.kind == jig::FeatureKind::Plane && before->planes.count(f.id)) {
+            for (auto* c : {base_, base2_}) {
+                c->addItem(q(f.name), q(nlohmann::json(f.id).dump()));
+            }
+        }
+        if (f.kind == jig::FeatureKind::Point && before->points.count(f.id)) {
+            for (auto* c : {from_, to_, at_}) {
+                c->addItem(q(f.name), q(f.id));
+            }
+        }
+    }
+    base2_->setCurrentIndex(1);
+    if (to_->count() > 1) {
+        to_->setCurrentIndex(1);
+    }
+    if (const jig::Feature* edit = editId_.empty() ? nullptr : doc_.feature(editId_)) {
+        const auto& p = edit->params;
+        auto put = [](QComboBox* c, const nlohmann::json& v) {
+            const QString key = q(v.dump());
+            int i = c->findData(key);
+            if (i < 0) {
+                QString label = q(v.is_string() ? v.get<std::string>() : std::string("(picked)"));
+                if (v.is_object() && v.contains("face")) {
+                    label = tr("Face %1").arg(q(v["face"].value("name", std::string {})));
+                }
+                else if (v.is_object() && v.contains("edge")) {
+                    label = tr("Edge %1").arg(q(v["edge"].value("name", std::string {})));
+                }
+                c->addItem(label, key);
+                i = c->count() - 1;
+            }
+            c->setCurrentIndex(i);
+        };
+        select(kind_, p.contains("through") ? "through" : p.contains("from") ? "points" : p.contains("normal") ? "normal" : "planes");
+        if (p.contains("normal")) {
+            put(base_, p["normal"]);
+            at_->setCurrentIndex(std::max(0, at_->findData(q(p.value("at", std::string("O"))))));
+        }
+        if (p.contains("from")) {
+            from_->setCurrentIndex(std::max(0, from_->findData(q(p.value("from", std::string("O"))))));
+            to_->setCurrentIndex(std::max(0, to_->findData(q(p.value("to", std::string("O"))))));
+        }
+        if (p.contains("through")) {
+            put(through_, p["through"]);
+        }
+        if (p.contains("base")) {
+            put(base_, p["base"]);
+        }
+        if (p.contains("base2")) {
+            put(base2_, p["base2"]);
+        }
+    }
+    for (auto* c : {kind_, through_, base_, base2_, from_, to_, at_}) {
+        connect(c, &QComboBox::currentIndexChanged, this, [this] {
+            updateVisibility();
+            ok_->setEnabled(current(kind_) != "through" || through_->count() > 0);
+            schedulePreview();
+        });
+    }
+    if (view_) {
+        view_->setPickMode(PickMode::Any);
+        connect(view_.data(), &Viewport::faceClicked, this,
+                [this](const QString& b, const QString& n, Qt::KeyboardModifiers) { useFace(b.toStdString(), n.toStdString()); });
+        connect(view_.data(), &Viewport::edgeClicked, this,
+                [this](const QString& b, const QString& n, Qt::KeyboardModifiers) { useEdge(b.toStdString(), n.toStdString()); });
+    }
+    updateVisibility();
+    if (through_->count() == 0 && current(kind_) == "through") {
+        status_->setText(tr("Click an edge or a round face in the view."));
+        ok_->setEnabled(false);
+    }
+    else {
+        schedulePreview();
+    }
+}
+
+AxisPanel::~AxisPanel()
+{
+    if (view_) {
+        view_->setPickMode(PickMode::Faces);
+        view_->setOverlay({});
+    }
+}
+
+void AxisPanel::useFace(const std::string& body, const std::string& name)
+{
+    const auto before = stateBefore();
+    auto it = before->bodies.find(body);
+    if (it == before->bodies.end()) {
+        return;
+    }
+    auto hits = it->second->findFaces(name);
+    if (hits.empty()) {
+        return;
+    }
+    const jig::MeasureItem m = jig::measureItem(it->second->face(hits[0]));
+    nlohmann::json ref {{"face", it->second->faceRef(body, hits[0]).toJson()}};
+    QComboBox* target = through_;
+    if (m.kind == "flat face" && current(kind_) == "normal") {  // the face the axis stands square on
+        target = base_;
+    }
+    else if (m.kind == "flat face") {  // flat faces: the axis where two of them meet
+        select(kind_, "planes");
+        target = nextIsSecond_ ? base2_ : base_;
+        nextIsSecond_ = !nextIsSecond_;
+    }
+    else if (!m.axis) {
+        status_->setText("<b>✕ " + tr("That face has no centre line. Click a hole, a cylinder or a cone.") + "</b>");
+        return;
+    }
+    else {
+        select(kind_, "through");
+    }
+    const QString key = q(ref.dump());
+    int i = target->findData(key);
+    if (i < 0) {
+        target->addItem(tr("Face %1").arg(q(name)), key);
+        i = target->count() - 1;
+    }
+    target->setCurrentIndex(i);
+    ok_->setEnabled(true);
+    schedulePreview();
+}
+
+void AxisPanel::useEdge(const std::string& body, const std::string& name)
+{
+    const auto before = stateBefore();
+    auto it = before->bodies.find(body);
+    if (it == before->bodies.end()) {
+        return;
+    }
+    auto hits = it->second->findEdges(name);
+    if (hits.empty()) {
+        return;
+    }
+    if (!jig::measureItem(it->second->edge(hits[0])).axis) {
+        status_->setText("<b>✕ " + tr("Click a straight edge, or a circle or arc.") + "</b>");
+        return;
+    }
+    select(kind_, "through");
+    nlohmann::json ref {{"edge", it->second->edgeRef(body, hits[0]).toJson()}};
+    const QString key = q(ref.dump());
+    int i = through_->findData(key);
+    if (i < 0) {
+        through_->addItem(tr("Edge %1").arg(q(name)), key);
+        i = through_->count() - 1;
+    }
+    through_->setCurrentIndex(i);
+    ok_->setEnabled(true);
+    schedulePreview();
+}
+
+void AxisPanel::updateVisibility()
+{
+    const bool through = current(kind_) == "through";
+    auto show = [this](QWidget* w, bool on) {
+        w->setVisible(on);
+        const int i = form_->indexOf(w);
+        if (i > 0) {
+            if (auto* item = form_->itemAt(i - 1); item && item->widget()) {
+                item->widget()->setVisible(on);
+            }
+        }
+    };
+    const bool points = current(kind_) == "points", normal = current(kind_) == "normal";
+    show(through_, through);
+    show(base_, !through && !points);
+    show(base2_, !through && !points && !normal);
+    show(from_, points);
+    show(to_, points);
+    show(at_, normal);
+}
+
+jig::Feature AxisPanel::draft() const
+{
+    jig::Feature f = startDraft(doc_, editId_, "ax", tr("Axis"));
+    f.kind = jig::FeatureKind::Axis;
+    auto json = [](const QComboBox* c) {
+        const std::string d = c->currentData().toString().toStdString();
+        return d.empty() ? nlohmann::json() : nlohmann::json::parse(d, nullptr, false);
+    };
+    if (current(kind_) == "through") {
+        f.params = {{"through", json(through_)}};
+    }
+    else if (current(kind_) == "points") {
+        f.params = {{"from", from_->currentData().toString().toStdString()}, {"to", to_->currentData().toString().toStdString()}};
+    }
+    else if (current(kind_) == "normal") {
+        f.params = {{"normal", json(base_)}, {"at", at_->currentData().toString().toStdString()}};
+    }
+    else {
+        f.params = {{"base", json(base_)}, {"base2", json(base2_)}};
+    }
+    return f;
+}
+
+void AxisPanel::previewed(const jig::FeatureOutcome& o)
+{
+    if (!view_) {
+        return;
+    }
+    SceneOverlay ov;
+    const jig::Feature f = draft();
+    if (o.after && o.after->axes.count(f.id)) {
+        const gp_Ax1& a = o.after->axes.at(f.id);
+        float s = 30;
+        for (auto& [id, b] : o.after->bodies) {
+            auto mp = jig::massProperties(b->shape());
+            s = std::max({s, float(mp.xmax - mp.xmin) * 0.7f, float(mp.ymax - mp.ymin) * 0.7f, float(mp.zmax - mp.zmin) * 0.7f});
+        }
+        const gp_XYZ p0 = a.Location().XYZ() - a.Direction().XYZ() * s, p1 = a.Location().XYZ() + a.Direction().XYZ() * s;
+        const QColor c(222, 150, 40, 255);
+        ov.lines.push_back({QVector3D(float(p0.X()), float(p0.Y()), float(p0.Z())), c});
+        ov.lines.push_back({QVector3D(float(p1.X()), float(p1.Y()), float(p1.Z())), c});
+    }
+    view_->setOverlay(std::move(ov));
+}
+
+QString AxisPanel::title() const
+{
+    return tr("construction axis");
+}
+
+// ---------------------------------------------------------------- PointPanel
+
+PointPanel::PointPanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent)
+    : FeaturePanel(doc, view, std::move(editId), parent)
+{
+    form_->addWidget(heading(this, tr("Construction point"),
+                             tr("A reference point to measure from or to run an axis through. Type where it "
+                                "goes, or click an edge (its end, middle or centre) or a face (its centre).")));
+    kind_ = combo(this, {{tr("At typed coordinates"), "at"}, {tr("On an edge or face"), "through"}});
+    through_ = new QComboBox(this);
+    end_ = combo(this, {{tr("Start"), "start"}, {tr("End"), "end"}, {tr("Middle"), "mid"}, {tr("Centre (circles, arcs)"), "center"},
+                        {tr("Where it crosses a plane"), "plane"}});
+    plane_ = new QComboBox(this);
+    plane_->addItem(tr("Floor (XY)"), "\"XY\"");
+    plane_->addItem(tr("Front (XZ)"), "\"XZ\"");
+    plane_->addItem(tr("Side (YZ)"), "\"YZ\"");
+    for (int i = 0; i < insertIndex(); ++i) {
+        const auto& f = doc_.model().features[size_t(i)];
+        if (f.kind == jig::FeatureKind::Plane && stateBefore()->planes.count(f.id)) {
+            plane_->addItem(q(f.name), q(nlohmann::json(f.id).dump()));
+        }
+    }
+    addRow(tr("Kind"), kind_);
+    const char* axes[3] = {"X", "Y", "Z"};
+    for (int i = 0; i < 3; ++i) {
+        xyz_[i] = new ExprField(doc_, jig::Dim::len(), this);
+        xyz_[i]->setText(q(doc_.defaultLength(0, 0)));
+        addRow(tr(axes[i]), xyz_[i]);
+    }
+    addRow(tr("On"), through_);
+    addRow(tr("Where"), end_);
+    addRow(tr("Plane"), plane_);
+    if (const jig::Feature* edit = editId_.empty() ? nullptr : doc_.feature(editId_)) {
+        const auto& p = edit->params;
+        if (p.contains("through")) {
+            select(kind_, "through");
+            const auto& t = p["through"];
+            const bool face = t.contains("face");
+            const std::string name = (face ? t["face"] : t.value("edge", nlohmann::json::object())).value("name", std::string {});
+            through_->addItem(face ? tr("Face %1").arg(q(name)) : tr("Edge %1").arg(q(name)), q(t.dump()));
+            select(end_, p.contains("plane") ? std::string("plane") : p.value("end", std::string("start")));
+            if (p.contains("plane")) {
+                const QString key = q(p["plane"].dump());
+                if (plane_->findData(key) < 0) {
+                    plane_->addItem(p["plane"].is_object() ? tr("(picked face)") : key, key);
+                }
+                plane_->setCurrentIndex(plane_->findData(key));
+            }
+        }
+        else if (p.contains("at") && p["at"].is_array() && p["at"].size() == 3) {
+            for (int i = 0; i < 3; ++i) {
+                xyz_[i]->setText(q(p["at"][size_t(i)].is_string() ? p["at"][size_t(i)].get<std::string>() : p["at"][size_t(i)].dump()));
+            }
+        }
+    }
+    for (auto* c : {kind_, through_, end_, plane_}) {
+        connect(c, &QComboBox::currentIndexChanged, this, [this] {
+            updateVisibility();
+            schedulePreview();
+        });
+    }
+    for (auto* e : xyz_) {
+        connect(e, &ExprField::changed, this, [this] { schedulePreview(); });
+    }
+    if (view_) {
+        view_->setPickMode(PickMode::Any);
+        connect(view_.data(), &Viewport::faceClicked, this,
+                [this](const QString& b, const QString& n, Qt::KeyboardModifiers) { useFace(b.toStdString(), n.toStdString()); });
+        connect(view_.data(), &Viewport::edgeClicked, this,
+                [this](const QString& b, const QString& n, Qt::KeyboardModifiers) { useEdge(b.toStdString(), n.toStdString()); });
+    }
+    updateVisibility();
+    schedulePreview();
+}
+
+PointPanel::~PointPanel()
+{
+    if (view_) {
+        view_->setPickMode(PickMode::Faces);
+        view_->setOverlay({});
+    }
+}
+
+void PointPanel::useFace(const std::string& body, const std::string& name)
+{
+    const auto before = stateBefore();
+    auto it = before->bodies.find(body);
+    if (it == before->bodies.end()) {
+        return;
+    }
+    auto hits = it->second->findFaces(name);
+    if (hits.empty()) {
+        return;
+    }
+    const nlohmann::json ref {{"face", it->second->faceRef(body, hits[0]).toJson()}};
+    select(kind_, "through");
+    through_->clear();
+    through_->addItem(tr("Face %1").arg(q(name)), q(ref.dump()));
+    updateVisibility();
+    schedulePreview();
+}
+
+void PointPanel::useEdge(const std::string& body, const std::string& name)
+{
+    const auto before = stateBefore();
+    auto it = before->bodies.find(body);
+    if (it == before->bodies.end()) {
+        return;
+    }
+    auto hits = it->second->findEdges(name);
+    if (hits.empty()) {
+        return;
+    }
+    const nlohmann::json ref {{"edge", it->second->edgeRef(body, hits[0]).toJson()}};
+    select(kind_, "through");
+    through_->clear();
+    through_->addItem(tr("Edge %1").arg(q(name)), q(ref.dump()));
+    // a round edge most often means its centre
+    if (jig::measureItem(it->second->edge(hits[0])).radius) {
+        select(end_, "center");
+    }
+    else if (current(end_) == "center") {
+        select(end_, "start");
+    }
+    updateVisibility();
+    schedulePreview();
+}
+
+void PointPanel::updateVisibility()
+{
+    const bool through = current(kind_) == "through";
+    const bool edge = through && through_->currentData().toString().contains("\"edge\"");
+    auto show = [this](QWidget* w, bool on) {
+        w->setVisible(on);
+        const int i = form_->indexOf(w);
+        if (i > 0) {
+            if (auto* item = form_->itemAt(i - 1); item && item->widget()) {
+                item->widget()->setVisible(on);
+            }
+        }
+    };
+    for (auto* e : xyz_) {
+        show(e, !through);
+    }
+    show(through_, through);
+    show(end_, edge);
+    show(plane_, edge && current(end_) == "plane");
+    if (through && through_->count() == 0) {
+        status_->setText(tr("Click an edge or a face in the view."));
+    }
+    ok_->setEnabled(!through || through_->count() > 0);
+}
+
+jig::Feature PointPanel::draft() const
+{
+    jig::Feature f = startDraft(doc_, editId_, "pt", tr("Point"));
+    f.kind = jig::FeatureKind::Point;
+    if (current(kind_) == "through" && through_->count() > 0) {
+        f.params = {{"through", nlohmann::json::parse(through_->currentData().toString().toStdString(), nullptr, false)}};
+        if (f.params["through"].contains("edge")) {
+            if (current(end_) == "plane") {
+                const std::string d = plane_->currentData().toString().toStdString();
+                f.params["plane"] = nlohmann::json::parse(d.empty() ? "\"XY\"" : d, nullptr, false);
+            }
+            else {
+                f.params["end"] = current(end_);
+            }
+        }
+    }
+    else {
+        f.params = {{"at", {xyz_[0]->text().toStdString(), xyz_[1]->text().toStdString(), xyz_[2]->text().toStdString()}}};
+    }
+    return f;
+}
+
+void PointPanel::previewed(const jig::FeatureOutcome& o)
+{
+    if (!view_) {
+        return;
+    }
+    SceneOverlay ov;
+    const jig::Feature f = draft();
+    if (o.after && o.after->points.count(f.id)) {
+        // a small 3D cross where the point is
+        const gp_Pnt& c = o.after->points.at(f.id);
+        const float s = 12 * view_->worldPerPixel();
+        const QColor col(222, 150, 40, 255);
+        const QVector3D p(float(c.X()), float(c.Y()), float(c.Z()));
+        for (const QVector3D d : {QVector3D(s, 0, 0), QVector3D(0, s, 0), QVector3D(0, 0, s)}) {
+            ov.lines.push_back({p - d, col});
+            ov.lines.push_back({p + d, col});
+        }
+    }
+    view_->setOverlay(std::move(ov));
+}
+
+QString PointPanel::title() const
+{
+    return tr("construction point");
 }
 
 // ---------------------------------------------------------------- body list helpers
@@ -1764,10 +3121,10 @@ void SplitPanel::useFace(const std::string& body, const std::string& name)
         return;
     }
     auto hits = it->second->findFaces(name);
-    if (hits.empty() || jig::measureItem(it->second->face(hits[0])).kind != "flat face") {
-        status_->setText("<b>✕ " + tr("Click a flat face to split along it.") + "</b>");
+    if (hits.empty()) {
         return;
     }
+    // a flat face splits along its plane; a curved one (of another body) where it reaches through
     const QString key = q(nlohmann::json {{"face", it->second->faceRef(body, hits[0]).toJson()}}.dump());
     if (plane_->findData(key) < 0) {
         plane_->addItem(tr("Face %1").arg(q(name)), key);
@@ -1791,12 +3148,164 @@ QString SplitPanel::title() const
 
 // ---------------------------------------------------------------- Move
 
+// Three arrows (X, Y, Z) from the bodies' centre; drag a grip to move along that axis.
+class MoveHandle : public Interactor
+{
+public:
+    explicit MoveHandle(MovePanel* p)
+        : p_(p)
+    {}
+    int gripAt(const QPointF& pos) const
+    {
+        for (int k = 0; k < 3; ++k) {
+            if (auto tip = p_->arrowTip(k); tip && QLineF(*tip, pos).length() <= 10) {
+                return k;
+            }
+        }
+        return -1;
+    }
+    bool mousePress(QMouseEvent* e) override
+    {
+        drag_ = gripAt(e->position());
+        if (drag_ >= 0) {
+            from_ = e->position();
+            start_ = p_->d_[drag_]->valid() ? p_->d_[drag_]->value() : 0;
+        }
+        return drag_ >= 0;
+    }
+    bool mouseMove(QMouseEvent* e) override
+    {
+        if (drag_ >= 0) {
+            p_->dragArrow(drag_, from_, e->position(), start_);
+            return true;
+        }
+        const int over = gripAt(e->position());
+        if (over != hover_ && p_->view_) {
+            hover_ = over;
+            p_->view_->setCursor(over >= 0 ? Qt::SizeAllCursor : Qt::ArrowCursor);
+            p_->view_->update();
+        }
+        return false;
+    }
+    bool mouseRelease(QMouseEvent*) override
+    {
+        const bool was = drag_ >= 0;
+        drag_ = -1;
+        return was;
+    }
+    void paint(QPainter& g) override
+    {
+        auto base = p_->arrowBase();
+        if (!base || !p_->view_) {
+            return;
+        }
+        const QPointF b = p_->view_->project(*base);
+        // red, green, blue as usual, and each labelled X, Y, Z (not colour alone)
+        const QColor cols[3] = {QColor(230, 80, 80), QColor(90, 190, 90), QColor(90, 140, 240)};
+        const char* names[3] = {"X", "Y", "Z"};
+        g.setRenderHint(QPainter::Antialiasing);
+        for (int k = 0; k < 3; ++k) {
+            auto tip = p_->arrowTip(k);
+            if (!tip) {
+                continue;
+            }
+            g.setPen(QPen(cols[k], 2.5));
+            g.setBrush(Qt::NoBrush);
+            g.drawLine(b, *tip);
+            g.setBrush(hover_ == k || drag_ == k ? QBrush(cols[k]) : QBrush(Qt::NoBrush));
+            g.drawEllipse(*tip, 6, 6);
+            g.setPen(p_->view_->colors().text);
+            g.drawText(*tip + QPointF(9, -7), QString("%1 %2").arg(names[k], p_->d_[k]->text()));
+        }
+    }
+
+private:
+    MovePanel* p_;
+    int drag_ = -1, hover_ = -1;
+    QPointF from_;
+    double start_ = 0;
+};
+
+MovePanel::~MovePanel()
+{
+    if (view_ && view_->interactor() == handle_.get()) {
+        view_->setInteractor(nullptr);
+    }
+    if (view_) {
+        view_->setBodyBoxing(false);
+    }
+}
+
+std::optional<QVector3D> MovePanel::arrowBase() const
+{
+    const nlohmann::json chosen = checkedBodies(bodies_);
+    if (chosen.dump() != centreFor_) {  // the bounds are worked out once per choice of bodies
+        centreFor_ = chosen.dump();
+        centre_.reset();
+        const auto before = stateBefore();
+        double x0 = 1e300, y0 = 1e300, z0 = 1e300, x1 = -1e300, y1 = -1e300, z1 = -1e300;
+        for (const auto& j : chosen) {
+            if (auto it = before->bodies.find(j.get<std::string>()); it != before->bodies.end()) {
+                const auto mp = jig::massProperties(it->second->shape());
+                x0 = std::min(x0, mp.xmin), y0 = std::min(y0, mp.ymin), z0 = std::min(z0, mp.zmin);
+                x1 = std::max(x1, mp.xmax), y1 = std::max(y1, mp.ymax), z1 = std::max(z1, mp.zmax);
+            }
+        }
+        if (x0 <= x1) {
+            centre_ = QVector3D(float((x0 + x1) / 2), float((y0 + y1) / 2), float((z0 + z1) / 2));
+        }
+    }
+    if (!centre_) {
+        return std::nullopt;
+    }
+    QVector3D c = *centre_;
+    for (int k = 0; k < 3; ++k) {
+        if (d_[k]->valid()) {
+            c[k] += float(d_[k]->value());
+        }
+    }
+    return c;
+}
+
+std::optional<QPointF> MovePanel::arrowTip(int axis) const
+{
+    auto base = arrowBase();
+    if (!view_ || !base) {
+        return std::nullopt;
+    }
+    QVector3D dir;
+    dir[axis] = 1;
+    return view_->project(*base + dir * (60 * view_->worldPerPixel()));  // about 60 pixels long
+}
+
+void MovePanel::dragArrow(int axis, const QPointF& from, const QPointF& to, double startValue)
+{
+    auto base = arrowBase();
+    if (!view_ || !base) {
+        return;
+    }
+    QVector3D dir;
+    dir[axis] = 1;
+    // how many pixels one millimetre along this arrow covers on screen
+    const QPointF s0 = view_->project(*base), s1 = view_->project(*base + dir * 10.0f);
+    const QPointF ax = s1 - s0;
+    const double len2 = QPointF::dotProduct(ax, ax);
+    if (len2 < 1e-6) {
+        return;  // looking straight down this arrow: use the field instead
+    }
+    double d = startValue + QPointF::dotProduct(to - from, ax) / len2 * 10.0;
+    const bool inch = doc_.units() == jig::LengthUnit::Inch || doc_.units() == jig::LengthUnit::Foot;
+    const double step = inch ? 25.4 / 32 : 0.5;  // snaps: 1/32 in or 0.5 mm
+    d = std::round(d / step) * step;
+    d_[axis]->setText(QString::fromStdString(doc_.fmtLength(d)));
+}
+
 MovePanel::MovePanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent)
     : FeaturePanel(doc, view, std::move(editId), parent)
 {
     form_->addWidget(heading(this, tr("Move / copy"),
-                             tr("Shift bodies along X, Y and Z and turn them around an axis through the origin. "
-                                "Tick Copy to keep the original where it is.")));
+                             tr("Shift bodies along X, Y and Z and turn them around an axis, or move them from one "
+                                "construction point to another. Tick Copy to keep the original where it is.")));
     bodies_ = new QListWidget(this);
     bodies_->setMaximumHeight(120);
     const char* names[3] = {"X", "Y", "Z"};
@@ -1806,10 +3315,27 @@ MovePanel::MovePanel(jig::Document& doc, Viewport* view, std::string editId, QWi
         addRow(tr("Move along %1").arg(names[k]), d_[k]);
     }
     axis_ = combo(this, {{tr("Z axis (up)"), "Z"}, {tr("X axis"), "X"}, {tr("Y axis"), "Y"}});
+    addConstructionAxes(axis_, doc_, *stateBefore(), insertIndex(), [](const std::string& id) { return q(id); });
     angle_ = new ExprField(doc, jig::Dim::ang(), this);
     copy_ = new QCheckBox(tr("Copy (keep the original)"), this);
     addRow(tr("Turn around"), axis_);
     addRow(tr("Angle"), angle_);
+    from_ = new QComboBox(this);
+    to_ = new QComboBox(this);
+    for (auto* c : {from_, to_}) {
+        c->addItem(tr("(none)"), QString());
+        c->addItem(tr("Origin"), "O");
+    }
+    for (int i = 0; i < insertIndex(); ++i) {
+        const auto& f = doc_.model().features[size_t(i)];
+        if (f.kind == jig::FeatureKind::Point && stateBefore()->points.count(f.id)) {
+            for (auto* c : {from_, to_}) {
+                c->addItem(q(f.name), q(f.id));
+            }
+        }
+    }
+    addRow(tr("From point"), from_);
+    addRow(tr("To point"), to_);
     form_->addWidget(copy_);
     const auto before = stateBefore();
     const jig::Feature* edit = editId_.empty() ? nullptr : doc_.feature(editId_);
@@ -1823,16 +3349,35 @@ MovePanel::MovePanel(jig::Document& doc, Viewport* view, std::string editId, QWi
     fillBodyList(bodies_, doc_, *before, chosen);
     const char* keys[3] = {"dx", "dy", "dz"};
     for (int k = 0; k < 3; ++k) {
-        d_[k]->setText(q(edit ? edit->params.value(keys[k], std::string("0 mm")) : std::string("0 mm")));
+        d_[k]->setText(q(edit ? edit->params.value(keys[k], std::string("0 mm")) : doc_.defaultLength(0, 0)));
         connect(d_[k], &ExprField::changed, this, [this] { schedulePreview(); });
     }
     angle_->setText(q(edit ? edit->params.value("angle", std::string("0 deg")) : std::string("0 deg")));
     if (edit) {
         select(axis_, edit->params.value("axis", std::string("Z")));
         copy_->setChecked(edit->params.value("copy", false));
+        if (edit->params.contains("from") || edit->params.contains("to")) {
+            select(from_, edit->params.value("from", std::string("O")));
+            select(to_, edit->params.value("to", std::string("O")));
+        }
     }
     connect(angle_, &ExprField::changed, this, [this] { schedulePreview(); });
-    connect(axis_, &QComboBox::currentIndexChanged, this, [this] { schedulePreview(); });
+    for (auto* c : {axis_, from_, to_}) {
+        connect(c, &QComboBox::currentIndexChanged, this, [this] { schedulePreview(); });
+    }
+    if (view_) {
+        handle_ = std::make_unique<MoveHandle>(this);
+        view_->setInteractor(handle_.get());
+        // a box dragged over empty space ticks the bodies in it (Ctrl: unticks them)
+        view_->setBodyBoxing(true);
+        connect(view_.data(), &Viewport::bodiesBoxed, this, [this](const QStringList& ids, Qt::KeyboardModifiers m) {
+            for (int i = 0; i < bodies_->count(); ++i) {
+                if (ids.contains(bodies_->item(i)->data(Qt::UserRole).toString())) {
+                    bodies_->item(i)->setCheckState(m & Qt::ControlModifier ? Qt::Unchecked : Qt::Checked);
+                }
+            }
+        });
+    }
     connect(bodies_, &QListWidget::itemChanged, this, [this] { schedulePreview(); });
     connect(copy_, &QCheckBox::toggled, this, [this] { schedulePreview(); });
     if (before->bodies.empty()) {
@@ -1855,6 +3400,11 @@ jig::Feature MovePanel::draft() const
                 {"axis", current(axis_)},
                 {"angle", text(angle_, "0 deg")},
                 {"copy", copy_->isChecked()}};
+    const std::string from = current(from_), to = current(to_);
+    if (!from.empty() || !to.empty()) {  // point to point (an unset end is the origin)
+        f.params["from"] = from.empty() ? "O" : from;
+        f.params["to"] = to.empty() ? "O" : to;
+    }
     return f;
 }
 
@@ -1899,7 +3449,7 @@ ParametersDialog::ParametersDialog(jig::Document& doc, QWidget* parent)
     }
     connect(add, &QPushButton::clicked, this, [this] {
         int n = table_->rowCount() + 1;
-        addRow({"param" + std::to_string(n), "10 mm", jig::ParamKind::Length, {}});
+        addRow({"param" + std::to_string(n), doc_.defaultLength(10, 0.5), jig::ParamKind::Length, {}});
         table_->editItem(table_->item(table_->rowCount() - 1, 0));
     });
     connect(del, &QPushButton::clicked, this, [this] {
@@ -1992,7 +3542,7 @@ void ParametersDialog::revalidate()
         else {
             auto v = jig::Document::evalParamIn(m, p.name);
             ok = v.ok();
-            text = ok ? "= " + q(jig::formatQuantity(v.value())) : "✕ " + q(v.error().message);
+            text = ok ? "= " + q(jig::formatQuantity(v.value())) : "✕ " + coreText(v.error().message);
         }
         bad += !ok;
         if (auto* it = table_->item(r, 3)) {
@@ -2012,7 +3562,7 @@ bool ParametersDialog::apply()
     for (auto& p : m.parameters) {
         if (!jig::isValidParameterName(p.name) || !names.insert(p.name).second || !jig::Document::evalParamIn(m, p.name)) {
             revalidate();
-            QMessageBox::information(this, tr("Parameters"), tr("Some parameters need attention first (see the Result column)."));
+            note_->setText("<b>✕ " + tr("Some parameters need attention first (see the Result column).") + "</b>");
             return false;
         }
     }

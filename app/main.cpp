@@ -15,6 +15,7 @@
 #include <QTimer>
 
 #include "MainWindow.hpp"
+#include "Translations.hpp"
 #include "Viewport.hpp"
 #include "jig/version.hpp"
 
@@ -38,9 +39,11 @@ int main(int argc, char** argv)
     QCommandLineOption size("size", "Window size for screenshots, e.g. 1360x860.", "WxH", "1360x860");
     QCommandLineOption theme("theme", "light, dark or contrast.", "name");
     QCommandLineOption select("select-face", "Screenshot helper: select a face by index.", "n");
-    cli.addOptions({shot, sample, size, theme, select});
+    QCommandLineOption lang("lang", "Interface language code (e.g. qps for the test pseudo-language).", "code");
+    cli.addOptions({shot, sample, size, theme, select, lang});
     cli.addPositionalArgument("design", "A .jig file to open.");
     cli.process(app);
+    jigapp::installLanguage(cli.isSet(lang) ? cli.value(lang) : QSettings().value("language").toString());
 
     jigapp::MainWindow w;
     if (cli.isSet(theme)) {
@@ -84,9 +87,11 @@ int main(int argc, char** argv)
             QTimer::singleShot(150, &w, [&] {
                 QImage img = w.grab().toImage();
                 const bool ok = img.save(out);
-                fprintf(stderr, "screenshot %s %s (%dx%d), started in %lld ms\n", ok ? "saved" : "FAILED",
-                        qPrintable(out), img.width(), img.height(), static_cast<long long>(startup.elapsed()));
-                QApplication::exit(ok ? 0 : 1);
+                const bool drawn = !w.viewport()->graphicsFailed();
+                fprintf(stderr, "screenshot %s %s (%dx%d), started in %lld ms%s\n", ok ? "saved" : "FAILED",
+                        qPrintable(out), img.width(), img.height(), static_cast<long long>(startup.elapsed()),
+                        drawn ? "" : "; the 3D view could not draw (no OpenGL 3.3)");
+                QApplication::exit(!ok ? 1 : drawn ? 0 : 3);  // 3: saved, but the model was not drawn
             });
         });
         t->start(25);

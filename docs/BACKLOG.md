@@ -8,23 +8,26 @@ decision or finding). Move items to STATUS.md when started.
 - **B-001 libslvs spike** (D-004): build SolveSpace's libslvs and run the same
   `tests/test_solver.cpp` contract plus the drag bench against it. Blocked this session by
   the environment's policy on building external code.
-- **B-002 Reorder regression tests** (5.4a): move a feature earlier/later (validated: a
-  feature can't move before what it references), assert names still resolve.
-- **B-003 Windows and macOS GUI evidence**: the CI GUI smoke test runs only on Linux
-  (xvfb). Add a Windows screenshot run (the runner has a desktop session) and a macOS
-  offscreen run; manual check of trackpad pinch on a real Mac.
+- ~~B-002 Reorder regression tests~~ done in session 2 (`Document.ReorderStepsSafely`, UI
+  `reorderTimeline`). Remaining: name-resolution checks for reorders inside the phone stand.
+- **B-003 Windows and macOS GUI evidence**: screenshot runs work in CI on macOS and on Windows
+  (Mesa llvmpipe as Qt's software OpenGL, run 41225131582). Left: a Windows machine with a real GPU
+  driver; manual check of trackpad pinch on a real Mac.
 - **B-004 macOS renderer path**: verify GL 4.1 core on Apple silicon; spike a Qt RHI
   (Metal) backend for `Viewport`.
 - **B-005 Universal macOS binary**: CI builds arm64 and Intel separately; add a
   `lipo`-merged universal .dmg and document signing/notarisation (secrets never in repo).
-- **B-006 Windows installer** (brief: installer + portable zip): WiX or Inno Setup.
+- ~~B-006 Windows installer~~ done (Inno Setup, tested in CI by silent install, run, uninstall); try
+  on a clean machine by hand.
 - **B-007 Flatpak manifest** (brief: AppImage and Flatpak).
-- **B-008 Endpoint tangency** in the solver wrapper via angle-via-point (finding in
-  D-004), and collinear/concentric constraints.
+- ~~B-008 Endpoint tangency~~ done (angle via the shared point); collinear/concentric done.
 - **B-012 OCCT 8 deprecations**: `TopTools_*`/`TColStd_*` typedef headers are deprecated in
   8.0 (warnings on Windows). Switch to `NCollection_*` types once 7.6 support is dropped, or
   wrap them in one compatibility header.
-- **B-011 Windows package DLL audit**: ship only the DLLs Jigsmith loads; list each licence.
+- **B-011 Windows package DLL audit**: `packaging/windows/trim-dlls.ps1` (CI) keeps only DLLs reachable
+  from the programs and Qt plugins and writes THIRD_PARTY_DLLS.txt (conda package + licence); the
+  trimmed package renders, installs and runs in CI (run 41225131582). Review that list before the
+  first release.
 - **B-009 Recompute off the UI thread** for long timelines with a progress indicator
   (5.3.6), once any real design exceeds 100 ms.
 
@@ -34,8 +37,10 @@ Done: sketch mode, plane/face picker, look-at, Line/Rectangle/Centre rectangle/C
 Dimension, typed values, snapping, automatic H/V, constraint commands, drag, DOF display,
 conflict refusal, gap rings, profiles, construction toggle, delete.
 
-- B-013 Arc (3-point, tangent, centre), Polygon, Ellipse, Slot, Fit-point spline tools.
-- B-014 Trim, Extend, Break, Offset, sketch Fillet, Mirror, patterns, Move/Copy.
+- B-013 (all v0.1 drawing tools done, incl. tangent arc, 2/3-point circle, 3-point rectangle) constraints along
+  ellipses and splines; trim/extend/break of them.
+- B-014 done (Trim, Extend, Break, Offset (linked), sketch Fillet, Mirror, Move/Copy with a turn,
+  Grid/Ring copy (linked)).
 - B-016 Select and delete individual constraints (click a glyph); window selection; collinear,
   concentric; point-on-curve snapping while drawing; endpoint tangency via angle-via-point.
 
@@ -44,29 +49,31 @@ conflict refusal, gap rings, profiles, construction toggle, delete.
 Done: Extrude and Fillet panels with live preview, Auto join/cut, edge picking, tangent chain,
 timeline edit/rename/suppress/roll back/delete with dependents warning, Parameters dialog.
 
-- B-015 UI test for the Parameters dialog and timeline context menu.
-- B-017 Extrude drag handle on the canvas; two sides, to object, taper, thin.
-- B-018 Timeline reorder (validated) and groups; Browser visibility/isolate/rename/find in timeline.
-- B-019 Selection filters, window selection, Select Other.
+- ~~B-015~~ done: UI test `parametersAndTimelineMenu` (Parameters dialog as one undoable step,
+  a bad value explained in the dialog; Suppress/Unsuppress from the timeline menu).
+- ~~B-017~~ done: drag handle, two sides, up to a face, taper, thin (incl. open curves).
+- B-018 done (reorder; Browser visibility, isolate, rename, find in timeline, timeline groups,
+  visibility and folded groups saved with the design).
+- B-019 (sketch window selection, selection filter, Select Other, 3D box selection of edges, faces and bodies done).
 
-- B-020 Text: pick installed fonts by family name (fontconfig / DirectWrite / CoreText),
-  bold/italic, multi-line, HarfBuzz shaping for complex scripts, text along a path.
+- B-020 Text (installed fonts by family and style, several lines, along circles and arcs done): HarfBuzz shaping for
+  complex scripts, text along a path.
 
 ## Later v0.1 milestones
 
 - M3 (done in session 2: Fillet, Chamfer, Shell, Hole, Mirror of bodies, Patterns of
-  features): variable fillet, hole clearance table and drill point, pattern of bodies,
-  mirror of features, Press Pull.
-- M4 (Revolve and the knob, A2, done in session 2): revolve to object, construction planes
-  (offset/angle/midplane), axis, point, Combine, Split, Move/Copy.
-- M5 (Parameters dialog and Text done in session 2, D-014): Project/Include, SVG and DXF
-  import with unit detection.
+  features; hole clearance table and drill point; pattern of bodies; mirror of steps):
+  variable fillet, press pull of curved faces (offset face).
+- M4 (Revolve, construction planes and axes, Combine, Split, Move/Copy done): revolve to
+  object, construction point.
+- M5 (Parameters, Text, Project, SVG and DXF import done): linked (associative) Project.
 - M6: Measure, Section, Properties with density; 3MF export; local versions; autosave
   preferences; STEP import UI with unit correction; parser fuzzing (SVG, DXF, STEP).
-- M7: tutorial, tooltips audit, error-explanation actions, marking menu, navigation
-  settings page.
-- M8: accessibility pass (keyboard, screen-reader labels, scaling, reduced motion),
-  localisation (Qt Linguist), performance, installers, v0.1.
+- M7 (tutorial, marking menu, navigation settings, one-click fixes, tooltips audit done): more fixes
+  (sketch gaps, hole sizes).
+- M8 (screen-reader names, keyboard-only modelling done): accessibility (scaling checks),
+  localisation (set up, pseudo-language done; core messages and real languages left),
+  performance, installers, v0.1.
 
 ## Ideas (unscheduled)
 

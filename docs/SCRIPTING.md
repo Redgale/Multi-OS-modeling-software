@@ -13,6 +13,15 @@ angle or position accepts an expression with units and parameter names (`width/2
 `2 in`, `75 deg`). A bare number in a length means millimetres; in an angle, degrees.
 The script stops at the first failing line, and the error names the line number.
 
+## Units
+
+| Command | Meaning |
+|---|---|
+| `units mm\|cm\|m\|in\|ft` | The design's unit. After `units in`, plain numbers in sizes and positions (`w=2`, `center=1,0.5`, `param wall = 0.125`) mean inches; they are stored as `2 in`, so a later unit change never resizes anything. Angles and counts are unaffected. Without this command scripts use millimetres |
+
+Units you can type anywhere: `mm`, `cm`, `m`, `um`, `in`, `ft`, `yd`, `thou`/`mil`
+(1/1000 in), `deg`, `rad`, `turn`.
+
 ## Parameters
 
 | Command | Example |
@@ -37,7 +46,20 @@ nothing is committed.
 | `slot [sketch=s1] c1=x,y c2=x,y width=<len>` | Centre-to-centre slot |
 | `line [sketch=s1] p1=x,y p2=x,y [construction=yes] [name=<n>]` | One line, ends dimensioned. Name it to use it as a revolve axis (`axis=line:<n>`) |
 | `point [sketch=s1] at=x,y` | A point (hole centres) |
-| `text [sketch=s1] center=x,y height=<len> text="…" [font=<font file>] [angle=<angle>]` | Lettering centred on a point. `height` is the font size (capitals are about 0.73 of it). Each letter outline is a closed area (keys `T<id>.<n>`). Built-in font: Inter |
+| `text [sketch=s1] center=x,y height=<len> text="…" [font=<font file or installed family, e.g. "DejaVu Sans Bold">] [angle=<angle>] [along=x,y]` | Lettering centred on a point (with `along=`, bent along the circle or arc through that point); `\n` in the text starts a new line. `height` is the font size (capitals are about 0.73 of it). Each letter outline is a closed area (keys `T<id>.<n>`). Built-in font: Inter |
+| `offset [sketch=s1] at=x,y distance=<len> [linked=no]` | Copy the curve nearest (x, y), or its whole closed outline, at a distance (positive: outward, or to the left of a single line). The copy follows its source and its distance (an expression) when they change; `linked=no` makes a plain copy |
+| `round [sketch=s1] at=x,y r=<len>` | Round the corner where two lines meet nearest (x, y) with a tangent arc |
+| `project edge:<name>\|face:<name> [sketch=s1] [linked=no]` | Bring a body edge, or every edge of a face, into the sketch as fixed curves that follow the edge when the model changes (`linked=no`: a plain copy that stays put) |
+| `extend [sketch=s1] at=x,y` | Lengthen the line or arc nearest (x, y), at its loose end nearest (x, y), until it meets the next curve |
+| `break [sketch=s1] at=x,y` | Split the curve nearest (x, y) where other curves cross it, either side of (x, y) |
+| `mirror [sketch=s1] at=x,y;x,y;… axis=x,y` | Mirror the curves nearest each point across the line nearest `axis` (construction lines count); the copies stay mirrored |
+| `move [sketch=s1] at=x,y;… [by=dx,dy] [angle=<angle> about=x,y]` | Move the curves nearest each point (turn first, then shift) |
+| `copy [sketch=s1] at=x,y;… [by=dx,dy] [angle=<angle> about=x,y]` | The same, leaving the originals: the copies keep the constraints among them |
+| `grid [sketch=s1] at=x,y;… count=n1[,n2] spacing=<len>[,<len>] [linked=no]` | Copies in columns to the right and rows upward (counts include the original). The copies follow the original and the spacing (an expression); `linked=no` makes plain copies |
+| `ring [sketch=s1] at=x,y;… center=x,y count=<n> [angle=360 deg] [linked=no]` | Copies around a centre; a full turn spaces them evenly. The copies follow the original and the angle; `linked=no` makes plain copies |
+| `ellipse [sketch=s1] center=x,y a=<len> b=<len> [angle=<angle>]` | Ellipse with radii a (along the angle) and b, both dimensioned |
+| `spline [sketch=s1] points=x,y;x,y;… [closed=yes]` | Smooth curve through the points (at least 2; 3 when closed) |
+| `trim [sketch=s1] at=x,y` | Remove the piece of the curve nearest (x, y) between its crossings with other curves |
 | `polygon [sketch=s1] center=x,y d=<len> [sides=6]` | Regular polygon; `d` is the diameter of the circle through the corners. One corner points straight up |
 | `arc [sketch=s1] center=x,y r=<len> from=<angle> to=<angle> [chord=yes]` | Counter-clockwise arc; `chord=yes` closes it with a straight line (a "D" shape) |
 | `constrain [sketch=s1] type=<t> a=<id> [b=<id>] [c=<id>] [value=<expr>]` | Raw constraint by entity id (for tests) |
@@ -48,21 +70,27 @@ nothing is committed.
 
 | Command | Meaning |
 |---|---|
-| `extrude id=e1 sketch=s1 distance=<len> [direction=one\|reverse\|symmetric] [extent=distance\|all] [op=new\|join\|cut\|intersect] [profiles=all\|<key>;<key>] [target=<body id>]` | Extrude closed areas of a sketch. `extent=all` goes through everything |
-| `fillet id=f1 edges="<selector>;<selector>" radius=<len> [body=<id>]` | Round edges. Selectors: `all`, `face:<face name>` (all edges of that face), `feature:<id>` (edges touching faces made by that feature), `name:<edge name>` |
-| `chamfer id=c1 edges="<selector>;…" distance=<len> [body=<id>]` | Bevel edges (equal distance); same selectors as fillet |
-| `shell id=sh1 faces="face:<name>;…" thickness=<len> [body=<id>]` | Hollow a body leaving walls; the listed faces are removed (left open). `faces=none` makes a closed hollow |
-| `revolve id=r1 sketch=s1 axis=X\|Y\|Z\|line:<name> [angle=<angle>] [op=new\|join\|cut\|intersect] [profiles=…]` | Spin closed areas around an axis (default a full turn). The outline must stay on one side of the axis |
-| `hole id=h1 sketch=s2 diameter=<len> (depth=<len> \| extent=all) [type=simple\|counterbore\|countersink]` | A hole at every free point of the sketch, drilled into the face the sketch sits on. Counterbore: `cbore_diameter= cbore_depth=`; countersink: `csink_diameter= csink_angle=` |
-| `pattern id=p1 feature=<id> kind=circular axis=X\|Y\|Z count=<n> [angle=<angle>]` | Repeat an Extrude, Revolve or Hole around an origin axis. A full turn spaces the copies evenly |
+| `extrude id=e1 sketch=s1 distance=<len> [direction=one\|reverse\|symmetric\|two] [distance2=<len>] [taper=<angle>] [thin=<len> thin_side=center\|inside\|outside] [extent=distance\|all\|to to=XY\|<plane id>\|face:<name> [to_offset=<len>]] [op=new\|join\|cut\|intersect] [profiles=all\|<key>;<key>] [target=<body id>]` | Extrude closed areas of a sketch. `extent=all` goes through everything; `extent=to` stops at a parallel plane or flat face (and follows it when it moves); `direction=two` uses `distance2` for the other side; `taper` narrows the shape (negative widens); `thin` makes a wall along the outline; `profiles=open thin=<len>` makes a wall along the sketch's open curves (centred on them) |
+| `fillet id=f1 edges="<selector>;<selector>" radius=<len> [type=variable radius2=<len> [flip=yes]] [body=<id>]` | Round edges. Selectors: `all`, `face:<face name>` (all edges of that face), `feature:<id>` (edges touching faces made by that feature), `name:<edge name>` |
+| `chamfer id=c1 edges="<selector>;…" distance=<len> [type=equal\|two\|angle] [distance2=<len>] [angle=<angle>] [flip=yes] [body=<id>]` | Bevel edges; same selectors as fillet. `two`: `distance` on one face, `distance2` on the other; `angle`: `distance` at `angle` from the first face; `flip` swaps the faces |
+| `shell id=sh1 faces="face:<name>;…" thickness=<len> [body=<id>] [direction=inside\|outside]` | Hollow a body leaving walls; the listed faces are removed (left open). `faces=none` makes a closed hollow. `direction=outside` grows the walls outward, so the body becomes the hollow |
+| `revolve id=r1 sketch=s1 axis=X\|Y\|Z\|line:<name> [angle=<angle> \| extent=to to=<plane>\|face:<name>] [op=new\|join\|cut\|intersect] [profiles=…]` | Spin closed areas around an axis (default a full turn), or (`extent=to`) the positive way up to a plane or flat face the axis lies in. The outline must stay on one side of the axis |
+| `hole id=h1 sketch=s2 diameter=<len> (depth=<len> \| extent=all) [type=simple\|counterbore\|countersink]` | A hole at every free point of the sketch, drilled into the face the sketch sits on. Counterbore: `cbore_diameter= cbore_depth=`; countersink: `csink_diameter= csink_angle=`. `size=M3` (M2–M12, #4–#10, 1/4, 5/16, 3/8, 1/2) with `fit=close\|normal\|loose` takes the sizes from the clearance table (typed sizes still win); `tip=118deg` ends a blind hole in a drill point |
+| `pattern id=p1 feature=<id> kind=circular axis=X\|Y\|Z\|<axis id> count=<n> [angle=<angle>]` | Repeat an Extrude, Revolve or Hole around an axis. A full turn spaces the copies evenly. `body=<id> [op=new\|join]` instead of `feature=` repeats a whole body (separate bodies, or joined one by one) |
 | `pattern id=p1 feature=<id> kind=rectangular dir1=X count1=<n> spacing1=<len> [dir2=Y count2=<n> spacing2=<len>]` | Repeat it in rows and columns |
+| `pattern id=p1 feature=<id> kind=path path=<sketch> count=<n> [spacing=<len>] [orient=same\|follow]` | Repeat it along the curves of a sketch (joined end to end; construction curves are fine), spread over the whole path or at a spacing; `orient=follow` turns each copy with the path. The path runs from its end nearer the original |
 | `plane id=pl1 base=XY\|<plane id>\|face:<name> distance=<len>` | Construction plane parallel to a plane or flat face |
 | `plane id=pl2 kind=angle base=… axis=X\|Y\|Z\|edge:<name> angle=<angle>` | Plane turned around an axis or straight edge lying in the base plane |
 | `plane id=pl3 kind=midplane base=… base2=…` | Plane halfway between two parallel planes or faces |
+| `axis id=a1 through=edge:<name>\|face:<name>` or `axis id=a1 base=… base2=…` or `axis id=a1 from=pt1 to=pt2` or `axis id=a1 normal=<plane>\|face:<name> at=pt1` | Construction axis along a straight edge, through a round edge or face, where two planes/flat faces meet, through two construction points (`O` is the origin), or square to a plane or flat face through a point. Use its id wherever an axis is asked for (`revolve axis=a1`, `pattern … axis=a1`, `move … axis=a1`, `plane kind=angle axis=a1`) |
+| `point id=pt1 at=x,y,z` or `point id=pt1 through=edge:<name> [end=start\|end\|mid\|center]` or `point id=pt1 through=face:<name>` or `point id=pt1 through=edge:<name> plane=<plane>\|face:<name>` | Construction point at typed coordinates (expressions allowed), at the start, end, middle or centre of an edge, at the centre of a face, or where an edge crosses a plane. With two coordinates (`at=x,y`) or `sketch=`, `point` is still a sketch point |
 | `combine id=cb1 target=<body> tools="<body>;…" [op=join\|cut\|intersect] [keep=yes]` | Combine bodies into the target; the tools are used up unless `keep=yes` |
 | `split id=sp1 body=<body> plane=XY\|XZ\|YZ\|<plane id>\|face:<name>` | Cut a body in two; the part on the plane's back side becomes body `sp1` |
-| `move id=mv1 bodies="<body>;…" [dx= dy= dz=] [axis=X\|Y\|Z angle=<angle>] [copy=yes]` | Turn about an origin axis, then shift. `copy=yes` keeps the original |
-| `mirror id=m1 [body=<id>] plane=YZ\|XZ\|XY [op=join\|new]` | Mirror a body across an origin plane, joined to the original or as a new body |
+| `move id=mv1 bodies="<body>;…" [dx= dy= dz=] [axis=X\|Y\|Z\|<axis id> angle=<angle>] [from=<point> to=<point>] [copy=yes]` | Turn about an axis, then shift. With `from`/`to` (construction point ids or `O`), the turned `from` point lands on `to`, plus any typed shift. `copy=yes` keeps the original |
+| `remove id=rm1 bodies="<body>;…"` | Take bodies out of the design from this step on (deleting a body). Rolling back before it, or deleting the step, brings them back |
+| `mirror id=m1 [body=<id> \| feature=<id>] plane=YZ\|XZ\|XY\|<plane id>\|face:<name> [op=join\|new]` | Mirror a body (joined to the original or as a new body), or one step (its copy adds or removes material the same way), across a plane or flat face |
+| `presspull [id=pp1] face=<name> distance=<len>` | Pull a flat face straight out (positive, adds material) or push it in (negative, removes it) |
+| `group name="Base" steps=s1;e1` | Put steps in a timeline group (an empty name takes them out); grouping never changes the part |
 
 Profile keys are the sorted ids of the sketch curves around a closed area, e.g. `3,4,5,6`.
 
@@ -73,7 +101,16 @@ Profile keys are the sorted ids of the sketch curves around a closed area, e.g. 
 | `set <feature id> key=value …` | Change a feature's values, e.g. `set f2 radius=1mm` |
 | `suppress <id>` / `unsuppress <id>` | Skip or restore a step |
 | `rollback before=<id>` · `rollback <n>` · `rollback end` | Move the rollback marker; new steps are inserted at the marker |
+| `reorder <id> before=<id>\|after=<id>\|to=<n>` | Move a step in the timeline (refused when it would break something) |
 | `undo [n]` / `redo [n]` | Undo or redo whole commands |
+
+## Import
+
+| Command | Meaning |
+|---|---|
+| `import svg <path> [sketch=s1] [width=<len>] [at=x,y]` | Bring an SVG's filled shapes into a sketch as artwork centred at (x, y); its outlines become closed areas (keys `G<id>.<n>`). Natural size unless `width` is given |
+| `import dxf <path> [sketch=s1] [units=mm\|in\|…] [at=x,y]` | Bring a DXF drawing's lines, circles, arcs and polylines into a sketch as editable curves. Units come from the file (`$INSUNITS`) unless given |
+| `import step <path> [id=im1]` | An Import step with the file's solids (one body per solid, ids `im1` or `im1.1`, `im1.2`…), kept inside the design so it does not need the file again. Faces are named `im1/face:<n>` in the file's order |
 
 ## Output
 

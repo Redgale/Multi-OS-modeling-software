@@ -17,6 +17,7 @@
 #include <cstdint>
 #include <map>
 #include <memory>
+#include <functional>
 #include <optional>
 #include <string>
 #include <vector>
@@ -25,7 +26,11 @@
 #include <TopTools_IndexedMapOfShape.hxx>
 #include <TopoDS_Face.hxx>
 #include <TopoDS_Shape.hxx>
+#include <TopoDS_Wire.hxx>
 #include <gp_Ax1.hxx>
+#include <gp_Pnt.hxx>
+#include <gp_Pln.hxx>
+#include <gp_XY.hxx>
 #include <gp_Ax3.hxx>
 #include <gp_Trsf.hxx>
 #include <nlohmann/json.hpp>
@@ -181,6 +186,79 @@ struct ProfileSet
     std::vector<std::string> notes;  // e.g. a missing font was replaced
 };
 
+// ---------------------------------------------------------------- SVG import
+
+// Filled shapes of an SVG file as closed outlines, in millimetres, y up, centred on (0, 0).
+struct SvgArtwork
+{
+    std::vector<ArtContour> contours;
+    double width = 0, height = 0;  // mm
+    bool unitsKnown = false;       // the file gives a physical size (mm, in, …)
+    std::map<std::string, int> skipped;
+};
+Result<SvgArtwork> parseSvg(const std::string& text);
+Result<SvgArtwork> readSvg(const std::string& path);
+// The artwork's outlines as faces in the sketch plane, centred on (x, y).
+Result<std::vector<TopoDS_Face>> artworkFaces(const SketchArtwork& a, double x, double y, const gp_Ax3& frame);
+
+// ---------------------------------------------------------------- DXF import
+
+// Curves read from a DXF file, in the file's own units (see unitScale).
+struct DxfDrawing
+{
+    struct Line
+    {
+        double x1, y1, x2, y2;
+    };
+    struct Circle
+    {
+        double cx, cy, r;
+    };
+    struct Arc
+    {
+        double cx, cy, r, startDeg, endDeg;  // counter-clockwise, as DXF stores them
+    };
+    std::vector<Line> lines;
+    std::vector<Circle> circles;
+    std::vector<Arc> arcs;
+    double unitScale = 1;     // millimetres per drawing unit
+    bool unitsKnown = false;  // false when the file does not say ($INSUNITS unset or 0)
+    std::map<std::string, int> skipped;  // entity types not imported, with counts
+};
+Result<DxfDrawing> parseDxf(const std::string& text);
+Result<DxfDrawing> readDxf(const std::string& path);
+// Adds the drawing's curves to a sketch, scaled (mm per drawing unit) and shifted; ends
+// that meet share a point, so outlines close. Returns the number of curves added.
+int addDxfToSketch(Sketch& s, const DxfDrawing& d, double scale, double dx = 0, double dy = 0);
+
+// Projects a body edge onto a sketch plane and adds it as fixed sketch geometry (lines,
+// circles and arcs; a circle seen at a slant would be an ellipse and is refused). Ends
+// meeting points already in the sketch share them. Returns the new curve ids.
+// With `ref` (the edge's ShapeRef as JSON), the copy is linked: followLink moves it when
+// the edge moves.
+Result<std::vector<int>> projectEdge(Sketch& sketch, const gp_Ax3& frame, const TopoDS_Shape& edge,
+                                     const nlohmann::json& ref = nullptr);
+// Moves a linked projection to where its edge is now. Refused (nothing changed) when the
+// edge is no longer the same kind of curve.
+Result<bool> followLink(Sketch& sketch, const gp_Ax3& frame, const nlohmann::json& link, const TopoDS_Shape& edge);
+
+// Offset copy of sketch curves: a single line (to its left for a positive distance), a
+// single circle or arc (bigger radius for positive), or one closed outline (outward for
+// positive, sharp corners). Adds the new curves to the sketch and returns their ids.
+Result<std::vector<int>> offsetCurves(Sketch& sketch, const std::vector<int>& curves, double distance);
+
+// Walls along the open chains of a sketch (curves joined end to end that do not close),
+// `thickness` wide and centred on the curves, as flat areas ready to extrude. Keys are
+// "W<first curve id>".
+Result<std::vector<Profile>> openChainWalls(const Sketch& sketch, const gp_Ax3& frame, double thickness);
+
+// Closed outlines made of straight segments (2 points) and quadratic / cubic Béziers
+// (3 / 4 points) turned into flat faces; holes are found by nesting, whatever the winding.
+using OutlineSegment = std::vector<gp_XY>;
+using OutlineContour = std::vector<OutlineSegment>;
+std::vector<TopoDS_Face> facesFromOutlines(const std::vector<OutlineContour>& contours,
+                                           const std::function<gp_Pnt(const gp_XY&)>& to3d, const gp_Pln& plane);
+
 // Glyph outlines of a sketch text as flat faces in the sketch plane, centred on (x, y).
 struct TextOutline
 {
@@ -188,6 +266,20 @@ struct TextOutline
     std::string note;  // set when the requested font was not available
 };
 Result<TextOutline> textFaces(const SketchText& t, double x, double y, const gp_Ax3& frame);
+
+// Fonts installed on this computer (the usual font folders of Linux, macOS and Windows,
+// plus any folders in JIG_FONT_DIRS), found once and remembered.
+struct FontFace
+{
+    std::string family;  // "DejaVu Sans"
+    std::string style;   // "Bold Oblique"
+    std::string path;
+    int index = 0;       // face number inside a collection (.ttc)
+};
+// `rescan`: look again (after fonts were installed, or JIG_FONT_DIRS changed).
+const std::vector<FontFace>& installedFonts(bool rescan = false);
+// "DejaVu Sans" (its regular style) or "DejaVu Sans Bold": the best match, if installed.
+std::optional<FontFace> findFont(const std::string& familyAndStyle);
 
 // Finds every closed region of the sketch's non-construction curves. Each glyph
 // outline of a sketch text is a closed region too (key "T<text id>.<n>"); text is
@@ -208,7 +300,8 @@ enum class ExtrudeDirection
 {
     OneSide,
     Reverse,
-    Symmetric
+    Symmetric,
+    TwoSides  // `distance` one way, `distance2` the other
 };
 
 struct ExtrudeInput
@@ -218,10 +311,37 @@ struct ExtrudeInput
     gp_Dir normal;
     double distance = 10;  // mm, >0
     ExtrudeDirection direction = ExtrudeDirection::OneSide;
+    double distance2 = 0;  // TwoSides: how far it goes the other way
+    double taper = 0;      // draft angle in radians; positive narrows the shape as it goes
+    double thin = 0;       // > 0: a wall of this thickness along the outline instead of a solid
+    int thinSide = 0;      // 0 centred on the outline, -1 inside it, +1 outside it
 };
 
 // Builds the extruded tool body and names its faces.
 Result<NamedShape> makeExtrusion(const ExtrudeInput& in);
+
+// Sketch curves joined end to end as one 3D path (for patterns along a path).
+struct SketchPath
+{
+    TopoDS_Wire wire;
+    double length = 0;
+    bool closed = false;
+};
+Result<SketchPath> sketchPath(const Sketch& sketch, const gp_Ax3& frame, const std::vector<int>& curves);
+// The point and the unit direction at distance s along the path (0 to its length).
+void pathAt(const SketchPath& path, double s, gp_Pnt& point, gp_Vec& tangent);
+
+// Cuts an extruded body off where it meets `target` (any face, curved or slanted; a flat
+// face is extended to a whole plane), keeping the piece that touches `start` (the sketch's
+// profile). The cut face is named `endName`. Refused when the face does not cross the
+// whole body.
+// Cuts a body into pieces with a face (curved or flat, used as it is: a curved face must reach
+// across the body). Faces keep their names; the cut faces are "<feature>/split". The pieces
+// come biggest first; refused when the face does not divide the body.
+Result<std::vector<NamedShape>> splitByFace(const NamedShape& body, const TopoDS_Face& tool, const std::string& featureId);
+
+Result<NamedShape> trimToFace(const NamedShape& body, const TopoDS_Face& target, const TopoDS_Shape& start,
+                              const std::string& featureId, const std::string& endName);
 
 // Spins profiles around an axis. angle in radians (2*pi = full turn). Faces are named
 // "<feature>/side:<sketch curve>", plus "start"/"end" caps for partial turns.
@@ -243,6 +363,7 @@ struct HoleSpec
     bool through = false;
     double cboreDiameter = 6, cboreDepth = 3;
     double csinkDiameter = 6, csinkAngle = 1.5707963267948966;  // 90 degrees
+    double tipAngle = 0;  // drill point angle of a blind hole (e.g. 118°); 0 = flat bottom
 };
 
 struct HolePoint
@@ -270,25 +391,43 @@ Result<NamedShape> booleanOp(const std::string& featureId,
                              const NamedShape& target,
                              const NamedShape& tool);
 
-// Fillet of resolved edges with a constant radius. On failure the Error carries a
-// probable cause and, when one can be found, the largest radius that does work.
+// How an edge is rounded or bevelled beyond a single size.
+struct EdgeOptions
+{
+    enum class Mode
+    {
+        Equal,          // constant radius / equal-distance chamfer
+        TwoDistances,   // chamfer: `size` on one face, `second` on the other
+        DistanceAngle,  // chamfer: `size` on one face, at `second` radians from it
+        Variable        // fillet: `size` at the edge's start, `second` at its end
+    } mode = Mode::Equal;
+    double second = 0;
+    bool flip = false;  // measure the first size on the other face / swap start and end
+};
+
+// Fillet of resolved edges. On failure the Error carries a probable cause and, when one
+// can be found, the largest radius that does work.
 Result<NamedShape> filletEdges(const std::string& featureId,
                                const NamedShape& body,
                                const std::vector<int>& edgeIndices,
-                               double radius);
+                               double radius,
+                               const EdgeOptions& options = {});
 
-// Equal-distance chamfer (bevel) of resolved edges; failures are diagnosed like fillets.
+// Chamfer (bevel) of resolved edges; failures are diagnosed like fillets.
 Result<NamedShape> chamferEdges(const std::string& featureId,
                                 const NamedShape& body,
                                 const std::vector<int>& edgeIndices,
-                                double distance);
+                                double distance,
+                                const EdgeOptions& options = {});
 
-// Hollow the body with walls of `thickness` (inward), removing `openFaces` (may be
-// empty: a closed hollow). Inner walls are named "<feature>/inner:<outer face>".
+// Hollow the body with walls of `thickness` (inward, or outward when `outside`: the body
+// becomes the cavity), removing `openFaces` (may be empty: a closed hollow). New walls are
+// named "<feature>/inner:<face>" (or "/outer:").
 Result<NamedShape> shellSolid(const std::string& featureId,
                               const NamedShape& body,
                               const std::vector<int>& openFaces,
-                              double thickness);
+                              double thickness,
+                              bool outside = false);
 
 // True when the point lies strictly inside the solid (used to choose Join or Cut).
 bool pointInside(const TopoDS_Shape& solid, double x, double y, double z);
@@ -347,6 +486,10 @@ struct DisplayMesh
 // Thread-safe for distinct shapes; used off the UI thread.
 DisplayMesh tessellate(const TopoDS_Shape& s, double linearDeflection = 0.05);
 
+// Where a plane cuts a solid: the flat cross-section (holes kept as holes), for capping a
+// section view and for measuring wall thickness. Empty when the plane misses the solid.
+Result<TopoDS_Shape> sectionFaces(const TopoDS_Shape& solid, const gp_Pln& plane);
+
 // ---------------------------------------------------------------- interchange
 
 Result<bool> exportStl(const TopoDS_Shape& s, const std::string& path, double deflection = 0.02);
@@ -357,5 +500,11 @@ struct ImportedShape
     std::string fileUnit;  // unit declared by the file, normalised: "mm", "cm", "m", "in", "ft"
 };
 Result<ImportedShape> importStep(const std::string& path);
+// A shape as OCCT's BRep text and back (an imported solid is kept inside the design this way).
+std::string shapeToText(const TopoDS_Shape& s);
+Result<TopoDS_Shape> shapeFromText(const std::string& text);
+// The solids of an imported shape, each with its faces named "<id>/face:<n>" (n from 1, in
+// the file's order, so later steps find the same faces every time).
+Result<std::vector<NamedShape>> importedBodies(const std::string& id, const TopoDS_Shape& s);
 
 }  // namespace jig

@@ -13,6 +13,7 @@
 
 #include <QObject>
 #include <QPointF>
+#include <QRectF>
 #include <QPointer>
 #include <QString>
 #include <gp_Ax3.hxx>
@@ -23,6 +24,7 @@
 class QFrame;
 class QLabel;
 class QLineEdit;
+class QComboBox;
 
 namespace jigapp
 {
@@ -39,9 +41,27 @@ public:
         CenterRectangle,
         Circle,
         Arc,      // centre, start, end (counter-clockwise)
+        Arc3,     // start, end, then a point the arc passes through
+        TangentArc,  // the loose end of a line or arc, then where the arc ends
+        Circle2,  // the two ends of a diameter
+        Circle3,  // three points on the circle
+        CircleTangent,  // two lines, then the radius: a circle touching both
+        Rect3,    // one side (two corners), then the depth
         Slot,     // centre, centre, width
+        Ellipse,  // centre, end of the major axis, then the minor radius
+        Spline,   // click the points it passes through; Enter, Esc or double-click ends, first point closes
         Polygon,  // centre, corner; sides typed (default 6)
         Text,     // click the centre, type the words and the size
+        Trim,     // click the piece of a curve to remove (between its crossings)
+        Extend,   // click near a loose end to lengthen it to the next curve
+        Break,    // click a curve to split it where others cross it
+        Mirror,   // with curves selected, click the line to mirror them across
+        Move,     // with curves selected: click a base point and where it goes (Ctrl: copy)
+        PatternRect,  // with curves selected: type columns and spacing, then rows and spacing
+        PatternCirc,  // with curves selected: click the centre, type the count and angle
+        Offset,   // click a curve (or a closed outline), type the distance
+        Round,    // click a corner where two lines meet, type the radius
+        Project,  // click a body edge (or a face for its outline) to bring it into the sketch
         Point,
         Dimension
     };
@@ -60,12 +80,22 @@ public:
     }
     // Constraint buttons act on the current selection.
     bool applyConstraint(jig::ConstraintType t);
+    // Two lines on one infinite line (both ends of the second lie on the first); circles
+    // and arcs that share a centre. Made from point-on-curve and coincident constraints.
+    bool applyCollinear();
+    bool applyConcentric();
     void toggleConstruction();
     void deleteSelection();
     void lookAt();
     // Re-read the sketch after undo/redo or a parameter change. Returns false when the
     // sketch feature no longer exists.
     bool refreshFromDocument();
+    const gp_Ax3& frame() const
+    {
+        return frame_;
+    }
+    // A curve as points in the sketch's own coordinates (for drawing it).
+    static std::vector<QPointF> polyline(const jig::Sketch& s, const jig::SketchEntity& e);
 
     struct Options
     {
@@ -96,8 +126,20 @@ public:
 
     // ---- for UI tests: drive the editor in sketch coordinates
     QPoint screenOf(double x, double y) const;
+    // Curves and points in a screen box: wholly inside, or (crossing) any part inside.
+    std::set<int> entitiesInBox(const QRectF& box, bool crossing) const;
     void typeValues(const QStringList& values);  // as if typed into the value box + Enter
     bool editTextAt(int anchorPoint);            // opens the value box on an existing text
+    bool editArtworkAt(int anchorPoint);         // … or on imported artwork (its width)
+    // Constraint glyphs and dimension labels: where they are drawn (after a paint), and
+    // selecting / editing them as a click or double-click would.
+    std::optional<QPointF> glyphCenter(int constraintId) const;
+    void selectConstraint(int constraintId, bool add = false);
+    bool editDimension(int constraintId);
+    const std::set<int>& selectedConstraints() const
+    {
+        return selectedConstraints_;
+    }
 
     // Interactor
     bool mousePress(QMouseEvent* e) override;
@@ -117,6 +159,7 @@ private:
     {
         QPointF local;
         int point = 0;           // existing point snapped to, 0 = none
+        int midOf = 0;           // the line whose midpoint it snapped to, 0 = none
         bool horizontal = false;  // inferred from the tool's first point
         bool vertical = false;
     };
@@ -127,6 +170,8 @@ private:
     int pointNear(const QPointF& screen, int exclude = 0) const;
     int entityNear(const QPointF& screen) const;  // curves and points
     double gridStep() const;
+    // places clicked on a line's midpoint: a point made there gets a midpoint constraint
+    std::vector<std::pair<QPointF, int>> midSnaps_;
     bool commit(const QString& label, const jig::Sketch& next);
     void rebuildOverlay();
     void resetToolState();
@@ -134,7 +179,7 @@ private:
     void showInput(const QStringList& labels, const QStringList& prefill = {});
     void hideInput();
     QStringList inputValues() const;
-    std::vector<QPointF> polyline(const jig::Sketch& s, const jig::SketchEntity& e) const;
+    QString inUnits(double mm) const;
     const jig::Sketch& shown() const
     {
         return dragging_ ? dragSketch_ : work_;
@@ -154,7 +199,34 @@ private:
     std::optional<Snap> second_;     // second click of a three-click tool (arc, slot)
     QString arcRadiusExpr_;          // typed at the second step (arc radius, slot length)
     int editText_ = 0;
-    QString lastTextHeight_ = "5 mm";               // text being changed (double-click on its anchor)
+    int editArtwork_ = 0;
+    std::optional<jig::Sketch::TrimPiece> trimHover_;  // the piece Trim would remove
+    std::vector<Snap> splinePts_;  // Spline: the points clicked so far
+    bool startInput_ = false;           // the X, Y box for a first point typed instead of clicked
+    std::optional<Snap> forcedCursor_;  // a typed point standing in for the cursor
+    void startAtTyped(double x, double y);
+    int tangentFrom_ = 0;   // Tangent arc: the curve it continues
+    // Line: a press on the chain's end that drags draws a tangent arc, then lines go on
+    bool arcArmed_ = false, arcFromLine_ = false;
+    int arcEnd_ = 0;        // the end point of the arc just placed
+    // The one line or arc whose loose end is `point` (0 if none or several), and the
+    // direction leaving it there.
+    int looseEndOwner(int point, QPointF* dir) const;
+    QPointF tangentDir_;    // and the direction it leaves in
+    void finishSpline(bool closed);
+    int gridCols_ = 0;     // Grid copy: columns typed in the first step
+    double gridDx_ = 0;    // and their spacing
+    QString gridDxText_;  // the spacing as typed (it may use a parameter)
+    std::vector<int> offsetHover_, offsetChain_;        // Offset: under the cursor / chosen
+    std::vector<std::pair<int, QRectF>> glyphBoxes_;     // constraint glyphs as last painted
+    std::set<int> selectedConstraints_;
+    int editConstraint_ = 0;
+    std::vector<int> tanLines_;  // Tangent circle: the lines it touches
+    QPointF tanClicks_[2];       // where each was clicked: the circle sits in the corner between them
+    std::optional<QPointF> roundAt_;                     // Round: the corner clicked                             // dimension being changed (double-click)
+    int glyphAt(const QPointF& screen) const;
+    QString lastTextHeight_;
+    std::string lastTextFont_;  // empty: the design's default size               // text being changed (double-click on its anchor)
     std::vector<std::vector<QVector3D>> textEdges_;  // glyph outlines, for drawing
     int chainStart_ = 0;             // line chains: the first point, clicking it closes
     Snap cursor_;
@@ -167,12 +239,18 @@ private:
     // dragging
     bool pressed_ = false, dragging_ = false;
     QPointF pressScreen_;
+    bool boxing_ = false;  // Select: dragging a selection box from empty space
+    QPointF boxEnd_;
     int dragPoint_ = 0, dragPoint2_ = 0;
     QPointF dragOffset2_;
     QPointF dragStartLocal_;
 
     // value box
     QPointer<QFrame> inputBox_;  // owned by the viewport
+    QComboBox* fontBox_ = nullptr;  // Text: the font (built-in Inter or an installed family)
+    QLabel* fontLabel_ = nullptr;
+    void showFontChoice(const std::string& current);
+    std::string chosenFont() const;
     std::vector<QLabel*> inputLabels_;
     std::vector<QLineEdit*> inputFields_;
 

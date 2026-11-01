@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "SketchEditor.hpp"
+#include "Translations.hpp"
+
+#include "jig/kernel.hpp"
 
 #include <cmath>
 #include <numbers>
@@ -7,7 +10,9 @@
 #include <BRepAdaptor_Curve.hxx>
 #include <TopExp_Explorer.hxx>
 #include <TopoDS.hxx>
+#include <QComboBox>
 #include <QFrame>
+#include <QGuiApplication>
 #include <QHBoxLayout>
 #include <QKeyEvent>
 #include <QLabel>
@@ -42,6 +47,55 @@ QString fmt(double v)
     return QString::number(v, 'g', 5);
 }
 
+// The circle through three points (none if they are in a straight line).
+struct Circ
+{
+    double cx = 0, cy = 0, r = 0;
+};
+std::optional<Circ> circleThrough(QPointF a, QPointF e, QPointF m)
+{
+    const double d = 2 * (a.x() * (e.y() - m.y()) + e.x() * (m.y() - a.y()) + m.x() * (a.y() - e.y()));
+    if (std::abs(d) < 1e-9) {
+        return std::nullopt;
+    }
+    const double a2 = a.x() * a.x() + a.y() * a.y(), e2 = e.x() * e.x() + e.y() * e.y(),
+                 m2 = m.x() * m.x() + m.y() * m.y();
+    Circ c;
+    c.cx = (a2 * (e.y() - m.y()) + e2 * (m.y() - a.y()) + m2 * (a.y() - e.y())) / d;
+    c.cy = (a2 * (m.x() - e.x()) + e2 * (a.x() - m.x()) + m2 * (e.x() - a.x())) / d;
+    c.r = std::hypot(a.x() - c.cx, a.y() - c.cy);
+    return c;
+}
+
+// An arc leaving S in direction t and ending at E (counter-clockwise from a0 to a1;
+// startAtS: S is the arc's start rather than its end).
+struct TangentArc
+{
+    double cx = 0, cy = 0, r = 0, a0 = 0, a1 = 0;
+    bool startAtS = true;
+};
+std::optional<TangentArc> tangentArc(QPointF S, QPointF t, QPointF E)
+{
+    const QPointF n(-t.y(), t.x()), d = E - S;
+    const double denom = 2 * (d.x() * n.x() + d.y() * n.y());
+    if (std::abs(denom) < 1e-9 || QLineF(S, E).length() < 1e-9) {
+        return std::nullopt;  // straight ahead: that is a line
+    }
+    const double rs = (d.x() * d.x() + d.y() * d.y()) / denom;
+    TangentArc a;
+    a.cx = S.x() + n.x() * rs;
+    a.cy = S.y() + n.y() * rs;
+    a.r = std::abs(rs);
+    const double as = std::atan2(S.y() - a.cy, S.x() - a.cx), ae = std::atan2(E.y() - a.cy, E.x() - a.cx);
+    a.startAtS = rs > 0;  // turning left: counter-clockwise from S
+    a.a0 = a.startAtS ? as : ae;
+    a.a1 = a.startAtS ? ae : as;
+    while (a.a1 <= a.a0) {
+        a.a1 += 2 * kPi;
+    }
+    return a;
+}
+
 }  // namespace
 
 SketchEditor::SketchEditor(Viewport* view, jig::Document& doc, std::string featureId, QObject* parent)
@@ -56,7 +110,7 @@ SketchEditor::SketchEditor(Viewport* view, jig::Document& doc, std::string featu
     inputBox_->setAutoFillBackground(true);
     auto* lay = new QHBoxLayout(inputBox_);
     lay->setContentsMargins(6, 4, 6, 4);
-    for (int i = 0; i < 2; ++i) {
+    for (int i = 0; i < 3; ++i) {
         auto* l = new QLabel(inputBox_);
         auto* f = new QLineEdit(inputBox_);
         f->setFixedWidth(84);
@@ -66,7 +120,22 @@ SketchEditor::SketchEditor(Viewport* view, jig::Document& doc, std::string featu
         inputLabels_.push_back(l);
         inputFields_.push_back(f);
         connect(f, &QLineEdit::returnPressed, this, [this] {
-            if (dimTarget_ || editText_) {
+            if (startInput_) {  // a first point typed as X, Y
+                const QStringList v = inputValues();
+                auto x = doc_.evalLength(doc_.lengthInput(v.value(0).isEmpty() ? "0" : v.value(0).toStdString()));
+                auto y = doc_.evalLength(doc_.lengthInput(v.value(1).isEmpty() ? "0" : v.value(1).toStdString()));
+                if (!x || !y) {
+                    message_ = QString::fromStdString((!x ? x.error() : y.error()).message);
+                    emit stateChanged();
+                    return;
+                }
+                startInput_ = false;
+                hideInput();
+                startAtTyped(x.value(), y.value());
+                return;
+            }
+            if (dimTarget_ || editText_ || editArtwork_ || editConstraint_ || roundAt_ || !offsetChain_.empty() ||
+                tanLines_.size() == 2) {
                 placeSecond(cursor_, inputValues());
                 return;
             }
@@ -76,6 +145,13 @@ SketchEditor::SketchEditor(Viewport* view, jig::Document& doc, std::string featu
         });
         connect(f, &QLineEdit::textChanged, this, [this] { rebuildOverlay(); });
     }
+    fontLabel_ = new QLabel(tr("Font"), inputBox_);
+    fontBox_ = new QComboBox(inputBox_);
+    fontBox_->setAccessibleName(tr("Font"));
+    lay->addWidget(fontLabel_);
+    lay->addWidget(fontBox_);
+    fontLabel_->hide();
+    fontBox_->hide();
     inputBox_->hide();
     refreshFromDocument();
 }
@@ -121,11 +197,12 @@ bool SketchEditor::refreshFromDocument()
         }
     }
     std::erase_if(selection_, [&](int id) { return !work_.entity(id); });
+    std::erase_if(selectedConstraints_, [&](int id) { return !work_.constraints().count(id); });
     profileTris_.clear();
     textEdges_.clear();
     if (it != doc_.state().sketches.end()) {
         for (auto& r : it->second->profiles.regions) {
-            if (!r.key.empty() && r.key[0] == 'T') {
+            if (!r.key.empty() && (r.key[0] == 'T' || r.key[0] == 'G')) {
                 for (TopExp_Explorer ee(r.face, TopAbs_EDGE); ee.More(); ee.Next()) {
                     BRepAdaptor_Curve c(TopoDS::Edge(ee.Current()));
                     std::vector<QVector3D> pts;
@@ -152,6 +229,17 @@ bool SketchEditor::refreshFromDocument()
 bool SketchEditor::commit(const QString& label, const jig::Sketch& next)
 {
     jig::Sketch trial = next;
+    // a new point where a line's midpoint was clicked stays at that midpoint
+    for (auto& [at, line] : midSnaps_) {
+        if (!trial.entity(line)) {
+            continue;
+        }
+        for (auto& [id, e] : next.entities()) {
+            if (e.type == jig::EntityType::Point && !work_.entity(id) && std::hypot(e.x - at.x(), e.y - at.y()) < 1e-9) {
+                trial.addConstraint(jig::ConstraintType::Midpoint, id, line);
+            }
+        }
+    }
     jig::SolveReport rep = trial.solve(doc_.lookup());
     if (rep.state == jig::SolveState::Failed
         || (rep.state == jig::SolveState::OverConstrained && !rep.conflicting.empty())) {
@@ -169,11 +257,12 @@ bool SketchEditor::commit(const QString& label, const jig::Sketch& next)
         return true;
     });
     if (!r) {
-        message_ = QString::fromStdString(r.error().message);
+        message_ = coreText(r.error().message);
         emit stateChanged();
         return false;
     }
     message_.clear();
+    midSnaps_.clear();
     refreshFromDocument();
     emit committed();
     return true;
@@ -212,15 +301,7 @@ QPoint SketchEditor::screenOf(double x, double y) const
 
 double SketchEditor::gridStep() const
 {
-    // a "nice" step of about 12 screen pixels: 0.1, 0.2, 0.5, 1, 2, 5, 10 ...
-    const double raw = 12 * view_->worldPerPixel();
-    const double p = std::pow(10.0, std::floor(std::log10(std::max(raw, 1e-6))));
-    for (double m : {1.0, 2.0, 5.0, 10.0}) {
-        if (raw <= m * p) {
-            return m * p;
-        }
-    }
-    return 10 * p;
+    return view_->sketchGridStep();  // the step of the grid drawn in the sketch's plane
 }
 
 int SketchEditor::pointNear(const QPointF& screen, int exclude) const
@@ -240,7 +321,7 @@ int SketchEditor::pointNear(const QPointF& screen, int exclude) const
     return best;
 }
 
-std::vector<QPointF> SketchEditor::polyline(const jig::Sketch& s, const jig::SketchEntity& e) const
+std::vector<QPointF> SketchEditor::polyline(const jig::Sketch& s, const jig::SketchEntity& e)
 {
     std::vector<QPointF> pts;
     if (e.type == jig::EntityType::Line) {
@@ -262,6 +343,11 @@ std::vector<QPointF> SketchEditor::polyline(const jig::Sketch& s, const jig::Ske
         for (int i = 0; i <= n; ++i) {
             const double a = a0 + (a1 - a0) * i / n;
             pts.emplace_back(cx + e.r * std::cos(a), cy + e.r * std::sin(a));
+        }
+    }
+    else if (e.type == jig::EntityType::Ellipse || e.type == jig::EntityType::Spline) {
+        for (auto [x, y] : s.curvePoints(e.id, 24)) {
+            pts.emplace_back(x, y);
         }
     }
     return pts;
@@ -309,6 +395,27 @@ SketchEditor::Snap SketchEditor::snapAt(const QPointF& screen, bool allowInferen
         s.point = p;
         return s;
     }
+    {
+        // the middle of a line is a place to snap to, as its ends are
+        double best = kSnapPx;
+        for (auto& [id, e] : shown().entities()) {
+            if (e.type != jig::EntityType::Line) {
+                continue;
+            }
+            auto [x1, y1] = shown().pointXY(e.p1);
+            auto [x2, y2] = shown().pointXY(e.p2);
+            const QPointF mid((x1 + x2) / 2, (y1 + y2) / 2);
+            const double d = QLineF(view_->project(toWorld(mid.x(), mid.y())), screen).length();
+            if (d < best) {
+                best = d;
+                s.local = mid;
+                s.midOf = id;
+            }
+        }
+        if (s.midOf) {
+            return s;
+        }
+    }
     if (options.snapGrid) {
         const double g = gridStep();
         s.local = QPointF(std::round(s.local.x() / g) * g, std::round(s.local.y() / g) * g);
@@ -338,12 +445,61 @@ void SketchEditor::setTool(Tool t)
     resetToolState();
     tool_ = t;
     message_.clear();
+    if (t == Tool::PatternRect && !selection_.empty()) {
+        first_ = cursor_;  // nothing to click: the counts and spacings are typed
+        showInput({tr("Columns"), tr("Spacing")}, {"3", QString::fromStdString(doc_.defaultLength(10, 0.5))});
+        inputFields_[0]->selectAll();
+        inputFields_[0]->setFocus();
+        inputBox_->move(QPoint(24, 24));
+    }
     rebuildOverlay();
     emit stateChanged();
 }
 
+int SketchEditor::looseEndOwner(int point, QPointF* dir) const
+{
+    int owners = 0, owner = 0;
+    for (auto& [id, en] : work_.entities()) {
+        if ((en.type == jig::EntityType::Line || en.type == jig::EntityType::Arc) && !en.construction &&
+            (en.p1 == point || en.p2 == point)) {
+            ++owners;
+            owner = id;
+        }
+    }
+    if (owners != 1) {
+        return 0;
+    }
+    const jig::SketchEntity* from = work_.entity(owner);
+    if (dir) {
+        if (from->type == jig::EntityType::Line) {
+            auto [x1, y1] = work_.pointXY(from->p1);
+            auto [x2, y2] = work_.pointXY(from->p2);
+            QPointF t = from->p2 == point ? QPointF(x2 - x1, y2 - y1) : QPointF(x1 - x2, y1 - y2);
+            *dir = t / std::max(1e-12, QLineF(QPointF(), t).length());
+        }
+        else {
+            const bool atEnd = from->p2 == point;
+            const double ang = atEnd ? from->a1 : from->a0;
+            *dir = atEnd ? QPointF(-std::sin(ang), std::cos(ang)) : QPointF(std::sin(ang), -std::cos(ang));
+        }
+    }
+    return owner;
+}
+
 void SketchEditor::resetToolState()
 {
+    editConstraint_ = 0;
+    editArtwork_ = 0;
+    roundAt_.reset();
+    tanLines_.clear();
+    midSnaps_.clear();
+    trimHover_.reset();
+    gridCols_ = 0;
+    gridDx_ = 0;
+    splinePts_.clear();
+    startInput_ = false;
+    offsetHover_.clear();
+    offsetChain_.clear();
     first_.reset();
     second_.reset();
     editText_ = 0;
@@ -359,7 +515,8 @@ QString SketchEditor::toolHint() const
         case Tool::Select:
             return tr("Click to select, drag to move what is still free. Delete removes the selection.");
         case Tool::Line:
-            return first_ ? tr("Click the end, or type a length (Tab: angle) and press Enter. Click the first point to close. Esc ends.")
+            return first_ ? tr("Click the end, or type a length (Tab: angle) and press Enter. Drag from the last point for a "
+                               "tangent arc. Click the first point to close. Esc ends.")
                           : tr("Click where the line starts.");
         case Tool::Rectangle:
             return first_ ? tr("Click the opposite corner, or type width (Tab) height and press Enter.")
@@ -374,6 +531,33 @@ QString SketchEditor::toolHint() const
             return second_ ? tr("Click where the arc ends (it runs counter-clockwise), or type the angle it spans.")
                  : first_  ? tr("Click where the arc starts, or type the radius and press Enter.")
                            : tr("Click the centre of the arc.");
+        case Tool::Arc3:
+            return second_ ? tr("Click a point the arc passes through (this sets how much it bends).")
+                 : first_  ? tr("Click where the arc ends.")
+                           : tr("Click where the arc starts.");
+        case Tool::TangentArc:
+            return first_ ? tr("Click where the arc ends. It leaves the curve smoothly.")
+                          : tr("Click the loose end of a line or arc to continue from.");
+        case Tool::Circle2:
+            return first_ ? tr("Click the other end of the diameter, or type the diameter and press Enter.")
+                          : tr("Click one end of the circle's diameter.");
+        case Tool::Circle3:
+            return second_ ? tr("Click a third point on the circle.")
+                 : first_  ? tr("Click a second point on the circle.")
+                           : tr("Click a point on the circle.");
+        case Tool::Rect3:
+            return second_ ? tr("Click to set the depth, or type it and press Enter.")
+                 : first_  ? tr("Click the other end of the first side, or type its length and press Enter.")
+                           : tr("Click the first corner.");
+        case Tool::Ellipse:
+            return second_ ? tr("Click to set the other radius, or type it and press Enter.")
+                 : first_  ? tr("Click the end of the long axis, or type its radius and press Enter.")
+                           : tr("Click the centre of the ellipse.");
+        case Tool::Spline:
+            return splinePts_.empty()
+                       ? tr("Click where the smooth curve starts.")
+                       : tr("Click the next point it passes through. Enter, Esc or double-click ends; "
+                            "click the first point to close it.");
         case Tool::Slot:
             return second_ ? tr("Click to set the width, or type it and press Enter.")
                  : first_  ? tr("Click the other end's centre, or type the centre-to-centre length.")
@@ -382,8 +566,52 @@ QString SketchEditor::toolHint() const
             return first_ ? tr("Click a corner, or type the diameter (Tab: number of sides) and press Enter.")
                           : tr("Click the centre.");
         case Tool::Text:
-            return first_ ? tr("Type the words, Tab, the size, then press Enter.")
-                          : tr("Click where the middle of the text goes.");
+            return first_ ? tr("Type the words (\\n starts a new line), Tab, the size, then press Enter.")
+                          : tr("Click where the middle of the text goes (on a circle or arc, it bends along it).");
+        case Tool::Trim:
+            return tr("Click the piece of a curve to remove. It is cut where other curves cross it.");
+        case Tool::Extend:
+            return tr("Click a curve near its loose end to lengthen it until it meets the next curve.");
+        case Tool::Break:
+            return tr("Click a curve to split it where other curves cross it (the pieces stay joined).");
+        case Tool::Mirror:
+            return selection_.empty()
+                       ? tr("Select the curves to mirror first (Select tool, Shift-click for more), then choose Mirror.")
+                       : tr("Click the line to mirror the %n selected curve(s) across.", "", int(selection_.size()));
+        case Tool::Move:
+            if (selection_.empty()) {
+                return tr("Select the curves to move first (Select tool, Shift-click for more), then choose Move.");
+            }
+            return first_ ? tr("Click where the base point goes, or type how far across (Tab) up (Tab) and how far "
+                               "to turn around the base point, then press Enter. Hold Ctrl to copy instead.")
+                          : tr("Click a base point to move the selected curves by.");
+        case Tool::PatternRect:
+            if (selection_.empty()) {
+                return tr("Select the curves to repeat first, then choose Grid copy.");
+            }
+            return second_ ? tr("Type the number of rows (1 for a single row) and their spacing upward, then Enter.")
+                           : tr("Type the number of columns (counting the original) and their spacing to the right, then Enter.");
+        case Tool::PatternCirc:
+            if (selection_.empty()) {
+                return tr("Select the curves to repeat first, then choose Ring copy.");
+            }
+            return first_ ? tr("Type how many in all (counting the original) and the angle to spread them over, then Enter.")
+                          : tr("Click the centre to repeat the selected curves around.");
+        case Tool::Project:
+            return tr("Click an edge of a body (or a face, for its whole outline) to bring it into the sketch. "
+                      "The copy is fixed in place and follows the body when it changes.");
+        case Tool::CircleTangent:
+            return tanLines_.empty()      ? tr("Click the first line the circle touches.")
+                   : tanLines_.size() == 1 ? tr("Click the second line. The circle goes in the corner between the parts you clicked.")
+                                           : tr("Type the radius and press Enter.");
+        case Tool::Round:
+            return roundAt_ ? tr("Type the radius and press Enter.")
+                            : tr("Click the corner where two lines meet to round it.");
+        case Tool::Offset:
+            return offsetChain_.empty()
+                       ? tr("Click a curve, or any curve of a closed outline, to copy it at a distance.")
+                       : tr("Type the distance and press Enter: positive goes outward (or to the left of a line), "
+                            "negative inward.");
         case Tool::Point:
             return tr("Click to place a point.");
         case Tool::Dimension:
@@ -406,9 +634,40 @@ void SketchEditor::showInput(const QStringList& labels, const QStringList& prefi
             inputFields_[i]->setPlaceholderText(tr("type…"));
         }
     }
+    fontLabel_->hide();
+    fontBox_->hide();
     inputBox_->adjustSize();
     inputBox_->show();
     inputBox_->raise();
+}
+
+void SketchEditor::showFontChoice(const std::string& current)
+{
+    if (fontBox_->count() == 0) {  // filled once: the scan of installed fonts can take a moment
+        fontBox_->addItem(tr("Inter (built in)"), QString());
+        QStringList seen;
+        for (const auto& f : jig::installedFonts()) {
+            const QString name = QString::fromStdString(f.family);
+            if (!seen.contains(name) && name != "Inter") {
+                seen << name;
+                fontBox_->addItem(name, name);
+            }
+        }
+    }
+    int i = fontBox_->findData(QString::fromStdString(current));
+    if (i < 0 && !current.empty()) {  // a font from another computer, or with a style
+        fontBox_->addItem(QString::fromStdString(current), QString::fromStdString(current));
+        i = fontBox_->count() - 1;
+    }
+    fontBox_->setCurrentIndex(std::max(0, i));
+    fontLabel_->show();
+    fontBox_->show();
+    inputBox_->adjustSize();
+}
+
+std::string SketchEditor::chosenFont() const
+{
+    return fontBox_ && fontBox_->isVisible() ? fontBox_->currentData().toString().toStdString() : std::string {};
 }
 
 void SketchEditor::hideInput()
@@ -420,6 +679,11 @@ void SketchEditor::hideInput()
         }
     }
     view_->setFocus();
+}
+
+QString SketchEditor::inUnits(double mm) const
+{
+    return QString::fromStdString(doc_.fmtLength(mm));  // prefill the value box, unit included
 }
 
 QStringList SketchEditor::inputValues() const
@@ -439,15 +703,27 @@ void SketchEditor::typeValues(const QStringList& values)
     placeSecond(cursor_, inputValues());
 }
 
-void SketchEditor::placeSecond(const Snap& cur, const QStringList& typed)
+void SketchEditor::placeSecond(const Snap& cur, const QStringList& rawTyped)
 {
+    // Plain numbers typed into size fields are in the design's unit; store them explicitly.
+    // (Angles, counts and the words of a text are left alone.)
+    QStringList typed = rawTyped;
+    for (int i = 0; i < typed.size(); ++i) {
+        const bool notLength = (tool_ == Tool::Line && i == 1) || (tool_ == Tool::Arc && second_) ||
+                               (tool_ == Tool::Polygon && i == 1) || (tool_ == Tool::Text && i == 0) ||
+                               (tool_ == Tool::PatternRect && i == 0) || tool_ == Tool::PatternCirc ||
+                               (tool_ == Tool::Move && i == 2);
+        if (!notLength && !typed[i].trimmed().isEmpty()) {
+            typed[i] = QString::fromStdString(doc_.lengthInput(typed[i].trimmed().toStdString()));
+        }
+    }
     auto typedLen = [&](int i) -> std::optional<double> {
         if (i >= typed.size() || typed[i].isEmpty()) {
             return std::nullopt;
         }
         auto r = doc_.evalLength(typed[i].toStdString());
         if (!r) {
-            message_ = QString::fromStdString(r.error().message);
+            message_ = coreText(r.error().message);
             emit stateChanged();
             return std::nullopt;
         }
@@ -474,12 +750,151 @@ void SketchEditor::placeSecond(const Snap& cur, const QStringList& typed)
         else if (e->type == jig::EntityType::Circle) {
             s.addConstraint(jig::ConstraintType::Diameter, dimTarget_, 0, 0, expr);
         }
-        else if (e->type == jig::EntityType::Arc) {
+        else if (e->type == jig::EntityType::Arc || e->type == jig::EntityType::Ellipse) {
             s.addConstraint(jig::ConstraintType::Radius, dimTarget_, 0, 0, expr);
         }
         commit(tr("Dimension"), s);
         dimFirst_ = dimTarget_ = dimSecond_ = 0;
         hideInput();
+        rebuildOverlay();
+        emit stateChanged();
+        return;
+    }
+    if (editConstraint_) {
+        if (rawTyped.isEmpty() || rawTyped[0].trimmed().isEmpty()) {
+            return;
+        }
+        jig::Sketch s = work_;
+        auto it = s.constraints().find(editConstraint_);
+        if (it == s.constraints().end()) {
+            resetToolState();
+            return;
+        }
+        const bool angle = it->second.type == jig::ConstraintType::Angle;
+        const std::string expr = angle ? rawTyped[0].trimmed().toStdString() : doc_.lengthInput(rawTyped[0].trimmed().toStdString());
+        const auto k = it->second;
+        s.removeConstraint(editConstraint_);
+        s.addConstraint(k.type, k.a, k.b, k.c, expr);
+        if (commit(tr("Change dimension"), s)) {
+            resetToolState();
+        }
+        rebuildOverlay();
+        emit stateChanged();
+        return;
+    }
+    if (editArtwork_) {
+        if (typed.isEmpty() || typed[0].isEmpty()) {
+            return;
+        }
+        auto w = doc_.evalLength(typed[0].toStdString());
+        if (!w || !(w.value() > 0)) {
+            message_ = w ? tr("The width must be larger than zero.") : coreText(w.error().message);
+            emit stateChanged();
+            return;
+        }
+        jig::Sketch s = work_;
+        if (jig::SketchArtwork* art = s.artwork(editArtwork_)) {
+            art->width = typed[0].toStdString();
+            art->widthValue = w.value();
+        }
+        if (commit(tr("Artwork size"), s)) {
+            resetToolState();
+        }
+        rebuildOverlay();
+        emit stateChanged();
+        return;
+    }
+    if (tool_ == Tool::CircleTangent && tanLines_.size() == 2) {
+        if (typed.isEmpty() || typed[0].isEmpty()) {
+            return;
+        }
+        auto r = doc_.evalLength(typed[0].toStdString());
+        if (!r || !(r.value() > 0)) {
+            message_ = !r ? coreText(r.error().message) : tr("The radius must be larger than zero.");
+            emit stateChanged();
+            return;
+        }
+        // the centre is the radius away from both lines, in the corner between the two parts
+        // that were clicked: each click says which side of the other line the circle is on
+        QPointF P[2], N[2];
+        for (int k = 0; k < 2; ++k) {
+            const jig::SketchEntity* L = work_.entity(tanLines_[size_t(k)]);
+            auto [x1, y1] = work_.pointXY(L->p1);
+            auto [x2, y2] = work_.pointXY(L->p2);
+            const QPointF d(x2 - x1, y2 - y1);
+            const double len = std::hypot(d.x(), d.y());
+            P[k] = QPointF(x1, y1);
+            N[k] = QPointF(-d.y() / len, d.x() / len);
+            const QPointF v = tanClicks_[1 - k] - P[k];
+            if (v.x() * N[k].x() + v.y() * N[k].y() < 0) {
+                N[k] = -N[k];
+            }
+        }
+        const double det = N[0].x() * N[1].y() - N[0].y() * N[1].x();
+        if (std::abs(det) < 1e-9) {
+            message_ = tr("The two lines are parallel: use a circle between them instead (its diameter is the gap).");
+            emit stateChanged();
+            return;
+        }
+        const double c0 = N[0].x() * P[0].x() + N[0].y() * P[0].y() + r.value();
+        const double c1 = N[1].x() * P[1].x() + N[1].y() * P[1].y() + r.value();
+        const double cx = (c0 * N[1].y() - c1 * N[0].y()) / det, cy = (N[0].x() * c1 - N[1].x() * c0) / det;
+        jig::Sketch s = work_;
+        const int c = s.addCircle(cx, cy, r.value());
+        s.addConstraint(jig::ConstraintType::Tangent, tanLines_[0], c);
+        s.addConstraint(jig::ConstraintType::Tangent, tanLines_[1], c);
+        s.addConstraint(jig::ConstraintType::Radius, c, 0, 0, typed[0].toStdString());
+        if (commit(tr("Tangent circle"), s)) {
+            resetToolState();
+        }
+        rebuildOverlay();
+        emit stateChanged();
+        return;
+    }
+    if (roundAt_) {
+        if (typed.isEmpty() || typed[0].isEmpty()) {
+            return;
+        }
+        auto r = doc_.evalLength(typed[0].toStdString());
+        if (!r) {
+            message_ = coreText(r.error().message);
+            emit stateChanged();
+            return;
+        }
+        jig::Sketch s = work_;
+        auto arc = s.filletCorner(roundAt_->x(), roundAt_->y(), r.value(), typed[0].toStdString());
+        if (!arc) {
+            message_ = coreText(arc.error().message);
+            emit stateChanged();
+            return;
+        }
+        if (commit(tr("Round corner"), s)) {
+            resetToolState();
+        }
+        rebuildOverlay();
+        emit stateChanged();
+        return;
+    }
+    if (!offsetChain_.empty()) {
+        if (typed.isEmpty() || typed[0].isEmpty()) {
+            return;
+        }
+        auto d = doc_.evalLength(typed[0].toStdString());
+        if (!d) {
+            message_ = coreText(d.error().message);
+            emit stateChanged();
+            return;
+        }
+        jig::Sketch s = work_;
+        auto made = s.offsetLinked(offsetChain_, typed[0].toStdString(), doc_.lookup());  // follows its source
+        if (!made) {
+            message_ = coreText(made.error().message);
+            emit stateChanged();
+            return;
+        }
+        if (commit(tr("Offset"), s)) {
+            resetToolState();
+        }
         rebuildOverlay();
         emit stateChanged();
         return;
@@ -499,6 +914,7 @@ void SketchEditor::placeSecond(const Snap& cur, const QStringList& typed)
         if (typed.size() > 1 && !typed[1].isEmpty()) {
             t->height = typed[1].toStdString();
         }
+        t->font = chosenFont();
         if (commit(tr("Edit text"), s)) {
             resetToolState();
         }
@@ -511,9 +927,10 @@ void SketchEditor::placeSecond(const Snap& cur, const QStringList& typed)
     }
     // the arc's last step takes an angle and the polygon's second field a count;
     // those are checked where they are used
-    const bool notLengths = tool_ == Tool::Arc && second_;
+    const bool notLengths = (tool_ == Tool::Arc && second_) || tool_ == Tool::PatternCirc;
     for (int i = 0; i < typed.size() && !notLengths; ++i) {
-        if ((tool_ == Tool::Polygon && i == 1) || (tool_ == Tool::Text && i == 0)) {
+        if ((tool_ == Tool::Polygon && i == 1) || (tool_ == Tool::Text && i == 0) ||
+            (tool_ == Tool::PatternRect && i == 0) || (tool_ == Tool::Move && i == 2)) {
             continue;
         }
         if (badTyped(i)) {
@@ -525,7 +942,293 @@ void SketchEditor::placeSecond(const Snap& cur, const QStringList& typed)
     QPointF b = cur.local;
     const QPointF dir = b - a;
 
+    const std::vector<int> picked(selection_.begin(), selection_.end());
+    auto countOf = [&](int i, int fallback) -> std::optional<int> {
+        if (i >= typed.size() || typed[i].trimmed().isEmpty()) {
+            return fallback;
+        }
+        auto q = jig::evaluate(typed[i].toStdString(), doc_.lookup());
+        if (!q || q->dim != jig::Dim::none() || q->value < 1 || std::abs(q->value - std::round(q->value)) > 1e-9) {
+            message_ = tr("Type a whole number for how many.");
+            emit stateChanged();
+            return std::nullopt;
+        }
+        return int(std::lround(q->value));
+    };
     switch (tool_) {
+        case Tool::TangentArc: {
+            const jig::SketchEntity* from = s.entity(tangentFrom_);
+            if (!from) {
+                return;
+            }
+            auto ta = tangentArc(a, tangentDir_, b);
+            if (!ta) {
+                message_ = tr("That is straight ahead of the curve: use a line, or click off to one side.");
+                break;
+            }
+            const int arc = s.addArc(ta->cx, ta->cy, ta->r, ta->a0, ta->a1);
+            const jig::SketchEntity A = *s.entity(arc);
+            const int sPt = ta->startAtS ? A.p1 : A.p2, ePt = ta->startAtS ? A.p2 : A.p1;
+            s.addConstraint(jig::ConstraintType::Coincident, sPt, first_->point);
+            s.addConstraint(jig::ConstraintType::Tangent, tangentFrom_, arc);
+            if (cur.point && cur.point != first_->point) {
+                s.addConstraint(jig::ConstraintType::Coincident, ePt, cur.point);
+            }
+            const int chain = chainStart_, startPt = first_->point;
+            if (commit(tr("Tangent arc"), s)) {
+                resetToolState();
+                if (arcFromLine_) {
+                    // back to the line chain, going on from the arc's end
+                    arcFromLine_ = false;
+                    tool_ = Tool::Line;
+                    const int end = cur.point && cur.point != startPt ? cur.point : ePt;
+                    arcEnd_ = end;
+                    if (end == chain) {
+                        break;  // the arc closed the outline
+                    }
+                    chainStart_ = chain;
+                    auto [x, y] = work_.pointXY(end);
+                    first_ = Snap {QPointF(x, y), end};
+                    showInput({tr("Length"), tr("Angle")});
+                    emit stateChanged();
+                }
+            }
+            break;
+        }
+        case Tool::Circle2: {
+            auto d = typedLen(0);
+            const double L = std::hypot(dir.x(), dir.y());
+            const double D = d ? *d : L;
+            if (D < 1e-9) {
+                return;
+            }
+            const QPointF u = L > 1e-9 ? dir / L : QPointF(1, 0);
+            const QPointF far = a + u * D, mid = (a + far) / 2;
+            const int c = s.addCircle(mid.x(), mid.y(), D / 2);
+            if (first_->point) {
+                s.addConstraint(jig::ConstraintType::PointOnCurve, first_->point, c);
+            }
+            if (!d && cur.point && cur.point != first_->point) {
+                s.addConstraint(jig::ConstraintType::PointOnCurve, cur.point, c);
+            }
+            if (d) {
+                s.addConstraint(jig::ConstraintType::Diameter, c, 0, 0, typed[0].toStdString());
+            }
+            if (commit(tr("2-point circle"), s)) {
+                resetToolState();
+            }
+            break;
+        }
+        case Tool::Circle3: {
+            if (!second_) {
+                if (QLineF(a, b).length() < 1e-9) {
+                    return;
+                }
+                second_ = cur;
+                break;
+            }
+            auto ci = circleThrough(a, second_->local, b);
+            if (!ci) {
+                message_ = tr("The three points are in a straight line: click to one side.");
+                break;
+            }
+            const int c = s.addCircle(ci->cx, ci->cy, ci->r);
+            for (int pid : {first_->point, second_->point, cur.point}) {
+                if (pid) {
+                    s.addConstraint(jig::ConstraintType::PointOnCurve, pid, c);
+                }
+            }
+            if (commit(tr("3-point circle"), s)) {
+                resetToolState();
+            }
+            break;
+        }
+        case Tool::Rect3: {
+            if (!second_) {
+                auto w = typedLen(0);
+                const double L = std::hypot(dir.x(), dir.y());
+                const double W = w ? *w : L;
+                if (W < 1e-9) {
+                    return;
+                }
+                const QPointF u = L > 1e-9 ? dir / L : QPointF(1, 0);
+                second_ = Snap {a + u * W, w ? 0 : cur.point};
+                arcRadiusExpr_ = w ? typed[0] : QString();  // the first side's length, used below
+                showInput({tr("Depth")});
+                break;
+            }
+            const QPointF B = second_->local;
+            const QPointF u = (B - a) / QLineF(a, B).length(), n(-u.y(), u.x());
+            auto h = typedLen(0);
+            double H = QPointF::dotProduct(b - B, n);
+            if (h) {
+                H = H < 0 ? -*h : *h;
+            }
+            if (std::abs(H) < 1e-9) {
+                return;
+            }
+            const QPointF C = B + n * H, D = a + n * H;
+            const int pa = first_->point ? first_->point : s.addPoint(a.x(), a.y(), true);
+            const int pb = second_->point ? second_->point : s.addPoint(B.x(), B.y(), true);
+            const int pc = s.addPoint(C.x(), C.y(), true), pd = s.addPoint(D.x(), D.y(), true);
+            const int ab = s.addLine(pa, pb), bc = s.addLine(pb, pc), cd = s.addLine(pc, pd), da = s.addLine(pd, pa);
+            s.addConstraint(jig::ConstraintType::Perpendicular, ab, bc);
+            s.addConstraint(jig::ConstraintType::Parallel, ab, cd);
+            s.addConstraint(jig::ConstraintType::Parallel, bc, da);
+            if (!arcRadiusExpr_.isEmpty()) {
+                s.addConstraint(jig::ConstraintType::Distance, ab, 0, 0, arcRadiusExpr_.toStdString());
+            }
+            if (h) {
+                s.addConstraint(jig::ConstraintType::Distance, bc, 0, 0, typed[0].toStdString());
+            }
+            if (commit(tr("3-point rectangle"), s)) {
+                resetToolState();
+            }
+            break;
+        }
+        case Tool::Ellipse: {
+            if (!second_) {
+                auto ra = typedLen(0);
+                const double L = std::hypot(dir.x(), dir.y());
+                const double R = ra ? *ra : L;
+                if (R < 1e-9) {
+                    return;
+                }
+                const QPointF u = L > 1e-9 ? dir / L : QPointF(1, 0);
+                second_ = Snap {a + u * R, 0};
+                arcRadiusExpr_ = ra ? typed[0] : QString();
+                showInput({tr("Minor radius")});
+                break;
+            }
+            const QPointF ax = second_->local;
+            const QPointF u = (ax - a) / QLineF(a, ax).length();
+            auto rb = typedLen(0);
+            const double minor = rb ? *rb : std::abs(QPointF::dotProduct(b - a, QPointF(-u.y(), u.x())));
+            if (minor < 1e-9) {
+                return;
+            }
+            const int el = s.addEllipse(a.x(), a.y(), ax.x(), ax.y(), minor);
+            const jig::SketchEntity E = *s.entity(el);
+            if (first_->point) {
+                s.addConstraint(jig::ConstraintType::Coincident, E.center, first_->point);
+            }
+            if (!arcRadiusExpr_.isEmpty()) {
+                s.addConstraint(jig::ConstraintType::Distance, E.center, E.p1, 0, arcRadiusExpr_.toStdString());
+            }
+            if (rb) {
+                s.addConstraint(jig::ConstraintType::Radius, el, 0, 0, typed[0].toStdString());
+            }
+            if (commit(tr("Ellipse"), s)) {
+                resetToolState();
+            }
+            break;
+        }
+        case Tool::Move: {
+            auto across = typedLen(0), up = typedLen(1);
+            double dx = dir.x(), dy = dir.y();
+            if (across || up) {
+                dx = across ? *across : 0;
+                dy = up ? *up : 0;
+            }
+            // an optional turn around the base point, then the shift
+            double turn = 0;
+            if (typed.size() > 2 && !typed[2].trimmed().isEmpty()) {
+                auto av = doc_.evalAngle(typed[2].toStdString());
+                if (!av) {
+                    message_ = coreText(av.error().message);
+                    break;
+                }
+                turn = av.value();
+            }
+            const bool copy = QGuiApplication::keyboardModifiers() & Qt::ControlModifier;
+            if (copy) {
+                auto r = s.copyCurves(picked, dx, dy, turn, a.x(), a.y());
+                if (!r) {
+                    message_ = coreText(r.error().message);
+                    break;
+                }
+                if (commit(tr("Copy"), s)) {
+                    selection_ = std::set<int>(r->begin(), r->end());
+                    resetToolState();
+                }
+                break;
+            }
+            auto r = s.moveCurves(picked, dx, dy, turn, a.x(), a.y());
+            if (!r) {
+                message_ = coreText(r.error().message);
+                break;
+            }
+            if (commit(tr("Move"), s)) {
+                resetToolState();
+            }
+            break;
+        }
+        case Tool::PatternRect: {
+            auto n = countOf(0, second_ ? 1 : 3);
+            if (!n) {
+                break;
+            }
+            auto sp = typedLen(1);
+            if (typed.size() > 1 && !typed[1].isEmpty() && !sp) {
+                break;
+            }
+            const double spacing = sp ? *sp : 10;
+            const QString spacingText = sp ? typed[1].trimmed() : QString::fromStdString(doc_.lengthInput("10"));
+            if (!second_) {
+                gridCols_ = *n;
+                gridDx_ = spacing;
+                gridDxText_ = spacingText;
+                second_ = cur;
+                showInput({tr("Rows"), tr("Spacing")}, {"1", typed.size() > 1 ? typed[1] : QString()});
+                inputFields_[0]->selectAll();
+                inputFields_[0]->setFocus();
+                break;
+            }
+            // linked: the copies follow the original (and a parameter in the spacing)
+            auto r = s.patternLinked(picked,
+                                     {{"kind", "grid"}, {"n1", gridCols_}, {"n2", *n}, {"s1", gridDxText_.toStdString()},
+                                      {"s2", spacingText.toStdString()}},
+                                     doc_.lookup());
+            if (!r) {
+                message_ = coreText(r.error().message);
+                break;
+            }
+            if (commit(tr("Grid copy"), s)) {
+                resetToolState();
+            }
+            break;
+        }
+        case Tool::PatternCirc: {
+            auto n = countOf(0, 6);
+            if (!n) {
+                break;
+            }
+            double total = 2 * kPi;
+            if (typed.size() > 1 && !typed[1].trimmed().isEmpty()) {
+                auto av = doc_.evalAngle(typed[1].toStdString());
+                if (!av) {
+                    message_ = coreText(av.error().message);
+                    break;
+                }
+                total = av.value();
+            }
+            nlohmann::json ring {{"kind", "ring"}, {"n", *n}, {"center", {a.x(), a.y()}},
+                                 {"angle", typed.size() > 1 && !typed[1].trimmed().isEmpty() ? typed[1].trimmed().toStdString()
+                                                                                             : std::string("360 deg")}};
+            if (first_->point) {
+                ring["center_point"] = first_->point;  // a clicked point: the ring follows it
+            }
+            (void)total;
+            auto r = s.patternLinked(picked, ring, doc_.lookup());
+            if (!r) {
+                message_ = coreText(r.error().message);
+                break;
+            }
+            if (commit(tr("Ring copy"), s)) {
+                resetToolState();
+            }
+            break;
+        }
         case Tool::Line: {
             auto len = typedLen(0);
             double ang = std::atan2(dir.y(), dir.x());
@@ -658,7 +1361,7 @@ void SketchEditor::placeSecond(const Snap& cur, const QStringList& typed)
             if (!typed.isEmpty() && !typed[0].isEmpty()) {
                 auto av = doc_.evalAngle(typed[0].toStdString());
                 if (!av) {
-                    message_ = QString::fromStdString(av.error().message);
+                    message_ = coreText(av.error().message);
                     return;
                 }
                 sweep = av.value();
@@ -689,6 +1392,49 @@ void SketchEditor::placeSecond(const Snap& cur, const QStringList& typed)
                 s.addConstraint(jig::ConstraintType::Radius, arc, 0, 0, arcRadiusExpr_.toStdString());
             }
             if (commit(tr("Arc"), s)) {
+                resetToolState();
+            }
+            break;
+        }
+        case Tool::Arc3: {
+            if (!second_) {
+                if (QLineF(a, b).length() < 1e-9) {
+                    return;
+                }
+                second_ = cur;
+                break;
+            }
+            // the circle through start, end and the clicked point
+            const QPointF e = second_->local, m = b;
+            const double d = 2 * (a.x() * (e.y() - m.y()) + e.x() * (m.y() - a.y()) + m.x() * (a.y() - e.y()));
+            if (std::abs(d) < 1e-9) {
+                message_ = tr("The three points are in a straight line: click to one side to make it bend.");
+                return;
+            }
+            const double a2 = a.x() * a.x() + a.y() * a.y(), e2 = e.x() * e.x() + e.y() * e.y(),
+                         m2 = m.x() * m.x() + m.y() * m.y();
+            const double cx = (a2 * (e.y() - m.y()) + e2 * (m.y() - a.y()) + m2 * (a.y() - e.y())) / d;
+            const double cy = (a2 * (m.x() - e.x()) + e2 * (a.x() - m.x()) + m2 * (e.x() - a.x())) / d;
+            const double R = std::hypot(a.x() - cx, a.y() - cy);
+            auto ang = [&](QPointF q) { return std::atan2(q.y() - cy, q.x() - cx); };
+            auto ccwFrom = [](double from, double to) {
+                double v = std::fmod(to - from, 2 * kPi);
+                return v < 0 ? v + 2 * kPi : v;
+            };
+            // counter-clockwise from start to end if the third point lies on that way round
+            const bool startFirst = ccwFrom(ang(a), ang(m)) < ccwFrom(ang(a), ang(e));
+            const double s0 = startFirst ? ang(a) : ang(e);
+            const double sweep = startFirst ? ccwFrom(ang(a), ang(e)) : ccwFrom(ang(e), ang(a));
+            const int arc = s.addArc(cx, cy, R, s0, s0 + sweep);
+            const jig::SketchEntity A = *s.entity(arc);
+            const int startPt = startFirst ? A.p1 : A.p2, endPt = startFirst ? A.p2 : A.p1;
+            if (first_->point) {
+                s.addConstraint(jig::ConstraintType::Coincident, startPt, first_->point);
+            }
+            if (second_->point) {
+                s.addConstraint(jig::ConstraintType::Coincident, endPt, second_->point);
+            }
+            if (commit(tr("3-point arc"), s)) {
                 resetToolState();
             }
             break;
@@ -746,18 +1492,27 @@ void SketchEditor::placeSecond(const Snap& cur, const QStringList& typed)
                 message_ = tr("Type the words for the text.");
                 return;
             }
-            const QString hExpr = typed.size() > 1 && !typed[1].isEmpty() ? typed[1] : QString("5 mm");
+            const QString hExpr = typed.size() > 1 && !typed[1].isEmpty() ? typed[1]
+                                                                            : QString::fromStdString(doc_.defaultLength(5, 0.25));
             auto h = doc_.evalLength(hExpr.toStdString());
             if (!h || !(h.value() > 0)) {
-                message_ = h ? tr("Text size must be larger than zero.") : QString::fromStdString(h.error().message);
+                message_ = h ? tr("Text size must be larger than zero.") : coreText(h.error().message);
                 return;
             }
-            const int id = s.addText(a.x(), a.y(), typed[0].toStdString(), hExpr.toStdString(), h.value());
+            const int id = s.addText(a.x(), a.y(), typed[0].toStdString(), hExpr.toStdString(), h.value(), chosenFont());
             if (first_->point) {
                 s.addConstraint(jig::ConstraintType::Coincident, s.texts().at(id).anchor, first_->point);
             }
+            // placed on a circle or arc: the text bends along it
+            if (auto near = s.curveNear(a.x(), a.y(), true); near && near->second < 6 * view_->worldPerPixel()) {
+                const jig::SketchEntity* c = s.entity(near->first);
+                if (c && (c->type == jig::EntityType::Circle || c->type == jig::EntityType::Arc)) {
+                    s.text(id)->path = near->first;
+                }
+            }
             if (commit(tr("Text"), s)) {
                 lastTextHeight_ = hExpr;
+                lastTextFont_ = chosenFont();
                 resetToolState();
             }
             break;
@@ -805,7 +1560,14 @@ bool SketchEditor::mousePress(QMouseEvent* e)
     pressed_ = true;
     pressScreen_ = e->position();
     dragging_ = false;
+    boxing_ = false;
     dragPoint_ = dragPoint2_ = 0;
+    arcArmed_ = false;
+    if (tool_ == Tool::Line && first_ && first_->point && chainStart_) {
+        // pressing on the end of the chain: a drag from here draws a tangent arc
+        auto [x, y] = work_.pointXY(first_->point);
+        arcArmed_ = QLineF(QPointF(screenOf(x, y)), pressScreen_).length() < 8 && looseEndOwner(first_->point, nullptr);
+    }
     if (tool_ != Tool::Select) {
         return true;
     }
@@ -821,6 +1583,17 @@ bool SketchEditor::mousePress(QMouseEvent* e)
             auto [x2, y2] = work_.pointXY(en->p2);
             dragOffset2_ = QPointF(x2 - x1, y2 - y1);
         }
+        else if (en->type == jig::EntityType::Spline) {
+            double best = 1e300;  // the fit point nearest the press
+            for (int pid : en->pts) {
+                const double d = QLineF(QPointF(screenOf(work_.pointXY(pid).first, work_.pointXY(pid).second)),
+                                        pressScreen_).length();
+                if (d < best) {
+                    best = d;
+                    dragPoint_ = pid;
+                }
+            }
+        }
         else {
             dragPoint_ = en->center;
         }
@@ -835,6 +1608,16 @@ bool SketchEditor::mousePress(QMouseEvent* e)
 bool SketchEditor::mouseMove(QMouseEvent* e)
 {
     const QPointF pos = e->position();
+    if (pressed_ && arcArmed_ && tool_ == Tool::Line && QLineF(pos, pressScreen_).length() > 6) {
+        arcArmed_ = false;
+        tangentFrom_ = looseEndOwner(first_->point, &tangentDir_);
+        if (tangentFrom_) {
+            tool_ = Tool::TangentArc;  // until the button comes up
+            arcFromLine_ = true;
+            hideInput();
+            emit stateChanged();
+        }
+    }
     if (pressed_ && tool_ == Tool::Select && dragPoint_) {
         if (!dragging_ && QLineF(pos, pressScreen_).length() < 3) {
             return true;
@@ -853,8 +1636,42 @@ bool SketchEditor::mouseMove(QMouseEvent* e)
         }
         return true;
     }
+    if (pressed_ && tool_ == Tool::Select && !dragPoint_ && !glyphAt(pressScreen_)) {
+        if (boxing_ || QLineF(pos, pressScreen_).length() >= 4) {
+            boxing_ = true;
+            boxEnd_ = pos;
+            rebuildOverlay();
+            return true;
+        }
+    }
     cursor_ = snapAt(pos, tool_ == Tool::Line || tool_ == Tool::Rectangle, e->modifiers());
     cursorValid_ = toLocal(pos).has_value();
+    if (tool_ == Tool::Offset && offsetChain_.empty()) {
+        offsetHover_.clear();
+        if (auto loc = toLocal(pos)) {
+            auto near = work_.curveNear(loc->x(), loc->y());
+            if (near && near->second < 8 * view_->worldPerPixel()) {
+                offsetHover_ = work_.chainOf(near->first);
+            }
+        }
+    }
+    if (tool_ == Tool::Project && view_) {
+        if (auto h = view_->pickEdgeAt(pos.toPoint())) {
+            view_->setEdgeHighlight(h->body, {h->edge});
+        }
+        else {
+            view_->setEdgeHighlight({}, {});
+        }
+    }
+    if (tool_ == Tool::Trim || tool_ == Tool::Break) {
+        trimHover_.reset();
+        if (auto loc = toLocal(pos)) {
+            auto near = work_.curveNear(loc->x(), loc->y());
+            if (near && near->second < 8 * view_->worldPerPixel()) {
+                trimHover_ = work_.trimPiece(near->first, loc->x(), loc->y());
+            }
+        }
+    }
     const int h = (tool_ == Tool::Select || tool_ == Tool::Dimension) ? entityNear(pos) : 0;
     if (h != hover_) {
         hover_ = h;
@@ -881,15 +1698,42 @@ bool SketchEditor::mouseRelease(QMouseEvent* e)
         }
         return true;
     }
+    if (boxing_) {
+        boxing_ = false;
+        // left to right: what is wholly inside; right to left: anything the box touches
+        const bool crossing = pos.x() < pressScreen_.x();
+        const auto inBox = entitiesInBox(QRectF(pressScreen_, pos).normalized(), crossing);
+        if (!(e->modifiers() & (Qt::ShiftModifier | Qt::ControlModifier | Qt::MetaModifier))) {
+            selection_.clear();
+            selectedConstraints_.clear();
+        }
+        selection_.insert(inBox.begin(), inBox.end());
+        rebuildOverlay();
+        emit stateChanged();
+        return true;
+    }
     cursor_ = snapAt(pos, tool_ == Tool::Line || tool_ == Tool::Rectangle, e->modifiers());
     // a click without a mouse move before it (a tablet tap, or the cursor already there)
     cursorValid_ = toLocal(pos).has_value();
+    if (forcedCursor_) {  // a point typed on the keyboard, exactly where it was typed
+        cursor_ = *forcedCursor_;
+        cursorValid_ = true;
+        forcedCursor_.reset();
+    }
+    if (cursor_.midOf && tool_ != Tool::Select) {
+        midSnaps_.push_back({cursor_.local, cursor_.midOf});  // a point made here keeps to the middle
+    }
     switch (tool_) {
         case Tool::Select: {
-            const int hit = entityNear(pos);
             const bool add = e->modifiers() & (Qt::ShiftModifier | Qt::ControlModifier | Qt::MetaModifier);
+            if (const int g = glyphAt(pos)) {  // a constraint glyph or dimension label
+                selectConstraint(g, add);
+                break;
+            }
+            const int hit = entityNear(pos);
             if (!add) {
                 selection_.clear();
+                selectedConstraints_.clear();
             }
             if (hit) {
                 if (selection_.count(hit) && add) {
@@ -899,6 +1743,178 @@ bool SketchEditor::mouseRelease(QMouseEvent* e)
                     selection_.insert(hit);
                 }
             }
+            break;
+        }
+        case Tool::Project: {
+            // the bodies as they were before this sketch (a sketch cannot project its own result)
+            const jig::ModelState before = doc_.stateBefore(doc_.featureIndex(id_));
+            std::vector<TopoDS_Shape> edges;
+            std::vector<nlohmann::json> refs;  // so the copies follow the edges
+            if (auto h = view_->pickEdgeAt(pos.toPoint())) {
+                auto it = before.bodies.find(h->body);
+                // the view shows the current bodies: map the edge over by its name
+                auto cur = doc_.state().bodies.find(h->body);
+                if (it != before.bodies.end() && cur != doc_.state().bodies.end()) {
+                    for (int e : it->second->findEdges(cur->second->edgeName(h->edge))) {
+                        edges.push_back(it->second->edge(e));
+                        refs.push_back(it->second->edgeRef(h->body, e).toJson());
+                    }
+                }
+            }
+            else if (auto f = view_->pickFaceAt(pos.toPoint())) {
+                auto it = before.bodies.find(f->body);
+                auto cur = doc_.state().bodies.find(f->body);
+                if (it != before.bodies.end() && cur != doc_.state().bodies.end()) {
+                    for (int fi : it->second->findFaces(cur->second->faceName(f->face))) {
+                        for (int e : it->second->edgesOfFace(fi)) {
+                            edges.push_back(it->second->edge(e));
+                            refs.push_back(it->second->edgeRef(f->body, e).toJson());
+                        }
+                    }
+                }
+            }
+            if (edges.empty()) {
+                message_ = tr("Click an edge or face of a body made before this sketch.");
+                break;
+            }
+            jig::Sketch s = work_;
+            for (size_t k = 0; k < edges.size(); ++k) {
+                const auto& edge = edges[k];
+                auto r = jig::projectEdge(s, frame_, edge, refs[k]);
+                if (!r) {
+                    message_ = coreText(r.error().message);
+                    if (edges.size() == 1) {
+                        break;
+                    }
+                }
+            }
+            commit(tr("Project"), s);
+            break;
+        }
+        case Tool::CircleTangent: {
+            auto loc = toLocal(pos);
+            if (!loc || tanLines_.size() >= 2) {
+                break;
+            }
+            auto near = work_.curveNear(loc->x(), loc->y(), true);
+            const jig::SketchEntity* L = near ? work_.entity(near->first) : nullptr;
+            if (!L || L->type != jig::EntityType::Line || near->second > 8 * view_->worldPerPixel()) {
+                message_ = tr("Click a straight line.");
+                break;
+            }
+            if (!tanLines_.empty() && tanLines_[0] == near->first) {
+                message_ = tr("Click a different line.");
+                break;
+            }
+            message_.clear();
+            tanClicks_[tanLines_.size()] = *loc;
+            tanLines_.push_back(near->first);
+            if (tanLines_.size() == 2) {
+                showInput({tr("Radius")}, {QString::fromStdString(doc_.defaultLength(5, 0.25))});
+                inputFields_[0]->selectAll();
+                inputFields_[0]->setFocus();
+                inputBox_->move(pos.toPoint() + QPoint(18, 18));
+            }
+            break;
+        }
+        case Tool::Round: {
+            auto loc = toLocal(pos);
+            if (!loc) {
+                break;
+            }
+            roundAt_ = *loc;
+            showInput({tr("Radius")}, {QString::fromStdString(doc_.defaultLength(3, 0.125))});
+            inputFields_[0]->selectAll();
+            inputFields_[0]->setFocus();
+            inputBox_->move(pos.toPoint() + QPoint(18, 18));
+            break;
+        }
+        case Tool::Offset: {
+            if (!offsetChain_.empty() || offsetHover_.empty()) {
+                if (offsetHover_.empty()) {
+                    message_ = tr("Click on a curve to offset it.");
+                }
+                break;
+            }
+            offsetChain_ = offsetHover_;
+            showInput({tr("Distance")}, {QString::fromStdString(doc_.defaultLength(2, 0.0625))});
+            inputFields_[0]->selectAll();
+            inputFields_[0]->setFocus();
+            inputBox_->move(pos.toPoint() + QPoint(18, 18));
+            break;
+        }
+        case Tool::Extend:
+        case Tool::Break: {
+            auto loc = toLocal(pos);
+            if (!loc) {
+                break;
+            }
+            auto near = work_.curveNear(loc->x(), loc->y());
+            if (!near || near->second > 8 * view_->worldPerPixel()) {
+                message_ = tool_ == Tool::Extend ? tr("Click on a line or arc, near the end to lengthen.")
+                                                 : tr("Click on a curve to break it.");
+                break;
+            }
+            jig::Sketch s = work_;
+            bool ok = false;
+            if (tool_ == Tool::Extend) {
+                auto r = s.extend(near->first, loc->x(), loc->y());
+                ok = r.ok();
+                message_ = ok ? QString() : coreText(r.error().message);
+            }
+            else {
+                auto r = s.breakAt(near->first, loc->x(), loc->y());
+                ok = r.ok();
+                message_ = ok ? QString() : coreText(r.error().message);
+            }
+            if (ok) {
+                commit(tool_ == Tool::Extend ? tr("Extend") : tr("Break"), s);
+            }
+            trimHover_.reset();
+            break;
+        }
+        case Tool::Mirror: {
+            auto loc = toLocal(pos);
+            if (!loc) {
+                break;
+            }
+            if (selection_.empty()) {
+                message_ = tr("Select the curves to mirror first, then choose Mirror.");
+                break;
+            }
+            auto near = work_.curveNear(loc->x(), loc->y(), true);
+            const jig::SketchEntity* axis = near ? work_.entity(near->first) : nullptr;
+            if (!axis || axis->type != jig::EntityType::Line || near->second > 8 * view_->worldPerPixel()) {
+                message_ = tr("Click a straight line (it can be a construction line) to mirror across.");
+                break;
+            }
+            jig::Sketch s = work_;
+            auto r = s.mirror(std::vector<int>(selection_.begin(), selection_.end()), near->first);
+            if (!r) {
+                message_ = coreText(r.error().message);
+                break;
+            }
+            if (commit(tr("Mirror"), s)) {
+                selection_ = std::set<int>(r->begin(), r->end());
+                message_.clear();
+            }
+            break;
+        }
+        case Tool::Trim: {
+            auto loc = toLocal(pos);
+            if (!loc) {
+                break;
+            }
+            auto near = work_.curveNear(loc->x(), loc->y());
+            if (!near || near->second > 8 * view_->worldPerPixel()) {
+                message_ = tr("Click on a curve to trim it.");
+                break;
+            }
+            jig::Sketch s = work_;
+            if (s.trim(near->first, loc->x(), loc->y())) {
+                commit(tr("Trim"), s);
+            }
+            trimHover_.reset();
             break;
         }
         case Tool::Point: {
@@ -931,7 +1947,7 @@ bool SketchEditor::mouseRelease(QMouseEvent* e)
                         auto [bx, by] = work_.pointXY(en->p2);
                         v = std::abs((bx - ax) * (ay - y1) - (ax - x1) * (by - ay)) / std::hypot(bx - ax, by - ay);
                     }
-                    showInput({tr("Distance")}, {fmt(v)});
+                    showInput({tr("Distance")}, {inUnits(v)});
                     inputFields_[0]->selectAll();
                     inputFields_[0]->setFocus();
                 }
@@ -954,11 +1970,20 @@ bool SketchEditor::mouseRelease(QMouseEvent* e)
                 v = 2 * en->r;
                 label = tr("Diameter");
             }
+            else if (en->type == jig::EntityType::Spline) {
+                dimTarget_ = 0;
+                message_ = tr("A smooth curve has no single size: dimension the points it passes through instead.");
+                break;
+            }
+            else if (en->type == jig::EntityType::Ellipse) {
+                v = en->r;
+                label = tr("Minor radius");  // the major radius: dimension the centre to the axis end
+            }
             else {
                 v = en->r;
                 label = tr("Radius");
             }
-            showInput({label}, {fmt(v)});
+            showInput({label}, {inUnits(v)});
             inputFields_[0]->selectAll();
             inputFields_[0]->setFocus();
             inputBox_->move(pos.toPoint() + QPoint(18, 18));
@@ -968,15 +1993,102 @@ bool SketchEditor::mouseRelease(QMouseEvent* e)
             if (!cursorValid_) {
                 break;
             }
+            if ((tool_ == Tool::Move || tool_ == Tool::PatternRect || tool_ == Tool::PatternCirc) && selection_.empty()) {
+                message_ = tr("Select the curves first (Select tool, Shift-click for more).");
+                break;
+            }
+            if (tool_ == Tool::PatternRect) {
+                break;  // typed only
+            }
+            if (tool_ == Tool::Spline) {
+                const QPointF start = splinePts_.empty() ? QPointF()
+                                                         : QPointF(screenOf(splinePts_.front().local.x(),
+                                                                            splinePts_.front().local.y()));
+                if (splinePts_.size() >= 3 && QLineF(start, pos).length() < kHitPx) {
+                    finishSpline(true);  // back on the first point: closed
+                    break;
+                }
+                if (!splinePts_.empty() && QLineF(splinePts_.back().local, cursor_.local).length() < 1e-9) {
+                    break;  // the same spot twice
+                }
+                splinePts_.push_back(cursor_);
+                if (!first_) {
+                    first_ = cursor_;
+                }
+                break;
+            }
+            if (tool_ == Tool::TangentArc && !first_) {
+                // the loose end of exactly one line or arc
+                tangentFrom_ = 0;
+                if (cursor_.point) {
+                    int owners = 0;
+                    for (auto& [id, en] : work_.entities()) {
+                        if ((en.type == jig::EntityType::Line || en.type == jig::EntityType::Arc) && !en.construction &&
+                            (en.p1 == cursor_.point || en.p2 == cursor_.point)) {
+                            ++owners;
+                            tangentFrom_ = id;
+                        }
+                    }
+                    if (owners != 1) {
+                        tangentFrom_ = 0;
+                    }
+                }
+                const jig::SketchEntity* from = work_.entity(tangentFrom_);
+                if (!from) {
+                    message_ = tr("Click the loose end of a line or arc to continue from it.");
+                    break;
+                }
+                if (from->type == jig::EntityType::Line) {
+                    auto [x1, y1] = work_.pointXY(from->p1);
+                    auto [x2, y2] = work_.pointXY(from->p2);
+                    QPointF t = from->p2 == cursor_.point ? QPointF(x2 - x1, y2 - y1) : QPointF(x1 - x2, y1 - y2);
+                    tangentDir_ = t / std::max(1e-12, QLineF(QPointF(), t).length());
+                }
+                else {
+                    const bool atEnd = from->p2 == cursor_.point;
+                    const double ang = atEnd ? from->a1 : from->a0;
+                    tangentDir_ = atEnd ? QPointF(-std::sin(ang), std::cos(ang)) : QPointF(std::sin(ang), -std::cos(ang));
+                }
+                message_.clear();
+                first_ = cursor_;
+                hideInput();
+                break;
+            }
             if (!first_) {
                 first_ = cursor_;
                 const bool two = tool_ != Tool::Circle;
                 (void)two;
-                if (tool_ == Tool::Polygon) {
+                if (tool_ == Tool::Circle3) {
+                    hideInput();  // three clicks, nothing to type
+                }
+                else if (tool_ == Tool::Circle2) {
+                    showInput({tr("Diameter")});
+                }
+                else if (tool_ == Tool::Rect3) {
+                    showInput({tr("Length")});
+                }
+                else if (tool_ == Tool::Move) {
+                    showInput({tr("Across"), tr("Up"), tr("Turn")});
+                }
+                else if (tool_ == Tool::Ellipse) {
+                    showInput({tr("Major radius")});
+                }
+                else if (tool_ == Tool::PatternCirc) {
+                    showInput({tr("How many"), tr("Angle")}, {"6", "360 deg"});
+                    inputFields_[0]->selectAll();
+                    inputFields_[0]->setFocus();
+                }
+                else if (tool_ == Tool::Polygon) {
                     showInput({tr("Diameter"), tr("Sides")}, {QString(), "6"});
                 }
+                else if (tool_ == Tool::Arc3) {
+                    hideInput();  // three clicks, nothing to type
+                }
                 else if (tool_ == Tool::Text) {
-                    showInput({tr("Text"), tr("Size")}, {QString(), lastTextHeight_});
+                    showInput({tr("Text"), tr("Size")},
+                              {QString(), lastTextHeight_.isEmpty() ? QString::fromStdString(doc_.defaultLength(5, 0.25))
+                                                                    : lastTextHeight_});
+                    showFontChoice(lastTextFont_);
                     inputFields_[0]->setFocus();
                 }
                 else {
@@ -994,9 +2106,137 @@ bool SketchEditor::mouseRelease(QMouseEvent* e)
             break;
         }
     }
+    if (arcFromLine_ && tool_ == Tool::TangentArc) {
+        // the arc could not be placed (straight ahead): back to the line, still at the chain's end
+        arcFromLine_ = false;
+        tool_ = Tool::Line;
+        showInput({tr("Length"), tr("Angle")});
+    }
     rebuildOverlay();
     emit stateChanged();
     return true;
+}
+
+int SketchEditor::glyphAt(const QPointF& screen) const
+{
+    for (auto& [cid, box] : glyphBoxes_) {
+        if (box.adjusted(-2, -2, 2, 2).contains(screen)) {
+            return cid;
+        }
+    }
+    return 0;
+}
+
+std::optional<QPointF> SketchEditor::glyphCenter(int constraintId) const
+{
+    for (auto& [cid, box] : glyphBoxes_) {
+        if (cid == constraintId) {
+            return box.center();
+        }
+    }
+    return std::nullopt;
+}
+
+std::set<int> SketchEditor::entitiesInBox(const QRectF& box, bool crossing) const
+{
+    std::set<int> out;
+    for (auto& [id, e] : work_.entities()) {
+        std::vector<QPointF> samples;
+        if (e.type == jig::EntityType::Point) {
+            if (e.internal) {
+                continue;
+            }
+            samples.push_back(screenOf(e.x, e.y));
+        }
+        else if (e.type == jig::EntityType::Line) {
+            auto [ax, ay] = work_.pointXY(e.p1);
+            auto [bx, by] = work_.pointXY(e.p2);
+            for (int i = 0; i <= 16; ++i) {
+                const double u = i / 16.0;
+                samples.push_back(screenOf(ax + (bx - ax) * u, ay + (by - ay) * u));
+            }
+        }
+        else if (e.type == jig::EntityType::Ellipse || e.type == jig::EntityType::Spline) {
+            for (auto [x, y] : work_.curvePoints(id, 16)) {
+                samples.push_back(screenOf(x, y));
+            }
+        }
+        else {
+            auto [cx, cy] = work_.pointXY(e.center);
+            double a0 = 0, span = 2 * kPi;
+            if (e.type == jig::EntityType::Arc) {
+                a0 = e.a0;
+                span = std::fmod(e.a1 - e.a0 + 4 * kPi, 2 * kPi);
+            }
+            for (int i = 0; i <= 48; ++i) {
+                const double t = a0 + span * i / 48.0;
+                samples.push_back(screenOf(cx + e.r * std::cos(t), cy + e.r * std::sin(t)));
+            }
+        }
+        const auto inside = [&](const QPointF& q) { return box.contains(q); };
+        const bool hit = crossing ? std::any_of(samples.begin(), samples.end(), inside)
+                                  : std::all_of(samples.begin(), samples.end(), inside);
+        if (hit && !samples.empty()) {
+            out.insert(id);
+        }
+    }
+    return out;
+}
+
+void SketchEditor::selectConstraint(int constraintId, bool add)
+{
+    if (!add) {
+        selection_.clear();
+        selectedConstraints_.clear();
+    }
+    if (add && selectedConstraints_.count(constraintId)) {
+        selectedConstraints_.erase(constraintId);
+    }
+    else {
+        selectedConstraints_.insert(constraintId);
+    }
+    message_ = tr("Constraint selected: press Delete to remove it. Double-click a dimension to change it.");
+    rebuildOverlay();
+    emit stateChanged();
+}
+
+bool SketchEditor::editDimension(int constraintId)
+{
+    auto it = work_.constraints().find(constraintId);
+    using CT = jig::ConstraintType;
+    if (it == work_.constraints().end() || !(it->second.type == CT::Distance || it->second.type == CT::Diameter ||
+                                             it->second.type == CT::Radius || it->second.type == CT::Angle)) {
+        return false;
+    }
+    resetToolState();
+    editConstraint_ = constraintId;
+    showInput({it->second.type == CT::Angle ? tr("Angle") : tr("Value")}, {QString::fromStdString(it->second.expr)});
+    if (auto c = glyphCenter(constraintId)) {
+        inputBox_->move(c->toPoint() + QPoint(14, 14));
+    }
+    inputFields_[0]->selectAll();
+    inputFields_[0]->setFocus();
+    emit stateChanged();
+    return true;
+}
+
+bool SketchEditor::editArtworkAt(int anchorPoint)
+{
+    for (auto& [id, a] : work_.artworks()) {
+        if (a.anchor == anchorPoint) {
+            resetToolState();
+            editArtwork_ = id;
+            showInput({tr("Width")}, {a.width.empty() ? QString::fromStdString(doc_.fmtLength(a.naturalWidth))
+                                                      : QString::fromStdString(a.width)});
+            auto [x, y] = work_.pointXY(a.anchor);
+            inputBox_->move(screenOf(x, y) + QPoint(18, 18));
+            inputFields_[0]->selectAll();
+            inputFields_[0]->setFocus();
+            emit stateChanged();
+            return true;
+        }
+    }
+    return false;
 }
 
 bool SketchEditor::editTextAt(int anchorPoint)
@@ -1006,6 +2246,7 @@ bool SketchEditor::editTextAt(int anchorPoint)
             resetToolState();
             editText_ = id;
             showInput({tr("Text"), tr("Size")}, {QString::fromStdString(t.text), QString::fromStdString(t.height)});
+            showFontChoice(t.font);
             auto [x, y] = work_.pointXY(t.anchor);
             inputBox_->move(screenOf(x, y) + QPoint(18, 18));
             inputFields_[0]->selectAll();
@@ -1017,13 +2258,76 @@ bool SketchEditor::editTextAt(int anchorPoint)
     return false;
 }
 
+void SketchEditor::startAtTyped(double x, double y)
+{
+    Snap at;
+    at.local = QPointF(x, y);
+    // an existing point exactly there is used, as a click on it would
+    for (auto& [id, e] : work_.entities()) {
+        if (e.type == jig::EntityType::Point && std::hypot(e.x - x, e.y - y) < 1e-9) {
+            at.point = id;
+        }
+    }
+    forcedCursor_ = at;
+    message_.clear();
+    const QPointF screen = screenOf(x, y);
+    QMouseEvent press(QEvent::MouseButtonPress, screen, view_->mapToGlobal(screen), Qt::LeftButton, Qt::LeftButton,
+                      Qt::NoModifier);
+    QMouseEvent release(QEvent::MouseButtonRelease, screen, view_->mapToGlobal(screen), Qt::LeftButton, Qt::NoButton,
+                        Qt::NoModifier);
+    mousePress(&press);
+    forcedCursor_ = at;
+    mouseRelease(&release);
+}
+
+void SketchEditor::finishSpline(bool closed)
+{
+    if (splinePts_.size() < 2) {
+        resetToolState();
+        return;
+    }
+    jig::Sketch s = work_;
+    std::vector<std::pair<double, double>> pts;
+    for (auto& p : splinePts_) {
+        pts.emplace_back(p.local.x(), p.local.y());
+    }
+    const int c = s.addSpline(pts, closed);
+    const jig::SketchEntity S = *s.entity(c);
+    for (size_t i = 0; i < splinePts_.size() && i < S.pts.size(); ++i) {
+        if (splinePts_[i].point) {  // clicked on an existing point: start or pass there
+            s.addConstraint(jig::ConstraintType::Coincident, S.pts[i], splinePts_[i].point);
+        }
+    }
+    if (commit(closed ? tr("Closed smooth curve") : tr("Smooth curve"), s)) {
+        resetToolState();
+    }
+}
+
 bool SketchEditor::mouseDoubleClick(QMouseEvent* e)
 {
     // Qt delivers the second press of a quick double click as this event instead of a
     // press. Unless the double click means something, treat it as the press it is, so a
     // fast second click is never lost.
+    if (tool_ == Tool::Select) {
+        if (const int g = glyphAt(e->position()); g && editDimension(g)) {
+            pressed_ = false;
+            return true;
+        }
+    }
+    if (tool_ == Tool::Select && editArtworkAt(entityNear(e->position()))) {
+        pressed_ = false;
+        return true;
+    }
     if (tool_ == Tool::Select && editTextAt(entityNear(e->position()))) {
         pressed_ = false;  // ignore the release that follows
+        return true;
+    }
+    if (tool_ == Tool::Spline && !splinePts_.empty()) {
+        mousePress(e);  // the second click places a point; then the curve ends there
+        mouseRelease(e);
+        finishSpline(false);
+        pressed_ = false;
+        emit stateChanged();
         return true;
     }
     if (tool_ == Tool::Line && first_) {
@@ -1037,8 +2341,16 @@ bool SketchEditor::mouseDoubleClick(QMouseEvent* e)
 
 bool SketchEditor::key(QKeyEvent* e)
 {
+    if (tool_ == Tool::Spline && !splinePts_.empty() &&
+        (e->key() == Qt::Key_Escape || e->key() == Qt::Key_Return || e->key() == Qt::Key_Enter)) {
+        finishSpline(false);
+        rebuildOverlay();
+        emit stateChanged();
+        return true;
+    }
     if (e->key() == Qt::Key_Escape) {
-        if (first_ || dimFirst_ || dimTarget_) {
+        if (first_ || dimFirst_ || dimTarget_ || editConstraint_ || editText_ || editArtwork_ || roundAt_ ||
+            !offsetChain_.empty() || !tanLines_.empty()) {
             resetToolState();
         }
         else if (tool_ != Tool::Select) {
@@ -1046,6 +2358,7 @@ bool SketchEditor::key(QKeyEvent* e)
         }
         else {
             selection_.clear();
+            selectedConstraints_.clear();
         }
         rebuildOverlay();
         emit stateChanged();
@@ -1053,6 +2366,23 @@ bool SketchEditor::key(QKeyEvent* e)
     }
     if (e->key() == Qt::Key_Delete || e->key() == Qt::Key_Backspace) {
         deleteSelection();
+        return true;
+    }
+    // Typing a number before the first click: the first point as X, Y (no mouse needed).
+    static const std::set<Tool> drawing {Tool::Line,   Tool::Rectangle, Tool::CenterRectangle, Tool::Circle,
+                                         Tool::Arc,    Tool::Arc3,      Tool::Slot,            Tool::Polygon,
+                                         Tool::Ellipse, Tool::Spline,   Tool::Circle2,         Tool::Circle3,
+                                         Tool::Rect3,  Tool::Point,     Tool::Text};
+    if (!first_ && !startInput_ && splinePts_.empty() && drawing.count(tool_) && !e->text().isEmpty() &&
+        (e->text()[0].isDigit() || e->text()[0] == '.' || e->text()[0] == '-')) {
+        startInput_ = true;
+        showInput({tr("X"), tr("Y")}, {e->text(), "0"});
+        inputFields_[0]->setFocus();
+        inputFields_[0]->deselect();
+        inputFields_[0]->setCursorPosition(int(e->text().size()));
+        inputBox_->move(QPoint(24, 24));
+        message_ = tr("Type where the first point goes (X, Tab, Y) and press Enter.");
+        emit stateChanged();
         return true;
     }
     // Typing a number while a tool waits for its second click goes into the value box.
@@ -1065,6 +2395,49 @@ bool SketchEditor::key(QKeyEvent* e)
 }
 
 // ---------------------------------------------------------------- selection commands
+
+bool SketchEditor::applyCollinear()
+{
+    std::vector<int> lines;
+    for (int id : selection_) {
+        if (const auto* e = work_.entity(id); e && e->type == jig::EntityType::Line) {
+            lines.push_back(id);
+        }
+    }
+    if (lines.size() < 2) {
+        message_ = tr("Select two or more lines to put on one line.");
+        emit stateChanged();
+        return false;
+    }
+    jig::Sketch s = work_;
+    for (size_t i = 1; i < lines.size(); ++i) {
+        const auto* e = s.entity(lines[i]);
+        s.addConstraint(jig::ConstraintType::PointOnCurve, e->p1, lines[0]);
+        s.addConstraint(jig::ConstraintType::PointOnCurve, e->p2, lines[0]);
+    }
+    return commit(tr("Collinear"), s);
+}
+
+bool SketchEditor::applyConcentric()
+{
+    std::vector<int> rounds;
+    for (int id : selection_) {
+        if (const auto* e = work_.entity(id);
+            e && (e->type == jig::EntityType::Circle || e->type == jig::EntityType::Arc)) {
+            rounds.push_back(id);
+        }
+    }
+    if (rounds.size() < 2) {
+        message_ = tr("Select two or more circles or arcs to share one centre.");
+        emit stateChanged();
+        return false;
+    }
+    jig::Sketch s = work_;
+    for (size_t i = 1; i < rounds.size(); ++i) {
+        s.addConstraint(jig::ConstraintType::Coincident, s.entity(rounds[i])->center, s.entity(rounds[0])->center);
+    }
+    return commit(tr("Concentric"), s);
+}
 
 bool SketchEditor::applyConstraint(jig::ConstraintType t)
 {
@@ -1212,10 +2585,14 @@ void SketchEditor::toggleConstruction()
 
 void SketchEditor::deleteSelection()
 {
-    if (selection_.empty()) {
+    if (selection_.empty() && selectedConstraints_.empty()) {
         return;
     }
     jig::Sketch s = work_;
+    for (int cid : selectedConstraints_) {
+        s.removeConstraint(cid);
+    }
+    selectedConstraints_.clear();
     for (int id : selection_) {
         const auto* e = s.entity(id);
         if (!e) {
@@ -1306,6 +2683,39 @@ void SketchEditor::rebuildOverlay()
             ov.lines.push_back({pts[i + 1], vc.text});
         }
     }
+    for (int id : offsetChain_.empty() ? offsetHover_ : offsetChain_) {
+        if (const jig::SketchEntity* e = s.entity(id)) {
+            addPoly(polyline(s, *e), kAccent, offsetChain_.empty());
+        }
+    }
+    if ((tool_ == Tool::Trim || tool_ == Tool::Break) && trimHover_) {
+        const jig::SketchEntity* e = s.entity(trimHover_->entity);
+        if (e) {
+            std::vector<QPointF> pts;
+            if (trimHover_->whole) {
+                pts = polyline(s, *e);
+            }
+            else if (e->type == jig::EntityType::Line) {
+                auto [ax, ay] = s.pointXY(e->p1);
+                auto [bx, by] = s.pointXY(e->p2);
+                for (double u : {trimHover_->from, trimHover_->to}) {
+                    pts.emplace_back(ax + (bx - ax) * u, ay + (by - ay) * u);
+                }
+            }
+            else {
+                auto [cx, cy] = s.pointXY(e->center);
+                double a0 = trimHover_->from, a1 = trimHover_->to;
+                while (a1 <= a0) {
+                    a1 += 2 * kPi;
+                }
+                for (int k = 0; k <= 48; ++k) {
+                    const double t = a0 + (a1 - a0) * k / 48;
+                    pts.emplace_back(cx + e->r * std::cos(t), cy + e->r * std::sin(t));
+                }
+            }
+            addPoly(pts, kGap, true);  // dashed red: this piece will go
+        }
+    }
     if (options.showProfiles && !dragging_) {
         QColor pc = kAccent;
         pc.setAlpha(46);
@@ -1333,6 +2743,103 @@ void SketchEditor::rebuildOverlay()
             jig::Sketch tmp;
             const int cid = tmp.addCircle(a.x(), a.y(), std::max(1e-6, QLineF(a, b).length()));
             addPoly(polyline(tmp, *tmp.entity(cid)), kAccent, false);
+        }
+        else if (tool_ == Tool::TangentArc) {
+            if (auto ta = tangentArc(a, tangentDir_, b)) {
+                jig::Sketch tmp;
+                addPoly(polyline(tmp, *tmp.entity(tmp.addArc(ta->cx, ta->cy, ta->r, ta->a0, ta->a1))), kAccent, false);
+            }
+            else {
+                addPoly({a, b}, kAccent, true);
+            }
+        }
+        else if (tool_ == Tool::Circle2) {
+            jig::Sketch tmp;
+            const QPointF mid = (a + b) / 2;
+            const double r = QLineF(a, b).length() / 2;
+            if (r > 1e-9) {
+                addPoly(polyline(tmp, *tmp.entity(tmp.addCircle(mid.x(), mid.y(), r))), kAccent, false);
+            }
+        }
+        else if (tool_ == Tool::Circle3) {
+            if (!second_) {
+                addPoly({a, b}, kAccent, true);
+            }
+            else if (auto ci = circleThrough(a, second_->local, b)) {
+                jig::Sketch tmp;
+                addPoly(polyline(tmp, *tmp.entity(tmp.addCircle(ci->cx, ci->cy, ci->r))), kAccent, false);
+            }
+        }
+        else if (tool_ == Tool::Rect3) {
+            if (!second_) {
+                addPoly({a, b}, kAccent, false);
+            }
+            else {
+                const QPointF B = second_->local;
+                const double L = QLineF(a, B).length();
+                if (L > 1e-9) {
+                    const QPointF u = (B - a) / L, n(-u.y(), u.x());
+                    const double H = QPointF::dotProduct(b - B, n);
+                    addPoly({a, B, B + n * H, a + n * H, a}, kAccent, false);
+                }
+            }
+        }
+        else if (tool_ == Tool::Spline && !splinePts_.empty()) {
+            jig::Sketch tmp;
+            std::vector<std::pair<double, double>> pts;
+            for (auto& q : splinePts_) {
+                pts.emplace_back(q.local.x(), q.local.y());
+            }
+            pts.emplace_back(b.x(), b.y());
+            const int c = tmp.addSpline(pts, false);
+            addPoly(polyline(tmp, *tmp.entity(c)), kAccent, false);
+        }
+        else if (tool_ == Tool::Ellipse) {
+            if (!second_) {
+                addPoly({a, b}, kAccent, true);
+            }
+            else {
+                jig::Sketch tmp;
+                const QPointF ax = second_->local;
+                const double L = QLineF(a, ax).length();
+                if (L > 1e-9) {
+                    const QPointF u = (ax - a) / L;
+                    const double minor = std::abs(QPointF::dotProduct(b - a, QPointF(-u.y(), u.x())));
+                    if (minor > 1e-9) {
+                        addPoly(polyline(tmp, *tmp.entity(tmp.addEllipse(a.x(), a.y(), ax.x(), ax.y(), minor))), kAccent, false);
+                    }
+                }
+            }
+        }
+        else if (tool_ == Tool::Arc3) {
+            if (!second_) {
+                addPoly({a, b}, kAccent, true);
+            }
+            else {
+                const QPointF e = second_->local, m = b;
+                const double d = 2 * (a.x() * (e.y() - m.y()) + e.x() * (m.y() - a.y()) + m.x() * (a.y() - e.y()));
+                if (std::abs(d) > 1e-9) {
+                    const double a2 = a.x() * a.x() + a.y() * a.y(), e2 = e.x() * e.x() + e.y() * e.y(),
+                                 m2 = m.x() * m.x() + m.y() * m.y();
+                    const double cx = (a2 * (e.y() - m.y()) + e2 * (m.y() - a.y()) + m2 * (a.y() - e.y())) / d;
+                    const double cy = (a2 * (m.x() - e.x()) + e2 * (a.x() - m.x()) + m2 * (e.x() - a.x())) / d;
+                    const double R = std::hypot(a.x() - cx, a.y() - cy);
+                    auto ang = [&](QPointF q) { return std::atan2(q.y() - cy, q.x() - cx); };
+                    auto ccwFrom = [](double from, double to) {
+                        double v = std::fmod(to - from, 2 * kPi);
+                        return v < 0 ? v + 2 * kPi : v;
+                    };
+                    const bool startFirst = ccwFrom(ang(a), ang(m)) < ccwFrom(ang(a), ang(e));
+                    const double s0 = startFirst ? ang(a) : ang(e);
+                    const double sw = startFirst ? ccwFrom(ang(a), ang(e)) : ccwFrom(ang(e), ang(a));
+                    std::vector<QPointF> pts;
+                    for (int k = 0; k <= 48; ++k) {
+                        const double t = s0 + sw * k / 48;
+                        pts.emplace_back(cx + R * std::cos(t), cy + R * std::sin(t));
+                    }
+                    addPoly(pts, kAccent, false);
+                }
+            }
         }
         else if (tool_ == Tool::Arc || tool_ == Tool::Slot || tool_ == Tool::Polygon) {
             jig::Sketch tmp;
@@ -1378,6 +2885,7 @@ void SketchEditor::rebuildOverlay()
 
 void SketchEditor::paint(QPainter& p)
 {
+    auto len = [this](double mm) { return QString::fromStdString(doc_.fmtLength(mm)); };
     const jig::Sketch& s = shown();
     const std::set<int> freeSet(report_.freeEntities.begin(), report_.freeEntities.end());
     const ViewColors& vc = view_->colors();
@@ -1390,6 +2898,7 @@ void SketchEditor::paint(QPainter& p)
         if (e.type != jig::EntityType::Point && freeSet.count(id)) {
             owner.insert(e.p1);
             owner.insert(e.p2);
+            owner.insert(e.pts.begin(), e.pts.end());
         }
     }
     for (auto& [id, e] : s.entities()) {
@@ -1433,6 +2942,8 @@ void SketchEditor::paint(QPainter& p)
             return scr(cx + e->r * 0.7071, cy + e->r * 0.7071);
         };
         std::map<int, int> stack;  // per entity: offset glyphs so they don't overlap
+        glyphBoxes_.clear();
+        auto num = [this](double mm) { return QString::fromStdString(jig::formatLength(mm, doc_.units(), false)); };
         for (auto& [cid, k] : s.constraints()) {
             using CT = jig::ConstraintType;
             QString g;
@@ -1450,14 +2961,14 @@ void SketchEditor::paint(QPainter& p)
                 case CT::PointOnCurve: g = "∘"; break;
                 case CT::Distance: {
                     auto q = doc_.evalLength(k.expr);
-                    g = q ? fmt(q.value()) : "?";
+                    g = q ? num(q.value()) : "?";
                     if (k.b) {
                         at = k.b;
                     }
                     break;
                 }
-                case CT::Diameter: { auto q = doc_.evalLength(k.expr); g = "Ø" + (q ? fmt(q.value()) : "?"); break; }
-                case CT::Radius: { auto q = doc_.evalLength(k.expr); g = "R" + (q ? fmt(q.value()) : "?"); break; }
+                case CT::Diameter: { auto q = doc_.evalLength(k.expr); g = "Ø" + (q ? num(q.value()) : "?"); break; }
+                case CT::Radius: { auto q = doc_.evalLength(k.expr); g = "R" + (q ? num(q.value()) : "?"); break; }
                 case CT::Angle: { auto q = doc_.evalAngle(k.expr); g = q ? fmt(q.value() * 180 / kPi) + "°" : "?"; break; }
                 default: break;  // coincident, x/y placement: not labelled (too noisy)
             }
@@ -1472,9 +2983,11 @@ void SketchEditor::paint(QPainter& p)
             const QPointF pos = *m + QPointF(8 + 16 * n, -10);
             const bool dim = k.type == CT::Distance || k.type == CT::Diameter || k.type == CT::Radius || k.type == CT::Angle;
             const QRectF box(pos.x() - 2, pos.y() - 11, p.fontMetrics().horizontalAdvance(g) + 6, 15);
-            p.setPen(Qt::NoPen);
-            QColor bg = vc.background;
-            bg.setAlpha(220);
+            glyphBoxes_.emplace_back(cid, box);
+            const bool picked = selectedConstraints_.count(cid) > 0;
+            p.setPen(picked ? QPen(vc.selected, 2) : QPen(Qt::NoPen));  // selected: outlined, not just coloured
+            QColor bg = picked ? vc.selected : vc.background;
+            bg.setAlpha(picked ? 90 : 220);
             p.setBrush(bg);
             p.drawRoundedRect(box, 3, 3);
             p.setPen(dim ? vc.text : kFree.darker(130));
@@ -1494,9 +3007,22 @@ void SketchEditor::paint(QPainter& p)
             p.setBrush(Qt::NoBrush);
             p.drawEllipse(c, 8, 8);
             if (g.nearestPointId && g.gap > 0) {
-                p.drawText(c + QPointF(10, -8), tr("gap %1 mm").arg(fmt(g.gap)));
+                p.drawText(c + QPointF(10, -8), tr("gap %1").arg(len(g.gap)));
             }
         }
+    }
+
+    // Selection box: solid for "wholly inside", dashed for "anything it touches"
+    if (boxing_) {
+        const bool crossing = boxEnd_.x() < pressScreen_.x();
+        const QRectF r = QRectF(pressScreen_, boxEnd_).normalized();
+        p.setPen(QPen(kAccent, 1.2, crossing ? Qt::DashLine : Qt::SolidLine));
+        QColor fill = kAccent;
+        fill.setAlpha(28);
+        p.setBrush(fill);
+        p.drawRect(r);
+        p.setPen(vc.text);
+        p.drawText(r.bottomLeft() + QPointF(4, 14), crossing ? tr("touching") : tr("inside"));
     }
 
     // Cursor feedback: snap marker, inferred constraint, live measurement.
@@ -1506,6 +3032,10 @@ void SketchEditor::paint(QPainter& p)
         p.setBrush(Qt::NoBrush);
         if (cursor_.point) {
             p.drawRect(QRectF(c.x() - 6, c.y() - 6, 12, 12));
+        }
+        else if (cursor_.midOf) {
+            // a midpoint: a small triangle (a different shape from an end's square)
+            p.drawPolygon(QPolygonF({c + QPointF(0, -7), c + QPointF(6.5, 5), c + QPointF(-6.5, 5)}));
         }
         QString label;
         if (cursor_.horizontal) {
@@ -1517,20 +3047,20 @@ void SketchEditor::paint(QPainter& p)
         if (first_) {
             const QPointF d = cursor_.local - first_->local;
             if (tool_ == Tool::Line) {
-                label += tr("%1 mm  %2°").arg(fmt(std::hypot(d.x(), d.y()))).arg(fmt(std::atan2(d.y(), d.x()) * 180 / kPi));
+                label += tr("%1  %2°").arg(len(std::hypot(d.x(), d.y()))).arg(fmt(std::atan2(d.y(), d.x()) * 180 / kPi));
             }
             else if (tool_ == Tool::Rectangle) {
-                label += tr("%1 × %2 mm").arg(fmt(std::abs(d.x()))).arg(fmt(std::abs(d.y())));
+                label += tr("%1 × %2").arg(len(std::abs(d.x()))).arg(len(std::abs(d.y())));
             }
             else if (tool_ == Tool::CenterRectangle) {
-                label += tr("%1 × %2 mm").arg(fmt(2 * std::abs(d.x()))).arg(fmt(2 * std::abs(d.y())));
+                label += tr("%1 × %2").arg(len(2 * std::abs(d.x()))).arg(len(2 * std::abs(d.y())));
             }
             else if (tool_ == Tool::Circle || tool_ == Tool::Polygon) {
-                label += tr("Ø %1 mm").arg(fmt(2 * std::hypot(d.x(), d.y())));
+                label += tr("Ø %1").arg(len(2 * std::hypot(d.x(), d.y())));
             }
             else if (tool_ == Tool::Arc) {
                 if (!second_) {
-                    label += tr("R %1 mm").arg(fmt(std::hypot(d.x(), d.y())));
+                    label += tr("R %1").arg(len(std::hypot(d.x(), d.y())));
                 }
                 else {
                     const QPointF st = second_->local - first_->local;
@@ -1543,7 +3073,7 @@ void SketchEditor::paint(QPainter& p)
             }
             else if (tool_ == Tool::Slot) {
                 if (!second_) {
-                    label += tr("%1 mm").arg(fmt(std::hypot(d.x(), d.y())));
+                    label += len(std::hypot(d.x(), d.y()));
                 }
                 else {
                     const QPointF c2 = second_->local;
@@ -1551,7 +3081,7 @@ void SketchEditor::paint(QPainter& p)
                     if (axis.length() > 1e-9) {
                         const QPointF n(-(c2.y() - first_->local.y()) / axis.length(),
                                         (c2.x() - first_->local.x()) / axis.length());
-                        label += tr("width %1 mm").arg(fmt(2 * std::abs(QPointF::dotProduct(d, n))));
+                        label += tr("width %1").arg(len(2 * std::abs(QPointF::dotProduct(d, n))));
                     }
                 }
             }

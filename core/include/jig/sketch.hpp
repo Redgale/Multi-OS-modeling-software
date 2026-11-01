@@ -6,6 +6,7 @@
 // root of persistent naming (D-005).
 #pragma once
 
+#include <array>
 #include <map>
 #include <optional>
 #include <string>
@@ -24,7 +25,9 @@ enum class EntityType
     Point,
     Line,
     Circle,
-    Arc
+    Arc,
+    Ellipse,  // center, p1 = end of the major axis (sets its length and direction), r = minor radius
+    Spline    // a smooth curve through the fit points `pts` (closed: back round to the first)
 };
 
 struct SketchEntity
@@ -38,7 +41,13 @@ struct SketchEntity
     double r = 0;
     double a0 = 0, a1 = 0;  // arc start/end angle (rad), counter-clockwise
     bool internal = false;  // point owned by a curve (hidden in the UI)
+    std::vector<int> pts;   // spline fit points, in order
+    bool closed = false;    // spline: runs back to its first point
 };
+
+// A spline's shape as cubic Bézier pieces (each: start, two handles, end), one per pair of
+// neighbouring fit points: a smooth curve through every fit point (Catmull-Rom).
+using Bezier2 = std::array<std::pair<double, double>, 4>;
 
 enum class ConstraintType
 {
@@ -91,6 +100,29 @@ struct SketchText
     std::string height = "5 mm";  // expression: the font size (about 1.4 x capital height)
     double heightValue = 5;  // evaluated on solve
     double angle = 0;        // radians, counter-clockwise
+    int path = 0;            // a circle or arc the text bends along (0: straight)
+    // where that curve is, filled in before the outlines are made (not saved)
+    double pathCx = 0, pathCy = 0, pathR = 0;
+};
+
+// Imported artwork (an SVG logo): closed outlines of straight segments and Béziers,
+// centred on an anchor point and scaled to a width. Like text, its outlines become
+// closed areas; the curves themselves are not editable in the sketch.
+using ArtSegment = std::vector<std::array<double, 2>>;  // 2 points: line; 3: quadratic; 4: cubic
+using ArtContour = std::vector<ArtSegment>;
+struct SketchArtwork
+{
+    int id = 0;
+    int anchor = 0;                    // point entity id (the artwork's centre)
+    std::vector<ArtContour> contours;  // at natural size in mm, centred on (0, 0)
+    double naturalWidth = 1;           // mm
+    std::string width;                 // expression; empty = natural size
+    double widthValue = 0;             // evaluated on solve
+    std::string name;
+    double scale() const
+    {
+        return width.empty() || naturalWidth <= 0 ? 1.0 : widthValue / naturalWidth;
+    }
 };
 
 struct SolveReport
@@ -123,6 +155,13 @@ public:
     int addCircle(double cx, double cy, double r);
     // Counter-clockwise arc from angle a0 to a1 around (cx, cy).
     int addArc(double cx, double cy, double r, double a0, double a1);
+    // Ellipse from its centre, the end of its major axis and the minor radius.
+    int addEllipse(double cx, double cy, double ax, double ay, double minor);
+    // Smooth curve through the given points (at least two; three for a closed one).
+    int addSpline(const std::vector<std::pair<double, double>>& points, bool closed = false);
+    std::vector<Bezier2> splinePieces(int splineId) const;
+    // Points along any curve, for drawing and picking (a line gives its two ends).
+    std::vector<std::pair<double, double>> curvePoints(int entityId, int perPiece = 24) const;
     // Composite shapes with the constraints that keep them in shape (but no sizes).
     struct SlotIds
     {
@@ -140,10 +179,70 @@ public:
     // Text centred at (x, y); returns the text id (its anchor is a new point).
     int addText(double x, double y, std::string text, std::string heightExpr, double heightValue,
                 std::string font = {}, double angle = 0);
+    // Artwork centred at (x, y); returns its id (its anchor is a new point).
+    int addArtwork(double x, double y, std::vector<ArtContour> contours, double naturalWidth, std::string widthExpr,
+                   double widthValue, std::string name);
+    const std::map<int, SketchArtwork>& artworks() const
+    {
+        return artworks_;
+    }
+    SketchArtwork* artwork(int id)
+    {
+        auto it = artworks_.find(id);
+        return it == artworks_.end() ? nullptr : &it->second;
+    }
     // Removes a curve, point or text. Also removes dependent constraints, internal
     // points, and text anchored to a removed point.
     bool remove(int entityId);
     void setConstruction(int entityId, bool on);
+
+    // ---- trim -------------------------------------------------------------
+    // The piece of a curve between its nearest crossings with other curves, around the
+    // point (x, y) on it. Lines use the parameter 0..1 from p1 to p2; circles and arcs use
+    // angles (radians), the piece running counter-clockwise from `from` to `to`.
+    struct TrimPiece
+    {
+        int entity = 0;
+        bool whole = false;  // nothing crosses it there: the whole curve goes
+        double from = 0, to = 0;
+    };
+    std::optional<TrimPiece> trimPiece(int entityId, double x, double y) const;
+    // Removes that piece. New ends stay attached to the curves that cut them (a
+    // point-on-curve constraint, or the existing point when they meet at one). Length
+    // and diameter dimensions of the trimmed curve that no longer apply are removed.
+    bool trim(int entityId, double x, double y);
+    // Lengthens the loose end of a line or arc nearest (x, y) until it meets another curve.
+    // Returns the moved end's point id, or why it cannot.
+    Result<int> extend(int entityId, double x, double y);
+    // Splits a curve where other curves cross it, either side of (x, y): the pieces share
+    // their new ends. Returns the ids of the curves that make up the old one.
+    Result<std::vector<int>> breakAt(int entityId, double x, double y);
+    // Mirror copies of curves and points across a line, held mirrored by symmetric
+    // constraints (points on the line are shared). Returns the new ids.
+    Result<std::vector<int>> mirror(const std::vector<int>& ids, int axisLine);
+    // Copies curves and points turned by `angle` (radians) around (cx, cy), then shifted by
+    // (dx, dy). Constraints among the copied items come along (horizontal/vertical only
+    // when the turn keeps them); the copy is not linked to the original. Returns new ids.
+    Result<std::vector<int>> copyCurves(const std::vector<int>& ids, double dx, double dy, double angle = 0,
+                                        double cx = 0, double cy = 0);
+    // Moves them instead (their end points move, so joined curves stretch to follow).
+    Result<bool> moveCurves(const std::vector<int>& ids, double dx, double dy, double angle = 0, double cx = 0,
+                            double cy = 0);
+    // Copies in rows and columns: n1 along (dx1, dy1), n2 along (dx2, dy2); counts include
+    // the original. Copies around (cx, cy): n in all, spread over `total` (a full turn
+    // spaces them evenly).
+    Result<std::vector<int>> patternRect(const std::vector<int>& ids, int n1, double dx1, double dy1, int n2,
+                                         double dx2, double dy2);
+    Result<std::vector<int>> patternCircular(const std::vector<int>& ids, double cx, double cy, int n, double total);
+    // Rounds the corner where two lines meet nearest (x, y) with a tangent arc of radius r
+    // (`radiusExpr` is stored as its dimension). Returns the arc id, or an error message.
+    Result<int> filletCorner(double x, double y, double r, const std::string& radiusExpr);
+    // Curves connected end to end with `curve` (sharing an end point), including itself.
+    std::vector<int> chainOf(int curve) const;
+    // Counter-clockwise arc on existing points (used when building offsets).
+    int addArcOn(int center, int p1, int p2, double r, double a0, double a1);
+    // The curve nearest to (x, y) (not points; construction only when asked), and its distance.
+    std::optional<std::pair<int, double>> curveNear(double x, double y, bool construction = false) const;
 
     // ---- constraints ----------------------------------------------------
     int addConstraint(ConstraintType type, int a, int b = 0, int c = 0, std::string expr = {});
@@ -177,17 +276,51 @@ public:
     // Point coordinates by point id (curves' endpoints are kept in sync on solve).
     std::pair<double, double> pointXY(int pointId) const;
 
+    // Projected edges that follow the model: each link holds the edge's persistent reference
+    // ("ref"), what was made ("kind": line, circle, arc), the fixed points it moves ("points")
+    // and, for a circle, its radius constraint ("radius"). Kept with the sketch.
+    const std::vector<nlohmann::json>& links() const
+    {
+        return links_;
+    }
+    void addLink(nlohmann::json link)
+    {
+        links_.push_back(std::move(link));
+    }
+    // An offset copy that follows its source: rebuilt after every solve from the source curves
+    // and the distance expression, held by fixed points (it adds no freedom). Returns the copy.
+    Result<std::vector<int>> offsetLinked(const std::vector<int>& curves, const std::string& distanceExpr,
+                                          const ParamLookup& lookup);
+    // Grid or ring copies that follow their source, rebuilt after every solve like a linked
+    // offset. `spec`: {"kind": "grid", "n1", "s1" (spacing along X), "n2", "s2" (along Y)} or
+    // {"kind": "ring", "n", "angle", "center": [x, y], optional "center_point": a point id
+    // the centre follows}; sizes and angles are expressions. Returns the copies.
+    Result<std::vector<int>> patternLinked(const std::vector<int>& curves, const nlohmann::json& spec,
+                                           const ParamLookup& lookup);
+    // Moves a fixed point (its Fix constraint) to (x, y); false if it has none.
+    bool moveFixedPoint(int pointId, double x, double y);
+    // Changes a dimension's value text (a projected circle's radius).
+    bool setConstraintExpr(int constraintId, std::string expr);
+
     nlohmann::json toJson() const;
     static Result<Sketch> fromJson(const nlohmann::json& j);
 
 private:
+    std::vector<nlohmann::json> links_;
+    // Rebuilds linked offsets from their sources' solved places; true if any was rebuilt.
+    bool rebuildOffsets(const ParamLookup& lookup);
     SolveReport runSolver(const ParamLookup& lookup, const int* dragPoint, double dx, double dy,
                           const std::vector<int>& skip = {});
     void syncCurvePoints();
+    void dropUnusedPoint(int pointId);
+    int attachedPoint(int skipEntity, double px, double py);
+    int crossingCurveOf(int pointId) const;
+    void dropSizeConstraints(int entityId);
 
     std::map<int, SketchEntity> entities_;
     std::map<int, SketchConstraint> constraints_;
     std::map<int, SketchText> texts_;
+    std::map<int, SketchArtwork> artworks_;
     int nextId_ = 1;
 };
 

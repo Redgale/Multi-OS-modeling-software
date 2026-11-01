@@ -1,9 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "MainWindow.hpp"
 
+#include "MarkingMenu.hpp"
+#include "Translations.hpp"
+
 #include <array>
 
 #include <QAction>
+#include <QLocale>
+#include <QDialogButtonBox>
+#include <QComboBox>
+#include <QFormLayout>
 #include <QCheckBox>
 #include <QPainter>
 #include <QInputDialog>
@@ -35,6 +42,7 @@
 #include <QStatusBar>
 #include <QStyleFactory>
 #include <QTextBrowser>
+#include <QPointer>
 #include <QTimer>
 #include <QToolBar>
 #include <QToolButton>
@@ -44,6 +52,7 @@
 
 #include "FeaturePanels.hpp"
 #include "InspectPanels.hpp"
+#include "Tutorial.hpp"
 #include "Icons.hpp"
 #include "SketchEditor.hpp"
 #include "Viewport.hpp"
@@ -131,6 +140,16 @@ QString kindWord(jig::FeatureKind k)
             return MainWindow::tr("Mirror");
         case jig::FeatureKind::Plane:
             return MainWindow::tr("Plane");
+        case jig::FeatureKind::Axis:
+            return MainWindow::tr("Axis");
+        case jig::FeatureKind::Point:
+            return MainWindow::tr("Point");
+        case jig::FeatureKind::Import:
+            return MainWindow::tr("Import");
+        case jig::FeatureKind::Remove:
+            return MainWindow::tr("Remove");
+        case jig::FeatureKind::PressPull:
+            return MainWindow::tr("Press pull");
         case jig::FeatureKind::Combine:
             return MainWindow::tr("Combine");
         case jig::FeatureKind::Split:
@@ -145,6 +164,7 @@ QString kindWord(jig::FeatureKind k)
 
 class CommandPalette : public QDialog
 {
+    Q_OBJECT  // (so tr() uses this class's context, which is what translators see)
 public:
     explicit CommandPalette(QWidget* parent)
         : QDialog(parent, Qt::Popup | Qt::FramelessWindowHint)
@@ -195,7 +215,7 @@ private:
         list_->clear();
         for (auto& m : jig::CommandRegistry::instance().search(text.toStdString())) {
             const auto& c = *m.info;
-            QString line = q(c.label);
+            QString line = QCoreApplication::translate("Command", c.label.c_str());
             if (c.standardName != c.label) {
                 line += "  —  " + q(c.standardName);  // always show the standard CAD name
             }
@@ -293,6 +313,17 @@ public:
         }
         return true;
     }
+    bool key(QKeyEvent* e) override
+    {
+        // without the mouse: 1 floor, 2 front, 3 side
+        static const char* planes[] = {"XY", "XZ", "YZ"};
+        const int n = e->key() - Qt::Key_1;
+        if (n >= 0 && n < 3) {
+            w_->createSketchOn(planes[n]);
+            return true;
+        }
+        return false;
+    }
     bool mouseRelease(QMouseEvent* e) override
     {
         const Hit h = hitAt(e->position());
@@ -309,7 +340,8 @@ public:
         QFont f = p.font();
         f.setBold(true);
         p.setFont(f);
-        const QString msg = QObject::tr("Click a plane, a construction plane or a flat face to sketch on.  Esc cancels.");
+        const QString msg = QObject::tr("Click a plane, a construction plane or a flat face to sketch on, or press 1 (floor), 2 (front) "
+                                           "or 3 (side).  Esc cancels.");
         const QRectF box(10, 10, p.fontMetrics().horizontalAdvance(msg) + 20, 26);
         QColor bg = v_->colors().background;
         bg.setAlpha(230);
@@ -319,9 +351,9 @@ public:
         p.setPen(v_->colors().text);
         p.drawText(box, Qt::AlignCenter, msg);
         const float s = size();
-        const std::pair<QString, QVector3D> labels[] = {{QObject::tr("XY · floor"), {s * 0.75f, -s * 0.75f, 0}},
-                                                         {QObject::tr("XZ · front"), {s * 0.75f, 0, s * 0.85f}},
-                                                         {QObject::tr("YZ · side"), {0, s * 0.75f, s * 0.85f}}};
+        const std::pair<QString, QVector3D> labels[] = {{QObject::tr("1 · XY · floor"), {s * 0.75f, -s * 0.75f, 0}},
+                                                         {QObject::tr("2 · XZ · front"), {s * 0.75f, 0, s * 0.85f}},
+                                                         {QObject::tr("3 · YZ · side"), {0, s * 0.75f, s * 0.85f}}};
         for (auto& [t, w] : labels) {
             p.drawText(v_->project(w), t);
         }
@@ -450,6 +482,42 @@ MainWindow::MainWindow()
     statusBar()->addWidget(statusSel_, 1);
     statusBar()->addPermanentWidget(statusInfo_);
     connect(view_, &Viewport::hovered, this, [this](const QString& d) { statusSel_->setText(d); });
+    connect(view_, &Viewport::menuRequested, this, [this](const QPoint& p) { openMarkingMenu(p); });
+    connect(view_, &Viewport::graphicsProblem, this, [this](const QString& why) {
+        statusBar()->showMessage(why);
+        auto* box = new QMessageBox(QMessageBox::Warning, tr("3D view unavailable"), why, QMessageBox::Ok, this);
+        box->setAttribute(Qt::WA_DeleteOnClose);
+        box->open();  // not modal to the event loop: everything else keeps working
+    });
+    connect(view_, &Viewport::selectOtherRequested, this, [this](const QPoint& p) { openSelectOther(p); });
+    selectFilter_ = new QComboBox(this);
+    selectFilter_->addItem(tr("Pick faces"), "faces");
+    selectFilter_->addItem(tr("Pick edges"), "edges");
+    selectFilter_->addItem(tr("Pick bodies"), "bodies");
+    selectFilter_->setAccessibleName(tr("Selection filter"));
+    selectFilter_->setToolTip(tr("What a click in the view picks when no tool is open."));
+    statusBar()->addPermanentWidget(selectFilter_);
+    connect(selectFilter_, &QComboBox::currentIndexChanged, this, [this] { setSelectFilter(selectFilter()); });
+    connect(view_, &Viewport::edgeClicked, this, [this](const QString& body, const QString& name, Qt::KeyboardModifiers) {
+        if (panel_ || sketch_ || selectFilter() != "edges" || !doc_) {
+            return;
+        }
+        auto it = doc_->state().bodies.find(body.toStdString());
+        if (it == doc_->state().bodies.end()) {
+            return;
+        }
+        auto hits = it->second->findEdges(name.toStdString());
+        if (hits.empty()) {
+            return;
+        }
+        const jig::MeasureItem m = jig::measureItem(it->second->edge(hits[0]));
+        QString html = tr("<h3>Edge</h3><p><b>Name:</b> %1<br><b>Kind:</b> %2<br><b>Length:</b> %3")
+                           .arg(name.toHtmlEscaped(), q(m.kind), q(doc_->fmtLength(m.size)));
+        if (m.radius) {
+            html += tr("<br><b>Diameter:</b> %1").arg(q(doc_->fmtLength(2 * *m.radius)));
+        }
+        details_->setHtml(html + tr("<br><b>Body:</b> %1</p>").arg(body));
+    });
     connect(view_, &Viewport::selectionChanged, this, [this](const QString& body, int face) {
         if (face < 0 || !doc_) {
             details_->setHtml(tr("<p>Nothing selected.</p>"));
@@ -459,12 +527,31 @@ MainWindow::MainWindow()
         if (it == doc_->state().bodies.end()) {
             return;
         }
+        if (!panel_ && selectFilter() == "bodies") {
+            // the whole body the face belongs to
+            const auto mp = jig::massProperties(it->second->shape());
+            const jig::Feature* f = doc_->feature(body.toStdString());
+            details_->setHtml(tr("<h3>Body</h3><p><b>Name:</b> %1<br><b>Volume:</b> %2<br><b>Size:</b> %3 × %4 × %5<br>"
+                                 "<b>Faces:</b> %6</p><p>Right-click it in the Browser to hide, isolate or rename it.</p>")
+                                  .arg(f ? q(f->name).toHtmlEscaped() : body, q(jig::formatVolume(mp.volume, doc_->units())),
+                                       q(doc_->fmtLength(mp.xmax - mp.xmin)), q(doc_->fmtLength(mp.ymax - mp.ymin)),
+                                       q(doc_->fmtLength(mp.zmax - mp.zmin)))
+                                  .arg(it->second->faceCount()));
+            browser_->blockSignals(true);  // (only mark the row: the details stay on the body)
+            for (QTreeWidgetItemIterator bi(browser_); *bi; ++bi) {
+                if ((*bi)->data(0, Qt::UserRole).toString() == body) {
+                    browser_->setCurrentItem(*bi);
+                }
+            }
+            browser_->blockSignals(false);
+            return;
+        }
         auto fp = it->second->faceFingerprint(face);
-        details_->setHtml(tr("<h3>Face</h3><p><b>Name:</b> %1<br><b>Surface:</b> %2<br><b>Area:</b> %3 mm²<br>"
+        details_->setHtml(tr("<h3>Face</h3><p><b>Name:</b> %1<br><b>Surface:</b> %2<br><b>Area:</b> %3<br>"
                              "<b>Body:</b> %4</p><p>Faces keep their name when earlier steps change, so "
                              "fillets and sketches stay attached.</p>")
                               .arg(q(it->second->faceName(face)).toHtmlEscaped(), q(fp.type))
-                              .arg(fp.size, 0, 'f', 1)
+                              .arg(q(jig::formatArea(fp.size, doc_->units())))
                               .arg(body));
     });
     connect(view_, &Viewport::meshesUpdated, this, [this] {
@@ -476,8 +563,12 @@ MainWindow::MainWindow()
     });
 
     QSettings st;
-    theme_ = Theme(st.value("theme", int(Theme::Light)).toInt());
+    // Dark is the default. The key is new: the old "theme" key was written with Light on
+    // every first start, so it does not tell us what anyone actually chose.
+    theme_ = Theme(st.value("appearance/theme", int(Theme::Dark)).toInt());
     view_->setNavPreset(NavPreset(st.value("navigation", int(NavPreset::Default)).toInt()));
+    view_->setZoomInverted(st.value("navigation/zoom_inverted", false).toBool());
+    view_->setOrbitSpeed(st.value("navigation/orbit_speed", 1.0).toFloat());
     setTheme(theme_);
     restoreGeometry(st.value("geometry").toByteArray());
 
@@ -486,7 +577,7 @@ MainWindow::MainWindow()
     connect(autosaveTimer_, &QTimer::timeout, this, &MainWindow::autosave);
     autosaveTimer_->start();
 
-    setDocument(std::make_unique<jig::Document>(), {});
+    setDocument(blankDocument(), {});
     resize(1360, 860);
     // Esc: cancel the open panel, the plane picker, or the sketch tool in progress
     auto* esc = new QShortcut(QKeySequence(Qt::Key_Escape), this);
@@ -503,14 +594,17 @@ QAction* MainWindow::registryAction(const char* id)
 
 void MainWindow::buildActions()
 {
+    // labels and tooltips come from the core in English; translated here (app/registry_strings.h
+    // lists them for the translation tools). The standard CAD name stays as it is.
+    auto cmd = [](const std::string& s) { return QCoreApplication::translate("Command", s.c_str()); };
     for (const auto& c : jig::CommandRegistry::instance().all()) {
-        auto* a = new QAction(q(c.label), this);
+        auto* a = new QAction(cmd(c.label), this);
         a->setObjectName(q(c.id));
-        QString tip = "<b>" + q(c.label) + "</b>";
+        QString tip = "<b>" + cmd(c.label) + "</b>";
         if (c.standardName != c.label) {
             tip += " (" + q(c.standardName) + ")";
         }
-        tip += "<br>" + q(c.tooltip).toHtmlEscaped();
+        tip += "<br>" + cmd(c.tooltip).toHtmlEscaped();
         if (!c.shortcut.empty()) {
             QKeySequence ks(q(c.shortcut));
             tip += "<br>" + tr("Key: %1").arg(ks.toString(QKeySequence::NativeText));
@@ -545,7 +639,7 @@ void MainWindow::buildActions()
 void MainWindow::buildMenus()
 {
     auto* file = menuBar()->addMenu(tr("&File"));
-    for (const char* id : {"file.new", "file.open", "file.save", "file.save_as"}) {
+    for (const char* id : {"file.new", "file.open", "file.save", "file.save_as", "file.save_version", "file.versions"}) {
         file->addAction(registryAction(id));
     }
     file->addSeparator();
@@ -566,6 +660,10 @@ void MainWindow::buildMenus()
     edit->addAction(registryAction("edit.redo"));
     edit->addSeparator();
     edit->addAction(registryAction("edit.palette"));
+    edit->addSeparator();
+    auto* settingsAction = edit->addAction(tr("Settings…"), this, [this] { openSettings(); });
+    settingsAction->setShortcut(QKeySequence::Preferences);
+    settingsAction->setMenuRole(QAction::PreferencesRole);  // macOS: in the application menu
 
     auto* view = menuBar()->addMenu(tr("&View"));
     view->addAction(registryAction("view.fit"));
@@ -574,6 +672,7 @@ void MainWindow::buildMenus()
     proj->setCheckable(true);
     proj->setChecked(true);
     view->addAction(proj);
+    view->addAction(registryAction("view.save_named"));
     view->addAction(tr("Top"), view_, &Viewport::viewTop);
     view->addAction(tr("Front"), view_, &Viewport::viewFront);
     view->addAction(tr("Right"), view_, &Viewport::viewRight);
@@ -584,16 +683,15 @@ void MainWindow::buildMenus()
         {NavPreset::Blender, tr("Blender-like (middle-drag orbits)")},
         {NavPreset::SolidWorks, tr("SolidWorks-like (middle-drag orbits, Ctrl pans)")},
         {NavPreset::Trackpad, tr("Trackpad (two fingers orbit, Shift pans, pinch zooms)")}};
-    auto* navGroup = new QActionGroup(this);
+    navGroup_ = new QActionGroup(this);
     for (auto& [p, label] : presets) {
         auto* a = nav->addAction(label);
         a->setCheckable(true);
+        a->setData(int(p));
         a->setChecked(view_->navPreset() == p);
-        navGroup->addAction(a);
-        connect(a, &QAction::triggered, this, [this, p = p] {
-            view_->setNavPreset(p);
-            QSettings().setValue("navigation", int(p));
-        });
+        navGroup_->addAction(a);
+        connect(a, &QAction::triggered, this,
+                [this, p = p] { setNavigation(p, view_->zoomInverted(), view_->orbitSpeed()); });
     }
     auto* themes = view->addMenu(tr("Theme"));
     auto* themeGroup = new QActionGroup(this);
@@ -660,7 +758,7 @@ void MainWindow::buildToolbar()
     tools->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
     tools->setIconSize(QSize(24, 24));
     for (const char* panel : {"CREATE", "MODIFY", "CONSTRUCT", "INSPECT", "INSERT"}) {
-        auto* title = new QLabel(QString("<small><b>%1</b></small>").arg(tr(panel)), this);
+        auto* title = new QLabel(QString("<small><b>%1</b></small>").arg(QCoreApplication::translate("Command", panel)), this);
         title->setContentsMargins(10, 0, 4, 0);
         tools->addWidget(title);
         for (const auto& c : jig::CommandRegistry::instance().all()) {
@@ -701,18 +799,38 @@ void MainWindow::buildToolbar()
         sketchBar_->addAction(registryAction(id));
     }
     sketchBar_->addAction(centerRect_);
-    for (const char* id : {"sketch.circle", "sketch.arc", "sketch.slot", "sketch.polygon", "sketch.text",
-                           "sketch.point", "sketch.dimension", "sketch.construction", "sketch.trim", "sketch.offset"}) {
+    for (const char* id : {"sketch.circle", "sketch.arc", "sketch.arc3", "sketch.slot", "sketch.polygon", "sketch.ellipse",
+                           "sketch.spline", "sketch.text",
+                           "sketch.point", "sketch.dimension", "sketch.construction", "sketch.trim", "sketch.offset",
+                           "sketch.extend", "sketch.break", "sketch.fillet", "sketch.mirror", "sketch.move",
+                           "sketch.pattern_rect", "sketch.pattern_circ", "sketch.project"}) {
         sketchBar_->addAction(registryAction(id));
+    }
+    // other ways to draw the same shape: on a drop-down beside its button
+    const std::pair<const char*, std::vector<const char*>> variants[] = {
+        {"sketch.rectangle", {"sketch.rect3"}},
+        {"sketch.circle", {"sketch.circle2", "sketch.circle3", "sketch.circle_tangent"}},
+        {"sketch.arc", {"sketch.arc_tangent"}}};
+    for (const auto& [base, more] : variants) {
+        if (auto* b = qobject_cast<QToolButton*>(sketchBar_->widgetForAction(registryAction(base)))) {
+            auto* m = new QMenu(b);
+            for (const char* id : more) {
+                m->addAction(registryAction(id));
+            }
+            b->setMenu(m);
+            b->setPopupMode(QToolButton::MenuButtonPopup);
+        }
     }
     sketchBar_->addSeparator();
     title(tr("CONSTRAIN"));
-    for (const char* id : {"constraint.coincident", "constraint.horizontal", "constraint.parallel",
+    for (const char* id : {"constraint.coincident", "constraint.collinear", "constraint.concentric", "constraint.horizontal",
+                           "constraint.parallel",
                            "constraint.perpendicular", "constraint.tangent", "constraint.equal", "constraint.midpoint",
                            "constraint.symmetric", "constraint.fix"}) {
         sketchBar_->addAction(registryAction(id));
     }
     sketchBar_->addSeparator();
+    sketchBar_->addAction(registryAction("modify.parameters"));  // change sizes without leaving the sketch
     sketchBar_->addAction(registryAction("sketch.finish"));
     sketchBar_->hide();
 }
@@ -723,6 +841,67 @@ void MainWindow::buildDocks()
     bdock->setObjectName("BrowserDock");
     browser_ = new QTreeWidget(bdock);
     browser_->setHeaderHidden(true);
+    browser_->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(browser_, &QTreeWidget::itemChanged, this, [this](QTreeWidgetItem* it, int) {
+        if (const QString sk = it->data(0, Qt::UserRole + 3).toString(); !sk.isEmpty()) {
+            const bool on = it->checkState(0) == Qt::Checked;
+            QTimer::singleShot(0, this, [this, id = sk.toStdString(), on] { setSketchVisible(id, on); });
+            return;
+        }
+        const QString id = it->data(0, Qt::UserRole).toString();
+        if (!id.isEmpty()) {
+            const std::string body = id.toStdString();
+            const bool on = it->checkState(0) == Qt::Checked;
+            QTimer::singleShot(0, this, [this, body, on] { setBodyVisible(body, on); });  // not inside the signal
+        }
+    });
+    // choosing a sketch or body shows the step that made it in the timeline
+    connect(browser_, &QTreeWidget::currentItemChanged, this, [this](QTreeWidgetItem* it, QTreeWidgetItem*) {
+        if (!it || !doc_) {
+            return;
+        }
+        const int row = doc_->featureIndex(it->data(0, Qt::UserRole + 1).toString().toStdString());
+        if (row >= 0 && row < timeline_->count()) {
+            timeline_->setCurrentRow(row);
+            timeline_->scrollToItem(timeline_->item(row));
+        }
+    });
+    connect(browser_, &QTreeWidget::itemActivated, this, [this](QTreeWidgetItem* it, int) {
+        const QString v = it ? it->data(0, Qt::UserRole + 2).toString() : QString();
+        if (!v.isEmpty()) {
+            restoreNamedView(v);
+        }
+    });
+    connect(browser_, &QTreeWidget::customContextMenuRequested, this, [this](const QPoint& pos) {
+        QTreeWidgetItem* it = browser_->itemAt(pos);
+        if (const QString v = it ? it->data(0, Qt::UserRole + 2).toString() : QString(); !v.isEmpty()) {
+            QMenu m(this);
+            m.addAction(tr("Go to this view"), this, [this, v] { restoreNamedView(v); });
+            m.addAction(tr("Replace with the current view"), this, [this, v] { saveNamedView(v); });
+            m.addAction(tr("Delete this view"), this, [this, v] {
+                doc_->setNamedView(v.toStdString(), nullptr);
+                refreshAll();
+            });
+            m.exec(browser_->viewport()->mapToGlobal(pos));
+            return;
+        }
+        const QString id = it ? it->data(0, Qt::UserRole).toString() : QString();
+        if (id.isEmpty()) {
+            return;
+        }
+        const std::string body = id.toStdString();
+        QMenu m(this);
+        m.addAction(bodyVisible(body) ? tr("Hide") : tr("Show"), this,
+                    [this, body] { setBodyVisible(body, !bodyVisible(body)); });
+        m.addAction(tr("Isolate (show only this)"), this, [this, body] { isolateBody(body); });
+        m.addAction(tr("Show all bodies"), this, [this] { showAllBodies(); });
+        if (doc_->feature(body)) {
+            m.addAction(tr("Rename…"), this, [this, body] { renameFeature(body); });
+        }
+        m.addSeparator();
+        m.addAction(tr("Delete body"), this, [this, body] { removeBody(body); });
+        m.exec(browser_->viewport()->mapToGlobal(pos));
+    });
     browser_->setAccessibleName(tr("Design browser"));
     browser_->setWhatsThis(tr("Everything in your design: settings, origin planes, sketches, bodies and "
                               "named parameters."));
@@ -768,6 +947,10 @@ void MainWindow::buildDocks()
         opt(tr("Show constraints and dimensions"), &SketchEditor::Options::showConstraints);
         opt(tr("Shade closed areas (profiles)"), &SketchEditor::Options::showProfiles);
         opt(tr("Show gaps (open line ends)"), &SketchEditor::Options::showGaps);
+        sliceBox_ = new QCheckBox(tr("Slice: hide the model in front of the sketch"), sketchPanel_);
+        sliceBox_->setToolTip(tr("Cuts the view (not the model) at the sketch plane, to draw inside a body."));
+        connect(sliceBox_, &QCheckBox::toggled, this, [this](bool on) { setSketchSlice(on); });
+        lay->addWidget(sliceBox_);
         auto* look = new QPushButton(tr("Look at the sketch"), sketchPanel_);
         connect(look, &QPushButton::clicked, this, [this] {
             if (sketch_) {
@@ -808,6 +991,18 @@ void MainWindow::buildDocks()
     connect(timeline_, &QListWidget::currentRowChanged, this, &MainWindow::showFeatureDetails);
     timeline_->setIconSize(QSize(20, 20));
     timeline_->setContextMenuPolicy(Qt::CustomContextMenu);
+    // drag a step to a new place in the history (checked: it must not break anything)
+    timeline_->setDragDropMode(QAbstractItemView::InternalMove);
+    timeline_->setDefaultDropAction(Qt::MoveAction);
+    connect(timeline_->model(), &QAbstractItemModel::rowsMoved, this,
+            [this](const QModelIndex&, int start, int, const QModelIndex&, int row) {
+                if (!doc_ || start < 0 || start >= int(doc_->model().features.size())) {
+                    return;
+                }
+                const std::string id = doc_->model().features[size_t(start)].id;
+                const int to = row > start ? row - 1 : row;  // Qt counts the destination before removal
+                QTimer::singleShot(0, this, [this, id, to] { moveStep(id, to); });  // after the view settles
+            });
     connect(timeline_, &QListWidget::customContextMenuRequested, this, &MainWindow::timelineMenu);
     connect(timeline_, &QListWidget::itemDoubleClicked, this,
             [this](QListWidgetItem* it) { editFeature(timeline_->row(it)); });
@@ -866,6 +1061,33 @@ void MainWindow::setDocument(std::unique_ptr<jig::Document> doc, const QString& 
     view_->homeView();
 }
 
+bool MainWindow::sketchVisible(const std::string& id) const
+{
+    if (sketch_ && sketch_->featureId() == id) {
+        return true;  // being edited: the sketch editor draws it
+    }
+    const bool used = !doc_->dependents(id).empty();
+    return used ? doc_->shownSketches().count(id) > 0 : !doc_->hiddenBodies().count(id);
+}
+
+void MainWindow::setSketchVisible(const std::string& id, bool on)
+{
+    if (sketchVisible(id) == on) {
+        return;
+    }
+    if (!doc_->dependents(id).empty()) {
+        auto shown = doc_->shownSketches();
+        on ? (void)shown.insert(id) : (void)shown.erase(id);
+        doc_->setShownSketches(std::move(shown));
+    }
+    else {
+        auto hidden = doc_->hiddenBodies();  // the same "hidden" list as bodies (ids never clash)
+        on ? (void)hidden.erase(id) : (void)hidden.insert(id);
+        doc_->setHiddenBodies(std::move(hidden));
+    }
+    refreshAll();
+}
+
 void MainWindow::refreshDatums()
 {
     SceneOverlay ov;
@@ -875,6 +1097,46 @@ void MainWindow::refreshDatums()
         auto mp = jig::massProperties(b->shape());
         s = std::max({s, float(mp.xmax - mp.xmin) * 0.6f, float(mp.ymax - mp.ymin) * 0.6f, float(mp.zmax - mp.zmin) * 0.6f});
     }
+    // finished sketches: their curves in the view, hidden by the model where it is in front
+    // (construction ones dashed: drawn in short pieces with gaps, not only lighter)
+    SceneOverlay sketchLines;
+    const double dash = std::max(0.5, double(s) / 40);
+    for (auto& [id, sk] : doc_->state().sketches) {
+        if ((sketch_ && sketch_->featureId() == id) || !sketchVisible(id)) {
+            continue;
+        }
+        const gp_Ax3& f = sk->frame;
+        auto to3d = [&](const QPointF& p) {
+            const gp_XYZ w = f.Location().XYZ() + f.XDirection().XYZ() * p.x() + f.YDirection().XYZ() * p.y();
+            return QVector3D(float(w.X()), float(w.Y()), float(w.Z()));
+        };
+        const QColor ink(110, 170, 255, 235);
+        for (auto& [eid, e] : sk->solved.entities()) {
+            if (e.type == jig::EntityType::Point) {
+                continue;
+            }
+            const auto pts = SketchEditor::polyline(sk->solved, e);
+            double along = 0;
+            for (size_t i = 0; i + 1 < pts.size(); ++i) {
+                if (!e.construction) {
+                    sketchLines.lines.push_back({to3d(pts[i]), ink});
+                    sketchLines.lines.push_back({to3d(pts[i + 1]), ink});
+                    continue;
+                }
+                const QPointF a = pts[i], b = pts[i + 1];
+                const double L = QLineF(a, b).length();
+                for (double t = 0; t < L; t += dash / 2) {
+                    const double t1 = std::min(L, t + dash / 2);
+                    if (int(std::floor((along + t) / (dash / 2))) % 2 == 0) {
+                        sketchLines.lines.push_back({to3d(a + (b - a) * (t / L)), ink});
+                        sketchLines.lines.push_back({to3d(a + (b - a) * (t1 / L)), ink});
+                    }
+                }
+                along += L;
+            }
+        }
+    }
+    view_->setSketchLines(std::move(sketchLines));
     for (auto& [id, f] : doc_->state().planes) {
         const auto c = planeCorners(f, s);
         QColor fill = kDatum, edge = kDatum;
@@ -890,6 +1152,35 @@ void MainWindow::refreshDatums()
         const jig::Feature* feat = doc_->feature(id);
         labels.emplace_back(feat ? q(feat->name) : q(id), c[3]);
     }
+    // construction axes: dashed amber lines (dashed, so not told apart by colour alone)
+    for (auto& [id, a] : doc_->state().axes) {
+        QColor edge = kDatum;
+        edge.setAlpha(230);
+        const int dashes = 24;
+        for (int k = 0; k < dashes; k += 2) {
+            for (int e = 0; e < 2; ++e) {
+                const double t = -s + 2 * s * (k + e) / dashes;
+                const gp_XYZ p = a.Location().XYZ() + a.Direction().XYZ() * t;
+                ov.lines.push_back({QVector3D(float(p.X()), float(p.Y()), float(p.Z())), edge});
+            }
+        }
+        const gp_XYZ end = a.Location().XYZ() + a.Direction().XYZ() * s;
+        const jig::Feature* feat = doc_->feature(id);
+        labels.emplace_back(feat ? q(feat->name) : q(id), QVector3D(float(end.X()), float(end.Y()), float(end.Z())));
+    }
+    // construction points: a small cross of three short lines, with the name beside it
+    for (auto& [id, pt] : doc_->state().points) {
+        QColor edge = kDatum;
+        edge.setAlpha(240);
+        const float r = float(s) * 0.03f;
+        const QVector3D c(float(pt.X()), float(pt.Y()), float(pt.Z()));
+        for (const QVector3D d : {QVector3D(r, 0, 0), QVector3D(0, r, 0), QVector3D(0, 0, r)}) {
+            ov.lines.push_back({c - d, edge});
+            ov.lines.push_back({c + d, edge});
+        }
+        const jig::Feature* feat = doc_->feature(id);
+        labels.emplace_back(feat ? q(feat->name) : q(id), c);
+    }
     view_->setDatums(std::move(ov), std::move(labels));
 }
 
@@ -900,9 +1191,12 @@ void MainWindow::refreshAll()
     }
     std::vector<Viewport::BodyInput> bodies;
     for (auto& [id, b] : doc_->state().bodies) {
-        bodies.push_back({id, b});
+        if (!doc_->hiddenBodies().count(id)) {
+            bodies.push_back({id, b});
+        }
     }
     view_->setBodies(std::move(bodies));
+    view_->setUnits(doc_->units());
     refreshDatums();
     view_->setEmptyHint(doc_->model().features.empty() && !sketch_ && !picker_
                             ? tr("Start here: every part begins as a flat sketch.\n"
@@ -922,7 +1216,8 @@ void MainWindow::refreshAll()
     const QString name = path_.isEmpty() ? tr("Untitled") : QFileInfo(path_).completeBaseName();
     setWindowTitle(QString("%1[*] — Jigsmith").arg(name));  // [*]: the platform's "unsaved" marker
     setWindowModified(dirty);
-    statusInfo_->setText(tr("mm · Z up · rebuilt %1 step(s) in %2 ms")
+    statusInfo_->setText(tr("%1 · Z up · rebuilt %2 step(s) in %3 ms")
+                             .arg(q(jig::unitSymbol(doc_->units())))
                              .arg(doc_->recomputedLastTime())
                              .arg(doc_->lastRecomputeMs(), 0, 'f', 0));
 }
@@ -931,12 +1226,14 @@ void MainWindow::refreshBrowser()
 {
     browser_->clear();
     auto* settings = new QTreeWidgetItem(browser_, {tr("Document settings")});
-    new QTreeWidgetItem(settings, {tr("Units: millimetres")});
+    static const char* unitNames[] = {"millimetres", "centimetres", "metres", "inches", "feet"};
+    new QTreeWidgetItem(settings, {tr("Units: %1 (change in Settings)").arg(tr(unitNames[int(doc_->units())]))});
     new QTreeWidgetItem(settings, {tr("Up axis: Z")});
     auto* origin = new QTreeWidgetItem(browser_, {tr("Origin")});
     for (const char* p : {"XY plane (floor)", "XZ plane (front)", "YZ plane (side)"}) {
         new QTreeWidgetItem(origin, {tr(p)});
     }
+    browser_->blockSignals(true);  // ticking the rows below is not a person ticking them
     auto* sketches = new QTreeWidgetItem(browser_, {tr("Sketches")});
     auto* bodies = new QTreeWidgetItem(browser_, {tr("Bodies")});
     const auto& feats = doc_->model().features;
@@ -951,13 +1248,42 @@ void MainWindow::refreshBrowser()
             extra = it->second->report.dof == 0 ? tr("fully defined")
                                                 : tr("%1 free").arg(it->second->report.dof);
         }
-        new QTreeWidgetItem(sketches, {QString("%1 %2  (%3)").arg(statusGlyph(st.level), q(feats[i].name),
-                                                                  extra.isEmpty() ? statusWord(st.level) : extra)});
+        const bool shown = sketchVisible(feats[i].id);
+        // the tick box shows visibility; a status mark only when something needs attention
+        const QString glyph = st.level == jig::StatusLevel::Ok ? QString() : statusGlyph(st.level) + " ";
+        auto* sk = new QTreeWidgetItem(sketches, {QString("%1%2  (%3)%4").arg(glyph, q(feats[i].name),
+                                                                               extra.isEmpty() ? statusWord(st.level) : extra,
+                                                                               shown ? QString() : tr("  hidden"))});
+        sk->setData(0, Qt::UserRole + 1, q(feats[i].id));  // the step, for "find in timeline"
+        sk->setData(0, Qt::UserRole + 3, q(feats[i].id));  // its tick shows or hides it
+        sk->setFlags(sk->flags() | Qt::ItemIsUserCheckable);
+        sk->setCheckState(0, shown ? Qt::Checked : Qt::Unchecked);
+        sk->setToolTip(0, tr("Tick to show the sketch in the view. A sketch a later step uses hides itself."));
     }
+    browser_->blockSignals(true);
     for (auto& [id, b] : doc_->state().bodies) {
         auto mp = jig::massProperties(b->shape());
         const jig::Feature* f = doc_->feature(id);
-        new QTreeWidgetItem(bodies, {tr("%1  (%2 cm³)").arg(f ? q(f->name) : q(id)).arg(mp.volume / 1000, 0, 'f', 1)});
+        const bool shown = !doc_->hiddenBodies().count(id);
+        // the checkbox shows visibility; "hidden" is also written out (not colour alone)
+        auto* it = new QTreeWidgetItem(bodies, {tr("%1  (%2)%3")
+                                                    .arg(f ? q(f->name) : q(id),
+                                                         q(jig::formatVolume(mp.volume, doc_->units())),
+                                                         shown ? QString() : tr("  hidden"))});
+        it->setData(0, Qt::UserRole, q(id));
+        it->setData(0, Qt::UserRole + 1, q(id));  // the step that made the body
+        it->setFlags(it->flags() | Qt::ItemIsUserCheckable);
+        it->setCheckState(0, shown ? Qt::Checked : Qt::Unchecked);
+        it->setToolTip(0, tr("Tick to show, untick to hide. Right-click to isolate or rename."));
+    }
+    browser_->blockSignals(false);
+    if (!doc_->namedViews().empty()) {
+        auto* views = new QTreeWidgetItem(browser_, {tr("Named views")});
+        for (auto& [name, cam] : doc_->namedViews()) {
+            auto* v = new QTreeWidgetItem(views, {q(name)});
+            v->setData(0, Qt::UserRole + 2, q(name));
+            v->setToolTip(0, tr("Double-click (or Enter) to look at the design from here. Right-click to replace or delete."));
+        }
     }
     auto* params = new QTreeWidgetItem(browser_, {tr("Parameters")});
     for (auto& p : doc_->model().parameters) {
@@ -969,6 +1295,138 @@ void MainWindow::refreshBrowser()
     browser_->expandAll();
     settings->setExpanded(false);
     origin->setExpanded(false);
+}
+
+void MainWindow::setSketchSlice(bool on)
+{
+    if (sliceBox_ && sliceBox_->isChecked() != on) {
+        sliceBox_->setChecked(on);  // comes back here through toggled
+        return;
+    }
+    if (!on || !sketch_) {
+        view_->setSection(std::nullopt);
+        return;
+    }
+    // keep what is behind the plane (the viewer looks along -normal); a hair in front of the
+    // plane so faces the sketch lies on stay visible
+    const gp_Ax3& f = sketch_->frame();
+    const QVector3D n(float(f.Direction().X()), float(f.Direction().Y()), float(f.Direction().Z()));
+    const QVector3D o(float(f.Location().X()), float(f.Location().Y()), float(f.Location().Z()));
+    view_->setSection(QVector4D(n, QVector3D::dotProduct(n, o) + 1e-3f));
+}
+
+void MainWindow::saveNamedView(const QString& name)
+{
+    doc_->setNamedView(name.toStdString(), view_->camera());  // saved with the design
+    refreshAll();
+    statusBar()->showMessage(tr("View “%1” saved with the design. Double-click it in the Browser to come back.").arg(name),
+                             6000);
+}
+
+bool MainWindow::restoreNamedView(const QString& name)
+{
+    auto it = doc_->namedViews().find(name.toStdString());
+    if (it == doc_->namedViews().end()) {
+        return false;
+    }
+    view_->setCamera(it->second);
+    registryAction("view.projection")->setChecked(view_->perspective());
+    return true;
+}
+
+void MainWindow::setBodyVisible(const std::string& body, bool on)
+{
+    auto hidden = doc_->hiddenBodies();  // saved with the design
+    if (on) {
+        hidden.erase(body);
+    }
+    else {
+        hidden.insert(body);
+    }
+    doc_->setHiddenBodies(std::move(hidden));
+    refreshAll();
+}
+
+void MainWindow::setSelectFilter(const QString& what)
+{
+    const int i = selectFilter_->findData(what);
+    if (i >= 0 && i != selectFilter_->currentIndex()) {
+        selectFilter_->setCurrentIndex(i);  // comes back here through the signal
+        return;
+    }
+    if (!panel_ && !sketch_) {
+        view_->setPickMode(what == "edges" ? PickMode::Edges : PickMode::Faces);
+    }
+    details_->setHtml(tr("<p>Nothing selected.</p>"));
+}
+
+QString MainWindow::selectFilter() const
+{
+    return selectFilter_ ? selectFilter_->currentData().toString() : QString("faces");
+}
+
+QString MainWindow::detailsText() const
+{
+    return details_->toPlainText();
+}
+
+MarkingMenu* MainWindow::openMarkingMenu(const QPoint& viewPos)
+{
+    // the commands people reach for most, for where they are: drawing or modelling
+    static const char* model[] = {"sketch.create", "solid.extrude", "solid.fillet", "solid.presspull",
+                                  "solid.hole",    "inspect.measure", "edit.undo", "edit.palette"};
+    static const char* drawing[] = {"sketch.line",  "sketch.rectangle", "sketch.circle",       "sketch.dimension",
+                                    "sketch.trim", "sketch.construction", "edit.undo", "sketch.finish"};
+    std::vector<QAction*> acts;
+    for (const char* id : sketch_ ? drawing : model) {
+        acts.push_back(registryAction(id));
+    }
+    auto* m = new MarkingMenu(acts, this);
+    m->popupAt(view_->mapToGlobal(viewPos));
+    return m;
+}
+
+QMenu* MainWindow::openSelectOther(const QPoint& viewPos)
+{
+    const auto faces = view_->facesUnder(viewPos);
+    auto* m = new QMenu(this);
+    m->setAttribute(Qt::WA_DeleteOnClose);
+    m->setAccessibleName(tr("Select other"));
+    m->addSection(faces.empty() ? tr("Nothing under the cursor") : tr("Faces here, nearest first"));
+    int n = 0;
+    for (const auto& f : faces) {
+        auto it = doc_->state().bodies.find(f.body);
+        if (it == doc_->state().bodies.end()) {
+            continue;
+        }
+        const jig::Feature* bf = doc_->feature(f.body);
+        const QString label = tr("%1. %2 (%3)")
+                                  .arg(++n)
+                                  .arg(q(it->second->faceName(f.face)), bf ? q(bf->name) : q(f.body));
+        m->addAction(label, this, [this, f] { view_->selectFace(f.body, f.face); });
+    }
+    m->popup(view_->mapToGlobal(viewPos));
+    return m;
+}
+
+void MainWindow::isolateBody(const std::string& body)
+{
+    std::set<std::string> hidden;
+    for (auto& [id, b] : doc_->state().bodies) {
+        if (id != body) {
+            hidden.insert(id);
+        }
+    }
+    doc_->setHiddenBodies(std::move(hidden));
+    refreshAll();
+    statusBar()->showMessage(tr("Only this body is shown. Right-click a body and choose Show all to bring the rest back."),
+                             6000);
+}
+
+void MainWindow::showAllBodies()
+{
+    doc_->setHiddenBodies({});
+    refreshAll();
 }
 
 void MainWindow::refreshTimeline()
@@ -983,11 +1441,31 @@ void MainWindow::refreshTimeline()
                                                                  q(feats[i].name)),
                                        timeline_);
         it->setTextAlignment(Qt::AlignCenter);
+        // groups: the first step of a run carries the group's name; folding hides the rest
+        const std::string& g = feats[i].group;
+        if (!g.empty()) {
+            const bool first = i == 0 || feats[i - 1].group != g;
+            const bool folded = doc_->foldedGroups().count(g) > 0;
+            if (first) {
+                int n = 0;
+                for (size_t k = i; k < feats.size() && feats[k].group == g; ++k) {
+                    ++n;
+                }
+                it->setText((folded ? QString("▸ %1 (%2 steps)").arg(q(g)).arg(n) : QString("▾ %1").arg(q(g))) + "\n" +
+                            it->text().section('\n', 1));
+            }
+            else if (folded) {
+                it->setHidden(true);
+            }
+        }
         it->setIcon(toolIcon(QString("feature.") + jig::toString(feats[i].kind), palette().color(QPalette::WindowText),
                              accentFor(palette())));
         QString tip = statusWord(st.level);
+        if (!feats[i].group.empty()) {
+            tip = tr("Group: %1").arg(q(feats[i].group)) + "\n" + tip;
+        }
         if (!st.message.empty()) {
-            tip += ": " + q(st.message);
+            tip += ": " + coreText(st.message);
         }
         it->setToolTip(tip);
         it->setSizeHint(QSize(150, 52));
@@ -1058,12 +1536,12 @@ void MainWindow::showFeatureDetails(int index)
                        .arg(statusGlyph(st.level), q(f.name).toHtmlEscaped(), kindWord(f.kind),
                             statusWord(st.level));
     if (!st.message.empty()) {
-        html += "<p>" + q(st.message).toHtmlEscaped() + "</p>";
+        html += "<p>" + coreText(st.message).toHtmlEscaped() + "</p>";
     }
     if (!st.suggestions.empty()) {
         html += tr("<p><b>Ways to fix this:</b></p><ul>");
         for (auto& s : st.suggestions) {
-            html += "<li>" + q(s).toHtmlEscaped() + "</li>";
+            html += "<li>" + coreText(s).toHtmlEscaped() + "</li>";
         }
         html += "</ul>";
     }
@@ -1100,6 +1578,15 @@ void MainWindow::runCommand(const QString& id)
     else if (id == "file.save") {
         save(false);
     }
+    else if (id == "help.tutorial") {
+        startTutorial();
+    }
+    else if (id == "file.save_version") {
+        saveVersionInteractive();
+    }
+    else if (id == "file.versions") {
+        showVersions();
+    }
     else if (id == "file.save_as") {
         save(true);
     }
@@ -1127,6 +1614,15 @@ void MainWindow::runCommand(const QString& id)
     }
     else if (id == "view.fit") {
         view_->fitAll();
+    }
+    else if (id == "view.save_named") {
+        bool ok = false;
+        const QString name = QInputDialog::getText(this, tr("Save view"), tr("Name for this view:"), QLineEdit::Normal,
+                                                   tr("View %1").arg(doc_->namedViews().size() + 1), &ok)
+                                 .trimmed();
+        if (ok && !name.isEmpty()) {
+            saveNamedView(name);
+        }
     }
     else if (id == "view.home") {
         view_->homeView();
@@ -1174,8 +1670,29 @@ void MainWindow::runCommand(const QString& id)
     else if (id == "construct.offset_plane" || id == "construct.angle_plane" || id == "construct.midplane") {
         openPlane({}, id == "construct.angle_plane" ? "angle" : id == "construct.midplane" ? "midplane" : "offset");
     }
+    else if (id == "construct.axis") {
+        openAxis();
+    }
+    else if (id == "construct.point") {
+        openPoint();
+    }
+    else if (id == "solid.presspull") {
+        openPressPull();
+    }
     else if (id == "inspect.properties") {
         openProperties();
+    }
+    else if (id == "insert.dxf") {
+        importDxf();
+    }
+    else if (id == "insert.svg") {
+        importSvg();
+    }
+    else if (id == "insert.step") {
+        const QString path = QFileDialog::getOpenFileName(this, tr("Import STEP"), {}, tr("STEP files (*.step *.stp)"));
+        if (!path.isEmpty()) {
+            importStepFile(path);
+        }
     }
     else if (id == "inspect.section") {
         if (doc_->state().bodies.empty()) {
@@ -1201,8 +1718,16 @@ void MainWindow::runCommand(const QString& id)
         using CT = jig::ConstraintType;
         static const std::map<QString, T> tools {
             {"sketch.line", T::Line},       {"sketch.rectangle", T::Rectangle}, {"sketch.circle", T::Circle},
-            {"sketch.arc", T::Arc},         {"sketch.slot", T::Slot},           {"sketch.polygon", T::Polygon},
-            {"sketch.text", T::Text},
+            {"sketch.arc", T::Arc},         {"sketch.arc3", T::Arc3},         {"sketch.slot", T::Slot},           {"sketch.polygon", T::Polygon},
+            {"sketch.ellipse", T::Ellipse}, {"sketch.spline", T::Spline},
+            {"sketch.arc_tangent", T::TangentArc}, {"sketch.circle2", T::Circle2}, {"sketch.circle3", T::Circle3},
+            {"sketch.circle_tangent", T::CircleTangent},
+            {"sketch.rect3", T::Rect3},
+            {"sketch.text", T::Text},       {"sketch.trim", T::Trim},
+            {"sketch.offset", T::Offset},   {"sketch.fillet", T::Round},
+            {"sketch.project", T::Project}, {"sketch.extend", T::Extend},     {"sketch.break", T::Break},
+            {"sketch.mirror", T::Mirror},   {"sketch.move", T::Move},         {"sketch.pattern_rect", T::PatternRect},
+            {"sketch.pattern_circ", T::PatternCirc},
             {"sketch.point", T::Point},     {"sketch.dimension", T::Dimension}};
         static const std::map<QString, CT> cons {
             {"constraint.coincident", CT::Coincident}, {"constraint.horizontal", CT::Horizontal},
@@ -1219,6 +1744,12 @@ void MainWindow::runCommand(const QString& id)
         else if (id == "sketch.construction") {
             sketch_->toggleConstruction();
         }
+        else if (id == "constraint.collinear") {
+            sketch_->applyCollinear();
+        }
+        else if (id == "constraint.concentric") {
+            sketch_->applyConcentric();
+        }
         view_->setFocus();
     }
     else {
@@ -1233,14 +1764,14 @@ void MainWindow::newDesign()
     if (!maybeKeepChanges()) {
         return;
     }
-    setDocument(std::make_unique<jig::Document>(), {});
+    setDocument(blankDocument(), {});
 }
 
 bool MainWindow::openFile(const QString& path)
 {
     auto r = jig::loadDocument(path.toStdString());
     if (!r) {
-        QMessageBox::warning(this, tr("Could not open"), q(r.error().message));
+        QMessageBox::warning(this, tr("Could not open"), coreText(r.error().message));
         return false;
     }
     setDocument(std::move(r.value()), path);
@@ -1258,13 +1789,117 @@ bool MainWindow::openSample(const QString& name)
     run.strict = false;
     auto r = run.runText(f.readAll().toStdString());
     if (!r) {
-        QMessageBox::warning(this, tr("Sample problem"), q(r.error().message));
+        QMessageBox::warning(this, tr("Sample problem"), coreText(r.error().message));
     }
     // A sample opens as a fresh, unsaved design with clean undo history.
     jig::Model m = doc->model();
     doc->resetModel(std::move(m));
     setDocument(std::move(doc), {});
     return true;
+}
+
+bool MainWindow::saveNamedVersion(const QString& label)
+{
+    if (path_.isEmpty() && !save(true)) {
+        return false;  // a version lives in the design's file, so it needs one
+    }
+    auto r = jig::saveVersion(*doc_, path_.toStdString(), label.toStdString());
+    if (!r) {
+        QMessageBox::warning(this, tr("Could not save a version"), coreText(r.error().message));
+        return false;
+    }
+    savedRevision_ = doc_->revision();
+    refreshAll();
+    statusBar()->showMessage(tr("Saved version %1: %2").arg(r.value()).arg(label), 5000);
+    return true;
+}
+
+void MainWindow::saveVersionInteractive()
+{
+    bool ok = false;
+    const QString label = QInputDialog::getText(this, tr("Save version"),
+                                                tr("A short note, e.g. “before rounding the edges”:"),
+                                                QLineEdit::Normal, {}, &ok)
+                              .trimmed();
+    if (ok) {
+        saveNamedVersion(label.isEmpty() ? tr("Version") : label);
+    }
+}
+
+bool MainWindow::restoreVersion(int number)
+{
+    if (path_.isEmpty()) {
+        return false;
+    }
+    auto v = jig::loadVersion(path_.toStdString(), number);
+    if (!v) {
+        QMessageBox::warning(this, tr("Could not restore"), coreText(v.error().message));
+        return false;
+    }
+    if (sketch_) {
+        exitSketch();
+    }
+    const jig::Model old = v.value()->model();
+    // one undoable change: the whole design becomes the version
+    doc_->transact(tr("Restore version %1").arg(number).toStdString(), [&](jig::Model& m) -> jig::Result<bool> {
+        m = old;
+        return true;
+    });
+    refreshAll();
+    statusBar()->showMessage(tr("Restored version %1. Undo brings back what you had.").arg(number), 6000);
+    return true;
+}
+
+void MainWindow::showVersions()
+{
+    if (path_.isEmpty()) {
+        QMessageBox::information(this, tr("Versions"), tr("This design has not been saved yet, so it has no versions. "
+                                                          "Use File ▸ Save version… to keep a snapshot."));
+        return;
+    }
+    auto list = jig::listVersions(path_.toStdString());
+    if (!list) {
+        QMessageBox::warning(this, tr("Versions"), coreText(list.error().message));
+        return;
+    }
+    QDialog d(this);
+    d.setWindowTitle(tr("Versions of %1").arg(QFileInfo(path_).fileName()));
+    d.resize(520, 320);
+    auto* lay = new QVBoxLayout(&d);
+    auto* items = new QListWidget(&d);
+    for (auto it = list->rbegin(); it != list->rend(); ++it) {  // newest first
+        QString when = q(it->saved);
+        const QDateTime t = QDateTime::fromString(when, Qt::ISODate);
+        if (t.isValid()) {
+            when = QLocale().toString(t.toLocalTime(), QLocale::ShortFormat);
+        }
+        auto* row = new QListWidgetItem(tr("%1 · %2 · %3 · %n step(s)", "", it->steps)
+                                            .arg(it->number)
+                                            .arg(q(it->label), when),
+                                        items);
+        row->setData(Qt::UserRole, it->number);
+    }
+    if (list->empty()) {
+        new QListWidgetItem(tr("No versions yet. Use File ▸ Save version… to keep one."), items);
+    }
+    auto* note = new QLabel(tr("Restoring replaces the design with the version. It is one change: Undo brings back "
+                               "what you had."),
+                            &d);
+    note->setWordWrap(true);
+    auto* box = new QDialogButtonBox(QDialogButtonBox::Close, &d);
+    auto* restore = box->addButton(tr("Restore into this design"), QDialogButtonBox::ActionRole);
+    restore->setEnabled(false);
+    connect(items, &QListWidget::currentRowChanged, &d,
+            [&] { restore->setEnabled(items->currentItem() && items->currentItem()->data(Qt::UserRole).isValid()); });
+    connect(restore, &QPushButton::clicked, &d, [&] {
+        restoreVersion(items->currentItem()->data(Qt::UserRole).toInt());
+        d.accept();
+    });
+    connect(box, &QDialogButtonBox::rejected, &d, &QDialog::reject);
+    lay->addWidget(items);
+    lay->addWidget(note);
+    lay->addWidget(box);
+    d.exec();
 }
 
 bool MainWindow::save(bool askPath)
@@ -1280,9 +1915,14 @@ bool MainWindow::save(bool askPath)
             p += ".jig";
         }
     }
+    return saveTo(p);
+}
+
+bool MainWindow::saveTo(const QString& p)
+{
     auto r = jig::saveDocument(*doc_, p.toStdString());
     if (!r) {
-        QMessageBox::warning(this, tr("Could not save"), q(r.error().message));
+        QMessageBox::warning(this, tr("Could not save"), coreText(r.error().message));
         return false;
     }
     path_ = p;
@@ -1322,9 +1962,10 @@ void MainWindow::exportAs(const QString& format)
         r = format == "stl" ? jig::exportStl(shape, p.toStdString()) : jig::exportStep(shape, p.toStdString());
     }
     if (!r) {
-        QMessageBox::warning(this, tr("Could not export"), q(r.error().message));
+        QMessageBox::warning(this, tr("Could not export"), coreText(r.error().message));
         return;
     }
+    exported_ = true;
     statusBar()->showMessage(tr("Exported %1 (millimetres)").arg(QDir::toNativeSeparators(p)), 5000);
 }
 
@@ -1410,9 +2051,11 @@ void MainWindow::showWelcome()
                              &d);
     title->setWordWrap(true);
     lay->addWidget(title);
-    auto* tut = new QPushButton(tr("Your first part (15 min)\nComing in milestone M7"), &d);
-    tut->setEnabled(false);
-    tut->setToolTip(tr("A guided tour that builds a phone stand with you. Not built yet."));
+    auto* tut = new QPushButton(tr("Your first part (10 min)\nA guided tour: sketch, 3D, round, print"), &d);
+    connect(tut, &QPushButton::clicked, &d, [&] {
+        d.accept();
+        startTutorial();
+    });
     auto* sample = new QPushButton(tr("Open a sample\nA finished phone stand to look around"), &d);
     auto* blank = new QPushButton(tr("Start blank\nAn empty design with the origin ready"), &d);
     for (auto* b : {tut, sample, blank}) {
@@ -1429,10 +2072,170 @@ void MainWindow::showWelcome()
     QSettings().setValue("welcomeShown", true);
 }
 
+QAction* MainWindow::commandAction(const QString& id)
+{
+    return actions_.count(id) ? actions_.at(id) : nullptr;
+}
+
+void MainWindow::startTutorial()
+{
+    if (tutorial_) {
+        tutorial_->deleteLater();
+    }
+    if (!doc_->model().features.empty()) {
+        if (!maybeKeepChanges()) {
+            return;
+        }
+        setDocument(blankDocument(), {});
+    }
+    exported_ = false;
+    tutorial_ = new TutorialCard(this, view_);
+    tutorial_->move(12, 12);
+    tutorial_->show();
+    tutorial_->raise();
+    connect(tutorial_, &TutorialCard::closed, this, [this] { tutorial_->deleteLater(); });
+}
+
+std::unique_ptr<jig::Document> MainWindow::blankDocument() const
+{
+    auto doc = std::make_unique<jig::Document>();
+    const auto u = jig::lengthUnitFromString(QSettings().value("units/new", "mm").toString().toStdString());
+    if (u && *u != jig::LengthUnit::Millimetre) {
+        jig::Model m = doc->model();
+        m.units = *u;
+        doc->resetModel(std::move(m));
+    }
+    return doc;
+}
+
+void MainWindow::setDesignUnits(jig::LengthUnit u)
+{
+    if (!doc_ || doc_->units() == u) {
+        return;
+    }
+    doc_->transact(tr("Change units to %1").arg(q(jig::unitSymbol(u))).toStdString(), [u](jig::Model& m) -> jig::Result<bool> {
+        m.units = u;
+        return true;
+    });
+    if (sketch_) {
+        sketch_->refreshFromDocument();
+    }
+    refreshAll();
+}
+
+void MainWindow::openSettings()
+{
+    QDialog d(this);
+    d.setWindowTitle(tr("Settings"));
+    auto* lay = new QVBoxLayout(&d);
+    auto* form = new QFormLayout();
+    auto* theme = new QComboBox(&d);
+    theme->addItem(tr("Dark"), int(Theme::Dark));
+    theme->addItem(tr("Light"), int(Theme::Light));
+    theme->addItem(tr("High contrast"), int(Theme::HighContrast));
+    theme->setCurrentIndex(theme->findData(int(theme_)));
+    const std::pair<QString, QString> units[] = {{tr("Millimetres (mm)"), "mm"}, {tr("Centimetres (cm)"), "cm"},
+                                                 {tr("Inches (in)"), "in"},      {tr("Feet (ft)"), "ft"},
+                                                 {tr("Metres (m)"), "m"}};
+    auto* design = new QComboBox(&d);
+    auto* fresh = new QComboBox(&d);
+    for (auto& [label, sym] : units) {
+        design->addItem(label, sym);
+        fresh->addItem(label, sym);
+    }
+    design->setCurrentIndex(design->findData(q(jig::unitSymbol(doc_->units()))));
+    fresh->setCurrentIndex(std::max(0, fresh->findData(QSettings().value("units/new", "mm").toString())));
+    auto* navCombo = new QComboBox(&d);
+    navCombo->addItem(tr("Default"), int(NavPreset::Default));
+    navCombo->addItem(tr("Blender-like"), int(NavPreset::Blender));
+    navCombo->addItem(tr("SolidWorks-like"), int(NavPreset::SolidWorks));
+    navCombo->addItem(tr("Trackpad"), int(NavPreset::Trackpad));
+    navCombo->setCurrentIndex(navCombo->findData(int(view_->navPreset())));
+    auto* navHelp = new QLabel(&d);
+    navHelp->setWordWrap(true);
+    auto describe = [navCombo, navHelp] {
+        static const QString always =
+            tr(" Everywhere: right-drag orbits, Shift+right-drag pans, right-click opens the marking menu, the wheel "
+               "zooms where the cursor is.");
+        switch (NavPreset(navCombo->currentData().toInt())) {
+            case NavPreset::Default: navHelp->setText(tr("Middle-drag pans; Shift+middle-drag orbits.") + always); break;
+            case NavPreset::Blender: navHelp->setText(tr("Middle-drag orbits; Shift+middle-drag pans.") + always); break;
+            case NavPreset::SolidWorks: navHelp->setText(tr("Middle-drag orbits; Ctrl+middle-drag pans.") + always); break;
+            case NavPreset::Trackpad:
+                navHelp->setText(tr("Two-finger scroll orbits, Shift+scroll pans, pinch zooms; Alt+drag also orbits.") +
+                                 always);
+                break;
+        }
+    };
+    describe();
+    connect(navCombo, &QComboBox::currentIndexChanged, &d, describe);
+    auto* invert = new QCheckBox(tr("Zoom the other way round (wheel and pinch)"), &d);
+    invert->setChecked(view_->zoomInverted());
+    auto* speed = new QComboBox(&d);
+    for (auto [label, f] : {std::pair {tr("Slow"), 0.5f}, std::pair {tr("Normal"), 1.0f}, std::pair {tr("Fast"), 2.0f}}) {
+        speed->addItem(label, f);
+    }
+    speed->setCurrentIndex(std::max(0, speed->findData(view_->orbitSpeed())));
+    form->addRow(tr("Theme"), theme);
+    form->addRow(tr("Units of this design"), design);
+    form->addRow(tr("Units for new designs"), fresh);
+    auto* language = new QComboBox(&d);
+    language->addItem(tr("The computer's language"), QString());
+    language->addItem("English", "en");
+    for (const QString& code : availableLanguages()) {
+        language->addItem(languageName(code), code);
+    }
+    language->setCurrentIndex(std::max(0, language->findData(QSettings().value("language").toString())));
+    form->addRow(tr("Language (after a restart)"), language);
+    form->addRow(tr("Mouse and trackpad"), navCombo);
+    form->addRow(QString(), navHelp);
+    form->addRow(QString(), invert);
+    form->addRow(tr("Orbit speed"), speed);
+    auto* note = new QLabel(tr("Changing units never resizes anything: it changes how sizes are shown, and what a "
+                               "plain number typed into a size field means. You can always type a unit, e.g. "
+                               "<i>2 in</i> or <i>50 mm</i>, in any design."),
+                            &d);
+    note->setWordWrap(true);
+    auto* box = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &d);
+    lay->addLayout(form);
+    lay->addWidget(note);
+    lay->addWidget(box);
+    connect(box, &QDialogButtonBox::accepted, &d, &QDialog::accept);
+    connect(box, &QDialogButtonBox::rejected, &d, &QDialog::reject);
+    connect(theme, &QComboBox::currentIndexChanged, this, [this, theme] { setTheme(Theme(theme->currentData().toInt())); });
+    const Theme before = theme_;
+    if (d.exec() != QDialog::Accepted) {
+        setTheme(before);  // the theme previews live; Cancel puts it back
+        return;
+    }
+    QSettings().setValue("units/new", fresh->currentData().toString());
+    QSettings().setValue("language", language->currentData().toString());
+    setNavigation(NavPreset(navCombo->currentData().toInt()), invert->isChecked(), speed->currentData().toFloat());
+    if (auto u = jig::lengthUnitFromString(design->currentData().toString().toStdString())) {
+        setDesignUnits(*u);
+    }
+}
+
+void MainWindow::setNavigation(NavPreset preset, bool zoomInverted, float orbitSpeed)
+{
+    view_->setNavPreset(preset);
+    view_->setZoomInverted(zoomInverted);
+    view_->setOrbitSpeed(orbitSpeed);
+    QSettings st;
+    st.setValue("navigation", int(preset));
+    st.setValue("navigation/zoom_inverted", zoomInverted);
+    st.setValue("navigation/orbit_speed", orbitSpeed);
+    if (navGroup_) {
+        for (QAction* a : navGroup_->actions()) {
+            a->setChecked(a->data().toInt() == int(preset));
+        }
+    }
+}
+
 void MainWindow::setTheme(Theme t)
 {
     theme_ = t;
-    QSettings().setValue("theme", int(t));
+    QSettings().setValue("appearance/theme", int(t));
     qApp->setStyle(QStyleFactory::create("Fusion"));  // Qt's built-in cross-platform widget style
     QPalette p;
     ViewColors vc;
@@ -1543,7 +2346,7 @@ bool MainWindow::createSketchOn(const std::string& plane, const std::string& fac
     });
     QTimer::singleShot(0, this, [this] { cancelPicker(); });
     if (!r) {
-        QMessageBox::warning(this, tr("Sketch"), q(r.error().message));
+        QMessageBox::warning(this, tr("Sketch"), coreText(r.error().message));
         return false;
     }
     cancelPicker();
@@ -1562,6 +2365,7 @@ void MainWindow::enterSketch(const std::string& id)
     }
     sketch_ = new SketchEditor(view_, *doc_, id, this);
     view_->setInteractor(sketch_);
+    view_->setSketchGrid(sketch_->frame());  // the grid lies in this sketch's plane
     view_->setPickMode(PickMode::None);
     connect(sketch_, &SketchEditor::committed, this, [this] { refreshAll(); });
     connect(sketch_, &SketchEditor::stateChanged, this, &MainWindow::updateSketchInfo);
@@ -1585,6 +2389,10 @@ void MainWindow::exitSketch()
     view_->setInteractor(nullptr);
     view_->setOverlay({});
     view_->setPickMode(PickMode::Faces);
+    view_->setSketchGrid(std::nullopt);  // back to the floor grid
+    if (sliceBox_ && sliceBox_->isChecked()) {
+        sliceBox_->setChecked(false);  // takes the slice away
+    }
     sketch_->deleteLater();
     sketch_ = nullptr;
     sketchBar_->hide();
@@ -1624,6 +2432,7 @@ void MainWindow::showPanel(ToolPanel* p)
     if (panel_) {
         panel_->cancel();
     }
+    nameInputsFromLabels(p);  // screen readers say each field's label
     panel_ = p;
     panelHost_->layout()->addWidget(p);
     sideStack_->setCurrentWidget(panelHost_);
@@ -1638,6 +2447,12 @@ void MainWindow::closePanel()
         return;
     }
     panel_->hide();
+    // back to the selection filter once the panel is gone (its destructor resets the view)
+    connect(panel_, &QObject::destroyed, this, [this, view = QPointer<Viewport>(view_)] {
+        if (view && !panel_ && !sketch_ && selectFilter_) {
+            view->setPickMode(selectFilter() == "edges" ? PickMode::Edges : PickMode::Faces);
+        }
+    });
     panel_->deleteLater();
     panel_ = nullptr;
     sideStack_->setCurrentWidget(details_);
@@ -1768,6 +2583,223 @@ void MainWindow::openPlane(const std::string& editId, const std::string& kind)
     showPanel(new PlanePanel(*doc_, view_, editId, panelHost_, kind));
 }
 
+void MainWindow::openPoint(const std::string& editId)
+{
+    if (sketch_) {
+        exitSketch();
+    }
+    cancelPicker();
+    showPanel(new PointPanel(*doc_, view_, editId, panelHost_));
+}
+
+void MainWindow::openAxis(const std::string& editId)
+{
+    if (sketch_) {
+        exitSketch();
+    }
+    cancelPicker();
+    showPanel(new AxisPanel(*doc_, view_, editId, panelHost_));
+}
+
+void MainWindow::openPressPull(const std::string& editId)
+{
+    if (sketch_) {
+        exitSketch();
+    }
+    cancelPicker();
+    auto* pp = new PressPullPanel(*doc_, view_, editId, panelHost_);
+    showPanel(pp);
+    if (editId.empty()) {
+        // a clicked face that is not flat: open the step that made it, when there is one
+        connect(view_, &Viewport::faceClicked, pp, [this, pp](const QString& b, const QString& n, Qt::KeyboardModifiers) {
+            if (featurePanel() == pp && !pp->previewOk()) {
+                const QString what = pressPullFace(b.toStdString(), n.toStdString());
+                if (!what.isEmpty()) {
+                    statusBar()->showMessage(what, 6000);
+                }
+            }
+        });
+    }
+}
+
+QString MainWindow::pressPullFace(const std::string& body, const std::string& face)
+{
+    auto it = doc_->state().bodies.find(body);
+    if (it == doc_->state().bodies.end()) {
+        return {};
+    }
+    auto hits = it->second->findFaces(face);
+    if (hits.empty() || jig::measureItem(it->second->face(hits[0])).kind == "flat face") {
+        return {};
+    }
+    // face names start with the id of the step that made them: "<step>/…"
+    const std::string owner = face.substr(0, face.find('/'));
+    const int idx = doc_->featureIndex(owner);
+    if (idx < 0) {
+        return {};
+    }
+    const auto kind = doc_->model().features[size_t(idx)].kind;
+    if (kind != jig::FeatureKind::Fillet && kind != jig::FeatureKind::Chamfer && kind != jig::FeatureKind::Hole) {
+        return {};
+    }
+    editFeature(idx);
+    return tr("That face was made by %1: change its size here.").arg(q(doc_->model().features[size_t(idx)].name));
+}
+
+bool MainWindow::importStepFile(const QString& path)
+{
+    if (sketch_) {
+        exitSketch();
+    }
+    cancelPicker();
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+    auto id = jig::insertStep(*doc_, path.toStdString());
+    QApplication::restoreOverrideCursor();
+    if (!id) {
+        QMessageBox::warning(this, tr("Could not import"), coreText(id.error().message));
+        return false;
+    }
+    refreshAll();
+    view_->fitAll();
+    int n = 0;
+    for (auto& [bid, b] : doc_->state().bodies) {
+        n += bid == id.value() || bid.rfind(id.value() + ".", 0) == 0;
+    }
+    statusBar()->showMessage(tr("Imported %n solid(s) from %1. It is kept inside this design.", "", n)
+                                 .arg(QFileInfo(path).fileName()),
+                             8000);
+    return true;
+}
+
+void MainWindow::importDxf()
+{
+    const QString path = QFileDialog::getOpenFileName(this, tr("Import DXF"), {}, tr("DXF drawings (*.dxf)"));
+    if (path.isEmpty()) {
+        return;
+    }
+    auto dwg = jig::readDxf(path.toStdString());
+    if (!dwg) {
+        QMessageBox::warning(this, tr("Could not import"), coreText(dwg.error().message));
+        return;
+    }
+    std::optional<jig::LengthUnit> units;
+    if (!dwg->unitsKnown) {
+        // the file does not say: ask, offering the design's unit first
+        QStringList choices {tr("Millimetres"), tr("Inches"), tr("Centimetres"), tr("Feet"), tr("Metres")};
+        const jig::LengthUnit order[] = {jig::LengthUnit::Millimetre, jig::LengthUnit::Inch, jig::LengthUnit::Centimetre,
+                                         jig::LengthUnit::Foot, jig::LengthUnit::Metre};
+        int current = 0;
+        for (int i = 0; i < 5; ++i) {
+            current = order[i] == doc_->units() ? i : current;
+        }
+        bool ok = false;
+        const QString pick = QInputDialog::getItem(this, tr("Units of this drawing"),
+                                                   tr("The file does not say which unit it uses. One unit in the "
+                                                      "drawing is:"),
+                                                   choices, current, false, &ok);
+        if (!ok) {
+            return;
+        }
+        units = order[choices.indexOf(pick)];
+    }
+    importDxfFile(path, units);
+}
+
+bool MainWindow::importDxfFile(const QString& path, std::optional<jig::LengthUnit> units)
+{
+    auto dwg = jig::readDxf(path.toStdString());
+    if (!dwg) {
+        QMessageBox::warning(this, tr("Could not import"), coreText(dwg.error().message));
+        return false;
+    }
+    const double scale = units ? jig::millimetresPer(*units) : dwg->unitScale;
+    if (!sketch_) {
+        if (!createSketchOn("XY")) {
+            return false;
+        }
+    }
+    const std::string sid = sketch_->featureId();
+    int added = 0;
+    auto r = doc_->transact(tr("Import DXF").toStdString(), [&](jig::Model& m) -> jig::Result<bool> {
+        jig::Feature* f = jig::Document::findFeature(m, sid);
+        if (!f) {
+            return jig::makeError("dxf.sketch", "The sketch to import into is gone.");
+        }
+        auto sk = jig::Sketch::fromJson(f->params.value("geometry", nlohmann::json::object()));
+        if (!sk) {
+            return sk.error();
+        }
+        added = jig::addDxfToSketch(sk.value(), dwg.value(), scale);
+        f->params["geometry"] = sk->toJson();
+        return true;
+    });
+    if (!r) {
+        QMessageBox::warning(this, tr("Could not import"), coreText(r.error().message));
+        return false;
+    }
+    sketch_->refreshFromDocument();
+    sketch_->lookAt();
+    refreshAll();
+    QString msg = tr("Imported %n curve(s) from %1", "", added).arg(QFileInfo(path).fileName());
+    QStringList skipped;
+    for (auto& [type, n] : dwg->skipped) {
+        skipped << QString("%1 × %2").arg(n).arg(q(type));
+    }
+    if (!skipped.isEmpty()) {
+        msg += tr(" (not imported: %1)").arg(skipped.join(", "));
+    }
+    statusBar()->showMessage(msg, 8000);
+    return true;
+}
+
+void MainWindow::importSvg()
+{
+    const QString path = QFileDialog::getOpenFileName(this, tr("Import SVG"), {}, tr("SVG artwork (*.svg)"));
+    if (!path.isEmpty()) {
+        importSvgFile(path);
+    }
+}
+
+bool MainWindow::importSvgFile(const QString& path)
+{
+    auto art = jig::readSvg(path.toStdString());
+    if (!art) {
+        QMessageBox::warning(this, tr("Could not import"), coreText(art.error().message));
+        return false;
+    }
+    if (!sketch_ && !createSketchOn("XY")) {
+        return false;
+    }
+    const std::string sid = sketch_->featureId();
+    auto r = doc_->transact(tr("Import SVG").toStdString(), [&](jig::Model& m) -> jig::Result<bool> {
+        jig::Feature* f = jig::Document::findFeature(m, sid);
+        if (!f) {
+            return jig::makeError("svg.sketch", "The sketch to import into is gone.");
+        }
+        auto sk = jig::Sketch::fromJson(f->params.value("geometry", nlohmann::json::object()));
+        if (!sk) {
+            return sk.error();
+        }
+        sk->addArtwork(0, 0, art->contours, art->width, {}, art->width, QFileInfo(path).completeBaseName().toStdString());
+        f->params["geometry"] = sk->toJson();
+        return true;
+    });
+    if (!r) {
+        QMessageBox::warning(this, tr("Could not import"), coreText(r.error().message));
+        return false;
+    }
+    sketch_->refreshFromDocument();
+    sketch_->lookAt();
+    refreshAll();
+    QString msg = tr("Imported %1 at %2 wide. Double-click its centre point to change the size; drag it to move it.")
+                      .arg(QFileInfo(path).fileName(), q(doc_->fmtLength(art->width)));
+    if (!art->unitsKnown) {
+        msg += " " + tr("(The file gives no physical size: 96 pixels per inch was assumed.)");
+    }
+    statusBar()->showMessage(msg, 10000);
+    return true;
+}
+
 void MainWindow::openMeasure()
 {
     if (sketch_) {
@@ -1856,6 +2888,25 @@ void MainWindow::editFeature(int index)
         case jig::FeatureKind::Plane:
             openPlane(f.id);
             break;
+        case jig::FeatureKind::Axis:
+            openAxis(f.id);
+            break;
+        case jig::FeatureKind::Point:
+            openPoint(f.id);
+            break;
+        case jig::FeatureKind::Remove:
+            statusBar()->showMessage(tr("This step takes bodies out of the design. To bring them back, delete the step "
+                                        "(or suppress it from its menu)."),
+                                     8000);
+            break;
+        case jig::FeatureKind::Import:
+            statusBar()->showMessage(tr("An imported solid has no settings to change. To use a newer copy of the "
+                                        "file, delete this step and import it again."),
+                                     8000);
+            break;
+        case jig::FeatureKind::PressPull:
+            openPressPull(f.id);
+            break;
         case jig::FeatureKind::Combine:
             openBodyTool("solid.combine", f.id);
             break;
@@ -1889,6 +2940,11 @@ void MainWindow::timelineMenu(const QPoint& pos)
                                    });
                     refreshAll();
                 });
+    const int count = int(doc_->model().features.size());
+    auto* earlier = m.addAction(tr("Move earlier"), this, [this, id = f.id, row] { moveStep(id, row - 1); });
+    earlier->setEnabled(row > 0);
+    auto* later = m.addAction(tr("Move later"), this, [this, id = f.id, row] { moveStep(id, row + 1); });
+    later->setEnabled(row + 1 < count);
     m.addAction(tr("Roll back to before this step"), this, [this, row] {
         doc_->transact(tr("Move rollback marker").toStdString(), [row](jig::Model& mm) -> jig::Result<bool> {
             mm.rollback = row;
@@ -1897,9 +2953,63 @@ void MainWindow::timelineMenu(const QPoint& pos)
         refreshAll();
     });
     m.addSeparator();
+    m.addAction(tr("Put in a group…"), this, [this, id = f.id, row] {
+        const auto& feats = doc_->model().features;
+        const QString suggest = row > 0 ? q(feats[size_t(row - 1)].group) : QString();
+        bool ok = false;
+        const QString name = QInputDialog::getText(this, tr("Group"), tr("Group name:"), QLineEdit::Normal,
+                                                   suggest.isEmpty() ? tr("Group") : suggest, &ok)
+                                 .trimmed();
+        if (ok && !name.isEmpty()) {
+            setStepGroup(id, name.toStdString());
+        }
+    });
+    if (!f.group.empty()) {
+        m.addAction(tr("Take out of the group"), this, [this, id = f.id] { setStepGroup(id, {}); });
+        const bool folded = doc_->foldedGroups().count(f.group) > 0;
+        m.addAction(folded ? tr("Unfold the group") : tr("Fold the group"), this,
+                    [this, g = f.group, folded] { setGroupFolded(g, !folded); });
+    }
+    m.addSeparator();
     m.addAction(toolIcon("sketch.trim", palette().color(QPalette::WindowText), accentFor(palette())), tr("Delete…"),
                 this, [this, id = f.id] { deleteFeature(id); });
     m.exec(timeline_->viewport()->mapToGlobal(pos));
+}
+
+void MainWindow::setStepGroup(const std::string& id, const std::string& group)
+{
+    doc_->transact(group.empty() ? tr("Ungroup").toStdString() : tr("Group").toStdString(),
+                   [&](jig::Model& mm) -> jig::Result<bool> {
+                       if (auto* x = jig::Document::findFeature(mm, id)) {
+                           x->group = group;
+                       }
+                       return true;
+                   });
+    refreshAll();
+}
+
+void MainWindow::setGroupFolded(const std::string& group, bool folded)
+{
+    auto groups = doc_->foldedGroups();  // saved with the design
+    if (folded) {
+        groups.insert(group);
+    }
+    else {
+        groups.erase(group);
+    }
+    doc_->setFoldedGroups(std::move(groups));
+    refreshAll();  // the title shows the unsaved change
+}
+
+bool MainWindow::moveStep(const std::string& id, int to)
+{
+    auto r = doc_->moveFeature(id, to);
+    if (!r) {
+        QMessageBox::information(this, tr("Cannot move this step there"), coreText(r.error().message) +
+                                     (r.error().suggestions.empty() ? QString() : "\n\n" + q(r.error().suggestions.front())));
+    }
+    refreshAll();  // also puts a refused drag back where it was
+    return r.ok();
 }
 
 void MainWindow::renameFeature(const std::string& id)
@@ -1921,6 +3031,37 @@ void MainWindow::renameFeature(const std::string& id)
         return true;
     });
     refreshAll();
+}
+
+bool MainWindow::removeBody(const std::string& body)
+{
+    if (!doc_->state().bodies.count(body)) {
+        return false;
+    }
+    if (sketch_) {
+        exitSketch();
+    }
+    const jig::Feature* maker = doc_->feature(body);
+    const std::string label = maker ? maker->name : body;
+    std::string id;
+    auto r = doc_->transact(tr("Delete body %1").arg(q(label)).toStdString(), [&](jig::Model& m) -> jig::Result<bool> {
+        jig::Feature f;
+        f.id = jig::Document::newId(m, "rm");
+        f.name = tr("Remove %1").arg(q(label)).toStdString();
+        f.kind = jig::FeatureKind::Remove;
+        f.params = {{"bodies", nlohmann::json::array({body})}};
+        id = f.id;
+        jig::Document::insertAtMarker(m, std::move(f));
+        return true;
+    });
+    if (!r) {
+        statusBar()->showMessage(coreText(r.error().message), 6000);
+        return false;
+    }
+    refreshAll();
+    statusBar()->showMessage(tr("Body removed as a step in the timeline. Undo, or delete that step, to bring it back."),
+                             6000);
+    return true;
 }
 
 void MainWindow::deleteFeature(const std::string& id)
@@ -1970,3 +3111,5 @@ void MainWindow::deleteFeature(const std::string& id)
 }
 
 }  // namespace jigapp
+
+#include "MainWindow.moc"

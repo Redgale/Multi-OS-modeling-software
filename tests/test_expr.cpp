@@ -133,3 +133,24 @@ TEST(Expr, FuzzNeverCrashes)
         }
     }
 }
+
+TEST(Units, FormattingAndTypedInput)
+{
+    EXPECT_EQ(formatLength(25.4, LengthUnit::Inch), "1 in");
+    EXPECT_EQ(formatLength(12.7, LengthUnit::Inch), "0.5 in");
+    EXPECT_EQ(formatLength(3.175, LengthUnit::Inch), "0.125 in");
+    EXPECT_EQ(formatLength(10, LengthUnit::Millimetre), "10 mm");
+    EXPECT_EQ(formatLength(304.8, LengthUnit::Foot), "1 ft");
+    EXPECT_EQ(formatArea(645.16, LengthUnit::Inch), "1 in²");
+    EXPECT_EQ(formatVolume(25.4 * 25.4 * 25.4, LengthUnit::Inch), "1 in³");
+    EXPECT_EQ(formatVolume(48000, LengthUnit::Millimetre), "48 cm³");
+    EXPECT_EQ(withLengthUnit("2", LengthUnit::Inch), "2 in");
+    EXPECT_EQ(withLengthUnit("3/4", LengthUnit::Inch), "(3/4) in");
+    EXPECT_EQ(withLengthUnit("5 mm", LengthUnit::Inch), "5 mm");  // explicit units stay
+    EXPECT_EQ(withLengthUnit("", LengthUnit::Inch), "");
+    EXPECT_NEAR(evaluate("2 yd")->value, 1828.8, 1e-9);
+    EXPECT_NEAR(evaluate("10 thou")->value, 0.254, 1e-12);
+    EXPECT_NEAR(evaluate("1 ft + 3 in")->value, 381, 1e-9);
+    EXPECT_EQ(*lengthUnitFromString("inch"), LengthUnit::Inch);
+    EXPECT_FALSE(lengthUnitFromString("furlong").has_value());
+}

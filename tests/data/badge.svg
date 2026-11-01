@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- A test drawing for SVG import: 80 x 20 mm, one user unit = 1 mm -->
+<svg xmlns="http://www.w3.org/2000/svg" width="80mm" height="20mm" viewBox="0 0 80 20">
+  <defs>
+    <rect id="ignored" x="0" y="0" width="500" height="500"/>
+    <g><path d="M0 0 L 1 1 Z"/></g>
+  </defs>
+  <rect x="0" y="0" width="40" height="20"/>
+  <circle cx="10" cy="10" r="5"/>
+  <path d="M25,13 a5,5 0 0,0 10,0 z"/>
+  <g transform="translate(50,0)">
+    <polygon points="0,0 10,0 0,10"/>
+  </g>
+  <path d="M62 0 C 62 0 72 0 72 0 L72 10 l-10 0 Z"/>
+  <path d="M0 0 L 80 20" fill="none" stroke="black"/>
+</svg>

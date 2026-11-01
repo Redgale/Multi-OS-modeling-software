@@ -6,17 +6,35 @@
 #include <algorithm>
 #include <cctype>
 #include <cmath>
+#include <cstdio>
 #include <numbers>
 #include <set>
 #include <sstream>
 
+#include <BRepAdaptor_Curve.hxx>
 #include <BRepBndLib.hxx>
-#include <Bnd_Box.hxx>
-#include <gp_Trsf.hxx>
+#include <gp_Cylinder.hxx>
+#include <BRepPrimAPI_MakeCylinder.hxx>
+#include <BRepAlgoAPI_Cut.hxx>
+#include <BRepTools.hxx>
+#include <BRepAdaptor_Surface.hxx>
+#include <TopoDS_Compound.hxx>
+#include <BRep_Builder.hxx>
+#include <BRepBuilderAPI_MakeFace.hxx>
+#include <BRepGProp.hxx>
+#include <GProp_GProps.hxx>
+#include <BRepGProp_Face.hxx>
 #include <BRepPrimAPI_MakeBox.hxx>
+#include <Bnd_Box.hxx>
+#include <TopExp_Explorer.hxx>
+#include <TopoDS.hxx>
 #include <gp_Ax2.hxx>
+#include <gp_Lin.hxx>
+#include <gp_Pln.hxx>
+#include <gp_Trsf.hxx>
 
 #include "jig/document.hpp"
+#include "jig/screws.hpp"
 
 namespace jig
 {
@@ -35,7 +53,20 @@ FeatureOutcome failed(std::string message, std::vector<std::string> suggestions 
 
 FeatureOutcome failed(const Error& e)
 {
-    return failed(e.message, e.suggestions, e.detail);
+    FeatureOutcome o = failed(e.message, e.suggestions, e.detail);
+    o.status.fixes = e.fixes;
+    return o;
+}
+
+// The same, with the kernel's generic "size" fix pointed at this step's own parameter.
+FeatureOutcome failed(Error e, const std::string& sizeParam)
+{
+    for (auto& f : e.fixes) {
+        if (f.param == "size") {
+            f.param = sizeParam;
+        }
+    }
+    return failed(e);
 }
 
 std::shared_ptr<ModelState> copyState(const std::shared_ptr<const ModelState>& in)
@@ -78,7 +109,7 @@ Result<gp_Ax3> planeFrame(const nlohmann::json& ref, const std::shared_ptr<const
         }
         auto it = in->planes.find(name);
         if (it == in->planes.end()) {
-            return makeError("plane.missing", "The plane '" + name + "' is missing or comes later in the timeline.",
+            return makeError("plane.missing", fmt("The plane '%1' is missing or comes later in the timeline.", {name}),
                              {"Pick another plane."});
         }
         return it->second;
@@ -101,6 +132,274 @@ Result<gp_Ax3> planeFrame(const nlohmann::json& ref, const std::shared_ptr<const
         return faceFrame(bit->second->face(r.index));
     }
     return makeError("plane.ref", "This step refers to a plane in a way Jigsmith does not understand.");
+}
+
+// An origin axis (X, Y, Z) or a construction axis by its feature id.
+std::optional<gp_Ax1> namedAxis(const std::string& name, const std::shared_ptr<const ModelState>& in)
+{
+    if (name == "X" || name == "Y" || name == "Z") {
+        return gp_Ax1(gp_Pnt(0, 0, 0), name == "X" ? gp_Dir(1, 0, 0) : name == "Y" ? gp_Dir(0, 1, 0) : gp_Dir(0, 0, 1));
+    }
+    if (auto it = in->axes.find(name); it != in->axes.end()) {
+        return it->second;
+    }
+    return std::nullopt;
+}
+
+// The origin (O) or a construction point by its feature id.
+std::optional<gp_Pnt> namedPoint(const std::string& name, const std::shared_ptr<const ModelState>& in)
+{
+    if (name == "O") {
+        return gp_Pnt(0, 0, 0);
+    }
+    if (auto it = in->points.find(name); it != in->points.end()) {
+        return it->second;
+    }
+    return std::nullopt;
+}
+
+FeatureOutcome missingAxis(const std::string& name)
+{
+    return failed(fmt("The axis '%1' does not exist (or comes later in the timeline).", {name}),
+                  {"Pick X, Y, Z or a construction axis made earlier."});
+}
+
+FeatureOutcome applyAxis(const Document&, const Feature& f, const std::shared_ptr<const ModelState>& in)
+{
+    const auto& p = f.params;
+    FeatureStatus status;
+    gp_Ax1 axis;
+    if (p.contains("normal")) {
+        // square to a plane or flat face, through a point (the origin, or a construction point)
+        auto pl = planeFrame(p["normal"], in, status);
+        if (!pl) {
+            return failed(pl.error());
+        }
+        const std::string name = p.value("at", std::string("O"));
+        auto at = namedPoint(name, in);
+        if (!at) {
+            return failed(fmt("The point '%1' does not exist (or comes later in the timeline).", {name}),
+                          {"Pick the origin (O) or a construction point made earlier."});
+        }
+        axis = gp_Ax1(*at, pl->Direction());
+    }
+    else if (p.contains("from")) {
+        // through two construction points (or the origin)
+        const std::string n1 = p.value("from", std::string {}), n2 = p.value("to", std::string {});
+        auto a = namedPoint(n1, in), b = namedPoint(n2, in);
+        if (!a || !b) {
+            return failed(fmt("The point '%1' does not exist (or comes later in the timeline).", {!a ? n1 : n2}),
+                          {"Pick the origin (O) or a construction point made earlier."});
+        }
+        if (a->Distance(*b) < 1e-7) {
+            return failed("The two points are in the same place, so no axis runs through them.",
+                          {"Pick two different points."});
+        }
+        axis = gp_Ax1(*a, gp_Dir(gp_Vec(*a, *b)));
+    }
+    else if (p.contains("through")) {
+        // along a straight edge, or through the centre of a round edge or face
+        const auto& t = p["through"];
+        const bool face = t.contains("face");
+        ShapeRef ref = ShapeRef::fromJson(face ? t["face"] : t.value("edge", nlohmann::json::object()));
+        auto bit = in->bodies.find(ref.body);
+        if (bit == in->bodies.end()) {
+            return failed("The body this axis runs through no longer exists.", {"Edit the axis and pick again."});
+        }
+        Resolution r = resolve(*bit->second, ref);
+        if (r.status == ResolveStatus::Missing || r.status == ResolveStatus::Ambiguous) {
+            return failed("The edge or face this axis runs through no longer exists.", {"Edit the axis and pick again."});
+        }
+        const MeasureItem m = measureItem(face ? bit->second->face(r.index) : bit->second->edge(r.index));
+        if (!m.axis) {
+            return failed(fmt("An axis can run along a straight edge or through a round edge or face (a hole, a "
+                              "cylinder); this %1 has no axis.", {m.kind}));
+        }
+        axis = *m.axis;
+    }
+    else {
+        // where two planes or flat faces meet
+        auto a = planeFrame(p.value("base", nlohmann::json("XY")), in, status);
+        auto b = planeFrame(p.value("base2", nlohmann::json("XZ")), in, status);
+        if (!a || !b) {
+            return failed(!a ? a.error() : b.error());
+        }
+        const gp_Vec n1(a->Direction()), n2(b->Direction());
+        const gp_Vec d = n1.Crossed(n2);
+        if (d.Magnitude() < 1e-9) {
+            return failed("The two planes are parallel, so they never meet.", {"Pick two planes that cross."});
+        }
+        // the point on both planes nearest the origin
+        const double h1 = n1.Dot(gp_Vec(a->Location().XYZ())), h2 = n2.Dot(gp_Vec(b->Location().XYZ()));
+        const double n12 = n1.Dot(n2), det = 1 - n12 * n12;
+        const double c1 = (h1 - h2 * n12) / det, c2 = (h2 - h1 * n12) / det;
+        axis = gp_Ax1(gp_Pnt((n1 * c1 + n2 * c2).XYZ()), gp_Dir(d));
+    }
+    auto out = copyState(in);
+    out->axes[f.id] = axis;
+    return {out, status};
+}
+
+FeatureOutcome applyPoint(const Document& doc, const Feature& f, const std::shared_ptr<const ModelState>& in)
+{
+    const auto& p = f.params;
+    gp_Pnt at;
+    if (p.contains("through")) {
+        // at an end, the middle or the centre of an edge, or the centre of a face
+        const auto& t = p["through"];
+        const bool face = t.contains("face");
+        ShapeRef ref = ShapeRef::fromJson(face ? t["face"] : t.value("edge", nlohmann::json::object()));
+        auto bit = in->bodies.find(ref.body);
+        if (bit == in->bodies.end()) {
+            return failed("The body this point sits on no longer exists.", {"Edit the point and pick again."});
+        }
+        Resolution r = resolve(*bit->second, ref);
+        if (r.status == ResolveStatus::Missing || r.status == ResolveStatus::Ambiguous) {
+            return failed("The edge or face this point sits on no longer exists.", {"Edit the point and pick again."});
+        }
+        if (face) {
+            GProp_GProps props;
+            BRepGProp::SurfaceProperties(bit->second->face(r.index), props);
+            at = props.CentreOfMass();
+        }
+        else if (p.contains("plane")) {
+            // where the edge (or its straight continuation) crosses a plane or flat face
+            FeatureStatus ignored;
+            auto pl = planeFrame(p["plane"], in, ignored);
+            if (!pl) {
+                return failed(pl.error());
+            }
+            BRepAdaptor_Curve c(TopoDS::Edge(bit->second->edge(r.index)));
+            const gp_Pln plane(*pl);
+            const gp_Dir n = plane.Axis().Direction();
+            auto side = [&](double u) { return gp_Vec(plane.Location(), c.Value(u)).Dot(gp_Vec(n)); };
+            double u0 = c.FirstParameter(), u1 = c.LastParameter();
+            if (c.GetType() == GeomAbs_Line) {
+                // a straight edge: its line, so the plane may be beyond its ends
+                const gp_Lin l = c.Line();
+                const double along = gp_Vec(l.Direction()).Dot(gp_Vec(n));
+                if (std::abs(along) < 1e-9) {
+                    return failed("The edge runs parallel to the plane, so it never crosses it.",
+                                  {"Pick an edge that points through the plane."});
+                }
+                const double t = -gp_Vec(plane.Location(), l.Location()).Dot(gp_Vec(n)) / along;
+                at = l.Location().Translated(gp_Vec(l.Direction()) * t);
+            }
+            else {
+                // a curve: the first crossing along it, found by halving
+                const int steps = 64;
+                bool found = false;
+                double a = u0, fa = side(u0);
+                for (int k = 1; k <= steps && !found; ++k) {
+                    const double b = u0 + (u1 - u0) * k / steps, fb = side(b);
+                    if (std::abs(fa) < 1e-9) {
+                        at = c.Value(a);
+                        found = true;
+                        break;
+                    }
+                    if (fa * fb < 0) {
+                        double lo = a, hi = b, flo = fa;
+                        for (int it = 0; it < 60; ++it) {
+                            const double mid = 0.5 * (lo + hi), fm = side(mid);
+                            (fm * flo <= 0 ? hi : lo) = mid;
+                            if (fm * flo > 0) {
+                                flo = fm;
+                            }
+                        }
+                        at = c.Value(0.5 * (lo + hi));
+                        found = true;
+                    }
+                    a = b;
+                    fa = fb;
+                }
+                if (!found && std::abs(side(u1)) < 1e-9) {
+                    at = c.Value(u1);
+                    found = true;
+                }
+                if (!found) {
+                    return failed("This curved edge does not reach the plane.", {"Pick another edge or plane."});
+                }
+            }
+        }
+        else {
+            const TopoDS_Edge e = TopoDS::Edge(bit->second->edge(r.index));
+            const std::string where = p.value("end", std::string("start"));
+            BRepAdaptor_Curve c(e);
+            if (where == "center") {
+                const MeasureItem m = measureItem(e);
+                if (!m.radius || !m.axis) {
+                    return failed(fmt("Only a circle or an arc has a centre; this is a %1.", {m.kind}),
+                                  {"Choose its start, end or middle instead."});
+                }
+                at = m.axis->Location();
+            }
+            else if (where == "start" || where == "end" || where == "mid") {
+                double u0 = c.FirstParameter(), u1 = c.LastParameter();
+                if (e.Orientation() == TopAbs_REVERSED) {
+                    std::swap(u0, u1);
+                }
+                at = c.Value(where == "start" ? u0 : where == "end" ? u1 : 0.5 * (u0 + u1));
+            }
+            else {
+                return failed(fmt("A point on an edge sits at its start, end, middle or centre, not at '%1'.", {where}));
+            }
+        }
+    }
+    else {
+        // typed coordinates, each an expression (parameters allowed)
+        const auto xyz = p.value("at", nlohmann::json::array({"0 mm", "0 mm", "0 mm"}));
+        if (!xyz.is_array() || xyz.size() != 3) {
+            return failed("A point needs three coordinates: X, Y and Z.");
+        }
+        double v[3];
+        for (int i = 0; i < 3; ++i) {
+            auto q = doc.evalLength(xyz[i].is_string() ? xyz[i].get<std::string>() : xyz[i].dump());
+            if (!q) {
+                return failed(q.error());
+            }
+            v[i] = q.value();
+        }
+        at = gp_Pnt(v[0], v[1], v[2]);
+    }
+    auto out = copyState(in);
+    out->points[f.id] = at;
+    return {out, {}};
+}
+
+std::vector<std::string> bodyList(const nlohmann::json& j);
+
+FeatureOutcome applyRemove(const Feature& f, const std::shared_ptr<const ModelState>& in)
+{
+    std::vector<std::string> bodies = bodyList(f.params.value("bodies", nlohmann::json::array()));
+    if (bodies.empty()) {
+        return failed("Pick at least one body to remove.");
+    }
+    auto out = copyState(in);
+    for (const std::string& b : bodies) {
+        if (!out->bodies.erase(b)) {
+            return failed(fmt("The body this step removes (%1) no longer exists.", {b}),
+                          {"Delete this step, or edit an earlier step so the body is made again."});
+        }
+    }
+    return {out, {}};
+}
+
+FeatureOutcome applyImport(const Feature& f, const std::shared_ptr<const ModelState>& in)
+{
+    auto shape = shapeFromText(f.params.value("brep", std::string {}));
+    if (!shape) {
+        return failed(shape.error());
+    }
+    auto bodies = importedBodies(f.id, shape.value());
+    if (!bodies) {
+        return failed(bodies.error());
+    }
+    auto out = copyState(in);
+    for (size_t k = 0; k < bodies->size(); ++k) {
+        const std::string id = bodies->size() == 1 ? f.id : f.id + "." + std::to_string(k + 1);
+        out->bodies[id] = std::make_shared<NamedShape>(std::move((*bodies)[k]));
+    }
+    return {out, {}};
 }
 
 FeatureOutcome applyPlane(const Document& doc, const Feature& f, const std::shared_ptr<const ModelState>& in)
@@ -145,7 +444,11 @@ FeatureOutcome applyPlane(const Document& doc, const Feature& f, const std::shar
         }
         else {
             const std::string n = ax.is_string() ? ax.get<std::string>() : "X";
-            axis = gp_Ax1(gp_Pnt(0, 0, 0), n == "Y" ? gp_Dir(0, 1, 0) : n == "Z" ? gp_Dir(0, 0, 1) : gp_Dir(1, 0, 0));
+            auto na = namedAxis(n, in);
+            if (!na) {
+                return missingAxis(n);
+            }
+            axis = *na;
         }
         if (std::abs(axis.Direction().Dot(frame.Direction())) > 1e-6) {
             return failed("The turning axis must lie in the base plane (it is not parallel to it).",
@@ -239,6 +542,25 @@ FeatureOutcome applySketch(const Document& doc, const Feature& f, const std::sha
         return failed(sk.error());
     }
     st->solved = std::move(sk.value());
+    // projected edges follow the model as it is before this sketch
+    for (const auto& link : st->solved.links()) {
+        if (!link.contains("ref")) {
+            continue;  // not a projection (an offset that follows its source, say)
+        }
+        ShapeRef ref = ShapeRef::fromJson(link.value("ref", nlohmann::json::object()));
+        auto bit = in->bodies.find(ref.body);
+        Resolution r = bit == in->bodies.end() ? Resolution {} : resolve(*bit->second, ref);
+        TopoDS_Shape edge;
+        if (bit != in->bodies.end() && r.status != ResolveStatus::Missing && r.status != ResolveStatus::Ambiguous) {
+            edge = bit->second->edge(r.index);
+        }
+        auto followed = followLink(st->solved, st->frame, link, edge);
+        if (!followed && status.level == StatusLevel::Ok) {
+            status.level = StatusLevel::Warning;
+            status.message = followed.error().message;
+            status.suggestions = followed.error().suggestions;
+        }
+    }
     st->report = st->solved.solve(doc.lookup());
     if (st->report.state == SolveState::Failed
         || (st->report.state == SolveState::OverConstrained && !st->report.conflicting.empty())) {
@@ -276,11 +598,10 @@ FeatureOutcome applySketch(const Document& doc, const Feature& f, const std::sha
                     best = std::min(best, g.gap);
                 }
             }
-            status.message += " " + std::to_string(gaps.size()) + " line end"
-                            + (gaps.size() == 1 ? " is" : "s are") + " not connected.";
+            status.message += " " + (gaps.size() == 1 ? std::string("1 line end is not connected.")
+                                                      : fmt("%1 line ends are not connected.", {std::to_string(gaps.size())}));
             if (best < 1e300) {
-                status.suggestions.push_back("The smallest gap is " + mm(best)
-                                             + ": drag those ends together to close it.");
+                status.suggestions.push_back(fmt("The smallest gap is %1: drag those ends together to close it.", {mm(best)}));
             }
         }
         status.suggestions.push_back("Turn on 'Show gaps' to highlight open ends.");
@@ -343,17 +664,17 @@ std::optional<FeatureOutcome> selectProfiles(const SketchState& sk, const nlohma
             if (want.size() == 1 && sk.profiles.regions.size() == 1) {
                 profiles = {&sk.profiles.regions[0]};
                 status.level = StatusLevel::Warning;
-                status.message = "The sketch's closed area changed shape; the " + what +
-                                 " now uses its only closed area. Check the result.";
+                status.message = fmt("The sketch's closed area changed shape; the %1 now uses its only closed area. "
+                                     "Check the result.", {what});
             }
             else {
-                return failed("Some of the closed areas this " + what + " used are gone from the sketch.",
-                              {"Edit the " + what + " and pick the areas again."});
+                return failed(fmt("Some of the closed areas this %1 used are gone from the sketch.", {what}),
+                              {fmt("Edit the %1 and pick the areas again.", {what})});
             }
         }
     }
     if (profiles.empty()) {
-        return failed("The sketch has no closed area to " + what + ".",
+        return failed(fmt("The sketch has no closed area to %1.", {what}),
                       {"Close the outline: look for small gaps between line ends.",
                        "Turn on 'Show gaps' in the sketch."});
     }
@@ -374,7 +695,7 @@ FeatureOutcome applyTool(const Feature& f, BoolOp op, NamedShape tool, const std
         return {out, status};
     }
     if (in->bodies.empty()) {
-        return failed("There is no body to " + std::string(op == BoolOp::Cut ? "cut" : "intersect") + " yet.",
+        return failed(op == BoolOp::Cut ? std::string("There is no body to cut yet.") : std::string("There is no body to intersect yet."),
                       {"Use 'New body' for the first shape."});
     }
     std::string target = p.value("target", std::string {});
@@ -411,8 +732,8 @@ const SketchState* findSketch(const std::shared_ptr<const ModelState>& in, const
 
 FeatureOutcome missingSketch(const std::string& what, const std::string& id)
 {
-    return failed("The sketch this " + what + " uses (" + id + ") is missing or has a problem.",
-                  {"Fix the sketch first: it is marked in the timeline.", "Edit this " + what + " and pick another sketch."});
+    return failed(fmt("The sketch this %1 uses (%2) is missing or has a problem.", {what, id}),
+                  {"Fix the sketch first: it is marked in the timeline.", fmt("Edit this %1 and pick another sketch.", {what})});
 }
 
 FeatureOutcome applyExtrude(const Document& doc, const Feature& f, const std::shared_ptr<const ModelState>& in)
@@ -426,7 +747,24 @@ FeatureOutcome applyExtrude(const Document& doc, const Feature& f, const std::sh
     }
     const SketchState& sk = *skp;
     std::vector<const Profile*> profiles;
-    if (auto bad = selectProfiles(sk, p, status, "extrude", profiles)) {
+    std::vector<Profile> walls;  // open curves: walls built here, extruded as plain areas
+    const nlohmann::json prof = p.value("profiles", nlohmann::json("all"));
+    const bool openCurves = prof == nlohmann::json("open") || prof == nlohmann::json::array({"open"});
+    if (openCurves) {
+        auto t = doc.evalLength(p.value("thin", std::string("2 mm")));
+        if (!t) {
+            return failed(t.error());
+        }
+        auto w = openChainWalls(sk.solved, sk.frame, t.value());
+        if (!w) {
+            return failed(w.error());
+        }
+        walls = std::move(w.value());
+        for (auto& wp : walls) {
+            profiles.push_back(&wp);
+        }
+    }
+    else if (auto bad = selectProfiles(sk, p, status, "extrude", profiles)) {
         return *bad;
     }
     ExtrudeInput ei;
@@ -436,8 +774,114 @@ FeatureOutcome applyExtrude(const Document& doc, const Feature& f, const std::sh
     std::string dir = p.value("direction", std::string("one"));
     ei.direction = dir == "symmetric" ? ExtrudeDirection::Symmetric
                  : dir == "reverse"   ? ExtrudeDirection::Reverse
+                 : dir == "two"       ? ExtrudeDirection::TwoSides
                                       : ExtrudeDirection::OneSide;
-    if (p.value("extent", std::string("distance")) == "all") {
+    if (ei.direction == ExtrudeDirection::TwoSides) {
+        auto d2 = doc.evalLength(p.value("distance2", std::string("10 mm")));
+        if (!d2) {
+            return failed(d2.error());
+        }
+        ei.distance2 = d2.value();
+    }
+    if (p.contains("taper")) {
+        auto t = doc.evalAngle(p.value("taper", std::string("0 deg")));
+        if (!t) {
+            return failed(t.error());
+        }
+        ei.taper = t.value();
+    }
+    if (p.contains("thin") && !openCurves) {
+        auto t = doc.evalLength(p.value("thin", std::string("0 mm")));
+        if (!t) {
+            return failed(t.error());
+        }
+        ei.thin = t.value();
+        const std::string side = p.value("thin_side", std::string("center"));
+        ei.thinSide = side == "inside" ? -1 : side == "outside" ? 1 : 0;
+    }
+    std::optional<TopoDS_Face> trimAt;  // up to a curved or slanted face: cut off there
+    if (p.value("extent", std::string("distance")) == "to") {
+        // up to a plane or flat face parallel to the sketch: the distance follows it
+        const nlohmann::json toRef = p.value("to", nlohmann::json("XY"));
+        const gp_Vec n(sk.frame.Direction());
+        std::optional<TopoDS_Face> face;
+        if (toRef.is_object() && toRef.contains("face")) {
+            ShapeRef ref = ShapeRef::fromJson(toRef["face"]);
+            auto bit = in->bodies.find(ref.body);
+            Resolution r = bit == in->bodies.end() ? Resolution {} : resolve(*bit->second, ref);
+            if (bit == in->bodies.end() || r.status == ResolveStatus::Missing || r.status == ResolveStatus::Ambiguous) {
+                return failed("The face this extrude goes up to no longer exists.", {"Edit the extrude and pick a face again."});
+            }
+            face = TopoDS::Face(bit->second->face(r.index));
+        }
+        const bool flat = !face || measureItem(*face).normal.has_value();
+        auto to = flat ? planeFrame(toRef, in, status) : Result<gp_Ax3>(gp_Ax3());
+        if (!to) {
+            return failed(to.error());
+        }
+        if (!flat || !to->Direction().IsParallel(sk.frame.Direction(), 1e-6)) {
+            // curved or slanted: extrude past it, then cut off where it meets it
+            if (p.contains("to_offset")) {
+                auto off = doc.evalLength(p.value("to_offset", std::string("0 mm")));
+                if (off && std::abs(off.value()) > 1e-9) {
+                    return failed("An offset beyond a curved or slanted face is not supported yet.",
+                                  {"Set the offset to 0, or pick a face parallel to the sketch."});
+                }
+            }
+            const TopoDS_Face target = face ? *face : BRepBuilderAPI_MakeFace(gp_Pln(*to)).Face();
+            Bnd_Box all;
+            for (auto& [id, b] : in->bodies) {
+                all.Add(boxOf(b->shape()));
+            }
+            all.Add(boxOf(profiles.front()->face));
+            if (face) {
+                all.Add(boxOf(*face));
+            }
+            const double reach = std::sqrt(all.SquareExtent()) * 2 + 10;
+            // which way: toward the face (its centre, or the plane's point nearest the sketch)
+            GProp_GProps g;
+            BRepGProp::SurfaceProperties(profiles.front()->face, g);
+            gp_Pnt aim;
+            if (face) {
+                GProp_GProps fg;
+                BRepGProp::SurfaceProperties(*face, fg);
+                aim = fg.CentreOfMass();
+            }
+            else {
+                const gp_Pln pl(*to);
+                const gp_Vec v(pl.Location(), g.CentreOfMass());
+                aim = g.CentreOfMass().Translated(-gp_Vec(pl.Axis().Direction()) * v.Dot(gp_Vec(pl.Axis().Direction())));
+            }
+            const double side = gp_Vec(g.CentreOfMass(), aim).Dot(n);
+            if (std::abs(side) < 1e-7) {
+                return failed("That face is level with the sketch, so there is no way to tell which way to extrude.");
+            }
+            ei.distance = reach;
+            ei.direction = side > 0 ? ExtrudeDirection::OneSide : ExtrudeDirection::Reverse;
+            trimAt = target;
+        }
+    }
+    if (p.value("extent", std::string("distance")) == "to" && !trimAt) {
+        auto to = planeFrame(p.value("to", nlohmann::json("XY")), in, status);
+        if (!to) {
+            return failed(to.error());
+        }
+        const gp_Vec n(sk.frame.Direction());
+        double d = gp_Vec(sk.frame.Location(), to->Location()).Dot(n);
+        if (p.contains("to_offset")) {
+            auto off = doc.evalLength(p.value("to_offset", std::string("0 mm")));
+            if (!off) {
+                return failed(off.error());
+            }
+            d += d >= 0 ? off.value() : -off.value();
+        }
+        if (std::abs(d) < 1e-7) {
+            return failed("That face or plane is in the sketch's own plane, so there is nothing to extrude up to.");
+        }
+        ei.distance = std::abs(d);
+        ei.direction = d > 0 ? ExtrudeDirection::OneSide : ExtrudeDirection::Reverse;
+    }
+    else if (p.value("extent", std::string("distance")) == "all") {
         Bnd_Box all;
         for (auto& [id, b] : in->bodies) {
             all.Add(boxOf(b->shape()));
@@ -447,7 +891,7 @@ FeatureOutcome applyExtrude(const Document& doc, const Feature& f, const std::sh
         ei.distance = 2 * d;
         ei.direction = ExtrudeDirection::Symmetric;
     }
-    else {
+    else if (!trimAt) {
         auto d = doc.evalLength(p.value("distance", std::string("10 mm")));
         if (!d) {
             return failed(d.error());
@@ -464,10 +908,138 @@ FeatureOutcome applyExtrude(const Document& doc, const Feature& f, const std::sh
         return failed("This extrude has an unknown operation.");
     }
     auto tool = makeExtrusion(ei);
+    if (tool && trimAt) {
+        TopoDS_Compound start;
+        BRep_Builder bb;
+        bb.MakeCompound(start);
+        for (const Profile* pr : profiles) {
+            bb.Add(start, pr->face);
+        }
+        tool = trimToFace(tool.value(), *trimAt, start, f.id, f.id + "/end");
+    }
+    if (!tool) {
+        Error e = tool.error();
+        if (e.code == "extrude.taper" && std::abs(ei.taper) > 1e-9) {
+            char buf[32];
+            std::snprintf(buf, sizeof buf, "%.3g deg", ei.taper * 90 / std::numbers::pi);  // half the angle
+            e.fixes.push_back({std::string("Use ") + buf, "taper", buf});
+        }
+        if (e.code == "extrude.thin" && ei.thin > 1e-9) {
+            char buf[32];
+            std::snprintf(buf, sizeof buf, "%.3g mm", ei.thin / 2);
+            e.fixes.push_back({std::string("Use ") + buf, "thin", buf});
+        }
+        return failed(e);
+    }
+    return applyTool(f, *op, std::move(tool.value()), in, status);
+}
+
+// ---------------------------------------------------------------- press pull
+
+// Pushes or pulls a flat face straight along its normal: out adds material, in removes it.
+FeatureOutcome applyPressPull(const Document& doc, const Feature& f, const std::shared_ptr<const ModelState>& in)
+{
+    const auto& p = f.params;
+    FeatureStatus status;
+    ShapeRef ref = ShapeRef::fromJson(p.value("face", nlohmann::json::object()));
+    auto bit = in->bodies.find(ref.body);
+    if (bit == in->bodies.end()) {
+        return failed("The body of the face to push or pull no longer exists.", {"Edit the step and click a face."});
+    }
+    Resolution r = resolve(*bit->second, ref);
+    if (r.status == ResolveStatus::Missing || r.status == ResolveStatus::Ambiguous) {
+        return failed("The face to push or pull no longer exists.", {"Edit the step and click a face."});
+    }
+    const TopoDS_Face face = TopoDS::Face(bit->second->face(r.index));
+    auto d = doc.evalLength(p.value("distance", std::string("5 mm")));
+    if (!d) {
+        return failed(d.error());
+    }
+    if (std::abs(d.value()) < 1e-9) {
+        return failed("Push or pull by more than zero.");
+    }
+    if (measureItem(face).kind != "flat face") {
+        // a whole round face (a hole's wall, a round boss): its radius changes; out adds material
+        BRepAdaptor_Surface sa(face);
+        if (sa.GetType() != GeomAbs_Cylinder) {
+            return failed("Press pull moves flat faces and whole round ones (a hole, a round boss). To change this "
+                          "face, edit the step that made it.");
+        }
+        double u0, u1, v0, v1;
+        BRepTools::UVBounds(face, u0, u1, v0, v1);
+        if (u1 - u0 < 2 * std::numbers::pi - 1e-6) {
+            return failed("This round face goes only part of the way round, so press pull cannot change its size.",
+                          {"Edit the step that made it (a fillet's radius, say)."});
+        }
+        const gp_Cylinder cyl = sa.Cylinder();
+        const double R = cyl.Radius();
+        const gp_Ax1 axis = cyl.Axis();
+        BRepGProp_Face gf(face);
+        gp_Pnt c;
+        gp_Vec n;
+        gf.Normal((u0 + u1) / 2, (v0 + v1) / 2, c, n);
+        gp_Vec radial(axis.Location(), c);
+        radial -= gp_Vec(axis.Direction()) * radial.Dot(gp_Vec(axis.Direction()));
+        const bool hole = n.Dot(radial) < 0;  // the outside of the material faces the axis
+        const double R2 = hole ? R - d.value() : R + d.value();
+        if (!(R2 > 1e-6)) {
+            return failed(hole ? "That would close the hole up completely." : "That would make the round part disappear.",
+                          {"Push or pull by less than the radius."});
+        }
+        const gp_Dir ad = axis.Direction();
+        const gp_Ax2 base(axis.Location().Translated(gp_Vec(ad) * v0), ad);
+        const double h = v1 - v0, inner = std::min(R, R2), outer = std::max(R, R2);
+        TopoDS_Shape ring = BRepAlgoAPI_Cut(BRepPrimAPI_MakeCylinder(base, outer, h).Shape(),
+                                            BRepPrimAPI_MakeCylinder(base, inner, h).Shape())
+                                .Shape();
+        NamedShape tool(ring);
+        int caps = 0;
+        for (int i = 0; i < tool.faceCount(); ++i) {
+            BRepAdaptor_Surface fs(TopoDS::Face(tool.face(i)));
+            if (fs.GetType() == GeomAbs_Cylinder) {
+                tool.setFaceName(i, f.id + (std::abs(fs.Cylinder().Radius() - R2) < 1e-9 ? "/wall" : "/back"));
+            }
+            else {
+                tool.setFaceName(i, f.id + "/cap~" + std::to_string(caps++));
+            }
+        }
+        tool.deriveEdgeNames();
+        Feature g = f;
+        g.params["target"] = ref.body;
+        return applyTool(g, d.value() > 0 ? BoolOp::Join : BoolOp::Cut, std::move(tool), in, status);
+    }
+    // the outward normal at the face's centre (the face's orientation says which side is out)
+    BRepGProp_Face gf(face);
+    double u0, u1, v0, v1;
+    gf.Bounds(u0, u1, v0, v1);
+    gp_Pnt c;
+    gp_Vec n;
+    gf.Normal((u0 + u1) / 2, (v0 + v1) / 2, c, n);
+    if (n.Magnitude() < 1e-12) {
+        return failed("The direction of this face could not be found.");
+    }
+    Profile prof;
+    prof.key = "face";
+    prof.face = face;
+    int k = 0;
+    for (TopExp_Explorer e(face, TopAbs_EDGE); e.More(); e.Next()) {
+        if (!prof.edgeEntity.IsBound(e.Current())) {
+            prof.edgeEntity.Bind(e.Current(), ++k);
+        }
+    }
+    ExtrudeInput ei;
+    ei.featureId = f.id;
+    ei.profiles = {&prof};
+    ei.normal = gp_Dir(n);
+    ei.distance = std::abs(d.value());
+    ei.direction = d.value() > 0 ? ExtrudeDirection::OneSide : ExtrudeDirection::Reverse;
+    auto tool = makeExtrusion(ei);
     if (!tool) {
         return failed(tool.error());
     }
-    return applyTool(f, *op, std::move(tool.value()), in, status);
+    Feature g = f;
+    g.params["target"] = ref.body;
+    return applyTool(g, d.value() > 0 ? BoolOp::Join : BoolOp::Cut, std::move(tool.value()), in, status);
 }
 
 // ---------------------------------------------------------------- combine, split, move
@@ -532,7 +1104,30 @@ FeatureOutcome applySplit(const Document&, const Feature& f, const std::shared_p
     if (bit == in->bodies.end()) {
         return failed("The body to split no longer exists.", {"Edit the step and choose a body."});
     }
-    auto fr = planeFrame(p.value("plane", nlohmann::json("YZ")), in, status);
+    const nlohmann::json pref = p.value("plane", nlohmann::json("YZ"));
+    if (pref.is_object() && pref.contains("face")) {
+        // a curved face cuts the body where it reaches through it
+        ShapeRef ref = ShapeRef::fromJson(pref["face"]);
+        auto fb = in->bodies.find(ref.body);
+        Resolution r = fb == in->bodies.end() ? Resolution {} : resolve(*fb->second, ref);
+        if (fb == in->bodies.end() || r.status == ResolveStatus::Missing || r.status == ResolveStatus::Ambiguous) {
+            return failed("The face to split with no longer exists.", {"Edit the step and click a face again."});
+        }
+        const TopoDS_Face face = TopoDS::Face(fb->second->face(r.index));
+        if (!measureItem(face).normal) {
+            auto pieces = splitByFace(*bit->second, face, f.id);
+            if (!pieces) {
+                return failed(pieces.error());
+            }
+            auto out = copyState(in);
+            out->bodies[bodyId] = std::make_shared<NamedShape>(std::move((*pieces)[0]));  // the biggest keeps the name
+            for (size_t k = 1; k < pieces->size(); ++k) {
+                out->bodies[k == 1 ? f.id : f.id + "." + std::to_string(k)] = std::make_shared<NamedShape>(std::move((*pieces)[k]));
+            }
+            return {out, status};
+        }
+    }
+    auto fr = planeFrame(pref, in, status);
     if (!fr) {
         return failed(fr.error());
     }
@@ -586,10 +1181,24 @@ FeatureOutcome applyMove(const Document& doc, const Feature& f, const std::share
         return failed(ang.error());
     }
     const std::string axis = p.value("axis", std::string("Z"));
+    auto turn = namedAxis(axis, in);
+    if (!turn) {
+        return missingAxis(axis);
+    }
     gp_Trsf rot, move;
-    rot.SetRotation(gp_Ax1(gp_Pnt(0, 0, 0), axis == "X" ? gp_Dir(1, 0, 0) : axis == "Y" ? gp_Dir(0, 1, 0) : gp_Dir(0, 0, 1)),
-                    ang.value());
-    move.SetTranslation(gp_Vec(d[0], d[1], d[2]));
+    rot.SetRotation(*turn, ang.value());
+    gp_Vec shift(d[0], d[1], d[2]);
+    if (p.contains("from") || p.contains("to")) {
+        // point to point: the (turned) "from" point lands on "to", plus any typed shift
+        const std::string n1 = p.value("from", std::string("O")), n2 = p.value("to", std::string("O"));
+        auto a = namedPoint(n1, in), b = namedPoint(n2, in);
+        if (!a || !b) {
+            return failed(fmt("The point '%1' does not exist (or comes later in the timeline).", {!a ? n1 : n2}),
+                          {"Pick the origin (O) or a construction point made earlier."});
+        }
+        shift += gp_Vec(a->Transformed(rot), *b);
+    }
+    move.SetTranslation(shift);
     const gp_Trsf t = move * rot;  // turn about the origin axis, then shift
     const bool copy = p.value("copy", false);
     auto out = copyState(in);
@@ -642,8 +1251,12 @@ FeatureOutcome applyRevolve(const Document& doc, const Feature& f, const std::sh
         axis = gp_Ax1(a, gp_Dir(gp_Vec(a, b)));
     }
     else {
-        const std::string name = ax.value("origin", std::string("Z"));
-        axis = gp_Ax1(gp_Pnt(0, 0, 0), name == "X" ? gp_Dir(1, 0, 0) : name == "Y" ? gp_Dir(0, 1, 0) : gp_Dir(0, 0, 1));
+        const std::string name = ax.contains("axis") ? ax.value("axis", std::string {}) : ax.value("origin", std::string("Z"));
+        auto na = namedAxis(name, in);
+        if (!na) {
+            return missingAxis(name);
+        }
+        axis = *na;
     }
     // profiles: the axis line itself never forms a region (it is usually construction)
     std::vector<const Profile*> profiles;
@@ -654,11 +1267,72 @@ FeatureOutcome applyRevolve(const Document& doc, const Feature& f, const std::sh
     if (!angle) {
         return failed(angle.error());
     }
+    double sweep = angle.value();
+    std::optional<TopoDS_Face> trimAt;  // a curved face (or a plane the axis is not in): cut off there
+    if (p.value("extent", std::string("angle")) == "to") {
+        const nlohmann::json toRef = p.value("to", nlohmann::json("XY"));
+        std::optional<TopoDS_Face> face;
+        if (toRef.is_object() && toRef.contains("face")) {
+            ShapeRef ref = ShapeRef::fromJson(toRef["face"]);
+            auto bit = in->bodies.find(ref.body);
+            Resolution r = bit == in->bodies.end() ? Resolution {} : resolve(*bit->second, ref);
+            if (bit == in->bodies.end() || r.status == ResolveStatus::Missing || r.status == ResolveStatus::Ambiguous) {
+                return failed("The face this revolve turns up to no longer exists.", {"Edit the revolve and pick a face again."});
+            }
+            face = TopoDS::Face(bit->second->face(r.index));
+        }
+        if (face && !measureItem(*face).normal) {
+            trimAt = face;
+            sweep = 2 * std::numbers::pi * 0.999;  // almost a full turn, then cut off at the face
+        }
+    }
+    if (p.value("extent", std::string("angle")) == "to" && !trimAt) {
+        // up to a plane or flat face the axis lies in: turn (the positive way) until the
+        // profile reaches it
+        auto to = planeFrame(p.value("to", nlohmann::json("XY")), in, status);
+        if (!to) {
+            return failed(to.error());
+        }
+        const gp_Vec d(axis.Direction()), n(to->Direction());
+        const double off = std::abs(gp_Vec(to->Location(), axis.Location()).Dot(n));
+        if (std::abs(d.Dot(n)) > 1e-6 || off > 1e-6) {
+            return failed("Revolve can only turn up to a plane or flat face that the axis lies in.",
+                          {"Pick a face or plane through the axis, or type an angle."});
+        }
+        GProp_GProps props;
+        BRepGProp::SurfaceProperties(profiles.front()->face, props);
+        gp_Vec r0(axis.Location(), props.CentreOfMass());
+        r0 -= d * r0.Dot(d);
+        if (r0.Magnitude() < 1e-7) {
+            return failed("The profile sits on the axis, so there is no way to tell where it starts turning.");
+        }
+        const gp_Vec t = d.Crossed(n);
+        double best = 0;
+        for (const gp_Vec& v : {t, -t}) {
+            double a = std::atan2(r0.Crossed(v).Dot(d), r0.Dot(v));
+            if (a <= 1e-7) {
+                a += 2 * std::numbers::pi;
+            }
+            if (best == 0 || a < best) {
+                best = a;
+            }
+        }
+        sweep = best;
+    }
     auto op = opFromString(p.value("op", std::string("new")));
     if (!op) {
         return failed("This revolve has an unknown operation.");
     }
-    auto tool = makeRevolution(f.id, profiles, axis, angle.value());
+    auto tool = makeRevolution(f.id, profiles, axis, sweep);
+    if (tool && trimAt) {
+        TopoDS_Compound start;
+        BRep_Builder bb;
+        bb.MakeCompound(start);
+        for (const Profile* pr : profiles) {
+            bb.Add(start, pr->face);
+        }
+        tool = trimToFace(tool.value(), *trimAt, start, f.id, f.id + "/end");
+    }
     if (!tool) {
         return failed(tool.error());
     }
@@ -688,6 +1362,9 @@ FeatureOutcome applyHole(const Document& doc, const Feature& f, const std::share
     for (auto& [id, t] : sk.solved.texts()) {
         used.insert(t.anchor);  // a text's anchor is not a hole centre
     }
+    for (auto& [id, a] : sk.solved.artworks()) {
+        used.insert(a.anchor);
+    }
     std::set<int> wanted;
     if (p.contains("points") && p["points"].is_array()) {
         for (auto& v : p["points"]) {
@@ -712,8 +1389,33 @@ FeatureOutcome applyHole(const Document& doc, const Feature& f, const std::share
     spec.type = type == "counterbore" ? HoleSpec::Type::Counterbore
               : type == "countersink" ? HoleSpec::Type::Countersink
                                       : HoleSpec::Type::Simple;
-    auto len = [&](const char* key, const char* def) { return doc.evalLength(p.value(key, std::string(def))); };
-    auto d = len("diameter", "3.4 mm");
+    // A screw size from the clearance table gives the defaults; typed sizes still win.
+    std::optional<ScrewSize> screw;
+    std::string sizeDefault = "3.4 mm", cbD = "6.5 mm", cbH = "3.5 mm", csD = "6.5 mm", csA = "90 deg";
+    if (p.contains("size")) {
+        const std::string size = p.value("size", std::string {});
+        auto fit = holeFitFromString(p.value("fit", std::string("normal")));
+        if (!fit) {
+            return failed("The hole fit must be close, normal or loose.");
+        }
+        auto cd = clearanceDiameter(size, *fit);
+        if (!cd) {
+            return failed(cd.error());
+        }
+        screw = screwSize(size);
+        auto mm = [](double v) {
+            char buf[32];
+            std::snprintf(buf, sizeof buf, "%.6g mm", v);
+            return std::string(buf);
+        };
+        sizeDefault = mm(cd.value());
+        cbD = mm(screw->cboreDiameter);
+        cbH = mm(screw->cboreDepth);
+        csD = mm(screw->csinkDiameter);
+        csA = std::to_string(int(screw->csinkAngleDeg)) + " deg";
+    }
+    auto len = [&](const char* key, const std::string& def) { return doc.evalLength(p.value(key, def)); };
+    auto d = len("diameter", sizeDefault);
     if (!d) {
         return failed(d.error());
     }
@@ -727,7 +1429,7 @@ FeatureOutcome applyHole(const Document& doc, const Feature& f, const std::share
         spec.depth = dp.value();
     }
     if (spec.type == HoleSpec::Type::Counterbore) {
-        auto cd = len("cbore_diameter", "6.5 mm"), ch = len("cbore_depth", "3.5 mm");
+        auto cd = len("cbore_diameter", cbD), ch = len("cbore_depth", cbH);
         if (!cd || !ch) {
             return failed(!cd ? cd.error() : ch.error());
         }
@@ -735,13 +1437,21 @@ FeatureOutcome applyHole(const Document& doc, const Feature& f, const std::share
         spec.cboreDepth = ch.value();
     }
     if (spec.type == HoleSpec::Type::Countersink) {
-        auto cd = len("csink_diameter", "6.5 mm");
-        auto ca = doc.evalAngle(p.value("csink_angle", std::string("90 deg")));
+        auto cd = len("csink_diameter", csD);
+        auto ca = doc.evalAngle(p.value("csink_angle", csA));
         if (!cd || !ca) {
             return failed(!cd ? cd.error() : ca.error());
         }
         spec.csinkDiameter = cd.value();
         spec.csinkAngle = ca.value();
+    }
+    // a drill point (e.g. 118°) at the bottom of a blind hole; flat when absent
+    if (!spec.through && p.contains("tip") && p.value("tip", std::string {}) != "flat") {
+        auto ta = doc.evalAngle(p.value("tip", std::string {}));
+        if (!ta) {
+            return failed(ta.error());
+        }
+        spec.tipAngle = ta.value();
     }
     Bnd_Box all;
     for (auto& [id, b] : in->bodies) {
@@ -761,19 +1471,121 @@ FeatureOutcome applyPattern(const Document& doc, const Feature& f, const std::sh
 {
     const auto& p = f.params;
     FeatureStatus status;
-    const std::string src = p.value("feature", std::string {});
-    auto rit = in->tools.find(src);
-    if (rit == in->tools.end()) {
-        return failed("The step this pattern repeats (" + src + ") is missing, after the pattern, or has a problem.",
-                      {"Pattern an Extrude, Revolve or Hole that comes earlier in the timeline."});
+    // what is repeated: the shape a step added or removed, or a whole body
+    const std::string bodyId = p.value("body", std::string {});
+    ToolRecord rec;
+    if (!bodyId.empty()) {
+        auto bit = in->bodies.find(bodyId);
+        if (bit == in->bodies.end()) {
+            return failed(fmt("The body this pattern repeats (%1) no longer exists.", {bodyId}),
+                          {"Edit the pattern and pick a body."});
+        }
+        rec.tool = bit->second;
+        rec.op = p.value("op", std::string("new")) == "join" ? BoolOp::Join : BoolOp::NewBody;
+        rec.target = bodyId;
     }
-    const ToolRecord& rec = rit->second;
+    else {
+        const std::string src = p.value("feature", std::string {});
+        auto rit = in->tools.find(src);
+        if (rit == in->tools.end()) {
+            return failed(fmt("The step this pattern repeats (%1) is missing, after the pattern, or has a problem.", {src}),
+                          {"Pattern an Extrude, Revolve or Hole that comes earlier in the timeline, or a body."});
+        }
+        rec = rit->second;
+    }
     const std::string kind = p.value("kind", std::string("circular"));
-    auto dirOf = [](const std::string& n) {
-        return n == "X" ? gp_Dir(1, 0, 0) : n == "Y" ? gp_Dir(0, 1, 0) : gp_Dir(0, 0, 1);
+    auto dirOf = [&](const std::string& n) {
+        auto na = namedAxis(n, in);  // an origin axis or a construction axis's direction
+        return na ? na->Direction() : gp_Dir(1, 0, 0);
     };
     std::vector<gp_Trsf> moves;
-    if (kind == "circular") {
+    if (kind == "path") {
+        // along a chain of sketch curves: spread evenly, or at a set spacing; the copies keep
+        // their direction, or turn with the path ("follow")
+        const nlohmann::json pj = p.value("path", nlohmann::json::object());
+        const std::string sid = pj.value("sketch", std::string {});
+        const SketchState* sk = findSketch(in, sid);
+        if (!sk) {
+            return failed(fmt("The sketch with this pattern's path (%1) is missing or comes later.", {sid}),
+                          {"Edit the pattern and pick the sketch with the path."});
+        }
+        std::vector<int> curves;
+        const nlohmann::json cj = pj.value("curves", nlohmann::json("all"));
+        if (cj.is_array()) {
+            for (auto& c : cj) {
+                curves.push_back(c.get<int>());
+            }
+        }
+        else {
+            for (auto& [id, e] : sk->solved.entities()) {
+                if (e.type != EntityType::Point) {
+                    curves.push_back(id);
+                }
+            }
+        }
+        auto path = sketchPath(sk->solved, sk->frame, curves);
+        if (!path) {
+            return failed(path.error());
+        }
+        auto n = evaluate(p.value("count", std::string("5")), doc.lookup());
+        if (!n || !(n->dim == Dim::none()) || n->value < 2 || n->value > 1000) {
+            return failed("The number of copies must be a whole number from 2 to 1000.");
+        }
+        const int cnt = int(std::lround(n->value));
+        const double L = path->length;
+        double step = path->closed ? L / cnt : L / (cnt - 1);
+        if (p.contains("spacing")) {
+            auto sp = doc.evalLength(p.value("spacing", std::string("10 mm")));
+            if (!sp) {
+                return failed(sp.error());
+            }
+            if (!(sp.value() > 0)) {
+                return failed("The spacing must be larger than zero.");
+            }
+            step = sp.value();
+            if (!path->closed && step * (cnt - 1) > L + 1e-7) {
+                return failed(fmt("%1 copies %2 apart do not fit on a path %3 long.",
+                                  {std::to_string(cnt), formatQuantity(Quantity {step, Dim::len()}), formatQuantity(Quantity {L, Dim::len()})}),
+                              {"Use fewer copies, a smaller spacing, or spread them over the whole path."});
+            }
+        }
+        // the path runs from the end nearer the shape being repeated
+        Bnd_Box sb = boxOf(rec.tool->shape());
+        double x0, y0, z0, x1, y1, z1;
+        sb.Get(x0, y0, z0, x1, y1, z1);
+        const gp_Pnt mid((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
+        gp_Pnt a, b;
+        gp_Vec ta, tb;
+        pathAt(*path, 0, a, ta);
+        pathAt(*path, L, b, tb);
+        const bool backwards = !path->closed && b.Distance(mid) < a.Distance(mid) - 1e-9;
+        auto at = [&](double sAlong, gp_Pnt& pt, gp_Vec& t) {
+            pathAt(*path, backwards ? L - sAlong : sAlong, pt, t);
+            if (backwards) {
+                t.Reverse();
+            }
+        };
+        const bool follow = p.value("orient", std::string("same")) == "follow";
+        gp_Pnt p0;
+        gp_Vec t0;
+        at(0, p0, t0);
+        const gp_Dir normal = sk->frame.Direction();
+        for (int k = 1; k < cnt; ++k) {
+            gp_Pnt pk;
+            gp_Vec tk;
+            at(step * k, pk, tk);
+            gp_Trsf move;
+            move.SetTranslation(gp_Vec(p0, pk));
+            if (follow && t0.Magnitude() > 1e-12 && tk.Magnitude() > 1e-12) {
+                const double ang = std::atan2(t0.Crossed(tk).Dot(gp_Vec(normal)), t0.Dot(tk));
+                gp_Trsf turn;
+                turn.SetRotation(gp_Ax1(pk, normal), ang);
+                move = turn * move;
+            }
+            moves.push_back(move);
+        }
+    }
+    else if (kind == "circular") {
         auto n = evaluate(p.value("count", std::string("6")), doc.lookup());
         if (!n || !(n->dim == Dim::none()) || n->value < 2 || n->value > 1000) {
             return failed("The number of copies must be a whole number from 2 to 1000.");
@@ -785,7 +1597,12 @@ FeatureOutcome applyPattern(const Document& doc, const Feature& f, const std::sh
         const int cnt = int(std::lround(n->value));
         const bool full = std::abs(ang.value() - 2 * std::numbers::pi) < 1e-9;
         const double step = full ? ang.value() / cnt : ang.value() / (cnt - 1);
-        const gp_Ax1 axis(gp_Pnt(0, 0, 0), dirOf(p.value("axis", std::string("Z"))));
+        const std::string axisName = p.value("axis", std::string("Z"));
+        auto na = namedAxis(axisName, in);
+        if (!na) {
+            return missingAxis(axisName);
+        }
+        const gp_Ax1 axis = *na;
         for (int k = 1; k < cnt; ++k) {
             gp_Trsf t;
             t.SetRotation(axis, step * k);
@@ -808,6 +1625,12 @@ FeatureOutcome applyPattern(const Document& doc, const Feature& f, const std::sh
         }
         if (!s1 || !s2) {
             return failed(!s1 ? s1.error() : s2.error());
+        }
+        for (const char* key : {"dir1", "dir2"}) {
+            const std::string n = p.value(key, std::string(key[3] == '1' ? "X" : "Y"));
+            if (!namedAxis(n, in)) {
+                return missingAxis(n);
+            }
         }
         const gp_Dir d1 = dirOf(p.value("dir1", std::string("X"))), d2 = dirOf(p.value("dir2", std::string("Y")));
         for (int i = 0; i < *n1; ++i) {
@@ -840,6 +1663,26 @@ FeatureOutcome applyPattern(const Document& doc, const Feature& f, const std::sh
     if (bit == in->bodies.end()) {
         return failed("The body the pattern should change no longer exists.");
     }
+    if (!bodyId.empty()) {
+        // copies of a body joined one by one: each needs to touch the ones before it, not
+        // necessarily the original
+        NamedShape acc = *bit->second;
+        for (auto& c : copies) {
+            auto step = booleanOp(f.id, BoolOp::Join, acc, c);
+            if (!step) {
+                Error e = step.error();
+                if (e.code == "boolean.not_touching") {
+                    e.message = "Some copies do not touch the others, so they cannot be joined into one body.";
+                    e.suggestions = {"Make them new bodies instead.", "Use a smaller spacing."};
+                }
+                return failed(e);
+            }
+            acc = std::move(step.value());
+        }
+        auto out = copyState(in);
+        out->bodies[rec.target] = std::make_shared<NamedShape>(std::move(acc));
+        return {out, status};
+    }
     auto res = booleanOp(f.id, rec.op, *bit->second, all);
     if (!res) {
         Error e = res.error();
@@ -860,6 +1703,44 @@ FeatureOutcome applyMirror(const Document&, const Feature& f, const std::shared_
 {
     const auto& p = f.params;
     FeatureStatus status;
+    // the mirror plane: an origin plane, a construction plane or a flat face
+    auto frame = planeFrame(p.value("plane", nlohmann::json("YZ")), in, status);
+    if (!frame) {
+        return failed(frame.error());
+    }
+    gp_Trsf t;
+    t.SetMirror(gp_Ax2(frame->Location(), frame->Direction()));
+    auto out = copyState(in);
+    if (p.contains("feature")) {
+        // mirror what a step added or removed, and do the same with the copy
+        const std::string src = p.value("feature", std::string {});
+        auto rit = in->tools.find(src);
+        if (rit == in->tools.end()) {
+            return failed(fmt("The step this mirror copies (%1) is missing, after the mirror, or has a problem.", {src}),
+                          {"Mirror an Extrude, Revolve or Hole that comes earlier in the timeline."});
+        }
+        const ToolRecord& rec = rit->second;
+        NamedShape copy = transformedCopy(*rec.tool, t, f.id + "/mirror:");
+        if (rec.op == BoolOp::NewBody) {
+            out->bodies[f.id] = std::make_shared<NamedShape>(std::move(copy));
+            return {out, status};
+        }
+        auto bit = in->bodies.find(rec.target);
+        if (bit == in->bodies.end()) {
+            return failed("The body the mirrored step should change no longer exists.");
+        }
+        auto res = booleanOp(f.id, rec.op, *bit->second, copy);
+        if (!res) {
+            Error e = res.error();
+            if (e.code == "boolean.not_touching") {
+                e.message = "The mirrored copy does not touch the body, so it cannot be joined.";
+                e.suggestions = {"Check the mirror plane."};
+            }
+            return failed(e);
+        }
+        out->bodies[rec.target] = std::make_shared<NamedShape>(std::move(res.value()));
+        return {out, status};
+    }
     std::string bodyId = p.value("body", std::string {});
     if (bodyId.empty() && in->bodies.size() == 1) {
         bodyId = in->bodies.begin()->first;
@@ -868,12 +1749,7 @@ FeatureOutcome applyMirror(const Document&, const Feature& f, const std::shared_
     if (bit == in->bodies.end()) {
         return failed("There is no body to mirror.", {"Edit the mirror and choose a body."});
     }
-    const std::string plane = p.value("plane", std::string("YZ"));
-    const gp_Dir n = plane == "XY" ? gp_Dir(0, 0, 1) : plane == "XZ" ? gp_Dir(0, 1, 0) : gp_Dir(1, 0, 0);
-    gp_Trsf t;
-    t.SetMirror(gp_Ax2(gp_Pnt(0, 0, 0), n));
     NamedShape copy = transformedCopy(*bit->second, t, f.id + "/mirror:");
-    auto out = copyState(in);
     if (p.value("op", std::string("join")) == "new") {
         out->bodies[f.id] = std::make_shared<NamedShape>(std::move(copy));
         return {out, status};
@@ -942,12 +1818,12 @@ FeatureOutcome applyFillet(const Document& doc, const Feature& f, const std::sha
     if (missing || ambiguous) {
         std::string msg;
         if (missing) {
-            msg += std::to_string(missing) + (chamfer ? " of the edges this chamfer bevelled no longer exist. "
-                                                      : " of the edges this fillet rounded no longer exist. ");
+            msg += fmt(chamfer ? "%1 of the edges this chamfer bevelled no longer exist." : "%1 of the edges this fillet rounded no longer exist.",
+                       {std::to_string(missing)}) + " ";
         }
         if (ambiguous) {
-            msg += std::to_string(ambiguous) + " edge" + (ambiguous == 1 ? " was" : "s were")
-                 + " split, and Jigsmith can't tell which piece you meant.";
+            msg += ambiguous == 1 ? std::string("1 edge was split, and Jigsmith can't tell which piece you meant.")
+                                  : fmt("%1 edges were split, and Jigsmith can't tell which piece you meant.", {std::to_string(ambiguous)});
         }
         return failed(msg,
                       {chamfer ? "Edit the chamfer and pick the edges again." : "Edit the fillet and pick the edges again.",
@@ -960,15 +1836,43 @@ FeatureOutcome applyFillet(const Document& doc, const Feature& f, const std::sha
         return failed(chamfer ? "This chamfer has no edges." : "This fillet has no edges.",
                       {chamfer ? "Edit the chamfer and pick edges to bevel." : "Edit the fillet and pick edges to round."});
     }
-    auto res = chamfer ? chamferEdges(f.id, *in->bodies.at(bodyId), edges, r.value())
-                       : filletEdges(f.id, *in->bodies.at(bodyId), edges, r.value());
+    EdgeOptions opt;
+    opt.flip = p.value("flip", false);
+    const std::string type = p.value("type", std::string("equal"));
+    if (chamfer && type == "two") {
+        opt.mode = EdgeOptions::Mode::TwoDistances;
+        auto d2 = doc.evalLength(p.value("distance2", std::string("1 mm")));
+        if (!d2) {
+            return failed(d2.error());
+        }
+        opt.second = d2.value();
+    }
+    else if (chamfer && type == "angle") {
+        opt.mode = EdgeOptions::Mode::DistanceAngle;
+        auto a = doc.evalAngle(p.value("angle", std::string("45 deg")));
+        if (!a) {
+            return failed(a.error());
+        }
+        opt.second = a.value();
+    }
+    else if (!chamfer && type == "variable") {
+        opt.mode = EdgeOptions::Mode::Variable;
+        auto r2 = doc.evalLength(p.value("radius2", std::string("1 mm")));
+        if (!r2) {
+            return failed(r2.error());
+        }
+        opt.second = r2.value();
+    }
+    auto res = chamfer ? chamferEdges(f.id, *in->bodies.at(bodyId), edges, r.value(), opt)
+                       : filletEdges(f.id, *in->bodies.at(bodyId), edges, r.value(), opt);
     if (!res) {
-        return failed(res.error());
+        return failed(res.error(), chamfer ? "distance" : "radius");
     }
     if (rebound) {
         status.level = StatusLevel::Warning;
-        status.message = std::to_string(rebound) + " edge" + (rebound == 1 ? " was" : "s were")
-                       + " re-attached by shape similarity after an earlier change. Check the result.";
+        status.message = rebound == 1 ? std::string("1 edge was re-attached by shape similarity after an earlier change. Check the result.")
+                                      : fmt("%1 edges were re-attached by shape similarity after an earlier change. Check the result.",
+                                            {std::to_string(rebound)});
     }
     auto out = copyState(in);
     out->bodies[bodyId] = std::make_shared<NamedShape>(std::move(res.value()));
@@ -1021,9 +1925,9 @@ FeatureOutcome applyShell(const Document& doc, const Feature& f, const std::shar
     if (bit == in->bodies.end()) {
         return failed("There is no body to hollow out.", {"Create a solid first, then shell it."});
     }
-    auto res = shellSolid(f.id, *bit->second, faces, t.value());
+    auto res = shellSolid(f.id, *bit->second, faces, t.value(), p.value("direction", std::string("inside")) == "outside");
     if (!res) {
-        return failed(res.error());
+        return failed(res.error(), "thickness");
     }
     if (rebound) {
         status.level = StatusLevel::Warning;
@@ -1066,6 +1970,16 @@ FeatureOutcome applyFeature(const Document& doc, const Feature& f, const std::sh
                 return applySplit(doc, f, in);
             case FeatureKind::Move:
                 return applyMove(doc, f, in);
+            case FeatureKind::Axis:
+                return applyAxis(doc, f, in);
+            case FeatureKind::PressPull:
+                return applyPressPull(doc, f, in);
+            case FeatureKind::Point:
+                return applyPoint(doc, f, in);
+            case FeatureKind::Import:
+                return applyImport(f, in);
+            case FeatureKind::Remove:
+                return applyRemove(f, in);
         }
     }
     catch (const std::exception& ex) {

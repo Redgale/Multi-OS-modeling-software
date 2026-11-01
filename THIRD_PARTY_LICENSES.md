@@ -93,8 +93,17 @@ Project Authors, https://github.com/rsms/inter. Licensed under the SIL Open Font
 The Windows build takes a prebuilt OCCT 8.0.1 from conda-forge, together with the
 libraries that OCCT build depends on (for example FreeType, FTL or GPL-2.0, used under the
 FTL). **Before the first release** the Windows package must ship only the DLLs Jigsmith
-actually loads, each listed here with its licence (BACKLOG B-011). Until then the CI zip is a
-development artifact, not a release.
+actually loads (BACKLOG B-011). The CI packaging now removes every DLL nothing loads and writes
+`THIRD_PARTY_DLLS.txt` into the package: each remaining conda-forge DLL with its package, version
+and licence. That list must be reviewed before the first release; until then the Windows
+packages are development builds.
+
+## Inno Setup (Windows installer only)
+
+`Jigsmith-windows-x64-setup.exe` is made with Inno Setup 6 (Jordan Russell and Martijn
+Laan), whose licence allows using it and distributing the installers it makes, including
+commercially. The installer's own setup program comes from Inno Setup; nothing of it is
+linked into Jigsmith. https://jrsoftware.org/files/is/license.txt
 
 ## Assets
 

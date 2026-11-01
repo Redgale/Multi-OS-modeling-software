@@ -8,6 +8,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include "jig/result.hpp"
 
@@ -57,6 +58,30 @@ std::vector<std::string> referencedNames(std::string_view text);
 
 // Formats a value for display, e.g. 12.5 mm, 75 deg.
 std::string formatQuantity(const Quantity& q);
+
+// ---------------------------------------------------------------- display units
+
+// The unit a design is shown in. Geometry is always stored in millimetres; the unit
+// only changes what bare numbers typed into size fields mean and how sizes are shown.
+enum class LengthUnit
+{
+    Millimetre,
+    Centimetre,
+    Metre,
+    Inch,
+    Foot
+};
+std::string unitSymbol(LengthUnit u);                         // "mm", "in", …
+std::optional<LengthUnit> lengthUnitFromString(std::string_view s);  // "mm", "in", "inch", …
+double millimetresPer(LengthUnit u);
+// "12.7 mm", "0.5 in": up to 3 decimals (4 for in, ft and m), trailing zeros removed.
+std::string formatLength(double mm, LengthUnit u, bool withSymbol = true);
+std::string formatArea(double mm2, LengthUnit u);    // mm² / cm² / m² / in² / ft²
+std::string formatVolume(double mm3, LengthUnit u);  // cm³ for metric designs, in³ / ft³ otherwise
+// What a user typed into a length field, made explicit: a unitless expression gets the
+// design's unit ("2" -> "2 in", "a*2" stays if a is a length, "3/4" -> "(3/4) in").
+// Expressions that already have units, or are invalid, are returned unchanged.
+std::string withLengthUnit(std::string_view expr, LengthUnit u, const ParamLookup& lookup = {});
 
 // True for names a user may give a parameter (letter or _ first, then
 // letters, digits or _), excluding unit and function names.

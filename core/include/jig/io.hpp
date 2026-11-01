@@ -28,8 +28,28 @@ Result<bool> saveDocument(const Document& doc,
                           const std::string& thumbnailPng = {});
 Result<std::unique_ptr<Document>> loadDocument(const std::string& path);
 
+// ---------------------------------------------------------------- versions
+
+// Named snapshots kept inside the design file (versions/N.json), so they travel with it.
+// Ordinary saves keep them.
+struct VersionInfo
+{
+    int number = 0;
+    std::string label;
+    std::string saved;  // UTC, ISO 8601
+    int steps = 0;
+};
+// Saves the design and records it as a new version; returns the version's number.
+Result<int> saveVersion(const Document& doc, const std::string& path, const std::string& label);
+Result<std::vector<VersionInfo>> listVersions(const std::string& path);
+Result<std::unique_ptr<Document>> loadVersion(const std::string& path, int number);
+
 // For tests and fuzzing: parse a container already in memory.
 Result<std::unique_ptr<Document>> loadDocumentFromMemory(const void* data, size_t size);
+
+// Adds an Import step with the solids of a STEP file (kept inside the design, so the design
+// does not depend on the file afterwards). Returns the step's id.
+Result<std::string> insertStep(Document& doc, const std::string& path, std::string id = {});
 
 // ---------------------------------------------------------------- 3MF
 

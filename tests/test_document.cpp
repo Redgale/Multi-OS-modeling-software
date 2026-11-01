@@ -194,3 +194,161 @@ TEST(Document, DependentsAreFound)
     EXPECT_NE(std::find(e1.begin(), e1.end(), "f1"), e1.end());
     EXPECT_TRUE(doc->dependents("f2").empty());
 }
+
+TEST(Document, InchDesignsReadPlainNumbersAsInches)
+{
+    auto doc = build("units in\nparam wall = 0.125\n"
+                     "sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=2 h=1\nextrude id=e1 sketch=s1 distance=0.5\n"
+                     "shell id=sh1 faces=face:e1/end thickness=wall\n");
+    expectAllOk(*doc);
+    EXPECT_EQ(doc->units(), LengthUnit::Inch);
+    const double in = 25.4;
+    const double t = 0.125 * in;
+    const double expected = 2 * in * 1 * in * 0.5 * in - (2 * in - 2 * t) * (1 * in - 2 * t) * (0.5 * in - t);
+    EXPECT_NEAR(props(*doc).volume, expected, 1e-6);
+    // the typed values were stored with their unit written out
+    EXPECT_EQ(doc->model().parameters[0].expr, "0.125 in");
+    EXPECT_EQ(doc->feature("e1")->params.value("distance", std::string {}), "0.5 in");
+    // the unit is saved, and switching back to millimetres changes the display only
+    const auto path = (tempDir() / "inch.jig").string();
+    ASSERT_TRUE(saveDocument(*doc, path).ok());
+    auto back = loadDocument(path);
+    ASSERT_TRUE(back.ok());
+    EXPECT_EQ((*back)->units(), LengthUnit::Inch);
+    run(*doc, "units mm");
+    EXPECT_NEAR(props(*doc).volume, expected, 1e-6);
+    EXPECT_EQ(doc->fmtLength(25.4), "25.4 mm");
+    EXPECT_EQ(doc->defaultLength(10, 0.5), "10 mm");
+    run(*doc, "units in");
+    EXPECT_EQ(doc->defaultLength(10, 0.5), "0.5 in");
+}
+
+TEST(Document, ReorderStepsSafely)
+{
+    auto doc = build("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=40 h=20\nextrude id=e1 sketch=s1 distance=10\n"
+                     "sketch id=s2 plane=XY\ncircle sketch=s2 center=0,0 d=6\nextrude id=e2 sketch=s2 extent=all op=cut\n"
+                     "fillet id=f1 edges=\"name:E[e1/end|e1/side:5]\" radius=1mm\n");
+    expectAllOk(*doc);
+    const double v = props(*doc).volume;
+    auto order = [&] {
+        std::string o;
+        for (auto& f : doc->model().features) {
+            o += f.id + " ";
+        }
+        return o;
+    };
+    // a step cannot move before what it uses
+    auto bad = doc->moveFeature("e1", 0);
+    ASSERT_FALSE(bad.ok());
+    EXPECT_NE(bad.error().message.find("uses"), std::string::npos) << bad.error().message;
+    EXPECT_EQ(order(), "s1 e1 s2 e2 f1 ");
+    // an independent sketch can move to the front; the fillet can go before the cut
+    ASSERT_TRUE(doc->moveFeature("s2", 0).ok());
+    ASSERT_TRUE(doc->moveFeature("f1", 3).ok());
+    EXPECT_EQ(order(), "s2 s1 e1 f1 e2 ");
+    expectAllOk(*doc);
+    EXPECT_NEAR(props(*doc).volume, v, 1e-6);
+    // the cut uses no name of the block, but before the block there is nothing to cut:
+    // the move is refused and the timeline stays as it was
+    auto breaks = doc->moveFeature("e2", 1);
+    ASSERT_FALSE(breaks.ok());
+    EXPECT_NE(breaks.error().message.find("stop"), std::string::npos) << breaks.error().message;
+    EXPECT_EQ(order(), "s2 s1 e1 f1 e2 ");
+    expectAllOk(*doc);
+    // moves are undoable
+    ASSERT_TRUE(doc->undo());
+    EXPECT_EQ(order(), "s2 s1 e1 e2 f1 ");  // the last successful move is taken back
+    ScriptRunner r(*doc);
+    ASSERT_TRUE(r.runLine("reorder s2 after=e1").ok());
+}
+
+TEST(Document, VersionsTravelInsideTheFile)
+{
+    auto doc = build("param w = 40 mm\nsketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=w h=20\n"
+                     "extrude id=e1 sketch=s1 distance=10\n");
+    const auto path = (tempDir() / "versions.jig").string();
+    std::filesystem::remove(path);
+    auto v1 = saveVersion(*doc, path, "first try");
+    ASSERT_TRUE(v1.ok()) << v1.error().message;
+    EXPECT_EQ(v1.value(), 1);
+    run(*doc, "param w = 60 mm");
+    ASSERT_TRUE(saveDocument(*doc, path).ok());  // an ordinary save keeps the versions
+    auto v2 = saveVersion(*doc, path, "wider");
+    ASSERT_TRUE(v2.ok());
+    EXPECT_EQ(v2.value(), 2);
+    auto list = listVersions(path);
+    ASSERT_TRUE(list.ok());
+    ASSERT_EQ(list->size(), 2u);
+    EXPECT_EQ((*list)[0].label, "first try");
+    EXPECT_EQ((*list)[1].label, "wider");
+    EXPECT_EQ((*list)[0].saved.size(), 20u);  // 2026-10-31T04:00:00Z
+    auto first = loadVersion(path, 1);
+    ASSERT_TRUE(first.ok());
+    EXPECT_NEAR(props(**first).volume, 40 * 20 * 10, 1e-6);
+    auto latest = loadDocument(path);
+    ASSERT_TRUE(latest.ok());
+    EXPECT_NEAR(props(**latest).volume, 60 * 20 * 10, 1e-6);
+    EXPECT_FALSE(loadVersion(path, 7).ok());
+    // a file without versions simply has none
+    const auto plain = (tempDir() / "plain.jig").string();
+    ASSERT_TRUE(saveDocument(*doc, plain).ok());
+    ASSERT_TRUE(listVersions(plain).ok());
+    EXPECT_TRUE(listVersions(plain)->empty());
+}
+
+TEST(Document, TimelineGroupsAreSaved)
+{
+    auto doc = build("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=10 h=10\nextrude id=e1 sketch=s1 distance=5\n"
+                     "group name=\"Base\" steps=s1;e1\n");
+    EXPECT_EQ(doc->model().features[0].group, "Base");
+    EXPECT_EQ(doc->model().features[1].group, "Base");
+    const auto path = (tempDir() / "groups.jig").string();
+    ASSERT_TRUE(saveDocument(*doc, path).ok());
+    auto back = loadDocument(path);
+    ASSERT_TRUE(back.ok()) << back.error().message;
+    EXPECT_EQ((*back)->model().features[1].group, "Base");
+    run(*doc, "group name=\"\" steps=e1");
+    EXPECT_TRUE(doc->model().features[1].group.empty());
+}
+
+TEST(Document, VisibilityIsSavedButNotUndone)
+{
+    auto doc = build("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=10 h=10\nextrude id=e1 sketch=s1 distance=5\n"
+                     "group name=\"Base\" steps=s1;e1\n");
+    const auto rev = doc->revision();
+    doc->setHiddenBodies({"e1"});
+    doc->setFoldedGroups({"Base"});
+    EXPECT_GT(doc->revision(), rev);  // counts as an unsaved change
+    const auto r2 = doc->revision();
+    doc->setHiddenBodies({"e1"});
+    EXPECT_EQ(doc->revision(), r2);  // no change, nothing to save
+    const auto path = (tempDir() / "visibility.jig").string();
+    ASSERT_TRUE(saveDocument(*doc, path).ok());
+    auto back = loadDocument(path);
+    ASSERT_TRUE(back.ok()) << back.error().message;
+    EXPECT_EQ((*back)->hiddenBodies(), std::set<std::string> {"e1"});
+    EXPECT_EQ((*back)->foldedGroups(), std::set<std::string> {"Base"});
+    EXPECT_FALSE((*back)->model().extra.contains("view"));  // read, not kept as unknown
+    // hiding is not a design step: undo takes back the group, not the visibility
+    ASSERT_TRUE(doc->undo());
+    EXPECT_EQ(doc->hiddenBodies(), std::set<std::string> {"e1"});
+    // a design with nothing hidden writes no view block
+    EXPECT_FALSE(build("param a = 1 mm\n")->toJson().contains("view"));
+}
+
+TEST(Document, NamedViewsAreSaved)
+{
+    auto doc = build("param a = 1 mm\n");
+    const auto rev = doc->revision();
+    doc->setNamedView("Front detail", {{"yaw", 10.0}, {"pitch", 5.0}, {"distance", 120.0}});
+    EXPECT_GT(doc->revision(), rev);
+    const auto path = (tempDir() / "views.jig").string();
+    ASSERT_TRUE(saveDocument(*doc, path).ok());
+    auto back = loadDocument(path);
+    ASSERT_TRUE(back.ok()) << back.error().message;
+    ASSERT_EQ((*back)->namedViews().size(), 1u);
+    EXPECT_DOUBLE_EQ((*back)->namedViews().at("Front detail").value("distance", 0.0), 120.0);
+    (*back)->setNamedView("Front detail", nullptr);
+    EXPECT_TRUE((*back)->namedViews().empty());
+    EXPECT_FALSE((*back)->toJson().contains("view"));
+}

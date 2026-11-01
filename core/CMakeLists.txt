@@ -8,11 +8,16 @@ configure_file(version.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/generated/jig/version.
 add_library(jig_core STATIC
     src/commands.cpp
     src/document.cpp
+    src/dxf.cpp
     src/expr.cpp
     src/features.cpp
     src/io.cpp
     src/kernel.cpp
     src/sketch.cpp
+    src/sketch_offset.cpp
+    src/sketch_edit.cpp
+    src/screws.cpp
+    src/svg.cpp
     src/text.cpp
     ${CMAKE_CURRENT_BINARY_DIR}/generated/font_inter_regular.cpp
 )

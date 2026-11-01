@@ -66,9 +66,14 @@ public:
     {
         return position_;
     }
+    double capArea() const  // the filled cut, mm²
+    {
+        return capArea_;
+    }
 
 private:
     void apply();
+    double capArea_ = 0;
     const jig::Document& doc_;
     QPointer<Viewport> view_;
     QComboBox* plane_;

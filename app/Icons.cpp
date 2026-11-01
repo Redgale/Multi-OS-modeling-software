@@ -33,6 +33,8 @@ const std::map<QString, QString>& icons()
         {"file.save_as", "M4 4 L15 4 L18 7 L18 12 M4 4 L4 20 L11 20 M8 4 L8 9 L14 9 L14 4 a M13 21 L14 17 L20 11 L22 13 L16 19 Z"},
         {"file.export_stl", "M3 19 L12 4 L21 19 Z M7.5 11.5 L16.5 11.5 M12 19 L7.5 11.5 M12 19 L16.5 11.5 a M17 3 L21 3 L21 7 M21 3 L15 9"},
         {"file.export_step", "M4 8 L12 4 L20 8 L20 17 L12 21 L4 17 Z M4 8 L12 12 L20 8 M12 12 L12 21 a M16 2 L22 2 L22 8 M22 2 L17 7"},
+        {"file.save_version", "M4 4 L15 4 L18 7 L18 20 L4 20 Z M8 4 L8 9 L14 9 L14 4 a O15 16 4 M15 14 L15 16 L16.5 17"},
+        {"file.versions", "O12 12 9 a M12 7 L12 12 L15 14 M3 12 L1 10 M3 12 L5 10"},
         {"file.export_3mf", "M4 4 L20 4 L20 15 L4 15 Z M8 15 L8 20 L16 20 L16 15 f R9 9 6 3 a M12 4 L12 9"},
         {"edit.undo", "M9 6 L4 11 L9 16 M4 11 L14 11 Q20 11 20 16 Q20 20 15 20"},
         {"edit.redo", "M15 6 L20 11 L15 16 M20 11 L10 11 Q4 11 4 16 Q4 20 9 20"},
@@ -47,6 +49,12 @@ const std::map<QString, QString>& icons()
         {"sketch.rectangle", "M5 7 L19 7 L19 17 L5 17 Z f O5 7 1.6 O19 17 1.6"},
         {"sketch.circle", "O12 12 8 f O12 12 1.6"},
         {"sketch.arc", "M4 17 A12 17 8 180 -180 f O4 17 1.6 O20 17 1.6 O12 17 1.4"},
+        {"sketch.arc3", "M4 17 A12 17 8 180 -180 f O4 17 1.6 O20 17 1.6 O12 9 1.6"},
+        {"sketch.arc_tangent", "M3 17 L10 17 A10 10 7 270 180 f O10 17 1.6 O10 3 1.6"},
+        {"sketch.circle_tangent", "O13 11 6 a M3 5 L21 5 M3 21 L9 3"},
+        {"sketch.circle2", "O12 12 8 d M4 12 L20 12 f O4 12 1.6 O20 12 1.6"},
+        {"sketch.circle3", "O12 12 8 f O4 12 1.6 O17.7 6.3 1.6 O14.1 19.7 1.6"},
+        {"sketch.rect3", "M4 14 L14 4 L20 10 L10 20 Z f O4 14 1.6 O14 4 1.6 O20 10 1.6"},
         {"sketch.polygon", "M12 3 L19.8 7.5 L19.8 16.5 L12 21 L4.2 16.5 L4.2 7.5 Z f O12 12 1.4"},
         {"sketch.ellipse", "E12 12 9 5.5 f O12 12 1.4"},
         {"sketch.slot", "M8 8 L16 8 A16 12 4 90 -180 L8 16 A8 12 4 270 -180 Z f O8 12 1.3 O16 12 1.3"},
@@ -92,6 +100,7 @@ const std::map<QString, QString>& icons()
         {"solid.split", "M4 7 L12 3 L20 7 L20 17 L12 21 L4 17 Z a M2 15 L22 9"},
         {"solid.move", "R8 8 8 8 a M12 2 L12 6 M10 4 L12 2 L14 4 M22 12 L18 12 M20 10 L22 12 L20 14"},
         // construct
+        {"view.save_named", "R3 8 18 12 a O12 14 3.5 f R8 5 6 3"},
         {"construct.offset_plane", "M2 19 L7 15 L22 15 L17 19 Z a M2 11 L7 7 L22 7 L17 11 Z t M12 10 L12 16"},
         {"construct.angle_plane", "M2 19 L8 15 L22 15 L16 19 Z a M8 15 L5 5 L19 5 L22 15 t M5 19 A5 19 4 90 -40"},
         {"construct.midplane", "M2 7 L7 4 L22 4 L17 7 Z M2 21 L7 18 L22 18 L17 21 Z a M2 14 L7 11 L22 11 L17 14 Z"},
@@ -117,6 +126,7 @@ const std::map<QString, QString>& icons()
         {"feature.split", "M4 7 L12 3 L20 7 L20 17 L12 21 L4 17 Z a M2 15 L22 9"},
         {"feature.move", "R8 8 8 8 a M12 2 L12 6 M10 4 L12 2 L14 4 M22 12 L18 12 M20 10 L22 12 L20 14"},
         {"feature.revolve", "M8 4 L8 20 d M12 3 L12 21 a M17 9 A12 12 5 0 -270 M12 7 L15 6"},
+        {"feature.remove", "M5 7 L19 7 M9 7 L9 4 L15 4 L15 7 M7 7 L8 20 L16 20 L17 7 a M10 10 L10 17 M14 10 L14 17"},
         {"feature.hole", "M3 9 L9 5 L21 5 L15 9 Z M3 9 L3 19 L15 19 L15 9 M15 19 L21 15 L21 5 f E12 7 3 1.2 a M9 9 L9 16 M15 9 L15 16"},
         {"feature.pattern", "t O12 12 7.5 f R10 3 4 4 R17 10 4 4 R10 17 4 4 R3 10 4 4"},
         {"feature.mirror", "M3 7 L9 4 L9 18 L3 19 Z d M12 2 L12 22 a M21 7 L15 4 L15 18 L21 19 Z"},
@@ -237,14 +247,29 @@ private:
 
 }  // namespace
 
+namespace
+{
+// timeline steps without a drawing of their own use the tool that makes them
+QString iconKey(const QString& id)
+{
+    static const std::map<QString, QString> sameAs {{"feature.axis", "construct.axis"},
+                                                    {"feature.point", "construct.point"},
+                                                    {"feature.presspull", "solid.presspull"},
+                                                    {"feature.import", "insert.step"},
+                                                    {"feature.move", "solid.move"}};
+    auto alias = sameAs.find(id);
+    return alias != sameAs.end() && !icons().count(id) ? alias->second : id;
+}
+}  // namespace
+
 bool hasToolIcon(const QString& id)
 {
-    return icons().count(id) > 0;
+    return icons().count(iconKey(id)) > 0;
 }
 
 QIcon toolIcon(const QString& id, const QColor& ink, const QColor& accent)
 {
-    auto it = icons().find(id);
+    auto it = icons().find(iconKey(id));
     const QString spec = it != icons().end() ? it->second : QStringLiteral("f O12 12 3");
     return QIcon(new VectorIconEngine(spec, ink, accent));
 }

@@ -4,8 +4,11 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <cstdlib>
 #include <filesystem>
 #include <mutex>
+#include <optional>
+#include <tuple>
 
 #include <BRepBuilderAPI_MakeEdge.hxx>
 #include <BRepBuilderAPI_MakeFace.hxx>
@@ -160,8 +163,259 @@ FT_Library library()
 
 }  // namespace
 
+std::vector<TopoDS_Face> facesFromOutlines(const std::vector<OutlineContour>& contours,
+                                           const std::function<gp_Pnt(const gp_XY&)>& to3d, const gp_Pln& plane)
+{
+    // a dense polyline and signed area per contour, for the nesting test
+    struct Info
+    {
+        std::vector<gp_XY> poly;
+        double area = 0;
+    };
+    std::vector<Info> info;
+    for (auto& c : contours) {
+        Info in;
+        for (auto& seg : c) {
+            if (seg.empty()) {
+                continue;
+            }
+            if (in.poly.empty()) {
+                in.poly.push_back(seg.front());
+            }
+            const int k = seg.size() == 2 ? 1 : 8;
+            for (int j = 1; j <= k; ++j) {
+                const double t = double(j) / k, u = 1 - t;
+                gp_XY p;
+                if (seg.size() == 2) {
+                    p = seg[0] * u + seg[1] * t;
+                }
+                else if (seg.size() == 3) {
+                    p = seg[0] * (u * u) + seg[1] * (2 * t * u) + seg[2] * (t * t);
+                }
+                else {
+                    p = seg[0] * (u * u * u) + seg[1] * (3 * u * u * t) + seg[2] * (3 * u * t * t) + seg[3] * (t * t * t);
+                }
+                in.poly.push_back(p);
+            }
+        }
+        for (size_t i = 0, j = in.poly.empty() ? 0 : in.poly.size() - 1; i < in.poly.size(); j = i++) {
+            in.area += in.poly[j].X() * in.poly[i].Y() - in.poly[i].X() * in.poly[j].Y();
+        }
+        in.area /= 2;
+        info.push_back(std::move(in));
+    }
+    const size_t n = contours.size();
+    // Outer contours have an even number of contours around them; holes an odd number.
+    // This works whichever winding direction the source uses.
+    std::vector<int> depth(n, 0);
+    for (size_t i = 0; i < n; ++i) {
+        for (size_t j = 0; j < n; ++j) {
+            if (i != j && info[i].poly.size() > 2 && info[j].poly.size() > 2 &&
+                std::abs(info[j].area) > std::abs(info[i].area) && inside(info[j].poly, info[i].poly.front())) {
+                ++depth[i];
+            }
+        }
+    }
+    auto wireOf = [&](const OutlineContour& c) {
+        BRepBuilderAPI_MakeWire mw;
+        for (auto& seg : c) {
+            if (seg.size() == 2) {
+                const gp_Pnt a = to3d(seg[0]), b = to3d(seg[1]);
+                if (a.Distance(b) < 1e-9) {
+                    continue;
+                }
+                mw.Add(BRepBuilderAPI_MakeEdge(a, b).Edge());
+            }
+            else if (seg.size() >= 3) {
+                TColgp_Array1OfPnt poles(1, int(seg.size()));
+                for (size_t k = 0; k < seg.size(); ++k) {
+                    poles.SetValue(int(k) + 1, to3d(seg[k]));
+                }
+                Handle(Geom_BezierCurve) bez = new Geom_BezierCurve(poles);
+                mw.Add(BRepBuilderAPI_MakeEdge(bez).Edge());
+            }
+        }
+        return mw;
+    };
+    std::vector<TopoDS_Face> out;
+    for (size_t i = 0; i < n; ++i) {
+        if (depth[i] % 2 != 0 || info[i].poly.size() < 3 || std::abs(info[i].area) < 1e-9) {
+            continue;  // a hole (added to its outer contour below) or nothing at all
+        }
+        auto outer = wireOf(contours[i]);
+        if (!outer.IsDone()) {
+            continue;
+        }
+        BRepBuilderAPI_MakeFace mf(plane, outer.Wire(), true);
+        for (size_t j = 0; j < n; ++j) {
+            if (depth[j] == depth[i] + 1 && info[j].poly.size() > 2 && std::abs(info[j].area) < std::abs(info[i].area) &&
+                inside(info[i].poly, info[j].poly.front())) {
+                auto hole = wireOf(contours[j]);
+                if (hole.IsDone()) {
+                    mf.Add(hole.Wire());
+                }
+            }
+        }
+        if (!mf.IsDone()) {
+            continue;
+        }
+        ShapeFix_Face fix(mf.Face());
+        fix.FixOrientation();
+        fix.Perform();
+        const TopoDS_Face f = TopoDS::Face(fix.Face());
+        if (BRepCheck_Analyzer(f).IsValid()) {
+            out.push_back(f);
+        }
+    }
+    return out;
+}
+
+// ---------------------------------------------------------------- installed fonts
+
+namespace
+{
+std::string lower(std::string s)
+{
+    std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) { return char(std::tolower(c)); });
+    return s;
+}
+
+std::vector<std::filesystem::path> fontFolders()
+{
+    std::vector<std::filesystem::path> dirs;
+    auto env = [](const char* n) -> std::string {
+        const char* v = std::getenv(n);
+        return v ? v : "";
+    };
+    const std::string home = env("HOME");
+#if defined(_WIN32)
+    const std::string win = env("WINDIR").empty() ? "C:\\Windows" : env("WINDIR");
+    dirs.push_back(std::filesystem::path(win) / "Fonts");
+    if (!env("LOCALAPPDATA").empty()) {
+        dirs.push_back(std::filesystem::path(env("LOCALAPPDATA")) / "Microsoft" / "Windows" / "Fonts");
+    }
+#elif defined(__APPLE__)
+    dirs = {"/System/Library/Fonts", "/Library/Fonts"};
+    if (!home.empty()) {
+        dirs.push_back(std::filesystem::path(home) / "Library" / "Fonts");
+    }
+#else
+    dirs = {"/usr/share/fonts", "/usr/local/share/fonts"};
+    if (!home.empty()) {
+        dirs.push_back(std::filesystem::path(home) / ".local" / "share" / "fonts");
+        dirs.push_back(std::filesystem::path(home) / ".fonts");
+    }
+#endif
+    // extra folders, separated like PATH
+    std::string extra = env("JIG_FONT_DIRS");
+#if defined(_WIN32)
+    const char sep = ';';
+#else
+    const char sep = ':';
+#endif
+    for (size_t from = 0; from < extra.size();) {
+        const size_t at = std::min(extra.find(sep, from), extra.size());
+        if (at > from) {
+            dirs.push_back(extra.substr(from, at - from));
+        }
+        from = at + 1;
+    }
+    return dirs;
+}
+}  // namespace
+
+const std::vector<FontFace>& installedFonts(bool rescan)
+{
+    static std::vector<FontFace> fonts;
+    static bool scanned = false;
+    static std::mutex scanLock;
+    std::lock_guard<std::mutex> once(scanLock);
+    if (scanned && !rescan) {
+        return fonts;
+    }
+    scanned = true;
+    fonts.clear();
+    {
+        std::lock_guard<std::mutex> guard(ftLock());
+        FT_Library lib = library();
+        for (const auto& dir : lib ? fontFolders() : std::vector<std::filesystem::path> {}) {
+            std::error_code ec;
+            if (!std::filesystem::is_directory(dir, ec)) {
+                continue;
+            }
+            for (auto it = std::filesystem::recursive_directory_iterator(
+                     dir, std::filesystem::directory_options::skip_permission_denied, ec);
+                 !ec && it != std::filesystem::recursive_directory_iterator(); it.increment(ec)) {
+                const std::string ext = lower(it->path().extension().string());
+                if (ext != ".ttf" && ext != ".otf" && ext != ".ttc" && ext != ".otc") {
+                    continue;
+                }
+                const std::string path = it->path().string();
+                FT_Face probe = nullptr;
+                if (FT_New_Face(lib, path.c_str(), -1, &probe) != 0) {
+                    continue;
+                }
+                const long n = probe->num_faces;
+                FT_Done_Face(probe);
+                for (long i = 0; i < n && i < 64; ++i) {
+                    FT_Face f = nullptr;
+                    if (FT_New_Face(lib, path.c_str(), i, &f) != 0) {
+                        continue;
+                    }
+                    if (f->family_name && FT_IS_SCALABLE(f)) {
+                        fonts.push_back({f->family_name, f->style_name ? f->style_name : "Regular", path, int(i)});
+                    }
+                    FT_Done_Face(f);
+                }
+            }
+        }
+        std::sort(fonts.begin(), fonts.end(), [](const FontFace& a, const FontFace& b) {
+            return std::tie(a.family, a.style, a.path) < std::tie(b.family, b.style, b.path);
+        });
+    }
+    return fonts;
+}
+
+std::optional<FontFace> findFont(const std::string& wanted)
+{
+    const std::string w = lower(wanted);
+    std::optional<FontFace> best;
+    int bestScore = -1;
+    for (const auto& f : installedFonts()) {
+        const std::string fam = lower(f.family);
+        if (w.rfind(fam, 0) != 0) {
+            continue;  // the family must start the request
+        }
+        std::string rest = w.substr(fam.size());
+        rest.erase(0, rest.find_first_not_of(' '));
+        if (!rest.empty() && w.size() > fam.size() && w[fam.size()] != ' ') {
+            continue;  // "DejaVu Sans Mono" is not "DejaVu Sans" + "Mono" style... unless no better
+        }
+        const std::string style = lower(f.style);
+        int score = 0;
+        if (rest.empty()) {
+            score = style == "regular" || style == "book" || style == "normal" || style == "roman" ? 3 : 1;
+        }
+        else if (style == rest) {
+            score = 4;
+        }
+        else {
+            continue;
+        }
+        score = score * 100 + int(fam.size());  // the longest family that matches wins
+        if (score > bestScore) {
+            bestScore = score;
+            best = f;
+        }
+    }
+    return best;
+}
+
 Result<TextOutline> textFaces(const SketchText& t, double x, double y, const gp_Ax3& frame)
 {
+    if (!t.font.empty() && t.font != "Inter" && !std::filesystem::exists(t.font)) {
+        (void)installedFonts();  // the first scan takes the FreeType lock itself
+    }
     std::lock_guard<std::mutex> guard(ftLock());
     FT_Library lib = library();
     if (!lib) {
@@ -172,11 +426,18 @@ Result<TextOutline> textFaces(const SketchText& t, double x, double y, const gp_
     if (!t.font.empty() && std::filesystem::exists(t.font)) {
         if (FT_New_Face(lib, t.font.c_str(), 0, &face) != 0) {
             face = nullptr;
-            result.note = "The font file " + t.font + " could not be read; using the built-in font (Inter).";
+            result.note = fmt("The font file %1 could not be read; using the built-in font (Inter).", {t.font});
         }
     }
     else if (!t.font.empty() && t.font != "Inter") {
-        result.note = "The font '" + t.font + "' is not available here; using the built-in font (Inter).";
+        // an installed font by family name (and style)
+        const std::optional<FontFace> found = findFont(t.font);  // (fonts were scanned before the lock)
+        if (found && FT_New_Face(lib, found->path.c_str(), found->index, &face) != 0) {
+            face = nullptr;
+        }
+        if (!face) {
+            result.note = fmt("The font '%1' is not available here; using the built-in font (Inter).", {t.font});
+        }
     }
     if (!face && FT_New_Memory_Face(lib, jig_font_inter_regular, FT_Long(jig_font_inter_regular_size), 0, &face) != 0) {
         return makeError("text.font", "The built-in font could not be loaded.");
@@ -201,14 +462,33 @@ Result<TextOutline> textFaces(const SketchText& t, double x, double y, const gp_
     struct Glyph
     {
         std::vector<Contour> contours;
-        double penX;
+        double penX, penY;
+        int line;
     };
     std::vector<Glyph> glyphs;
-    double pen = 0;
-    double xmin = 1e300, xmax = -1e300, ymin = 1e300, ymax = -1e300;
+    double pen = 0, penY = 0;
+    int line = 0;
+    // the font's own line spacing (or 1.2 em when it gives none)
+    const double lineStep = face->height > 0 ? double(face->height) : 1.2 * double(face->units_per_EM);
+    std::vector<std::pair<double, double>> lineX;  // per line: leftmost and rightmost outline point
+    double ymin = 1e300, ymax = -1e300;
     FT_UInt prev = 0;
     const bool kerning = FT_HAS_KERNING(face);
-    for (char32_t cp : utf8(t.text)) {
+    // "\n" (a backslash and n, as typed in a one-line field or a script) starts a new line too
+    std::string text = t.text;
+    for (size_t at = text.find("\\n"); at != std::string::npos; at = text.find("\\n", at)) {
+        text.replace(at, 2, "\n");
+    }
+    lineX.push_back({1e300, -1e300});
+    for (char32_t cp : utf8(text)) {
+        if (cp == U'\n') {
+            pen = 0;
+            penY -= lineStep;
+            ++line;
+            prev = 0;
+            lineX.push_back({1e300, -1e300});
+            continue;
+        }
         const FT_UInt gi = FT_Get_Char_Index(face, FT_ULong(cp));
         if (kerning && prev && gi) {
             FT_Vector k;
@@ -223,7 +503,7 @@ Result<TextOutline> textFaces(const SketchText& t, double x, double y, const gp_
         if (face->glyph->format == FT_GLYPH_FORMAT_OUTLINE) {
             Decomposer d;
             FT_Outline_Decompose(&face->glyph->outline, &funcs, &d);
-            Glyph g {{}, pen};
+            Glyph g {{}, pen, penY, line};
             for (auto& c : d.contours) {
                 if (c.segments.empty()) {
                     continue;
@@ -241,10 +521,10 @@ Result<TextOutline> textFaces(const SketchText& t, double x, double y, const gp_
                     continue;
                 }
                 for (auto& p : c.poly) {
-                    xmin = std::min(xmin, p.X() + pen);
-                    xmax = std::max(xmax, p.X() + pen);
-                    ymin = std::min(ymin, p.Y());
-                    ymax = std::max(ymax, p.Y());
+                    lineX[size_t(line)].first = std::min(lineX[size_t(line)].first, p.X() + pen);
+                    lineX[size_t(line)].second = std::max(lineX[size_t(line)].second, p.X() + pen);
+                    ymin = std::min(ymin, p.Y() + penY);
+                    ymax = std::max(ymax, p.Y() + penY);
                 }
                 g.contours.push_back(std::move(c));
             }
@@ -258,84 +538,42 @@ Result<TextOutline> textFaces(const SketchText& t, double x, double y, const gp_
         return result;  // empty or whitespace-only text: no areas
     }
 
-    // Centre the lettering on the anchor and place it in the sketch plane.
-    const gp_XY centre((xmin + xmax) / 2, (ymin + ymax) / 2);
+    // Centre each line on its own, then the block on the anchor, in the sketch plane.
+    for (Glyph& g : glyphs) {
+        const auto [l0, l1] = lineX[size_t(g.line)];
+        g.penX -= (l0 + l1) / 2;
+    }
+    const gp_XY centre(0, (ymin + ymax) / 2);
     const double ca = std::cos(t.angle), sa = std::sin(t.angle);
-    auto to3d = [&](const gp_XY& fontPt, double penX) {
+    // along a circle: the baseline's middle at the anchor's angle, reading clockwise round the
+    // top, letters standing outward; the text's middle height sits on the curve
+    const bool bent = t.pathR > 1e-9;
+    const double theta0 = std::atan2(y - t.pathCy, x - t.pathCx);
+    auto to3d = [&](const gp_XY& fontPt, double penX, double pY) {
         const double u = (fontPt.X() + penX - centre.X()) * scale;
-        const double v = (fontPt.Y() - centre.Y()) * scale;
-        const double lx = x + u * ca - v * sa;
-        const double ly = y + u * sa + v * ca;
+        const double v = (fontPt.Y() + pY - centre.Y()) * scale;
+        double lx = x + u * ca - v * sa;
+        double ly = y + u * sa + v * ca;
+        if (bent) {
+            const double th = theta0 - u / t.pathR, rho = t.pathR + v;
+            lx = t.pathCx + rho * std::cos(th);
+            ly = t.pathCy + rho * std::sin(th);
+        }
         return gp_Pnt(frame.Location().XYZ() + frame.XDirection().XYZ() * lx + frame.YDirection().XYZ() * ly);
     };
     const gp_Pln plane(frame);
 
     try {
         for (const Glyph& g : glyphs) {
-            // Outer contours have an even number of contours around them; holes an odd
-            // number. This works whichever winding direction the font uses.
-            const size_t n = g.contours.size();
-            std::vector<int> depth(n, 0);
-            for (size_t i = 0; i < n; ++i) {
-                for (size_t j = 0; j < n; ++j) {
-                    if (i != j && std::abs(g.contours[j].area) > std::abs(g.contours[i].area)
-                        && inside(g.contours[j].poly, g.contours[i].poly.front())) {
-                        ++depth[i];
-                    }
-                }
+            std::vector<OutlineContour> cs;
+            for (auto& c : g.contours) {
+                cs.push_back(c.segments);
             }
-            auto wireOf = [&](const Contour& c) {
-                BRepBuilderAPI_MakeWire mw;
-                for (auto& seg : c.segments) {
-                    if (seg.size() == 2) {
-                        const gp_Pnt a = to3d(seg[0], g.penX), b = to3d(seg[1], g.penX);
-                        if (a.Distance(b) < 1e-9) {
-                            continue;
-                        }
-                        mw.Add(BRepBuilderAPI_MakeEdge(a, b).Edge());
-                    }
-                    else {
-                        TColgp_Array1OfPnt poles(1, int(seg.size()));
-                        for (size_t k = 0; k < seg.size(); ++k) {
-                            poles.SetValue(int(k) + 1, to3d(seg[k], g.penX));
-                        }
-                        Handle(Geom_BezierCurve) bez = new Geom_BezierCurve(poles);
-                        mw.Add(BRepBuilderAPI_MakeEdge(bez).Edge());
-                    }
-                }
-                return mw;
-            };
-            for (size_t i = 0; i < n; ++i) {
-                if (depth[i] % 2 != 0) {
-                    continue;  // a hole: added to its outer contour below
-                }
-                auto outer = wireOf(g.contours[i]);
-                if (!outer.IsDone()) {
-                    continue;
-                }
-                BRepBuilderAPI_MakeFace mf(plane, outer.Wire(), true);
-                for (size_t j = 0; j < n; ++j) {
-                    // holes directly inside this outer contour
-                    if (depth[j] == depth[i] + 1 && std::abs(g.contours[j].area) < std::abs(g.contours[i].area)
-                        && inside(g.contours[i].poly, g.contours[j].poly.front())) {
-                        auto hole = wireOf(g.contours[j]);
-                        if (hole.IsDone()) {
-                            mf.Add(hole.Wire());
-                        }
-                    }
-                }
-                if (!mf.IsDone()) {
-                    continue;
-                }
-                ShapeFix_Face fix(mf.Face());
-                fix.FixOrientation();
-                fix.Perform();
-                const TopoDS_Face f = TopoDS::Face(fix.Face());
-                if (BRepCheck_Analyzer(f).IsValid()) {
-                    result.faces.push_back(f);
-                }
-            }
+            const double penX = g.penX, pY = g.penY;
+            auto faces = facesFromOutlines(cs, [&](const gp_XY& p) { return to3d(p, penX, pY); }, plane);
+            result.faces.insert(result.faces.end(), faces.begin(), faces.end());
         }
+        return result;
     }
     catch (const Standard_Failure& f) {
         const char* m = f.GetMessageString();

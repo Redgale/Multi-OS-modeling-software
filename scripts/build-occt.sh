@@ -33,6 +33,7 @@ fi
 cmake -S "$work/$tag" -B "$work/build-$version" -G Ninja \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX="$prefix" \
+    -DCMAKE_INSTALL_RPATH='$ORIGIN' \
     -DBUILD_LIBRARY_TYPE=Shared \
     -DBUILD_MODULE_ApplicationFramework=OFF \
     -DBUILD_MODULE_Draw=OFF \

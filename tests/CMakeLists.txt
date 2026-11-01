@@ -28,3 +28,16 @@ if(JIG_BUILD_GUI)
     add_test(NAME ui.workflow COMMAND test_ui)
     set_tests_properties(ui.workflow PROPERTIES LABELS ui TIMEOUT 300)
 endif()
+
+# The command labels lupdate reads (app/registry_strings.h) must match the core's registry.
+find_package(Python3 QUIET COMPONENTS Interpreter)
+if(Python3_FOUND)
+    add_test(NAME translations.registry_strings_current
+             COMMAND ${CMAKE_COMMAND} -DPYTHON=${Python3_EXECUTABLE} -DSRC=${PROJECT_SOURCE_DIR}
+                     -DOUT=${CMAKE_CURRENT_BINARY_DIR}/registry_strings.h
+                     -P ${CMAKE_CURRENT_SOURCE_DIR}/check_registry_strings.cmake)
+    add_test(NAME translations.core_strings_current
+             COMMAND ${CMAKE_COMMAND} -DPYTHON=${Python3_EXECUTABLE} -DSRC=${PROJECT_SOURCE_DIR}
+                     -DOUT=${CMAKE_CURRENT_BINARY_DIR}/core_strings.h -DCORE=1
+                     -P ${CMAKE_CURRENT_SOURCE_DIR}/check_registry_strings.cmake)
+endif()

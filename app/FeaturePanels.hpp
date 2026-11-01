@@ -11,6 +11,9 @@
 #include <QDialog>
 #include <QPointer>
 #include <QWidget>
+#include <QVector3D>
+
+#include <optional>
 
 #include "jig/document.hpp"
 
@@ -58,6 +61,14 @@ private:
     double value_ = 0;
 };
 
+// Gives every input under `root` the text of the label shown just before it (or the label
+// that names it as its buddy) as its accessible name, so screen readers say what it is.
+void nameInputsFromLabels(QWidget* root);
+
+// Panels remember the values last used in this session (a fillet radius, a hole type);
+// this forgets them (each UI test starts fresh).
+void forgetRememberedValues();
+
 // Anything shown in the side dock while a tool runs (feature panels, Measure).
 class ToolPanel : public QWidget
 {
@@ -90,6 +101,8 @@ public:
     }
 
 protected:
+    // Enter presses OK (when the preview is good), Esc cancels: no mouse needed.
+    void keyPressEvent(QKeyEvent* e) override;
     virtual jig::Feature draft() const = 0;
     virtual QString title() const = 0;
     virtual void rememberValues() {}
@@ -97,6 +110,11 @@ protected:
     virtual void previewed(const jig::FeatureOutcome&) {}
     void schedulePreview();
     void addRow(const QString& label, QWidget* w);
+    // Which field holds a step parameter, so a one-click fix can set it.
+    void bindParam(const std::string& param, QWidget* field)
+    {
+        paramFields_[param] = field;
+    }
     int insertIndex() const;
     std::shared_ptr<const jig::ModelState> stateBefore() const;
 
@@ -106,6 +124,7 @@ protected:
     QVBoxLayout* form_;
     QLabel* status_;
     QWidget* fixes_;
+    std::map<std::string, QWidget*> paramFields_;
     QPushButton* ok_;
     QTimer* timer_;
     bool previewOk_ = false;
@@ -115,11 +134,17 @@ private:
     void runPreview();
 };
 
+class ExtrudeHandle;
+
 class ExtrudePanel : public FeaturePanel
 {
     Q_OBJECT
 public:
     ExtrudePanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent = nullptr);
+    ~ExtrudePanel() override;
+    // The arrow on the canvas: where its tip is (screen), and dragging it to a screen point.
+    std::optional<QPointF> handleTip() const;
+    void dragHandleTo(const QPointF& screen);
     ExprField* distance() const
     {
         return distance_;
@@ -128,6 +153,35 @@ public:
     {
         return op_;
     }
+    QComboBox* direction() const
+    {
+        return direction_;
+    }
+    ExprField* distance2() const
+    {
+        return distance2_;
+    }
+    ExprField* taper() const
+    {
+        return taper_;
+    }
+    QCheckBox* thinWall() const
+    {
+        return thinOn_;
+    }
+    ExprField* thickness() const
+    {
+        return thin_;
+    }
+    QComboBox* extent() const
+    {
+        return extent_;
+    }
+    QComboBox* upTo() const
+    {
+        return to_;
+    }
+    void useFace(const std::string& body, const std::string& name);  // "up to" this face
 
 protected:
     jig::Feature draft() const override;
@@ -136,10 +190,18 @@ protected:
 
 private:
     void fillProfiles();
+    void updateVisibility();
     QString autoOperation() const;
-    QComboBox *sketch_, *extent_, *direction_, *op_;
+    QComboBox *sketch_, *extent_, *direction_, *op_, *thinSide_, *to_;
+    ExprField* toOffset_;
+    void previewed(const jig::FeatureOutcome& o) override;
+    friend class ExtrudeHandle;
+    std::unique_ptr<ExtrudeHandle> handle_;
+    std::optional<QVector3D> handleBase_;  // the arrow starts at the profile's centre
+    QVector3D handleDir_;                  // along the extrude direction
     QListWidget* profiles_;
-    ExprField* distance_;
+    ExprField *distance_, *distance2_, *taper_, *thin_;
+    QCheckBox* thinOn_;
 };
 
 // Fillet (round) and Chamfer (bevel) share this panel: pick edges, type one size.
@@ -154,6 +216,8 @@ public:
     void toggleEdge(const std::string& body, int edge);
     // A click in the view, by persistent edge name (works on the preview body too).
     void toggleEdgeByName(const std::string& body, const std::string& name);
+    // a selection box: add every edge (Ctrl held: take them away)
+    void addEdgesByName(const std::string& body, const QStringList& names, bool remove);
     ExprField* radius() const
     {
         return radius_;
@@ -161,6 +225,18 @@ public:
     size_t edgeCount() const
     {
         return edges_.size();
+    }
+    QComboBox* type() const
+    {
+        return type_;
+    }
+    ExprField* second() const
+    {
+        return second_;
+    }
+    ExprField* angle() const
+    {
+        return angle_;
     }
 
 protected:
@@ -170,10 +246,14 @@ protected:
 
 private:
     void refreshEdges();
+    void updateVisibility();
     bool chamfer_ = false;
     std::string body_;
     std::set<int> edges_;
     ExprField* radius_;
+    QComboBox* type_;
+    ExprField *second_, *angle_;
+    QCheckBox* flip_;
     QCheckBox* chain_;
     QLabel* count_;
 };
@@ -187,6 +267,8 @@ public:
     ~ShellPanel() override;
     void toggleFace(const std::string& body, int face);       // face of the body before this step
     void toggleFaceByName(const std::string& body, const std::string& name);  // a click in the view
+    // a selection box: leave all these faces open (Ctrl held: close them again)
+    void addFacesByName(const std::string& body, const QStringList& names, bool remove);
     ExprField* thickness() const
     {
         return thickness_;
@@ -194,6 +276,10 @@ public:
     size_t faceCount() const
     {
         return faces_.size();
+    }
+    QComboBox* direction() const
+    {
+        return direction_;
     }
 
 protected:
@@ -206,6 +292,7 @@ private:
     std::string body_;
     std::set<int> faces_;
     ExprField* thickness_;
+    QComboBox* direction_;
     QLabel* count_;
 };
 
@@ -223,6 +310,12 @@ public:
     {
         return axis_;
     }
+    QComboBox* extent() const
+    {
+        return extent_;
+    }
+    // a click on a flat face: turn up to it
+    void useFace(const std::string& body, const std::string& name);
 
 protected:
     jig::Feature draft() const override;
@@ -230,7 +323,8 @@ protected:
 
 private:
     void fillFromSketch();
-    QComboBox *sketch_, *axis_, *op_;
+    void updateVisibility();
+    QComboBox *sketch_, *axis_, *op_, *extent_, *to_;
     QListWidget* profiles_;
     ExprField* angle_;
 };
@@ -249,6 +343,22 @@ public:
     {
         return type_;
     }
+    QComboBox* size() const
+    {
+        return size_;
+    }
+    QComboBox* fit() const
+    {
+        return fit_;
+    }
+    QComboBox* bottom() const
+    {
+        return bottom_;
+    }
+    ExprField* cboreDiameter() const
+    {
+        return cboreDiameter_;
+    }
 
 protected:
     jig::Feature draft() const override;
@@ -257,9 +367,98 @@ protected:
 
 private:
     void updateVisibility();
-    QComboBox *sketch_, *type_, *extent_;
+    void fillFromSize();  // a screw size fills (and locks) the sizes it decides
+    QComboBox *sketch_, *type_, *extent_, *size_, *fit_, *bottom_;
     ExprField *diameter_, *depth_, *cboreDiameter_, *cboreDepth_, *csinkDiameter_, *csinkAngle_;
     QLabel* points_;
+};
+
+// Press pull: click a flat face, type how far to pull it out (or push it in, negative).
+class PressPullPanel : public FeaturePanel
+{
+    Q_OBJECT
+public:
+    PressPullPanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent = nullptr);
+    ~PressPullPanel() override;
+    // a face click: true when taken (flat), false when another step should handle it
+    bool useFace(const std::string& body, const std::string& name);
+    ExprField* distance() const
+    {
+        return distance_;
+    }
+
+protected:
+    jig::Feature draft() const override;
+    QString title() const override;
+
+private:
+    QLabel* face_;
+    nlohmann::json faceRef_;
+    ExprField* distance_;
+};
+
+// Construction axis: along a straight edge, through a round edge or face, or where two
+// planes meet.
+class AxisPanel : public FeaturePanel
+{
+    Q_OBJECT
+public:
+    AxisPanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent = nullptr);
+    ~AxisPanel() override;
+    void useFace(const std::string& body, const std::string& name);  // a click in the view
+    void useEdge(const std::string& body, const std::string& name);
+    QComboBox* kind() const
+    {
+        return kind_;
+    }
+    QComboBox* through() const
+    {
+        return through_;
+    }
+
+protected:
+    jig::Feature draft() const override;
+    QString title() const override;
+    void previewed(const jig::FeatureOutcome& o) override;
+
+private:
+    void updateVisibility();
+    QComboBox *kind_, *through_, *base_, *base2_, *from_, *to_, *at_;
+    bool nextIsSecond_ = false;
+};
+
+// Construction point: typed coordinates, an end, the middle or the centre of an edge, or
+// the centre of a face.
+class PointPanel : public FeaturePanel
+{
+    Q_OBJECT
+public:
+    PointPanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent = nullptr);
+    ~PointPanel() override;
+    void useFace(const std::string& body, const std::string& name);  // a click in the view
+    void useEdge(const std::string& body, const std::string& name);
+    QComboBox* kind() const
+    {
+        return kind_;
+    }
+    QComboBox* end() const
+    {
+        return end_;
+    }
+    ExprField* coord(int i) const
+    {
+        return xyz_[i];
+    }
+
+protected:
+    jig::Feature draft() const override;
+    QString title() const override;
+    void previewed(const jig::FeatureOutcome& o) override;
+
+private:
+    void updateVisibility();
+    QComboBox *kind_, *through_, *end_, *plane_;
+    ExprField* xyz_[3];
 };
 
 // Pattern: repeat an Extrude, Revolve or Hole around an axis or in a grid.
@@ -277,6 +476,22 @@ public:
     {
         return count_;
     }
+    QComboBox* kind() const
+    {
+        return kind_;
+    }
+    QComboBox* pathSketch() const
+    {
+        return pathSketch_;
+    }
+    ExprField* pathCount() const
+    {
+        return pathCount_;
+    }
+    QComboBox* pathOrient() const
+    {
+        return pathOrient_;
+    }
 
 protected:
     jig::Feature draft() const override;
@@ -284,9 +499,10 @@ protected:
 
 private:
     void updateVisibility();
-    QComboBox *source_, *kind_, *axis_, *dir1_, *dir2_;
-    ExprField *count_, *angle_, *count1_, *spacing1_, *count2_, *spacing2_;
-    QWidget *circular_, *grid_;
+    QComboBox *source_, *kind_, *axis_, *dir1_, *dir2_, *bodyOp_, *pathSketch_, *pathOrient_;
+    ExprField *count_, *angle_, *count1_, *spacing1_, *count2_, *spacing2_, *pathCount_, *pathSpacing_;
+    QCheckBox* pathSpaced_;
+    QWidget *circular_, *grid_, *path_;
 };
 
 // Mirror: copy a body across an origin plane.
@@ -295,10 +511,16 @@ class MirrorPanel : public FeaturePanel
     Q_OBJECT
 public:
     MirrorPanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent = nullptr);
+    ~MirrorPanel() override;
     QComboBox* plane() const
     {
         return plane_;
     }
+    QComboBox* what() const
+    {
+        return body_;
+    }
+    void useFace(const std::string& body, const std::string& name);  // a flat face to mirror across
 
 protected:
     jig::Feature draft() const override;
@@ -394,6 +616,10 @@ public:
     {
         return plane_;
     }
+    QComboBox* body() const
+    {
+        return body_;
+    }
 
 protected:
     jig::Feature draft() const override;
@@ -403,12 +629,19 @@ private:
     QComboBox *body_, *plane_;
 };
 
+class MoveHandle;
+
 // Move / copy bodies: shift along X, Y, Z and turn around an origin axis.
 class MovePanel : public FeaturePanel
 {
     Q_OBJECT
 public:
     MovePanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent = nullptr);
+    ~MovePanel() override;
+    // The three arrows on the canvas (X, Y, Z): where each grip is on screen, and dragging
+    // one from a screen point to another (the field along it changes by that much).
+    std::optional<QPointF> arrowTip(int axis) const;
+    void dragArrow(int axis, const QPointF& from, const QPointF& to, double startValue);
     QListWidget* bodies() const
     {
         return bodies_;
@@ -433,15 +666,28 @@ public:
     {
         return copy_;
     }
+    QComboBox* fromPoint() const
+    {
+        return from_;
+    }
+    QComboBox* toPoint() const
+    {
+        return to_;
+    }
 
 protected:
     jig::Feature draft() const override;
     QString title() const override;
 
 private:
+    friend class MoveHandle;
+    std::optional<QVector3D> arrowBase() const;  // the chosen bodies' centre, moved by the typed shift
+    std::unique_ptr<MoveHandle> handle_;
+    mutable std::string centreFor_;               // the bodies the cached centre belongs to
+    mutable std::optional<QVector3D> centre_;
     QListWidget* bodies_;
     ExprField* d_[3];
-    QComboBox* axis_;
+    QComboBox *axis_, *from_, *to_;
     ExprField* angle_;
     QCheckBox* copy_;
 };

@@ -6,6 +6,8 @@
 // GL path later without touching the rest of the app.
 #pragma once
 
+#include <algorithm>
+
 #include <atomic>
 #include <memory>
 #include <optional>
@@ -24,6 +26,8 @@
 
 class QKeyEvent;
 class QOpenGLFramebufferObject;
+
+class QTimer;
 
 namespace jigapp
 {
@@ -107,11 +111,45 @@ public:
         std::shared_ptr<const jig::NamedShape> shape;
     };
     void setBodies(std::vector<BodyInput> bodies);
+    // The graphics driver could not run the 3D view (no OpenGL 3.3).
+    bool graphicsFailed() const
+    {
+        return glFailed_;
+    }
+    // How many bodies the view was last asked to show.
+    int bodyCount() const
+    {
+        return shownBodies_;
+    }
 
     void setNavPreset(NavPreset p)
     {
         nav_ = p;
     }
+    // Wheel and pinch zoom the other way round; orbit speed as a factor (1 = normal).
+    void setZoomInverted(bool on)
+    {
+        zoomInverted_ = on;
+    }
+    bool zoomInverted() const
+    {
+        return zoomInverted_;
+    }
+    void setOrbitSpeed(float f)
+    {
+        orbitSpeed_ = std::clamp(f, 0.25f, 4.0f);
+    }
+    float orbitSpeed() const
+    {
+        return orbitSpeed_;
+    }
+    float yaw() const
+    {
+        return yaw_;
+    }
+    // Where the camera is (target, distance, angles, projection), to save and restore it.
+    nlohmann::json camera() const;
+    void setCamera(const nlohmann::json& c);
     NavPreset navPreset() const
     {
         return nav_;
@@ -156,6 +194,25 @@ public:
     {
         return section_;
     }
+    void setUnits(jig::LengthUnit u);  // hover descriptions and the floor grid
+    // While sketching: the grid lies in the sketch's plane instead of on the floor, and adapts
+    // to the zoom (its fine lines are the snap step, heavier lines at round sizes).
+    void setSketchGrid(std::optional<gp_Ax3> frame);
+    // line segments drawn as construction geometry and finished sketches (for tests)
+    int datumSegments() const
+    {
+        return int((datums_.lines.size() + sketchLines_.lines.size()) / 2);
+    }
+    // Finished sketches: drawn with depth, so the model hides what is behind it.
+    void setSketchLines(SceneOverlay lines);
+    std::optional<gp_Ax3> sketchGrid() const
+    {
+        return sketchFrame_;
+    }
+    // The snap step for the current zoom: a round size about 12 pixels across (0.1, 0.2, 0.5,
+    // 1, 2, 5 mm …, or 1/64 in … 1 ft), and how many of them make a heavier line.
+    double sketchGridStep() const;
+    int sketchGridPerMajor() const;
     // Construction planes and their names: drawn under any tool overlay.
     void setDatums(SceneOverlay geometry, std::vector<std::pair<QString, QVector3D>> labels);
     void setEdgeHighlight(const std::string& body, std::vector<int> edges);
@@ -167,6 +224,28 @@ public:
         return pickAt(p);
     }
     std::optional<EdgePick> pickEdgeAt(const QPoint& p);
+    // Edges in a screen box: wholly inside, or (crossing) any part inside. Edges the
+    // section view cuts away are left out. Grouped by body, in pick order.
+    std::vector<EdgePick> edgesInBox(const QRectF& box, bool crossing) const;
+    bool boxing() const
+    {
+        return boxing_;
+    }
+    // Faces seen through a screen box (hidden ones are not): every one showing in it, or
+    // (window) only those wholly inside it. Grouped by body.
+    std::vector<PickResult> facesInBox(const QRectF& box, bool crossing);
+    void setFaceBoxing(bool on)
+    {
+        faceBoxing_ = on;
+    }
+    void setBodyBoxing(bool on)
+    {
+        bodyBoxing_ = on;
+    }
+    // Every face under a widget pixel, nearest first (for Select Other).
+    std::vector<PickResult> facesUnder(const QPoint& px) const;
+    // Selects a face as a click on it would (selection + faceClicked).
+    void selectFace(const std::string& body, int face);
     // Camera ray through a widget pixel, and the reverse.
     void ray(const QPointF& px, QVector3D& origin, QVector3D& dir) const;
     QPointF project(const QVector3D& world) const;
@@ -192,7 +271,20 @@ signals:
     // Clicks report the persistent name of what is on screen, so tools never have to
     // guess which version of a body (preview or not) an index belongs to.
     void edgeClicked(const QString& bodyId, const QString& edgeName, Qt::KeyboardModifiers mods);
+    // a box dragged over empty space while picking edges: every edge of one body in it
+    // (left to right: wholly inside; right to left: anything it touches)
+    void edgesBoxed(const QString& bodyId, const QStringList& edgeNames, Qt::KeyboardModifiers mods);
+    // the same for faces, while a tool asks for it (setFaceBoxing): only faces seen in the box
+    void facesBoxed(const QString& bodyId, const QStringList& faceNames, Qt::KeyboardModifiers mods);
+    // and whole bodies (setBodyBoxing): any part seen in the box, or (window) all of them inside
+    void bodiesBoxed(const QStringList& bodyIds, Qt::KeyboardModifiers mods);
     void faceClicked(const QString& bodyId, const QString& faceName, Qt::KeyboardModifiers mods);
+    // a right click without dragging (a right drag orbits): open the marking menu here
+    void menuRequested(const QPoint& pos);
+    // a long left press without moving: offer the faces hidden behind the one under it
+    void selectOtherRequested(const QPoint& pos);
+    // the graphics driver cannot draw the 3D view (too old an OpenGL): what to tell the person
+    void graphicsProblem(const QString& explanation);
     void meshesUpdated();
 
 protected:
@@ -253,8 +345,12 @@ private:
     QOpenGLVertexArrayObject gridVao_;
     QOpenGLBuffer gridVbo_ {QOpenGLBuffer::VertexBuffer};
     int gridMinorCount_ = 0, gridMajorCount_ = 0, axisCount_ = 0;
+    std::optional<gp_Ax3> sketchFrame_;
+    double builtStep_ = 0;          // the sketch grid as last built: its step and centre
+    QPointF builtCentre_;
     std::unique_ptr<QOpenGLFramebufferObject> pickFbo_;
     bool glReady_ = false;
+    bool glFailed_ = false;  // no usable OpenGL 3.3: the view draws nothing instead of crashing
     std::vector<BodyInput> waiting_;  // set before GL was initialised
 
     // camera (Z-up)
@@ -275,12 +371,24 @@ private:
     std::optional<PickResult> hover_, selected_;
     std::atomic<int> generation_ {0};
     int pending_ = 0;
+    int shownBodies_ = 0;
+    bool zoomInverted_ = false;
+    float orbitSpeed_ = 1.0f;
+    QTimer* longPress_ = nullptr;
+    bool longPressed_ = false;  // the release after a long press is not a click
+    QPoint rightPress_;      // where the right button went down
+    bool rightMoved_ = false;  // it dragged (orbit) rather than clicked
+    QPoint boxStart_, boxEnd_;  // window selection of edges
+    bool boxArmed_ = false, boxing_ = false, faceBoxing_ = false, bodyBoxing_ = false;
 
     Interactor* interactor_ = nullptr;
     PickMode pickMode_ = PickMode::Faces;
     SceneOverlay overlayData_;
     SceneOverlay datums_;
-    std::optional<QVector4D> section_;                                     // construction planes, always shown
+    SceneOverlay sketchLines_;
+    int ovSketchCount_ = 0;
+    std::optional<QVector4D> section_;
+    jig::LengthUnit units_ = jig::LengthUnit::Millimetre;                                     // construction planes, always shown
     std::vector<std::pair<QString, QVector3D>> datumLabels_;
     bool overlayDirty_ = false;
     std::unique_ptr<QOpenGLShaderProgram> colorProg_;
