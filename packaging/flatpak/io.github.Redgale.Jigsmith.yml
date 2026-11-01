@@ -97,10 +97,10 @@ modules:
       - -DFETCHCONTENT_FULLY_DISCONNECTED=ON
       - -DFETCHCONTENT_SOURCE_DIR_MINIZ=/run/build/jigsmith/flatpak-deps/miniz
     post-install:
-      - install -Dm644 packaging/linux/jigsmith.desktop /app/share/applications/jigsmith.desktop
-      - install -Dm644 packaging/linux/jigsmith.svg /app/share/icons/hicolor/scalable/apps/jigsmith.svg
-      - install -Dm644 packaging/linux/jigsmith.png /app/share/icons/hicolor/256x256/apps/jigsmith.png
-      - install -Dm644 packaging/flatpak/io.github.Redgale.Jigsmith.metainfo.xml /app/share/metainfo/io.github.Redgale.Jigsmith.metainfo.xml
+      - install -Dm644 ${FLATPAK_BUILDER_BUILDDIR}/packaging/linux/jigsmith.desktop /app/share/applications/jigsmith.desktop
+      - install -Dm644 ${FLATPAK_BUILDER_BUILDDIR}/packaging/linux/jigsmith.svg /app/share/icons/hicolor/scalable/apps/jigsmith.svg
+      - install -Dm644 ${FLATPAK_BUILDER_BUILDDIR}/packaging/linux/jigsmith.png /app/share/icons/hicolor/256x256/apps/jigsmith.png
+      - install -Dm644 ${FLATPAK_BUILDER_BUILDDIR}/packaging/flatpak/io.github.Redgale.Jigsmith.metainfo.xml /app/share/metainfo/io.github.Redgale.Jigsmith.metainfo.xml
     sources:
       - type: dir
         path: ../..
