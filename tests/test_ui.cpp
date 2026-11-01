@@ -2457,6 +2457,64 @@ private slots:
         QVERIFY2(std::abs(mp.xmin - (-10 + dx)) < 1e-6, qPrintable(QString::number(mp.xmin)));
     }
 
+    // Move by the free grip: seen from above it moves in XY, from the front in XZ.
+    void moveFreely()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        {
+            jig::ScriptRunner r(w.document());
+            QVERIFY(r.runText("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=20 h=20\nextrude id=e1 sketch=s1 distance=10\n").ok());
+        }
+        w.refreshAll();
+        Viewport* view = w.viewport();
+        w.runCommand("solid.move");
+        auto* mv = qobject_cast<MovePanel*>(w.featurePanel());
+        QVERIFY(mv);
+        QTRY_VERIFY(view->meshesReady());
+        view->viewTop();
+        QCOMPARE(mv->freePlaneNormal(), 2);
+        auto grip = mv->centreGrip();
+        QVERIFY(grip);
+        // 30 mm along X and 12 mm along Y, measured on screen at the grip's height (z = 5)
+        const QVector3D base(0, 0, 5);
+        const QPointF target = view->project(base + QVector3D(30, 12, 0));
+        const QPoint from = grip->toPoint(), to = target.toPoint();
+        QTest::mousePress(view, Qt::LeftButton, Qt::NoModifier, from);
+        QTest::mouseMove(view, (from + to) / 2);
+        QTest::mouseMove(view, to);
+        QTest::mouseRelease(view, Qt::LeftButton, Qt::NoModifier, to);
+        QVERIFY2(std::abs(mv->dx()->value() - 30) <= 1.0, qPrintable(mv->dx()->text()));  // a snap or a pixel
+        QVERIFY2(std::abs(mv->dy()->value() - 12) <= 1.0, qPrintable(mv->dy()->text()));
+        QCOMPARE(mv->dz()->value(), 0.0);
+        QTest::qWait(300);
+        w.grab().save(shotPath("move-free"));
+        // from the front the grip moves in XZ: up 8 mm, Y stays
+        view->viewFront();
+        QCOMPARE(mv->freePlaneNormal(), 1);
+        const double y = mv->dy()->value(), x = mv->dx()->value();
+        grip = mv->centreGrip();
+        QVERIFY(grip);
+        const QVector3D now(float(x), float(y), 5);
+        const QPoint f2 = grip->toPoint(), t2 = view->project(now + QVector3D(0, 0, 8)).toPoint();
+        QTest::mousePress(view, Qt::LeftButton, Qt::NoModifier, f2);
+        QTest::mouseMove(view, t2);
+        QTest::mouseRelease(view, Qt::LeftButton, Qt::NoModifier, t2);
+        QVERIFY2(std::abs(mv->dz()->value() - 8) <= 1.0, qPrintable(mv->dz()->text()));
+        QCOMPARE(mv->dy()->value(), y);
+        QVERIFY(std::abs(mv->dx()->value() - x) <= 1.0);
+        const double dz = mv->dz()->value(), dx = mv->dx()->value();
+        QTest::qWait(300);
+        QTRY_VERIFY(mv->previewOk());
+        QVERIFY(mv->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        const auto mp = jig::massProperties(w.document().state().bodies.at("e1")->shape());
+        QVERIFY(std::abs(mp.xmin - (-10 + dx)) < 1e-6);
+        QVERIFY(std::abs(mp.zmin - dz) < 1e-6);
+    }
+
     // Move a body from one construction point to another.
     void movePointToPoint()
     {

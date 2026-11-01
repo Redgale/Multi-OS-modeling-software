@@ -5,6 +5,7 @@
 // remembered per command for the session.
 #pragma once
 
+#include <array>
 #include <set>
 #include <string>
 
@@ -642,6 +643,13 @@ public:
     // one from a screen point to another (the field along it changes by that much).
     std::optional<QPointF> arrowTip(int axis) const;
     void dragArrow(int axis, const QPointF& from, const QPointF& to, double startValue);
+    // The square grip at the centre moves freely in the main plane that faces the camera most
+    // (XY seen from above, XZ from the front, YZ from the side): which axis that plane leaves
+    // out, where the grip is, and dragging it (the two fields in the plane change).
+    int freePlaneNormal() const;
+    std::optional<QPointF> centreGrip() const;
+    void dragFree(int normalAxis, const QVector3D& startBase, const QPointF& from, const QPointF& to,
+                  const std::array<double, 3>& startValues);
     QListWidget* bodies() const
     {
         return bodies_;

@@ -3157,29 +3157,51 @@ public:
     {}
     int gripAt(const QPointF& pos) const
     {
+        const auto c = p_->centreGrip();
         for (int k = 0; k < 3; ++k) {
-            if (auto tip = p_->arrowTip(k); tip && QLineF(*tip, pos).length() <= 10) {
+            auto tip = p_->arrowTip(k);
+            if (tip && c && QLineF(*tip, *c).length() < 14) {
+                continue;  // seen end-on, over the centre: the free grip is there
+            }
+            if (tip && QLineF(*tip, pos).length() <= 10) {
                 return k;
             }
         }
         return -1;
     }
+    bool overCentre(const QPointF& pos) const
+    {
+        auto c = p_->centreGrip();
+        return c && std::abs(c->x() - pos.x()) <= 8 && std::abs(c->y() - pos.y()) <= 8;
+    }
     bool mousePress(QMouseEvent* e) override
     {
         drag_ = gripAt(e->position());
+        if (drag_ < 0 && overCentre(e->position())) {
+            drag_ = 3;  // the free grip: in the plane facing the camera, fixed for this drag
+            normal_ = p_->freePlaneNormal();
+            base_ = *p_->arrowBase();
+        }
         if (drag_ >= 0) {
             from_ = e->position();
-            start_ = p_->d_[drag_]->valid() ? p_->d_[drag_]->value() : 0;
+            for (int k = 0; k < 3; ++k) {
+                starts_[size_t(k)] = p_->d_[k]->valid() ? p_->d_[k]->value() : 0;
+            }
+            start_ = drag_ < 3 ? starts_[size_t(drag_)] : 0;
         }
         return drag_ >= 0;
     }
     bool mouseMove(QMouseEvent* e) override
     {
+        if (drag_ == 3) {
+            p_->dragFree(normal_, base_, from_, e->position(), starts_);
+            return true;
+        }
         if (drag_ >= 0) {
             p_->dragArrow(drag_, from_, e->position(), start_);
             return true;
         }
-        const int over = gripAt(e->position());
+        const int over = gripAt(e->position()) >= 0 ? gripAt(e->position()) : overCentre(e->position()) ? 3 : -1;
         if (over != hover_ && p_->view_) {
             hover_ = over;
             p_->view_->setCursor(over >= 0 ? Qt::SizeAllCursor : Qt::ArrowCursor);
@@ -3206,8 +3228,8 @@ public:
         g.setRenderHint(QPainter::Antialiasing);
         for (int k = 0; k < 3; ++k) {
             auto tip = p_->arrowTip(k);
-            if (!tip) {
-                continue;
+            if (!tip || QLineF(*tip, b).length() < 14) {
+                continue;  // none, or seen end-on: the field still moves along it
             }
             g.setPen(QPen(cols[k], 2.5));
             g.setBrush(Qt::NoBrush);
@@ -3217,13 +3239,23 @@ public:
             g.setPen(p_->view_->colors().text);
             g.drawText(*tip + QPointF(9, -7), QString("%1 %2").arg(names[k], p_->d_[k]->text()));
         }
+        // the free grip: a square at the centre, named by the plane it moves in
+        const int n = drag_ == 3 ? normal_ : p_->freePlaneNormal();
+        const char* planes[3] = {"YZ", "XZ", "XY"};
+        g.setPen(QPen(p_->view_->colors().text, 1.5));
+        g.setBrush(hover_ == 3 || drag_ == 3 ? QBrush(p_->view_->colors().text) : QBrush(Qt::NoBrush));
+        g.drawRect(QRectF(b - QPointF(6, 6), QSizeF(12, 12)));
+        g.drawText(b + QPointF(-14, 20), MovePanel::tr("free %1").arg(planes[n]));
     }
 
 private:
     MovePanel* p_;
-    int drag_ = -1, hover_ = -1;
+    int drag_ = -1, hover_ = -1;  // 0-2: an arrow; 3: the free grip
     QPointF from_;
     double start_ = 0;
+    std::array<double, 3> starts_ {};
+    int normal_ = 2;
+    QVector3D base_;
 };
 
 MovePanel::~MovePanel()
@@ -3276,6 +3308,63 @@ std::optional<QPointF> MovePanel::arrowTip(int axis) const
     QVector3D dir;
     dir[axis] = 1;
     return view_->project(*base + dir * (60 * view_->worldPerPixel()));  // about 60 pixels long
+}
+
+int MovePanel::freePlaneNormal() const
+{
+    auto base = arrowBase();
+    if (!view_ || !base) {
+        return 2;
+    }
+    QVector3D o, dir;
+    view_->ray(view_->project(*base), o, dir);
+    int n = 2;  // the axis the view looks along most
+    for (int k = 0; k < 3; ++k) {
+        if (std::abs(dir[k]) > std::abs(dir[n]) + 1e-6) {
+            n = k;
+        }
+    }
+    return n;
+}
+
+std::optional<QPointF> MovePanel::centreGrip() const
+{
+    auto base = arrowBase();
+    if (!view_ || !base) {
+        return std::nullopt;
+    }
+    return view_->project(*base);
+}
+
+void MovePanel::dragFree(int n, const QVector3D& startBase, const QPointF& from, const QPointF& to,
+                         const std::array<double, 3>& startValues)
+{
+    if (!view_) {
+        return;
+    }
+    // where the mouse rays meet the plane through the grip (as it was when the drag began)
+    auto onPlane = [&](const QPointF& px) -> std::optional<QVector3D> {
+        QVector3D o, dir;
+        view_->ray(px, o, dir);
+        if (std::abs(dir[n]) < 1e-4) {
+            return std::nullopt;  // edge-on: nothing to drag in
+        }
+        const float t = (startBase[n] - o[n]) / dir[n];
+        return o + dir * t;
+    };
+    const auto a = onPlane(from), b = onPlane(to);
+    if (!a || !b) {
+        return;
+    }
+    const bool inch = doc_.units() == jig::LengthUnit::Inch || doc_.units() == jig::LengthUnit::Foot;
+    const double step = inch ? 25.4 / 32 : 0.5;  // snaps: 1/32 in or 0.5 mm
+    for (int k = 0; k < 3; ++k) {
+        if (k == n) {
+            continue;  // the field across the plane stays as typed
+        }
+        const double d = std::round((startValues[size_t(k)] + double((*b)[k] - (*a)[k])) / step) * step;
+        d_[k]->setText(QString::fromStdString(doc_.fmtLength(d)));
+    }
 }
 
 void MovePanel::dragArrow(int axis, const QPointF& from, const QPointF& to, double startValue)

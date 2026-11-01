@@ -5909,7 +5909,12 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
 <context>
     <name>jigapp::MovePanel</name>
     <message>
-        <location line="+1143" />
+        <location line="+1085" />
+        <source>free %1</source>
+        <translation>[fréé %1~]</translation>
+    </message>
+    <message>
+        <location line="+147" />
         <source>Move / copy</source>
         <translation>[Mövé / çöpý~~]</translation>
     </message>
@@ -6095,7 +6100,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
 <context>
     <name>jigapp::PatternPanel</name>
     <message>
-        <location line="-1716" />
+        <location line="-1805" />
         <location line="+154" />
         <source>Pattern</source>
         <translation>[Páttérñ~~]</translation>
@@ -8026,7 +8031,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
 <context>
     <name>jigapp::Viewport</name>
     <message>
-        <location filename="../app/Viewport.cpp" line="+453" />
+        <location filename="../app/Viewport.cpp" line="+454" />
         <source>none</source>
         <translation>[ñöñé~]</translation>
     </message>
@@ -8036,7 +8041,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
         <translation>[Thé 3D vîéw ñééds ÖpéñGL 3.3, áñd thîs çömpütér's gráphîçs drîvér öfférs %1. Üpdátîñg thé gráphîçs drîvér üsüállý fîxés thîs. Désîgñs stîll öpéñ, sávé áñd éxpört; öñlý thé vîéw stáýs émptý.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+602" />
+        <location line="+604" />
         <source>touching</source>
         <translation>[töüçhîñg~~]</translation>
     </message>

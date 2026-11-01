@@ -5913,7 +5913,12 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::MovePanel</name>
     <message>
-        <location line="+1143"/>
+        <location line="+1085"/>
+        <source>free %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+147"/>
         <source>Move / copy</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6101,7 +6106,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::PatternPanel</name>
     <message>
-        <location line="-1716"/>
+        <location line="-1805"/>
         <location line="+154"/>
         <source>Pattern</source>
         <translation type="unfinished"></translation>
@@ -8038,7 +8043,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::Viewport</name>
     <message>
-        <location filename="../app/Viewport.cpp" line="+453"/>
+        <location filename="../app/Viewport.cpp" line="+454"/>
         <source>none</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8048,7 +8053,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+602"/>
+        <location line="+604"/>
         <source>touching</source>
         <translation type="unfinished"></translation>
     </message>
