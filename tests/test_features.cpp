@@ -2237,19 +2237,22 @@ TEST(SketchTrim, EllipsesAndSmoothCurves)
         EXPECT_NEAR(std::max(y1, y2), 5, 0.05);
     }
     // half an ellipse trimmed away at a line through its middle; the line's ends trimmed too:
-    // a closed half ellipse (area half of pi a b)
-    {
+    // a closed half ellipse (area half of pi a b). The line runs through two of the ellipse's
+    // sample points; nudged by rounding-sized amounts either way it must still close (macOS on
+    // Intel rounds cos(pi/2) differently and once found no closed area)
+    for (double nudge : {0.0, 1e-15, -1e-15, 1e-13, -1e-13, 1e-11, -1e-11}) {
+        SCOPED_TRACE(nudge);
         Sketch s;
         const int el = s.addEllipse(0, 0, 20, 0, 10);
-        const int line = s.addLine(0, -15, 0, 15);
+        const int line = s.addLine(nudge, -15, nudge, 15);
         ASSERT_TRUE(s.trim(el, 20, 0));  // the right half goes
         int splines = 0;
         for (auto& [id, e] : s.entities()) {
             splines += e.type == EntityType::Spline;
         }
         EXPECT_EQ(splines, 1);
-        ASSERT_TRUE(s.trim(line, 0, 13));
-        ASSERT_TRUE(s.trim(line, 0, -13));
+        ASSERT_TRUE(s.trim(line, nudge, 13));
+        ASSERT_TRUE(s.trim(line, nudge, -13));
         auto prof = buildProfiles(s, originPlaneFrame(OriginPlane::XY, 0));
         ASSERT_TRUE(prof.ok());
         ASSERT_EQ(prof->regions.size(), 1u) << "the half ellipse closes";

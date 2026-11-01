@@ -382,7 +382,9 @@ std::optional<Sketch::TrimPiece> Sketch::trimPiece(int entityId, double x, doubl
             // an ellipse or smooth curve cuts too: where its short pieces cross this curve
             const auto Q = curvePoints(id, 32);
             for (size_t k = 0; k + 1 < Q.size(); ++k) {
-                const double wEnd = k + 2 == Q.size() ? 1 + 1e-12 : 1;  // the curve's last point counts
+                // a little slack at both ends: a crossing exactly at a sample point counts (rounding of
+                // the sample may put it a hair outside either piece); repeats are merged below
+                constexpr double wTol = 1e-9;
                 const double qx = Q[k].first, qy = Q[k].second, ex = Q[k + 1].first - qx, ey = Q[k + 1].second - qy;
                 if (T.line) {
                     const double rx = T.bx - T.ax, ry = T.by - T.ay, den = rx * ey - ry * ex;
@@ -390,7 +392,7 @@ std::optional<Sketch::TrimPiece> Sketch::trimPiece(int entityId, double x, doubl
                         continue;
                     }
                     const double w = ((qx - T.ax) * ry - (qy - T.ay) * rx) / den;  // along the piece
-                    if (w >= 0 && w < wEnd) {
+                    if (w >= -wTol && w <= 1 + wTol) {
                         pts.emplace_back(qx + ex * w, qy + ey * w);
                     }
                 }
@@ -401,7 +403,7 @@ std::optional<Sketch::TrimPiece> Sketch::trimPiece(int entityId, double x, doubl
                     if (A > 0 && disc >= 0) {
                         for (double sgn : {-1.0, 1.0}) {
                             const double w = (-B + sgn * std::sqrt(disc)) / (2 * A);
-                            if (w >= 0 && w < wEnd) {
+                            if (w >= -wTol && w <= 1 + wTol) {
                                 pts.emplace_back(qx + ex * w, qy + ey * w);
                             }
                         }
@@ -858,7 +860,7 @@ bool Sketch::splitFreeForm(int entityId, double x, double y, bool keepAll, std::
                     continue;
                 }
                 const double u = ((bx - ax) * sy - (by - ay) * sx) / den, v = ((bx - ax) * ry - (by - ay) * rx) / den;
-                if (u >= 0 && u < 1 && v >= 0 && v <= 1) {
+                if (u >= -1e-9 && u <= 1 + 1e-9 && v >= -1e-9 && v <= 1 + 1e-9) {  // exact hits at sample points too
                     const double s = S[i] + u * (S[i + 1] - S[i]);
                     if (closed || (s > 1e-7 && s < L - 1e-7)) {
                         cuts.push_back({s, id});
@@ -869,6 +871,9 @@ bool Sketch::splitFreeForm(int entityId, double x, double y, bool keepAll, std::
     }
     std::sort(cuts.begin(), cuts.end(), [](const C& a, const C& b) { return a.s < b.s; });
     cuts.erase(std::unique(cuts.begin(), cuts.end(), [&](const C& a, const C& b) { return b.s - a.s < 1e-6 * std::max(1.0, L); }), cuts.end());
+    if (closed && cuts.size() > 1 && cuts.back().s - cuts.front().s > L - 1e-6 * std::max(1.0, L)) {
+        cuts.pop_back();  // the same crossing at the closing point, seen from both ends
+    }
     // where the click is along it
     double click = 0, best = 1e300;
     for (size_t k = 0; k + 1 < P.size(); ++k) {
