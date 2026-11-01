@@ -3231,6 +3231,9 @@ MovePanel::~MovePanel()
     if (view_ && view_->interactor() == handle_.get()) {
         view_->setInteractor(nullptr);
     }
+    if (view_) {
+        view_->setBodyBoxing(false);
+    }
 }
 
 std::optional<QVector3D> MovePanel::arrowBase() const
@@ -3365,6 +3368,15 @@ MovePanel::MovePanel(jig::Document& doc, Viewport* view, std::string editId, QWi
     if (view_) {
         handle_ = std::make_unique<MoveHandle>(this);
         view_->setInteractor(handle_.get());
+        // a box dragged over empty space ticks the bodies in it (Ctrl: unticks them)
+        view_->setBodyBoxing(true);
+        connect(view_.data(), &Viewport::bodiesBoxed, this, [this](const QStringList& ids, Qt::KeyboardModifiers m) {
+            for (int i = 0; i < bodies_->count(); ++i) {
+                if (ids.contains(bodies_->item(i)->data(Qt::UserRole).toString())) {
+                    bodies_->item(i)->setCheckState(m & Qt::ControlModifier ? Qt::Unchecked : Qt::Checked);
+                }
+            }
+        });
     }
     connect(bodies_, &QListWidget::itemChanged, this, [this] { schedulePreview(); });
     connect(copy_, &QCheckBox::toggled, this, [this] { schedulePreview(); });

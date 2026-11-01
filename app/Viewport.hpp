@@ -220,6 +220,10 @@ public:
     {
         faceBoxing_ = on;
     }
+    void setBodyBoxing(bool on)
+    {
+        bodyBoxing_ = on;
+    }
     // Every face under a widget pixel, nearest first (for Select Other).
     std::vector<PickResult> facesUnder(const QPoint& px) const;
     // Selects a face as a click on it would (selection + faceClicked).
@@ -254,6 +258,8 @@ signals:
     void edgesBoxed(const QString& bodyId, const QStringList& edgeNames, Qt::KeyboardModifiers mods);
     // the same for faces, while a tool asks for it (setFaceBoxing): only faces seen in the box
     void facesBoxed(const QString& bodyId, const QStringList& faceNames, Qt::KeyboardModifiers mods);
+    // and whole bodies (setBodyBoxing): any part seen in the box, or (window) all of them inside
+    void bodiesBoxed(const QStringList& bodyIds, Qt::KeyboardModifiers mods);
     void faceClicked(const QString& bodyId, const QString& faceName, Qt::KeyboardModifiers mods);
     // a right click without dragging (a right drag orbits): open the marking menu here
     void menuRequested(const QPoint& pos);
@@ -352,7 +358,7 @@ private:
     QPoint rightPress_;      // where the right button went down
     bool rightMoved_ = false;  // it dragged (orbit) rather than clicked
     QPoint boxStart_, boxEnd_;  // window selection of edges
-    bool boxArmed_ = false, boxing_ = false, faceBoxing_ = false;
+    bool boxArmed_ = false, boxing_ = false, faceBoxing_ = false, bodyBoxing_ = false;
 
     Interactor* interactor_ = nullptr;
     PickMode pickMode_ = PickMode::Faces;

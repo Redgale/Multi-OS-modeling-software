@@ -1033,6 +1033,52 @@ private slots:
         }
     }
 
+    // Box selection of bodies (Move): the bodies in the box get ticked.
+    void boxSelectBodies()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        {
+            jig::ScriptRunner r(w.document());
+            QVERIFY(r.runText("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=10 h=10\nextrude id=e1 sketch=s1 distance=10\n"
+                              "sketch id=s2 plane=XY\nrect sketch=s2 center=40,0 w=10 h=10\nextrude id=e2 sketch=s2 distance=10 op=new\n").ok());
+        }
+        Viewport* view = w.viewport();
+        w.runCommand("solid.move");
+        auto* mv = qobject_cast<MovePanel*>(w.featurePanel());
+        QVERIFY(mv);
+        QTRY_VERIFY(view->meshesReady());
+        view->fitAll();
+        QTest::qWait(300);
+        view->viewTop();
+        QTest::qWait(100);
+        auto ticked = [&] {
+            QStringList t;
+            for (int i = 0; i < mv->bodies()->count(); ++i) {
+                if (mv->bodies()->item(i)->checkState() == Qt::Checked) {
+                    t << mv->bodies()->item(i)->data(Qt::UserRole).toString();
+                }
+            }
+            return t;
+        };
+        QVERIFY(ticked().isEmpty());  // two bodies: none chosen yet
+        // a box around the second block only (left to right: wholly inside)
+        // 12 mm round it on the floor, as seen from above
+        const QPointF p1 = view->project(QVector3D(28, 12, 0)), p2 = view->project(QVector3D(52, -12, 0));
+        const QPoint a(int(std::min(p1.x(), p2.x())), int(std::min(p1.y(), p2.y()))),
+            b(int(std::max(p1.x(), p2.x())), int(std::max(p1.y(), p2.y())));
+        QVERIFY(!view->pickFaceAt(a));
+        QTest::mousePress(view, Qt::LeftButton, Qt::NoModifier, a);
+        QTest::mouseMove(view, (a + b) / 2);
+        QTest::mouseMove(view, b);
+        QVERIFY(view->boxing());
+        QTest::mouseRelease(view, Qt::LeftButton, Qt::NoModifier, b);
+        QCOMPARE(ticked(), QStringList {"e2"});
+        mv->cancel();
+    }
+
     // Box selection of faces (Shell): only the faces seen in the box are picked.
     void boxSelectFaces()
     {

@@ -1236,12 +1236,10 @@ void Viewport::mousePressEvent(QMouseEvent* e)
         if (!interactor_ && (pickMode_ == PickMode::Faces || pickMode_ == PickMode::Any) && !meshes_.empty()) {
             longPress_->start();
         }
-        if (interactor_) {
-            interactor_->mousePress(e);
-        }
-        // a press on empty space while picking edges may become a selection box
-        boxArmed_ = !interactor_ && ((pickMode_ == PickMode::Edges && !pickEdgeAt(lastPos_)) ||
-                                     (pickMode_ == PickMode::Faces && faceBoxing_ && !pickAt(lastPos_)));
+        const bool taken = interactor_ && interactor_->mousePress(e);
+        // a press on empty space while picking edges, faces or bodies may become a selection box
+        boxArmed_ = !taken && ((pickMode_ == PickMode::Edges && !pickEdgeAt(lastPos_)) ||
+                               (pickMode_ == PickMode::Faces && (faceBoxing_ || bodyBoxing_) && !pickAt(lastPos_)));
         boxStart_ = boxEnd_ = lastPos_;
         boxing_ = false;
     }
@@ -1346,6 +1344,32 @@ void Viewport::mouseReleaseEvent(QMouseEvent* e)
         boxEnd_ = e->position().toPoint();
         overlay_->update();
         const bool crossing = boxEnd_.x() < boxStart_.x();
+        if (pickMode_ == PickMode::Faces && !faceBoxing_) {
+            // whole bodies: any of it seen in the box, or (window) all of it inside
+            const QRectF box = QRectF(boxStart_, boxEnd_).normalized();
+            std::set<std::string> touched;
+            for (auto& f : facesInBox(box, true)) {
+                touched.insert(f.body);
+            }
+            QStringList ids;
+            for (auto& m : meshes_) {
+                if (!touched.count(m->body)) {
+                    continue;
+                }
+                bool inside = true;
+                if (!crossing) {
+                    for (size_t v = 0; v * 3 + 2 < m->positions.size() && inside; ++v) {
+                        inside = box.adjusted(-1, -1, 1, 1).contains(
+                            project(QVector3D(m->positions[v * 3], m->positions[v * 3 + 1], m->positions[v * 3 + 2])));
+                    }
+                }
+                if (inside) {
+                    ids << QString::fromStdString(m->body);
+                }
+            }
+            emit bodiesBoxed(ids, e->modifiers());
+            return;
+        }
         if (pickMode_ == PickMode::Faces) {
             const auto faces = facesInBox(QRectF(boxStart_, boxEnd_).normalized(), crossing);
             if (!faces.empty()) {
