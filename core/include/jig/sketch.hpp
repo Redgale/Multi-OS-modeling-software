@@ -234,6 +234,9 @@ public:
     // dimensions among them (a dimension's value becomes "(value) * factor"). Fixed points
     // move with them.
     Result<bool> scaleCurves(const std::vector<int>& ids, double factor, double cx = 0, double cy = 0);
+    // Moves every point inside the box (x0, y0)-(x1, y1) by (dx, dy); curves joined to them
+    // stretch to follow, the rest stay. Fixed points inside move with it.
+    Result<bool> stretch(double x0, double y0, double x1, double y1, double dx, double dy);
     // Copies in rows and columns: n1 along (dx1, dy1), n2 along (dx2, dy2); counts include
     // the original. Copies around (cx, cy): n in all, spread over `total` (a full turn
     // spaces them evenly).

@@ -73,7 +73,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Sketch scale | 11 | v0.2 | **app** (Sketch ▸ Scale: selected curves about their middle) + scripts (`scale … at=`): dimensions follow | |
 | Offset (chains) | 11 | v0.1 M1 | **app** + scripts: closed outlines (sharp corners) and single curves; the copy follows its source and its distance | |
 | Move/Copy (sketch) | 11 | v0.1 M1 | **app** (click or typed shift and turn about the base point, Ctrl copies) + scripts (`angle= about=`) | |
-| Stretch | 11 | v0.2 | — | |
+| Stretch | 11 | v0.2 | scripts (`stretch box=… by=…`); in the app, select points and use Move: joined curves stretch | A drag-a-box stretch tool not yet |
 | Delete | 11 | v0.1 M1 | **app** | |
 | Change parameters from sketch | 11 | v0.1 M5 | **app**: Parameters on the sketch toolbar; the open sketch follows the change | |
 | Constraints: coincident, collinear, concentric, midpoint, fix, parallel, perpendicular, horizontal/vertical, tangent, symmetry, equal | 12 | v0.1 M1 | **app**: all (collinear and concentric built from point-on-curve and coincident) | |

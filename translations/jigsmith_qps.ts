@@ -3641,6 +3641,11 @@
         <translation>[Séléçt thé çürvés tö sçálé fîrst.~~~~~~~~~]</translation>
     </message>
     <message>
+        <location line="+1" />
+        <source>There are no points inside that box to stretch.</source>
+        <translation>[Théré áré ñö pöîñts îñsîdé thát böx tö strétçh.~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
         <location line="+14" />
         <source>Pick an edge to project.</source>
         <translation>[Pîçk áñ édgé tö pröjéçt.~~~~~~]</translation>
@@ -4156,7 +4161,7 @@
         <translation>[Thé föñt '%1' îs ñöt áváîláblé héré; üsîñg thé büîlt-îñ föñt (Îñtér).~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="-285" />
+        <location line="-286" />
         <source>There is nothing to export yet.</source>
         <translation>[Théré îs ñöthîñg tö éxpört ýét.~~~~~~~~]</translation>
     </message>
@@ -4736,7 +4741,7 @@
         <translation>[Séléçt thé çürvés tö mövé fîrst.~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+3" />
+        <location line="+4" />
         <source>A grid copy needs at least two in all.</source>
         <translation>[Á grîd çöpý ñééds át léást twö îñ áll.~~~~~~~~~]</translation>
     </message>

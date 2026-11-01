@@ -1566,6 +1566,26 @@ Result<bool> ScriptRunner::runLineUnchecked(std::string_view rawLine)
         }
         return doc.setAppearance(a.get("body"), {c, a.get("finish", "satin")});
     }
+    if (a.verb == "stretch") {
+        // stretch [sketch=s1] box=x0,y0,x1,y1 by=dx,dy : the points inside move, joined curves stretch
+        const std::string sid = a.get("sketch", last_);
+        return editSketch("Stretch", sid, [&](Sketch& s, const Document& d) -> Result<bool> {
+            const auto b = split(a.get("box"), ',');
+            const auto by = split(a.get("by", "0,0"), ',');
+            if (b.size() != 4 || by.size() != 2) {
+                return makeError("script.args", "Use: stretch box=x0,y0,x1,y1 by=dx,dy");
+            }
+            double v[6];
+            for (int i = 0; i < 6; ++i) {
+                auto r = d.evalLength(i < 4 ? b[size_t(i)] : by[size_t(i - 4)]);
+                if (!r) {
+                    return r.error();
+                }
+                v[i] = r.value();
+            }
+            return s.stretch(v[0], v[1], v[2], v[3], v[4], v[5]);
+        });
+    }
     if (a.verb == "rigid") {
         // rigid bodies=a;b;… : these parts move together under later joints
         const auto bodies = split(a.get("bodies"), ';');

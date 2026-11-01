@@ -772,6 +772,42 @@ Result<bool> Sketch::scaleCurves(const std::vector<int>& ids, double factor, dou
     return true;
 }
 
+Result<bool> Sketch::stretch(double x0, double y0, double x1, double y1, double dx, double dy)
+{
+    if (x0 > x1) {
+        std::swap(x0, x1);
+    }
+    if (y0 > y1) {
+        std::swap(y0, y1);
+    }
+    std::set<int> moved;
+    for (auto& [id, e] : entities_) {
+        if (e.type == EntityType::Point && e.x >= x0 && e.x <= x1 && e.y >= y0 && e.y <= y1) {
+            e.x += dx;
+            e.y += dy;
+            moved.insert(id);
+        }
+    }
+    if (moved.empty()) {
+        return editError("sketch.stretch", "There are no points inside that box to stretch.");
+    }
+    // points pinned in place go with it: fixed points, and coordinates from the origin
+    char sx[48], sy[48];
+    std::snprintf(sx, sizeof sx, " + (%.12g mm)", dx);
+    std::snprintf(sy, sizeof sy, " + (%.12g mm)", dy);
+    for (auto& [cid, c] : constraints_) {
+        if (c.type == ConstraintType::Fix && moved.count(c.a)) {
+            std::tie(c.fx, c.fy) = pointXY(c.a);
+        }
+        const bool x = c.type == ConstraintType::DistanceX, y = c.type == ConstraintType::DistanceY;
+        if ((x || y) && c.b == 0 && moved.count(c.a) && !c.expr.empty() && std::abs(x ? dx : dy) > 1e-12) {
+            c.expr = "(" + c.expr + ")" + (x ? sx : sy);
+        }
+    }
+    syncCurvePoints();
+    return true;
+}
+
 Result<std::vector<int>> Sketch::patternRect(const std::vector<int>& ids, int n1, double dx1, double dy1, int n2,
                                              double dx2, double dy2)
 {

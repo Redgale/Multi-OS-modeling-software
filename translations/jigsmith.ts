@@ -3642,6 +3642,11 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location line="+1"/>
+        <source>There are no points inside that box to stretch.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <location line="+14"/>
         <source>Pick an edge to project.</source>
         <translation type="unfinished"></translation>
@@ -4157,7 +4162,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-285"/>
+        <location line="-286"/>
         <source>There is nothing to export yet.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4737,7 +4742,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+3"/>
+        <location line="+4"/>
         <source>A grid copy needs at least two in all.</source>
         <translation type="unfinished"></translation>
     </message>

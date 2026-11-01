@@ -3228,3 +3228,18 @@ TEST(Joint, RigidGroupsMoveTogether)
         EXPECT_EQ(d->status(int(d->model().features.size()) - 1).level, StatusLevel::Error) << bad;
     }
 }
+
+TEST(SketchStretch, PointsInTheBoxMoveAndJoinedCurvesFollow)
+{
+    // a free 10 x 6 rectangle (no dimensions): its right side pulled 5 mm further right
+    auto doc = build("sketch id=s1 plane=XY\nline sketch=s1 p1=0,0 p2=10,0\nline p1=10,0 p2=10,6\nline p1=10,6 p2=0,6\n"
+                     "line p1=0,6 p2=0,0\nstretch sketch=s1 box=8,-1,12,7 by=5,0\n");
+    expectAllOk(*doc);
+    const auto& r = doc->state().sketches.at("s1")->profiles.regions;
+    ASSERT_EQ(r.size(), 1u);
+    EXPECT_NEAR(r[0].area, 15 * 6, 1e-6);
+    // nothing inside the box is refused
+    auto d = std::make_unique<Document>();
+    ScriptRunner sr(*d);
+    EXPECT_FALSE(sr.runText("sketch id=s1 plane=XY\nline sketch=s1 p1=0,0 p2=10,0\nstretch sketch=s1 box=50,50,60,60 by=1,0\n").ok());
+}
