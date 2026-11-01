@@ -212,6 +212,7 @@ private:
     void finishSpline(bool closed);
     int gridCols_ = 0;     // Grid copy: columns typed in the first step
     double gridDx_ = 0;    // and their spacing
+    QString gridDxText_;  // the spacing as typed (it may use a parameter)
     std::vector<int> offsetHover_, offsetChain_;        // Offset: under the cursor / chosen
     std::vector<std::pair<int, QRectF>> glyphBoxes_;     // constraint glyphs as last painted
     std::set<int> selectedConstraints_;

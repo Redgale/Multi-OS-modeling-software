@@ -1177,11 +1177,55 @@ Result<std::vector<int>> Sketch::offsetLinked(const std::vector<int>& curves, co
     return made;
 }
 
+namespace
+{
+// Makes the copies a linked grid or ring describes.
+Result<std::vector<int>> makePattern(Sketch& s, const std::vector<int>& curves, const nlohmann::json& spec,
+                                     const ParamLookup& lookup)
+{
+    auto len = [&](const char* key, const char* def) { return evaluate(spec.value(key, std::string(def)), lookup, Dim::len()); };
+    if (spec.value("kind", std::string {}) == "grid") {
+        auto s1 = len("s1", "10 mm"), s2 = len("s2", "10 mm");
+        if (!s1 || !s2) {
+            return !s1 ? s1.error() : s2.error();
+        }
+        return s.patternRect(curves, spec.value("n1", 2), s1->value, 0, spec.value("n2", 1), 0, s2->value);
+    }
+    auto ang = evaluate(spec.value("angle", std::string("360 deg")), lookup, Dim::ang());
+    if (!ang) {
+        return ang.error();
+    }
+    const auto c = spec.value("center", std::vector<double> {0, 0});
+    double cx = c.size() == 2 ? c[0] : 0, cy = c.size() == 2 ? c[1] : 0;
+    if (spec.contains("center_point") && s.entity(spec["center_point"].get<int>())) {
+        std::tie(cx, cy) = s.pointXY(spec["center_point"].get<int>());
+    }
+    return s.patternCircular(curves, cx, cy, spec.value("n", 6), ang->value);
+}
+}  // namespace
+
+Result<std::vector<int>> Sketch::patternLinked(const std::vector<int>& curves, const nlohmann::json& spec,
+                                               const ParamLookup& lookup)
+{
+    std::set<int> keep;
+    for (auto& [cid, c] : constraints_) {
+        keep.insert(cid);
+    }
+    auto made = makePattern(*this, curves, spec, lookup);
+    if (!made) {
+        return made;
+    }
+    holdInPlace(*this, made.value(), keep);
+    links_.push_back({{"kind", "pattern"}, {"source", curves}, {"spec", spec}, {"made", made.value()}});
+    return made;
+}
+
 bool Sketch::rebuildOffsets(const ParamLookup& lookup)
 {
     bool any = false;
     for (auto& link : links_) {
-        if (link.value("kind", std::string {}) != "offset") {
+        const std::string kind = link.value("kind", std::string {});
+        if (kind != "offset" && kind != "pattern") {
             continue;
         }
         const auto source = link.value("source", std::vector<int> {});
@@ -1190,10 +1234,11 @@ bool Sketch::rebuildOffsets(const ParamLookup& lookup)
             whole = whole && entity(id);
         }
         if (!whole) {
-            link["kind"] = "offset-unlinked";  // its source is gone: the copy stays as it is
+            link["kind"] = kind + "-unlinked";  // its source is gone: the copy stays as it is
             continue;
         }
-        auto d = evaluate(link.value("distance", std::string("1 mm")), lookup, Dim::len());
+        auto d = kind == "offset" ? evaluate(link.value("distance", std::string("1 mm")), lookup, Dim::len())
+                                  : Result<Quantity>(Quantity {0, Dim::len()});
         if (!d) {
             continue;
         }
@@ -1204,7 +1249,8 @@ bool Sketch::rebuildOffsets(const ParamLookup& lookup)
         for (auto& [cid, c] : constraints_) {
             keep.insert(cid);
         }
-        auto made = offsetCurves(*this, source, d->value);
+        auto made = kind == "offset" ? offsetCurves(*this, source, d->value)
+                                     : makePattern(*this, source, link.value("spec", nlohmann::json::object()), lookup);
         link["made"] = made ? made.value() : std::vector<int> {};
         if (made) {
             holdInPlace(*this, made.value(), keep);

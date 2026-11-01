@@ -6968,12 +6968,12 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
     </message>
     <message>
         <location line="+0"/>
-        <location line="+729"/>
+        <location line="+731"/>
         <source>Spacing</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-664"/>
+        <location line="-666"/>
         <source>Click to select, drag to move what is still free. Delete removes the selection.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7315,12 +7315,12 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
     </message>
     <message>
         <location line="+11"/>
-        <location line="+573"/>
+        <location line="+586"/>
         <source>Type the words for the text.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-561"/>
+        <location line="-574"/>
         <source>Edit text</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7366,12 +7366,12 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
     </message>
     <message>
         <location line="+16"/>
-        <location line="+857"/>
+        <location line="+870"/>
         <source>Minor radius</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-836"/>
+        <location line="-849"/>
         <source>Ellipse</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7386,17 +7386,17 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+19"/>
+        <location line="+21"/>
         <source>Rows</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+10"/>
+        <location line="+14"/>
         <source>Grid copy</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+24"/>
+        <location line="+31"/>
         <source>Ring copy</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7406,8 +7406,8 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-260"/>
-        <location line="+271"/>
+        <location line="-273"/>
+        <location line="+284"/>
         <location line="+681"/>
         <location line="+101"/>
         <location line="+27"/>
@@ -7417,7 +7417,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1572"/>
+        <location line="-1585"/>
         <source>Click the end, or type a length (Tab: angle) and press Enter. Drag from the last point for a tangent arc. Click the first point to close. Esc ends.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7433,7 +7433,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
     </message>
     <message>
         <location line="+387"/>
-        <location line="+271"/>
+        <location line="+284"/>
         <location line="+77"/>
         <location line="+714"/>
         <location line="+18"/>

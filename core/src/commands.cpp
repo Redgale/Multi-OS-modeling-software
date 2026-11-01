@@ -1108,7 +1108,12 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
                     if (!s1 || !s2) {
                         return !s1 ? s1.error() : s2.error();
                     }
-                    auto r = s.patternRect(ids, c1, s1.value(), 0, c2, 0, s2.value());
+                    // linked (the default): the copies follow the original and the spacing
+                    auto r = a.get("linked", "yes") == "no"
+                                 ? s.patternRect(ids, c1, s1.value(), 0, c2, 0, s2.value())
+                                 : s.patternLinked(ids, {{"kind", "grid"}, {"n1", c1}, {"n2", c2}, {"s1", sp.substr(0, k)},
+                                                         {"s2", k == std::string::npos ? sp : sp.substr(k + 1)}},
+                                                   doc.lookup());
                     if (!r) {
                         return r.error();
                     }
@@ -1119,7 +1124,11 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
                 if (!center || !total) {
                     return !center ? center.error() : total.error();
                 }
-                auto r = s.patternCircular(ids, center->first, center->second, c1, total.value());
+                auto r = a.get("linked", "yes") == "no"
+                             ? s.patternCircular(ids, center->first, center->second, c1, total.value())
+                             : s.patternLinked(ids, {{"kind", "ring"}, {"n", c1}, {"angle", a.get("angle", "360 deg")},
+                                                     {"center", {center->first, center->second}}},
+                                               doc.lookup());
                 if (!r) {
                     return r.error();
                 }

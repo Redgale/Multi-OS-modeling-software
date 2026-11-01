@@ -1857,3 +1857,41 @@ TEST(SketchOffset, CopiesFollowTheirSource)
     run(*plain, "param w = 60 mm");
     EXPECT_NE(total(*plain), 66 * 26);
 }
+
+TEST(SketchCopy, LinkedGridAndRingFollowTheOriginal)
+{
+    auto total = [](const Document& d) {
+        double t = 0;
+        for (auto& r : d.state().sketches.at("s1")->profiles.regions) {
+            t += r.area;
+        }
+        return t;
+    };
+    // a 3 x 2 grid of 4 mm circles 10 apart; the circle and the spacing are parameters
+    auto doc = build("param d = 4 mm\nparam pitch = 10 mm\nsketch id=s1 plane=XY\ncircle sketch=s1 center=0,0 d=d\n"
+                     "grid sketch=s1 at=2,0 count=3,2 spacing=pitch\n");
+    EXPECT_NEAR(total(*doc), 6 * pi * 4, 1e-6);
+    const int dof = doc->state().sketches.at("s1")->report.dof;
+    run(*doc, "param d = 6 mm");  // every copy grows with the original
+    expectAllOk(*doc);
+    EXPECT_NEAR(total(*doc), 6 * pi * 9, 1e-6);
+    run(*doc, "param d = 12 mm");  // 12 mm circles 10 apart overlap: the areas merge, so check the spread
+    run(*doc, "param d = 4 mm");
+    run(*doc, "param pitch = 15 mm");
+    expectAllOk(*doc);
+    double xmax = -1e9;
+    for (auto& [id, e] : doc->state().sketches.at("s1")->solved.entities()) {
+        if (e.type == EntityType::Circle) {
+            xmax = std::max(xmax, doc->state().sketches.at("s1")->solved.pointXY(e.center).first);
+        }
+    }
+    EXPECT_NEAR(xmax, 30, 1e-6);  // the third column at twice the new pitch
+    EXPECT_EQ(doc->state().sketches.at("s1")->report.dof, dof);
+    // a ring of 6 round the origin follows the original's size
+    auto ring = build("param d = 4 mm\nsketch id=s1 plane=XY\ncircle sketch=s1 center=20,0 d=d\n"
+                      "ring sketch=s1 at=22,0 center=0,0 count=6\n");
+    EXPECT_NEAR(total(*ring), 6 * pi * 4, 1e-6);
+    run(*ring, "param d = 8 mm");
+    expectAllOk(*ring);
+    EXPECT_NEAR(total(*ring), 6 * pi * 16, 1e-6);
+}

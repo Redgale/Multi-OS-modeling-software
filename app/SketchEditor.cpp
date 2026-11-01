@@ -1156,16 +1156,22 @@ void SketchEditor::placeSecond(const Snap& cur, const QStringList& rawTyped)
                 break;
             }
             const double spacing = sp ? *sp : 10;
+            const QString spacingText = sp ? typed[1].trimmed() : QString::fromStdString(doc_.lengthInput("10"));
             if (!second_) {
                 gridCols_ = *n;
                 gridDx_ = spacing;
+                gridDxText_ = spacingText;
                 second_ = cur;
                 showInput({tr("Rows"), tr("Spacing")}, {"1", typed.size() > 1 ? typed[1] : QString()});
                 inputFields_[0]->selectAll();
                 inputFields_[0]->setFocus();
                 break;
             }
-            auto r = s.patternRect(picked, gridCols_, gridDx_, 0, *n, 0, spacing);
+            // linked: the copies follow the original (and a parameter in the spacing)
+            auto r = s.patternLinked(picked,
+                                     {{"kind", "grid"}, {"n1", gridCols_}, {"n2", *n}, {"s1", gridDxText_.toStdString()},
+                                      {"s2", spacingText.toStdString()}},
+                                     doc_.lookup());
             if (!r) {
                 message_ = coreText(r.error().message);
                 break;
@@ -1189,7 +1195,14 @@ void SketchEditor::placeSecond(const Snap& cur, const QStringList& rawTyped)
                 }
                 total = av.value();
             }
-            auto r = s.patternCircular(picked, a.x(), a.y(), *n, total);
+            nlohmann::json ring {{"kind", "ring"}, {"n", *n}, {"center", {a.x(), a.y()}},
+                                 {"angle", typed.size() > 1 && !typed[1].trimmed().isEmpty() ? typed[1].trimmed().toStdString()
+                                                                                             : std::string("360 deg")}};
+            if (first_->point) {
+                ring["center_point"] = first_->point;  // a clicked point: the ring follows it
+            }
+            (void)total;
+            auto r = s.patternLinked(picked, ring, doc_.lookup());
             if (!r) {
                 message_ = coreText(r.error().message);
                 break;

@@ -288,6 +288,12 @@ public:
     // and the distance expression, held by fixed points (it adds no freedom). Returns the copy.
     Result<std::vector<int>> offsetLinked(const std::vector<int>& curves, const std::string& distanceExpr,
                                           const ParamLookup& lookup);
+    // Grid or ring copies that follow their source, rebuilt after every solve like a linked
+    // offset. `spec`: {"kind": "grid", "n1", "s1" (spacing along X), "n2", "s2" (along Y)} or
+    // {"kind": "ring", "n", "angle", "center": [x, y], optional "center_point": a point id
+    // the centre follows}; sizes and angles are expressions. Returns the copies.
+    Result<std::vector<int>> patternLinked(const std::vector<int>& curves, const nlohmann::json& spec,
+                                           const ParamLookup& lookup);
     // Moves a fixed point (its Fix constraint) to (x, y); false if it has none.
     bool moveFixedPoint(int pointId, double x, double y);
     // Changes a dimension's value text (a projected circle's radius).

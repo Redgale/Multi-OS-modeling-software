@@ -6960,12 +6960,12 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
     </message>
     <message>
         <location line="+0" />
-        <location line="+729" />
+        <location line="+731" />
         <source>Spacing</source>
         <translation>[Spáçîñg~~]</translation>
     </message>
     <message>
-        <location line="-664" />
+        <location line="-666" />
         <source>Click to select, drag to move what is still free. Delete removes the selection.</source>
         <translation>[Çlîçk tö séléçt, drág tö mövé whát îs stîll fréé. Délété rémövés thé séléçtîöñ.~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -7305,12 +7305,12 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
     </message>
     <message>
         <location line="+11" />
-        <location line="+573" />
+        <location line="+586" />
         <source>Type the words for the text.</source>
         <translation>[Týpé thé wörds för thé téxt.~~~~~~~]</translation>
     </message>
     <message>
-        <location line="-561" />
+        <location line="-574" />
         <source>Edit text</source>
         <translation>[Édît téxt~~]</translation>
     </message>
@@ -7356,12 +7356,12 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
     </message>
     <message>
         <location line="+16" />
-        <location line="+857" />
+        <location line="+870" />
         <source>Minor radius</source>
         <translation>[Mîñör rádîüs~~~]</translation>
     </message>
     <message>
-        <location line="-836" />
+        <location line="-849" />
         <source>Ellipse</source>
         <translation>[Éllîpsé~~]</translation>
     </message>
@@ -7376,17 +7376,17 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
         <translation>[Mövé~]</translation>
     </message>
     <message>
-        <location line="+19" />
+        <location line="+21" />
         <source>Rows</source>
         <translation>[Röws~]</translation>
     </message>
     <message>
-        <location line="+10" />
+        <location line="+14" />
         <source>Grid copy</source>
         <translation>[Grîd çöpý~~]</translation>
     </message>
     <message>
-        <location line="+24" />
+        <location line="+31" />
         <source>Ring copy</source>
         <translation>[Rîñg çöpý~~]</translation>
     </message>
@@ -7396,8 +7396,8 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
         <translation>[Lîñé~]</translation>
     </message>
     <message>
-        <location line="-260" />
-        <location line="+271" />
+        <location line="-273" />
+        <location line="+284" />
         <location line="+681" />
         <location line="+101" />
         <location line="+27" />
@@ -7407,7 +7407,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
         <translation>[Léñgth~~]</translation>
     </message>
     <message>
-        <location line="-1572" />
+        <location line="-1585" />
         <source>Click the end, or type a length (Tab: angle) and press Enter. Drag from the last point for a tangent arc. Click the first point to close. Esc ends.</source>
         <translation>[Çlîçk thé éñd, ör týpé á léñgth (Táb: áñglé) áñd préss Éñtér. Drág fröm thé lást pöîñt för á táñgéñt árç. Çlîçk thé fîrst pöîñt tö çlösé. Ésç éñds.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -7423,7 +7423,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
     </message>
     <message>
         <location line="+387" />
-        <location line="+271" />
+        <location line="+284" />
         <location line="+77" />
         <location line="+714" />
         <location line="+18" />

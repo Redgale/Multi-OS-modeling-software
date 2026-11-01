@@ -55,8 +55,8 @@ nothing is committed.
 | `mirror [sketch=s1] at=x,y;x,y;… axis=x,y` | Mirror the curves nearest each point across the line nearest `axis` (construction lines count); the copies stay mirrored |
 | `move [sketch=s1] at=x,y;… [by=dx,dy] [angle=<angle> about=x,y]` | Move the curves nearest each point (turn first, then shift) |
 | `copy [sketch=s1] at=x,y;… [by=dx,dy] [angle=<angle> about=x,y]` | The same, leaving the originals: the copies keep the constraints among them |
-| `grid [sketch=s1] at=x,y;… count=n1[,n2] spacing=<len>[,<len>]` | Copies in columns to the right and rows upward (counts include the original) |
-| `ring [sketch=s1] at=x,y;… center=x,y count=<n> [angle=360 deg]` | Copies around a centre; a full turn spaces them evenly |
+| `grid [sketch=s1] at=x,y;… count=n1[,n2] spacing=<len>[,<len>] [linked=no]` | Copies in columns to the right and rows upward (counts include the original). The copies follow the original and the spacing (an expression); `linked=no` makes plain copies |
+| `ring [sketch=s1] at=x,y;… center=x,y count=<n> [angle=360 deg] [linked=no]` | Copies around a centre; a full turn spaces them evenly. The copies follow the original and the angle; `linked=no` makes plain copies |
 | `ellipse [sketch=s1] center=x,y a=<len> b=<len> [angle=<angle>]` | Ellipse with radii a (along the angle) and b, both dimensioned |
 | `spline [sketch=s1] points=x,y;x,y;… [closed=yes]` | Smooth curve through the points (at least 2; 3 when closed) |
 | `trim [sketch=s1] at=x,y` | Remove the piece of the curve nearest (x, y) between its crossings with other curves |
