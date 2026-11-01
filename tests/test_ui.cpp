@@ -1680,6 +1680,10 @@ private slots:
         const QString two = coreText(jig::fmt("%1 of the edges this fillet rounded no longer exist.", {"2"}) + " " +
                                      jig::fmt("%1 edges were split, and Jigsmith can't tell which piece you meant.", {"3"}));
         QVERIFY2(two.count('[') == 2 && two.contains("2") && two.contains("3"), qPrintable(two));
+        // a value that is one of the core's words ("extrude") is translated inside the sentence
+        const QString kind = coreText(jig::fmt("Some of the closed areas this %1 used are gone from the sketch.",
+                                               {jig::word("extrude")}));
+        QVERIFY2(kind.count('[') == 2 && !kind.contains(" extrude "), qPrintable(kind));
         // something the core never says is left as it is
         QCOMPARE(coreText("Not a message from the core"), QString("Not a message from the core"));
         installLanguage("en");

@@ -195,8 +195,8 @@ screenshot (B-003). No real GPU on Windows or Linux has been tried. Builds are u
 ## Next three tasks
 
 1. Leftovers: universal macOS binary (B-005); open the Flatpak's window on a real desktop.
-2. M7/M8 leftovers: the step kind inside messages ("the extrude") as translatable words; first real
-   language once a reviewer is found.
+2. First real language once a reviewer is found (step kinds inside messages are translatable now:
+   `word("…")` in the core, the "CoreWords" context, UI test `pseudoTranslation`).
 3. Review THIRD_PARTY_DLLS.txt before the first release (B-011); B-001 libslvs
    spike where building SolveSpace is allowed.
 

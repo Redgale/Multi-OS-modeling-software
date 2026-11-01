@@ -433,8 +433,9 @@ never spans the end of a sentence, so several sentences side by side are matched
 
 **Consequences.** A message built from values that does not go through `fmt` stays English;
 a pattern that could match another pattern's text would be ambiguous (none do today; the
-first in the list wins). Words that are values themselves ("extrude" in "the extrude") stay
-English until they become translatable words.
+first in the list wins). Words that are values themselves ("extrude" in "the extrude") stayed
+English at first; since 2026-11-01 the core marks them `word("extrude")`, the extractor lists
+them under the "CoreWords" context, and the app translates such a value when it fills a pattern.
 
 ## D-017 Recompute on a worker thread, results swapped in afterwards (accepted)
 

@@ -3372,6 +3372,69 @@
     </message>
 </context>
 <context>
+    <name>CoreWords</name>
+    <message>
+        <location line="+84" />
+        <source>ball face (sphere)</source>
+        <translation>[báll fáçé (sphéré)~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>cone</source>
+        <translation>[çöñé~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>curved edge</source>
+        <translation>[çürvéd édgé~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>curved face</source>
+        <translation>[çürvéd fáçé~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>extrude</source>
+        <translation>[éxtrüdé~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>flat face</source>
+        <translation>[flát fáçé~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>hole</source>
+        <translation>[hölé~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>revolve</source>
+        <translation>[révölvé~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>round face (cylinder)</source>
+        <translation>[röüñd fáçé (çýlîñdér)~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>rounded face (torus)</source>
+        <translation>[röüñdéd fáçé (törüs)~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>shape</source>
+        <translation>[shápé~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>straight edge</source>
+        <translation>[stráîght édgé~~~~]</translation>
+    </message>
+</context>
+<context>
     <name>MainWindow</name>
     <message>
         <location filename="../app/MainWindow.cpp" line="+509" />
@@ -3485,7 +3548,7 @@
 <context>
     <name>Settings</name>
     <message>
-        <location filename="../app/Translations.cpp" line="+134" />
+        <location filename="../app/Translations.cpp" line="+136" />
         <source>Pseudo-translation (for testing)</source>
         <translation>[Pséüdö-tráñslátîöñ (för téstîñg)~~~~~~~~~]</translation>
     </message>

@@ -37,6 +37,14 @@ inline std::string fmt(std::string_view pattern, std::initializer_list<std::stri
     return out;
 }
 
+// A word that goes into a message as a value ("extrude" in "the extrude"): marked so the
+// extractor lists it for translation; the app translates such values when it fills a
+// translated pattern. Returns the word unchanged.
+constexpr const char* word(const char* w)
+{
+    return w;
+}
+
 // A one-click repair: set a step's parameter to a value ("size" = the step's main size,
 // renamed to the real parameter by the step that reports it).
 struct Fix

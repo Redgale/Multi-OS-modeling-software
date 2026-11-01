@@ -90,7 +90,9 @@ QString translateOne(const QString& s)
         }
         QStringList values(9);
         for (size_t g = 0; g < p.order.size(); ++g) {
-            values[p.order[g] - 1] = m.captured(int(g) + 1);
+            // a value that is one of the core's marked words ("extrude") is translated too
+            const QString v = m.captured(int(g) + 1);
+            values[p.order[g] - 1] = QCoreApplication::translate("CoreWords", v.toUtf8().constData());
         }
         return fill(QCoreApplication::translate("Core", p.english), values);
     }

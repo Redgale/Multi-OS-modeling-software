@@ -503,3 +503,19 @@ inline const char* const kCorePatterns[] = {
     QT_TRANSLATE_NOOP("Core", "The font file %1 could not be read; using the built-in font (Inter)."),
     QT_TRANSLATE_NOOP("Core", "The font '%1' is not available here; using the built-in font (Inter)."),
 };
+
+// Words that go into messages as values (marked word("...") in the core).
+#if 0
+QT_TRANSLATE_NOOP("CoreWords", "ball face (sphere)")
+QT_TRANSLATE_NOOP("CoreWords", "cone")
+QT_TRANSLATE_NOOP("CoreWords", "curved edge")
+QT_TRANSLATE_NOOP("CoreWords", "curved face")
+QT_TRANSLATE_NOOP("CoreWords", "extrude")
+QT_TRANSLATE_NOOP("CoreWords", "flat face")
+QT_TRANSLATE_NOOP("CoreWords", "hole")
+QT_TRANSLATE_NOOP("CoreWords", "revolve")
+QT_TRANSLATE_NOOP("CoreWords", "round face (cylinder)")
+QT_TRANSLATE_NOOP("CoreWords", "rounded face (torus)")
+QT_TRANSLATE_NOOP("CoreWords", "shape")
+QT_TRANSLATE_NOOP("CoreWords", "straight edge")
+#endif

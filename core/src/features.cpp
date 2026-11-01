@@ -743,7 +743,7 @@ FeatureOutcome applyExtrude(const Document& doc, const Feature& f, const std::sh
     const std::string sketchId = p.value("sketch", std::string {});
     const SketchState* skp = findSketch(in, sketchId);
     if (!skp) {
-        return missingSketch("extrude", sketchId);
+        return missingSketch(word("extrude"), sketchId);
     }
     const SketchState& sk = *skp;
     std::vector<const Profile*> profiles;
@@ -764,7 +764,7 @@ FeatureOutcome applyExtrude(const Document& doc, const Feature& f, const std::sh
             profiles.push_back(&wp);
         }
     }
-    else if (auto bad = selectProfiles(sk, p, status, "extrude", profiles)) {
+    else if (auto bad = selectProfiles(sk, p, status, word("extrude"), profiles)) {
         return *bad;
     }
     ExtrudeInput ei;
@@ -1228,7 +1228,7 @@ FeatureOutcome applyRevolve(const Document& doc, const Feature& f, const std::sh
     const std::string sketchId = p.value("sketch", std::string {});
     const SketchState* skp = findSketch(in, sketchId);
     if (!skp) {
-        return missingSketch("revolve", sketchId);
+        return missingSketch(word("revolve"), sketchId);
     }
     const SketchState& sk = *skp;
     // Axis: a line of the sketch (usually a construction line), or an origin axis.
@@ -1260,7 +1260,7 @@ FeatureOutcome applyRevolve(const Document& doc, const Feature& f, const std::sh
     }
     // profiles: the axis line itself never forms a region (it is usually construction)
     std::vector<const Profile*> profiles;
-    if (auto bad = selectProfiles(sk, p, status, "revolve", profiles)) {
+    if (auto bad = selectProfiles(sk, p, status, word("revolve"), profiles)) {
         return *bad;
     }
     auto angle = doc.evalAngle(p.value("angle", std::string("360 deg")));
@@ -1348,7 +1348,7 @@ FeatureOutcome applyHole(const Document& doc, const Feature& f, const std::share
     const std::string sketchId = p.value("sketch", std::string {});
     const SketchState* skp = findSketch(in, sketchId);
     if (!skp) {
-        return missingSketch("hole", sketchId);
+        return missingSketch(word("hole"), sketchId);
     }
     const SketchState& sk = *skp;
     // Hole centres: sketch points that are not the end or centre of a curve, or the

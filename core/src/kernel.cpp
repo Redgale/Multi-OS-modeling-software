@@ -2192,7 +2192,7 @@ MeasureItem measureItem(const TopoDS_Shape& s)
             BRepAdaptor_Surface a(f);
             switch (a.GetType()) {
                 case GeomAbs_Plane: {
-                    m.kind = "flat face";
+                    m.kind = word("flat face");
                     gp_Dir n = a.Plane().Axis().Direction();
                     if (f.Orientation() == TopAbs_REVERSED) {
                         n.Reverse();
@@ -2201,26 +2201,26 @@ MeasureItem measureItem(const TopoDS_Shape& s)
                     break;
                 }
                 case GeomAbs_Cylinder:
-                    m.kind = "round face (cylinder)";
+                    m.kind = word("round face (cylinder)");
                     m.radius = a.Cylinder().Radius();
                     m.axis = a.Cylinder().Axis();
                     break;
                 case GeomAbs_Cone:
-                    m.kind = "cone";
+                    m.kind = word("cone");
                     m.radius = a.Cone().RefRadius();
                     m.axis = a.Cone().Axis();
                     break;
                 case GeomAbs_Sphere:
-                    m.kind = "ball face (sphere)";
+                    m.kind = word("ball face (sphere)");
                     m.radius = a.Sphere().Radius();
                     break;
                 case GeomAbs_Torus:
-                    m.kind = "rounded face (torus)";
+                    m.kind = word("rounded face (torus)");
                     m.radius = a.Torus().MinorRadius();
                     m.axis = a.Torus().Axis();
                     break;
                 default:
-                    m.kind = "curved face";
+                    m.kind = word("curved face");
             }
         }
         else if (s.ShapeType() == TopAbs_EDGE) {
@@ -2230,7 +2230,7 @@ MeasureItem measureItem(const TopoDS_Shape& s)
             m.size = g.Mass();
             BRepAdaptor_Curve c(e);
             if (c.GetType() == GeomAbs_Line) {
-                m.kind = "straight edge";
+                m.kind = word("straight edge");
                 m.axis = gp_Ax1(c.Line().Location(), c.Line().Direction());
             }
             else if (c.GetType() == GeomAbs_Circle) {
@@ -2240,12 +2240,12 @@ MeasureItem measureItem(const TopoDS_Shape& s)
                 m.axis = c.Circle().Axis();
             }
             else {
-                m.kind = "curved edge";
+                m.kind = word("curved edge");
             }
         }
     }
     catch (const Standard_Failure&) {
-        m.kind = "shape";
+        m.kind = word("shape");
     }
     return m;
 }
