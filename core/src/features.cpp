@@ -2839,6 +2839,18 @@ Result<gp_Ax3> jointFrame(const nlohmann::json& ref, const std::shared_ptr<const
         }
         return gp_Ax3(gp::Origin(), gp::DZ(), gp::DX());
     }
+    if (ref.is_object() && ref.contains("axis")) {  // a construction axis (a hinge pin's line)
+        if (body) {
+            body->clear();
+        }
+        const std::string id = ref["axis"].is_string() ? ref["axis"].get<std::string>() : std::string {};
+        auto a = namedAxis(id, in);
+        if (!a) {
+            return makeError("joint.ref", fmt("The axis '%1' is missing or comes later in the timeline.", {id}),
+                             {"Edit the joint and pick another axis."});
+        }
+        return gp_Ax3(a->Location(), a->Direction());
+    }
     const bool face = ref.is_object() && ref.contains("face");
     const bool edge = ref.is_object() && ref.contains("edge");
     if (!face && !edge) {
@@ -2923,7 +2935,11 @@ FeatureOutcome applyJoint(const Document& doc, const Feature& f, const std::shar
         return failed(b.error());
     }
     if (moving.empty()) {
-        return failed("The first pick of a joint must be on the part that moves.");
+        moving = p.value("part", std::string {});  // the first pick was an axis: the part is named
+    }
+    if (moving.empty() || !in->bodies.count(moving)) {
+        return failed("The first pick of a joint must be on the part that moves (or name the part that turns "
+                      "about an axis).");
     }
     if (moving == fixed) {
         return failed("A joint connects two different parts.", {"Pick the second edge or face on another part."});

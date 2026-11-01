@@ -1558,6 +1558,9 @@ Result<bool> ScriptRunner::runLineUnchecked(std::string_view rawLine)
             if (v == "origin") {
                 return nlohmann::json("origin");
             }
+            if (v.rfind("axis:", 0) == 0) {
+                return nlohmann::json {{"axis", v.substr(5)}};
+            }
             const bool face = v.rfind("face:", 0) == 0, edge = v.rfind("edge:", 0) == 0;
             if (!face && !edge) {
                 return makeError("script.args", "Joint ends are edge:<name>, face:<name> or origin.");
@@ -1582,6 +1585,9 @@ Result<bool> ScriptRunner::runLineUnchecked(std::string_view rawLine)
         }
         nlohmann::json params {{"kind", a.get("kind", "rigid")}, {"from", from.value()}, {"to", to.value()},
                                {"flip", a.get("flip", "no") == "yes"}};
+        if (a.has("part")) {
+            params["part"] = a.get("part");  // the part that moves, when `from` is an axis
+        }
         for (const char* k : {"angle", "angle_min", "angle_max", "angle2", "distance", "distance_min", "distance_max",
                               "distance2", "offset"}) {
             if (a.has(k)) {

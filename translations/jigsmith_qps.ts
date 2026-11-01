@@ -2862,6 +2862,11 @@
     </message>
     <message>
         <location line="+1" />
+        <source>Edit the joint and pick another axis.</source>
+        <translation>[Édît thé jöîñt áñd pîçk áñöthér áxîs.~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
         <source>This joint is missing where it attaches.</source>
         <translation>[Thîs jöîñt îs mîssîñg whéré ît áttáçhés.~~~~~~~~~~~]</translation>
     </message>
@@ -2906,12 +2911,7 @@
         <translation>[Á jöîñt áttáçhés tö á röüñd édgé, á stráîght édgé ör á fáçé.~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+1" />
-        <source>The first pick of a joint must be on the part that moves.</source>
-        <translation>[Thé fîrst pîçk öf á jöîñt müst bé öñ thé párt thát mövés.~~~~~~~~~~~~~~]</translation>
-    </message>
-    <message>
-        <location line="+1" />
+        <location line="+2" />
         <source>A joint connects two different parts.</source>
         <translation>[Á jöîñt çöññéçts twö dîfféréñt párts.~~~~~~~~~~]</translation>
     </message>
@@ -3276,7 +3276,12 @@
         <translation>[Thîs fîlé çöüld ñöt bé öpéñéd. Ît máý bé dámágéd ör ñöt á Jîgsmîth désîgñ.~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+11" />
+        <location line="-71" />
+        <source>The first pick of a joint must be on the part that moves (or name the part that turns about an axis).</source>
+        <translation>[Thé fîrst pîçk öf á jöîñt müst bé öñ thé párt thát mövés (ör ñámé thé párt thát türñs áböüt áñ áxîs).~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+82" />
         <source>The path has no curves.</source>
         <translation>[Thé páth hás ñö çürvés.~~~~~~]</translation>
     </message>
@@ -3887,6 +3892,11 @@
     </message>
     <message>
         <location line="+1" />
+        <source>The axis '%1' is missing or comes later in the timeline.</source>
+        <translation>[Thé áxîs '%1' îs mîssîñg ör çömés látér îñ thé tîmélîñé.~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
         <source>Jigsmith has no joint called '%1'.</source>
         <translation>[Jîgsmîth hás ñö jöîñt çálléd '%1'.~~~~~~~~]</translation>
     </message>
@@ -3946,7 +3956,7 @@
         <translation>[%1 édgés wéré ré-áttáçhéd bý shápé sîmîlárîtý áftér áñ éárlîér çháñgé. Çhéçk thé résült.~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="-55" />
+        <location line="-56" />
         <source>The id '%1' is already used.</source>
         <translation>[Thé îd '%1' îs álréádý üséd.~~~~~~]</translation>
     </message>
@@ -3956,7 +3966,7 @@
         <translation>[Thîs SVG hás ñö shápés, öütlîñés ör téxt tö brîñg îñ.~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+71" />
+        <location line="+72" />
         <source>A wall of %1 does not fit this outline.</source>
         <translation>[Á wáll öf %1 döés ñöt fît thîs öütlîñé.~~~~~~~~~]</translation>
     </message>
@@ -4041,12 +4051,12 @@
         <translation>[Thé föñt '%1' îs ñöt áváîláblé héré; üsîñg thé büîlt-îñ föñt (Îñtér).~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="-279" />
+        <location line="-280" />
         <source>There is nothing to export yet.</source>
         <translation>[Théré îs ñöthîñg tö éxpört ýét.~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="-293" />
+        <location line="-294" />
         <source>This DXF has no lines, circles, arcs, curves, text or blocks to bring in.</source>
         <translation>[Thîs DXF hás ñö lîñés, çîrçlés, árçs, çürvés, téxt ör blöçks tö brîñg îñ.~~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -4086,7 +4096,7 @@
         <translation>[Thát fáçé îs lévél wîth thé skétçh, sö théré îs ñö wáý tö téll whîçh wáý tö éxtrüdé.~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+206" />
+        <location line="+207" />
         <source>The 3MF file could not be created.</source>
         <translation>[Thé 3MF fîlé çöüld ñöt bé çréátéd.~~~~~~~~]</translation>
     </message>
@@ -4689,7 +4699,7 @@
 <context>
     <name>CoreWords</name>
     <message>
-        <location line="+109" />
+        <location line="+110" />
         <source>ball face (sphere)</source>
         <translation>[báll fáçé (sphéré)~~~~]</translation>
     </message>
@@ -6467,7 +6477,7 @@
     </message>
     <message>
         <location line="+9" />
-        <location line="+757" />
+        <location line="+758" />
         <location line="+775" />
         <location line="+963" />
         <location line="+27" />
@@ -6475,7 +6485,7 @@
         <translation>[Skétçh~~]</translation>
     </message>
     <message>
-        <location line="-2520" />
+        <location line="-2521" />
         <source>Extrude</source>
         <translation>[Éxtrüdé~~]</translation>
     </message>
@@ -6681,12 +6691,12 @@
     </message>
     <message>
         <location line="+4" />
-        <location line="+885" />
+        <location line="+886" />
         <source>&lt;p&gt;Nothing selected.&lt;/p&gt;</source>
         <translation>[&lt;p&gt;Ñöthîñg séléçtéd.&lt;/p&gt;~~~~~]</translation>
     </message>
     <message>
-        <location line="-874" />
+        <location line="-875" />
         <source>&lt;h3&gt;Body&lt;/h3&gt;&lt;p&gt;&lt;b&gt;Name:&lt;/b&gt; %1&lt;br&gt;&lt;b&gt;Volume:&lt;/b&gt; %2&lt;br&gt;&lt;b&gt;Size:&lt;/b&gt; %3 × %4 × %5&lt;br&gt;&lt;b&gt;Faces:&lt;/b&gt; %6&lt;/p&gt;&lt;p&gt;Right-click it in the Browser to hide, isolate or rename it.&lt;/p&gt;</source>
         <translation>[&lt;h3&gt;Bödý&lt;/h3&gt;&lt;p&gt;&lt;b&gt;Ñámé:&lt;/b&gt; %1&lt;br&gt;&lt;b&gt;Völümé:&lt;/b&gt; %2&lt;br&gt;&lt;b&gt;Sîzé:&lt;/b&gt; %3 × %4 × %5&lt;br&gt;&lt;b&gt;Fáçés:&lt;/b&gt; %6&lt;/p&gt;&lt;p&gt;Rîght-çlîçk ît îñ thé Bröwsér tö hîdé, îsöláté ör réñámé ît.&lt;/p&gt;~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -6736,7 +6746,7 @@
         <translation>[Péñ çüp (párámétérs, shéll)~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+6" />
+        <location line="+7" />
         <source>Quit</source>
         <translation>[Qüît~]</translation>
     </message>
@@ -7151,12 +7161,17 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
         <translation>[  hîddéñ~~]</translation>
     </message>
     <message>
-        <location line="-1231" />
+        <location line="-1232" />
         <source>Fastener</source>
         <translation>[Fástéñér~~]</translation>
     </message>
     <message>
-        <location line="+1236" />
+        <location line="+571" />
+        <source>Hinged box (parts, hinge joint)</source>
+        <translation>[Hîñgéd böx (párts, hîñgé jöîñt)~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+666" />
         <source>Tick to show, untick to hide. Right-click to isolate or rename.</source>
         <translation>[Tîçk tö shöw, üñtîçk tö hîdé. Rîght-çlîçk tö îsöláté ör réñámé.~~~~~~~~~~~~~~~~]</translation>
     </message>

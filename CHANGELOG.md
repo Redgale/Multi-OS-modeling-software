@@ -19,6 +19,7 @@
 - Python API: `import jigsmith` to build, measure, export and save designs (docs/PYTHON.md).
 - Variants: named sets of parameter values, switched in one step.
 - Fastener library: metric screws, nuts and washers (M2–M12), offline.
+- Sample: the hinged box (parts, knuckles, pin and a hinge joint you open with a parameter).
 - Fixed: a fillet or chamfer on the edges of a loft or sweep could lose its edges when an earlier step changed.
 
 ## 0.1.0 (2026-11-01)

@@ -359,6 +359,7 @@ QT_TRANSLATE_NOOP("Core", "Edit the scale and pick another point, or the origin.
 QT_TRANSLATE_NOOP("Core", "A body this step scales no longer exists.")
 QT_TRANSLATE_NOOP("Core", "This body could not be stretched.")
 QT_TRANSLATE_NOOP("Core", "This body could not be scaled.")
+QT_TRANSLATE_NOOP("Core", "Edit the joint and pick another axis.")
 QT_TRANSLATE_NOOP("Core", "This joint is missing where it attaches.")
 QT_TRANSLATE_NOOP("Core", "Edit the joint and click an edge or face.")
 QT_TRANSLATE_NOOP("Core", "A part this joint attaches to no longer exists.")
@@ -368,7 +369,7 @@ QT_TRANSLATE_NOOP("Core", "Edit the joint and click the edge or face again.")
 QT_TRANSLATE_NOOP("Core", "An edge or face of a joint changed; the most similar one is used. Check it.")
 QT_TRANSLATE_NOOP("Core", "A joint attaches to a flat face, a round face or an edge.")
 QT_TRANSLATE_NOOP("Core", "A joint attaches to a round edge, a straight edge or a face.")
-QT_TRANSLATE_NOOP("Core", "The first pick of a joint must be on the part that moves.")
+QT_TRANSLATE_NOOP("Core", "The first pick of a joint must be on the part that moves (or name the part that turns about an axis).")
 QT_TRANSLATE_NOOP("Core", "A joint connects two different parts.")
 QT_TRANSLATE_NOOP("Core", "Pick the second edge or face on another part.")
 QT_TRANSLATE_NOOP("Core", "The axis line of this revolve is gone from the sketch.")
@@ -691,6 +692,7 @@ inline const char* const kCorePatterns[] = {
     QT_TRANSLATE_NOOP("Core", "Jigsmith has no basic shape called '%1'."),
     QT_TRANSLATE_NOOP("Core", "Jigsmith has no fastener size '%1'."),
     QT_TRANSLATE_NOOP("Core", "The point '%1' to scale about is missing or comes later."),
+    QT_TRANSLATE_NOOP("Core", "The axis '%1' is missing or comes later in the timeline."),
     QT_TRANSLATE_NOOP("Core", "Jigsmith has no joint called '%1'."),
     QT_TRANSLATE_NOOP("Core", "The joint stops at its limit (%1)."),
     QT_TRANSLATE_NOOP("Core", "The body this pattern repeats (%1) no longer exists."),

@@ -2863,6 +2863,11 @@
     </message>
     <message>
         <location line="+1"/>
+        <source>Edit the joint and pick another axis.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>This joint is missing where it attaches.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2907,12 +2912,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
-        <source>The first pick of a joint must be on the part that moves.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+1"/>
+        <location line="+2"/>
         <source>A joint connects two different parts.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3277,7 +3277,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+11"/>
+        <location line="-71"/>
+        <source>The first pick of a joint must be on the part that moves (or name the part that turns about an axis).</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+82"/>
         <source>The path has no curves.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3888,6 +3893,11 @@
     </message>
     <message>
         <location line="+1"/>
+        <source>The axis &apos;%1&apos; is missing or comes later in the timeline.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>Jigsmith has no joint called &apos;%1&apos;.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3947,7 +3957,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-55"/>
+        <location line="-56"/>
         <source>The id &apos;%1&apos; is already used.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3957,7 +3967,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+71"/>
+        <location line="+72"/>
         <source>A wall of %1 does not fit this outline.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4042,12 +4052,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-279"/>
+        <location line="-280"/>
         <source>There is nothing to export yet.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-293"/>
+        <location line="-294"/>
         <source>This DXF has no lines, circles, arcs, curves, text or blocks to bring in.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4087,7 +4097,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+206"/>
+        <location line="+207"/>
         <source>The 3MF file could not be created.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4690,7 +4700,7 @@
 <context>
     <name>CoreWords</name>
     <message>
-        <location line="+109"/>
+        <location line="+110"/>
         <source>ball face (sphere)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6472,7 +6482,7 @@
     </message>
     <message>
         <location line="+9"/>
-        <location line="+757"/>
+        <location line="+758"/>
         <location line="+775"/>
         <location line="+963"/>
         <location line="+27"/>
@@ -6480,7 +6490,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2520"/>
+        <location line="-2521"/>
         <source>Extrude</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6686,12 +6696,12 @@
     </message>
     <message>
         <location line="+4"/>
-        <location line="+885"/>
+        <location line="+886"/>
         <source>&lt;p&gt;Nothing selected.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-874"/>
+        <location line="-875"/>
         <source>&lt;h3&gt;Body&lt;/h3&gt;&lt;p&gt;&lt;b&gt;Name:&lt;/b&gt; %1&lt;br&gt;&lt;b&gt;Volume:&lt;/b&gt; %2&lt;br&gt;&lt;b&gt;Size:&lt;/b&gt; %3 × %4 × %5&lt;br&gt;&lt;b&gt;Faces:&lt;/b&gt; %6&lt;/p&gt;&lt;p&gt;Right-click it in the Browser to hide, isolate or rename it.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6741,7 +6751,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+6"/>
+        <location line="+7"/>
         <source>Quit</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7154,12 +7164,17 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1231"/>
+        <location line="-1232"/>
         <source>Fastener</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1236"/>
+        <location line="+571"/>
+        <source>Hinged box (parts, hinge joint)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+666"/>
         <source>Tick to show, untick to hide. Right-click to isolate or rename.</source>
         <translation type="unfinished"></translation>
     </message>

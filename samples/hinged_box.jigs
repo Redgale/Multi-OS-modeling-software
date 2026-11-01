@@ -1,0 +1,41 @@
+# Hinged box: the PDF's starter project 2 (v0.2), driven by parameters. A base and a lid as
+# separate parts, three hinge knuckles round a pin, and a hinge joint: set `open` to swing the lid.
+param w = 80 mm
+param d = 60 mm
+param h = 40 mm
+param lidh = 12 mm
+param wall = 2.4 mm
+param r = 4 mm
+param gap = 0.4 mm
+param open = 0 deg
+
+# The base: a box hollowed with its top open.
+box id=base length=w width=d height=h name="Base"
+shell id=sh1 body=base faces="face:base/top" thickness=wall name="Hollow base"
+
+# The lid: a box on top, hollowed with its bottom open.
+plane id=pltop base=XY distance=h name="Top of the base"
+box id=lid plane=pltop length=w width=d height=lidh op=new name="Lid"
+shell id=sh2 body=lid faces="face:lid/bottom" thickness=wall name="Hollow lid"
+
+# Hinge knuckles behind the back wall, their axis along the top edge: the outer two belong to
+# the base (with a leaf below the seam), the middle one to the lid (a leaf above it).
+plane id=pk1 base=YZ distance=-w/2 name="Left end"
+box id=f1 plane=pk1 center=d/2+r/2-wall/2,h-r length=r+wall width=2*r height=w/3-gap target=base op=join name="Left leaf"
+cylinder id=k1 plane=pk1 center=d/2+r,h diameter=2*r height=w/3-gap target=base op=join name="Left knuckle"
+plane id=pk2 base=YZ distance=-w/2+w/3 name="Middle"
+box id=f2 plane=pk2 center=d/2+r/2-wall/2,h+r length=r+wall width=2*r height=w/3-gap target=lid op=join name="Middle leaf"
+cylinder id=k2 plane=pk2 center=d/2+r,h diameter=2*r height=w/3-gap target=lid op=join name="Middle knuckle"
+plane id=pk3 base=YZ distance=-w/2+2*w/3 name="Right third"
+box id=f3 plane=pk3 center=d/2+r/2-wall/2,h-r length=r+wall width=2*r height=w/3 target=base op=join name="Right leaf"
+cylinder id=k3 plane=pk3 center=d/2+r,h diameter=2*r height=w/3 target=base op=join name="Right knuckle"
+
+# The pin hole through all three, and the pin (a little smaller, so it turns).
+cylinder id=hb plane=pk1 center=d/2+r,h diameter=r height=w target=base op=cut name="Pin hole (base)"
+cylinder id=hl plane=pk1 center=d/2+r,h diameter=r height=w target=lid op=cut name="Pin hole (lid)"
+cylinder id=pin plane=pk1 center=d/2+r,h diameter=r-0.3mm height=w op=new name="Pin"
+
+# The hinge: the lid turns about the pin's line. Negative angles lift the front; it stops
+# fully closed and at 110 degrees open.
+axis id=hinge through=face:k1/side name="Hinge line"
+joint id=j1 kind=revolute part=lid from=axis:hinge to=axis:hinge flip=yes angle=-open angle_min=-110deg angle_max=0deg name="Hinge"

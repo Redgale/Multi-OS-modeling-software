@@ -35,7 +35,7 @@ int main(int argc, char** argv)
     cli.addHelpOption();
     cli.addVersionOption();
     QCommandLineOption shot("screenshot", "Render the window to <png> and quit.", "png");
-    QCommandLineOption sample("sample", "Open a built-in sample (phone_stand, knob, pen_cup).", "name");
+    QCommandLineOption sample("sample", "Open a built-in sample (phone_stand, knob, pen_cup, hinged_box).", "name");
     QCommandLineOption size("size", "Window size for screenshots, e.g. 1360x860.", "WxH", "1360x860");
     QCommandLineOption theme("theme", "light, dark or contrast.", "name");
     QCommandLineOption select("select-face", "Screenshot helper: select a face by index.", "n");

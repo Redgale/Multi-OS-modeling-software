@@ -763,6 +763,7 @@ void MainWindow::buildMenus()
     samples->addAction(tr("Phone stand"), this, [this] { openSample("phone_stand"); });
     samples->addAction(tr("Knob (revolve, pattern, text)"), this, [this] { openSample("knob"); });
     samples->addAction(tr("Pen cup (parameters, shell)"), this, [this] { openSample("pen_cup"); });
+    samples->addAction(tr("Hinged box (parts, hinge joint)"), this, [this] { openSample("hinged_box"); });
     file->addSeparator();
     for (const char* id : {"file.export_stl", "file.export_step", "file.export_3mf"}) {
         file->addAction(registryAction(id));

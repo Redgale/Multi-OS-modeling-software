@@ -437,3 +437,37 @@ TEST(Interchange, StepImportIsATimelineStep)
     auto no = rb.runText("import step " + path + "\n");
     EXPECT_FALSE(no.ok());
 }
+
+TEST(Golden, HingedBoxOpensWithoutCollisions)
+{
+    // The guide's starter project 2: base and lid as parts, three knuckles, a pin, a hinge.
+    auto doc = buildSample("hinged_box.jigs");
+    expectAllOk(*doc);
+    const auto& st = doc->state();
+    ASSERT_EQ(st.bodies.size(), 3u);  // base, lid, pin
+    for (auto& [id, b] : st.bodies) {
+        EXPECT_TRUE(massProperties(b->shape()).valid) << id;
+    }
+    EXPECT_TRUE(interferences(st).empty());  // closed: the lid sits on the base, the pin turns freely
+    auto lidBox = [&] { return massProperties(doc->state().bodies.at("lid")->shape()); };
+    EXPECT_NEAR(lidBox().zmax, 52, 1e-6);
+    // open it a quarter turn: the lid stands up behind the hinge, still touching nothing
+    run(*doc, "param open = 90 deg");
+    expectAllOk(*doc);
+    EXPECT_GT(lidBox().zmax, 40 + 4 + 50);  // the lid's depth now points up
+    EXPECT_GT(lidBox().ymin, 30 - 1);       // and it is behind the box
+    EXPECT_TRUE(interferences(doc->state()).empty());
+    // past the stop: it stays at 110 degrees and says so
+    run(*doc, "param open = 200 deg");
+    const int hinge = doc->featureIndex("j1");
+    EXPECT_EQ(doc->status(hinge).level, StatusLevel::Warning);
+    EXPECT_TRUE(interferences(doc->state()).empty());
+    // a bigger box follows its parameters
+    run(*doc, "param open = 0 deg");
+    run(*doc, "param w = 120 mm");
+    expectAllOk(*doc);
+    EXPECT_NEAR(massProperties(doc->state().bodies.at("pin")->shape()).xmax -
+                    massProperties(doc->state().bodies.at("pin")->shape()).xmin,
+                120, 1e-6);
+    EXPECT_TRUE(interferences(doc->state()).empty());
+}

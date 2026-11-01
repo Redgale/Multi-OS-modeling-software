@@ -3,5 +3,6 @@
     <file alias="phone_stand.jigs">../samples/phone_stand.jigs</file>
     <file alias="knob.jigs">../samples/knob.jigs</file>
     <file alias="pen_cup.jigs">../samples/pen_cup.jigs</file>
+    <file alias="hinged_box.jigs">../samples/hinged_box.jigs</file>
 </qresource>
 </RCC>

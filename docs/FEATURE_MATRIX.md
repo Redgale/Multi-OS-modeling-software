@@ -189,7 +189,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Project | Release | Tools needed | Now |
 |---|---|---|---|
 | 1. Phone stand | v0.1 (A1, A4, A7) | sketch, rectangle, polyline, slot, extrude join/cut/symmetric, sketch on face, fillet, export | **Builds headlessly** (`samples/phone_stand.jigs`); golden test passes; edit-early regression passes |
-| 2. Hinged box | v0.2 | components, shell, project/offset, patterns, revolute joint, interference | — |
+| 2. Hinged box | v0.2 | components, shell, project/offset, patterns, revolute joint, interference | **Done**: `samples/hinged_box.jigs` (File ▸ Open a sample), `Golden.HingedBoxOpensWithoutCollisions` |
 | 3. Knob | v0.1 (A2) | revolve, arc, trim, axis, circular pattern, cut, fillet, text | **builds completely** (`samples/knob.jigs`: revolve, D-bore from an arc, 12 scallops, top round, engraved "VOL"; golden and parameter tests) |
 | 4. Pen cup | v0.1 (A3) | parameters, circle, extrude, shell, fillets, text + cut | **builds completely** (`samples/pen_cup.jigs`: maker's mark cut into the underside, sized from `dia`; golden test, parameter changes). Text wrapped around the wall needs Emboss (v0.2) |
 
