@@ -142,7 +142,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Interference | 21 | v0.2 | — | Needs parts |
 | Curvature comb, zebra, draft, curvature map, isocurve, accessibility, min radius | 21 | v0.3+ | — | Surface-quality tools |
 | Component colours | 21 | v0.2 | — | |
-| Insert SVG, DXF | 22 | v0.1 M5 | **app** + scripts: DXF (lines, arcs, circles, polylines with bulges; unit detection); SVG (filled paths and shapes, transforms, viewBox; as scalable artwork) | |
+| Insert SVG, DXF | 22 | v0.1 M5 | **app** + scripts: DXF (lines, arcs, circles, polylines with bulges, splines, ellipses, text, blocks; unit detection); SVG (filled paths and shapes, transforms, viewBox; as scalable artwork) | |
 | Insert STEP | 22 | v0.1 M6 | **app** + scripts (`import step`): an Import step with one body per solid, kept inside the design; faces named `<step>/face:<n>` for later steps | |
 | Insert mesh (STL/OBJ/3MF) | 22, 27 | v0.2 | — | Brief v0.2 |
 | Attached canvas (image tracing) | 22 | v0.2 | — | Hobby-valuable; small |

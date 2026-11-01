@@ -1457,17 +1457,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
-        <source>This DXF has no lines, circles, arcs or polylines to bring in.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+1"/>
-        <source>Text, hatches, splines and blocks are not imported yet: explode them to lines first.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+1"/>
+        <location line="+3"/>
         <source>This file could not be opened.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2732,7 +2722,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-98"/>
+        <location line="-168"/>
+        <source>This DXF has no lines, circles, arcs, curves, text or blocks to bring in.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Hatches and dimensions are not imported: explode them to lines first.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+69"/>
         <source>The face this extrude goes up to no longer exists.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4318,14 +4318,14 @@
     <message>
         <location line="+9"/>
         <location line="+654"/>
-        <location line="+735"/>
+        <location line="+737"/>
         <location line="+834"/>
         <location line="+27"/>
         <source>Sketch</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2248"/>
+        <location line="-2250"/>
         <source>Extrude</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4471,12 +4471,12 @@
     </message>
     <message>
         <location line="+4"/>
-        <location line="+835"/>
+        <location line="+837"/>
         <source>&lt;p&gt;Nothing selected.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-824"/>
+        <location line="-826"/>
         <source>&lt;h3&gt;Body&lt;/h3&gt;&lt;p&gt;&lt;b&gt;Name:&lt;/b&gt; %1&lt;br&gt;&lt;b&gt;Volume:&lt;/b&gt; %2&lt;br&gt;&lt;b&gt;Size:&lt;/b&gt; %3 × %4 × %5&lt;br&gt;&lt;b&gt;Faces:&lt;/b&gt; %6&lt;/p&gt;&lt;p&gt;Right-click it in the Browser to hide, isolate or rename it.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4562,12 +4562,12 @@
     </message>
     <message>
         <location line="+2"/>
-        <location line="+1508"/>
+        <location line="+1510"/>
         <source>Mouse and trackpad</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1506"/>
+        <location line="-1508"/>
         <source>Default (middle-drag pans, Shift+middle orbits)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4588,30 +4588,30 @@
     </message>
     <message>
         <location line="+11"/>
-        <location line="+1481"/>
+        <location line="+1483"/>
         <source>Theme</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1479"/>
-        <location line="+1434"/>
+        <location line="-1481"/>
+        <location line="+1436"/>
         <source>Light</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1434"/>
-        <location line="+1433"/>
+        <location line="-1436"/>
+        <location line="+1435"/>
         <source>Dark</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1432"/>
-        <location line="+1434"/>
+        <location line="-1434"/>
+        <location line="+1436"/>
         <source>High contrast</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1426"/>
+        <location line="-1428"/>
         <source>&amp;Help</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4728,12 +4728,12 @@
     </message>
     <message>
         <location line="+2"/>
-        <location line="+2030"/>
+        <location line="+2032"/>
         <source>Rename…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2027"/>
+        <location line="-2029"/>
         <source>Delete body</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4749,13 +4749,13 @@
     </message>
     <message>
         <location line="+5"/>
-        <location line="+1488"/>
+        <location line="+1490"/>
         <location line="+58"/>
         <source>Properties</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1540"/>
+        <location line="-1542"/>
         <source>Properties and help</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4841,12 +4841,12 @@
     </message>
     <message>
         <location line="+18"/>
-        <location line="+1916"/>
+        <location line="+1918"/>
         <source>Move rollback marker</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1745"/>
+        <location line="-1747"/>
         <source>Start here: every part begins as a flat sketch.
 Click Sketch on the toolbar, then click a plane.
 Or open the phone stand sample (File ▸ Open a sample).</source>
@@ -4923,7 +4923,7 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+10"/>
+        <location line="+12"/>
         <source>Tick to show the sketch in the view. A sketch a later step uses hides itself.</source>
         <translation type="unfinished"></translation>
     </message>

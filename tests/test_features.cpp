@@ -647,12 +647,14 @@ TEST(DxfImport, InchDrawingWithPolylinesBulgesArcsAndCircles)
     ASSERT_TRUE(d.ok()) << d.error().message;
     EXPECT_TRUE(d->unitsKnown);
     EXPECT_NEAR(d->unitScale, 25.4, 1e-12);
-    EXPECT_EQ(d->skipped.at("TEXT"), 1);
+    EXPECT_EQ(d->texts.size(), 1u);  // its label comes in as sketch text now
     auto doc = build("sketch id=s1 plane=XY\nimport dxf \"" + path + "\" sketch=s1\n");
     const auto& regions = doc->state().sketches.at("s1")->profiles.regions;
     std::vector<double> a;
     for (auto& r : regions) {
-        a.push_back(r.area / (25.4 * 25.4));  // in square inches
+        if (r.key.rfind("T", 0) != 0) {  // not the letters
+            a.push_back(r.area / (25.4 * 25.4));  // in square inches
+        }
     }
     std::sort(a.begin(), a.end());
     ASSERT_EQ(a.size(), 4u);  // circle, D, stadium, plate around the holes
@@ -665,11 +667,78 @@ TEST(DxfImport, InchDrawingWithPolylinesBulgesArcsAndCircles)
     auto mm = build("sketch id=s1 plane=XY\nimport dxf \"" + path + "\" sketch=s1 units=mm\n");
     double total = 0;
     for (auto& r : mm->state().sketches.at("s1")->profiles.regions) {
-        total += r.area;
+        if (r.key.rfind("T", 0) != 0) {
+            total += r.area;
+        }
     }
     EXPECT_NEAR(total, 8 + stadium, 1e-6);  // the same numbers, read as millimetres
     EXPECT_FALSE(parseDxf("this is not a dxf").ok());
     EXPECT_FALSE(parseDxf("0\nSECTION\n2\nENTITIES\n0\nENDSEC\n0\nEOF\n").ok());
+}
+
+TEST(DxfImport, BlocksSplinesEllipsesAndText)
+{
+    // a block (a 10 x 10 square with its corner at the block's base) placed twice: once at
+    // (100, 0); once at (0, 50) turned 90 degrees and mirrored; a spline through fit points,
+    // a whole ellipse and an MTEXT with a line break
+    const std::string dxf =
+        "0\nSECTION\n2\nHEADER\n9\n$INSUNITS\n70\n4\n0\nENDSEC\n"
+        "0\nSECTION\n2\nBLOCKS\n0\nBLOCK\n2\nSQ\n10\n0\n20\n0\n"
+        "0\nLWPOLYLINE\n90\n4\n70\n1\n10\n0\n20\n0\n10\n10\n20\n0\n10\n10\n20\n10\n10\n0\n20\n10\n"
+        "0\nENDBLK\n0\nENDSEC\n"
+        "0\nSECTION\n2\nENTITIES\n"
+        "0\nINSERT\n2\nSQ\n10\n100\n20\n0\n"
+        "0\nINSERT\n2\nSQ\n10\n0\n20\n50\n41\n-1\n42\n1\n50\n90\n"
+        "0\nSPLINE\n70\n0\n71\n3\n11\n0\n21\n-30\n11\n10\n21\n-20\n11\n20\n21\n-30\n"
+        "0\nELLIPSE\n10\n50\n20\n50\n11\n8\n21\n0\n40\n0.5\n41\n0\n42\n6.283185307179586\n"
+        "0\nMTEXT\n10\n0\n20\n100\n40\n5\n1\n{\\fArial;HI}\\PTHERE\n"
+        "0\nENDSEC\n0\nEOF\n";
+    auto d = parseDxf(dxf);
+    ASSERT_TRUE(d.ok()) << d.error().message;
+    EXPECT_EQ(d->lines.size(), 8u);  // two squares
+    // the plain copy at x 100..110; the turned, mirrored one: (x, y) -> mirror -> turn 90 -> +(0, 50)
+    double minX = 1e9, maxX = -1e9;
+    for (auto& l : d->lines) {
+        if (l.x1 > 50) {
+            minX = std::min({minX, l.x1, l.x2});
+            maxX = std::max({maxX, l.x1, l.x2});
+        }
+    }
+    EXPECT_NEAR(minX, 100, 1e-9);
+    EXPECT_NEAR(maxX, 110, 1e-9);
+    bool turned = false;  // the point (10, 0) of the block: mirrored (-10, 0), turned (0, -10), moved (0, 40)
+    for (auto& l : d->lines) {
+        turned = turned || (std::abs(l.x1) < 1e-9 && std::abs(l.y1 - 40) < 1e-9) || (std::abs(l.x2) < 1e-9 && std::abs(l.y2 - 40) < 1e-9);
+    }
+    EXPECT_TRUE(turned);
+    ASSERT_EQ(d->splines.size(), 1u);
+    EXPECT_EQ(d->splines[0].points.size(), 3u);
+    ASSERT_EQ(d->ellipses.size(), 1u);
+    ASSERT_EQ(d->texts.size(), 1u);
+    EXPECT_EQ(d->texts[0].text, "HI\\nTHERE");  // formatting codes out, the break kept
+    // into a sketch: the squares and the ellipse are closed areas (the ellipse: pi * 8 * 4)
+    Sketch s;
+    EXPECT_GT(addDxfToSketch(s, d.value(), 1.0), 0);
+    auto prof = buildProfiles(s, originPlaneFrame(OriginPlane::XY, 0));
+    ASSERT_TRUE(prof.ok());
+    int squares = 0;
+    bool ellipse = false;
+    for (auto& r : prof->regions) {
+        squares += std::abs(r.area - 100) < 1e-6;
+        ellipse = ellipse || std::abs(r.area - pi * 32) < 1e-6;
+    }
+    EXPECT_EQ(squares, 2);
+    EXPECT_TRUE(ellipse);
+    // a control-point spline (no fit points) is followed from its knots
+    auto cp = parseDxf("0\nSECTION\n2\nENTITIES\n0\nSPLINE\n70\n8\n71\n2\n40\n0\n40\n0\n40\n0\n40\n1\n40\n1\n40\n1\n"
+                       "10\n0\n20\n0\n10\n5\n20\n10\n10\n10\n20\n0\n0\nENDSEC\n0\nEOF\n");
+    ASSERT_TRUE(cp.ok()) << cp.error().message;
+    ASSERT_EQ(cp->splines.size(), 1u);
+    double peak = 0;
+    for (auto [x, y] : cp->splines[0].points) {
+        peak = std::max(peak, y);
+    }
+    EXPECT_NEAR(peak, 5, 1e-6);  // a quadratic Bezier from (0,0) over (5,10) to (10,0) peaks at 5
 }
 
 TEST(DxfImport, DamagedFilesNeverCrash)

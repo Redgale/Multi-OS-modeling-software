@@ -1456,17 +1456,7 @@
         <translation>[Thîs DXF fîlé îs émptý.~~~~~~]</translation>
     </message>
     <message>
-        <location line="+1" />
-        <source>This DXF has no lines, circles, arcs or polylines to bring in.</source>
-        <translation>[Thîs DXF hás ñö lîñés, çîrçlés, árçs ör pölýlîñés tö brîñg îñ.~~~~~~~~~~~~~~~~]</translation>
-    </message>
-    <message>
-        <location line="+1" />
-        <source>Text, hatches, splines and blocks are not imported yet: explode them to lines first.</source>
-        <translation>[Téxt, hátçhés, splîñés áñd blöçks áré ñöt împörtéd ýét: éxplödé thém tö lîñés fîrst.~~~~~~~~~~~~~~~~~~~~~~]</translation>
-    </message>
-    <message>
-        <location line="+1" />
+        <location line="+3" />
         <source>This file could not be opened.</source>
         <translation>[Thîs fîlé çöüld ñöt bé öpéñéd.~~~~~~~~]</translation>
     </message>
@@ -2731,7 +2721,17 @@
         <translation>[Théré îs ñöthîñg tö éxpört ýét.~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="-98" />
+        <location line="-168" />
+        <source>This DXF has no lines, circles, arcs, curves, text or blocks to bring in.</source>
+        <translation>[Thîs DXF hás ñö lîñés, çîrçlés, árçs, çürvés, téxt ör blöçks tö brîñg îñ.~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Hatches and dimensions are not imported: explode them to lines first.</source>
+        <translation>[Hátçhés áñd dîméñsîöñs áré ñöt împörtéd: éxplödé thém tö lîñés fîrst.~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+69" />
         <source>The face this extrude goes up to no longer exists.</source>
         <translation>[Thé fáçé thîs éxtrüdé göés üp tö ñö löñgér éxîsts.~~~~~~~~~~~~~]</translation>
     </message>
@@ -4315,14 +4315,14 @@
     <message>
         <location line="+9" />
         <location line="+654" />
-        <location line="+735" />
+        <location line="+737" />
         <location line="+834" />
         <location line="+27" />
         <source>Sketch</source>
         <translation>[Skétçh~~]</translation>
     </message>
     <message>
-        <location line="-2248" />
+        <location line="-2250" />
         <source>Extrude</source>
         <translation>[Éxtrüdé~~]</translation>
     </message>
@@ -4468,12 +4468,12 @@
     </message>
     <message>
         <location line="+4" />
-        <location line="+835" />
+        <location line="+837" />
         <source>&lt;p&gt;Nothing selected.&lt;/p&gt;</source>
         <translation>[&lt;p&gt;Ñöthîñg séléçtéd.&lt;/p&gt;~~~~~]</translation>
     </message>
     <message>
-        <location line="-824" />
+        <location line="-826" />
         <source>&lt;h3&gt;Body&lt;/h3&gt;&lt;p&gt;&lt;b&gt;Name:&lt;/b&gt; %1&lt;br&gt;&lt;b&gt;Volume:&lt;/b&gt; %2&lt;br&gt;&lt;b&gt;Size:&lt;/b&gt; %3 × %4 × %5&lt;br&gt;&lt;b&gt;Faces:&lt;/b&gt; %6&lt;/p&gt;&lt;p&gt;Right-click it in the Browser to hide, isolate or rename it.&lt;/p&gt;</source>
         <translation>[&lt;h3&gt;Bödý&lt;/h3&gt;&lt;p&gt;&lt;b&gt;Ñámé:&lt;/b&gt; %1&lt;br&gt;&lt;b&gt;Völümé:&lt;/b&gt; %2&lt;br&gt;&lt;b&gt;Sîzé:&lt;/b&gt; %3 × %4 × %5&lt;br&gt;&lt;b&gt;Fáçés:&lt;/b&gt; %6&lt;/p&gt;&lt;p&gt;Rîght-çlîçk ît îñ thé Bröwsér tö hîdé, îsöláté ör réñámé ît.&lt;/p&gt;~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -4559,12 +4559,12 @@
     </message>
     <message>
         <location line="+2" />
-        <location line="+1508" />
+        <location line="+1510" />
         <source>Mouse and trackpad</source>
         <translation>[Möüsé áñd tráçkpád~~~~~]</translation>
     </message>
     <message>
-        <location line="-1506" />
+        <location line="-1508" />
         <source>Default (middle-drag pans, Shift+middle orbits)</source>
         <translation>[Défáült (mîddlé-drág páñs, Shîft+mîddlé örbîts)~~~~~~~~~~~~]</translation>
     </message>
@@ -4585,30 +4585,30 @@
     </message>
     <message>
         <location line="+11" />
-        <location line="+1481" />
+        <location line="+1483" />
         <source>Theme</source>
         <translation>[Thémé~]</translation>
     </message>
     <message>
-        <location line="-1479" />
-        <location line="+1434" />
+        <location line="-1481" />
+        <location line="+1436" />
         <source>Light</source>
         <translation>[Lîght~]</translation>
     </message>
     <message>
-        <location line="-1434" />
-        <location line="+1433" />
+        <location line="-1436" />
+        <location line="+1435" />
         <source>Dark</source>
         <translation>[Dárk~]</translation>
     </message>
     <message>
-        <location line="-1432" />
-        <location line="+1434" />
+        <location line="-1434" />
+        <location line="+1436" />
         <source>High contrast</source>
         <translation>[Hîgh çöñtrást~~~~]</translation>
     </message>
     <message>
-        <location line="-1426" />
+        <location line="-1428" />
         <source>&amp;Help</source>
         <translation>[&amp;Hélp~]</translation>
     </message>
@@ -4725,12 +4725,12 @@
     </message>
     <message>
         <location line="+2" />
-        <location line="+2030" />
+        <location line="+2032" />
         <source>Rename…</source>
         <translation>[Réñámé…~~]</translation>
     </message>
     <message>
-        <location line="-2027" />
+        <location line="-2029" />
         <source>Delete body</source>
         <translation>[Délété bödý~~~]</translation>
     </message>
@@ -4746,13 +4746,13 @@
     </message>
     <message>
         <location line="+5" />
-        <location line="+1488" />
+        <location line="+1490" />
         <location line="+58" />
         <source>Properties</source>
         <translation>[Pröpértîés~~~]</translation>
     </message>
     <message>
-        <location line="-1540" />
+        <location line="-1542" />
         <source>Properties and help</source>
         <translation>[Pröpértîés áñd hélp~~~~~]</translation>
     </message>
@@ -4838,12 +4838,12 @@
     </message>
     <message>
         <location line="+18" />
-        <location line="+1916" />
+        <location line="+1918" />
         <source>Move rollback marker</source>
         <translation>[Mövé röllbáçk márkér~~~~~~]</translation>
     </message>
     <message>
-        <location line="-1745" />
+        <location line="-1747" />
         <source>Start here: every part begins as a flat sketch.
 Click Sketch on the toolbar, then click a plane.
 Or open the phone stand sample (File ▸ Open a sample).</source>
@@ -4922,7 +4922,7 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
         <translation>[%1 fréé~]</translation>
     </message>
     <message>
-        <location line="+10" />
+        <location line="+12" />
         <source>Tick to show the sketch in the view. A sketch a later step uses hides itself.</source>
         <translation>[Tîçk tö shöw thé skétçh îñ thé vîéw. Á skétçh á látér stép üsés hîdés îtsélf.~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>

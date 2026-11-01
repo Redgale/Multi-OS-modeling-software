@@ -218,9 +218,26 @@ struct DxfDrawing
     {
         double cx, cy, r, startDeg, endDeg;  // counter-clockwise, as DXF stores them
     };
+    struct Spline
+    {
+        std::vector<std::pair<double, double>> points;  // points the curve passes through
+        bool closed = false;
+    };
+    struct Ellipse
+    {
+        double cx, cy, ax, ay, ratio;  // centre, end of the major axis (relative), minor / major
+    };
+    struct Text
+    {
+        double x, y, height, angleDeg;  // the middle of the text
+        std::string text;
+    };
     std::vector<Line> lines;
     std::vector<Circle> circles;
     std::vector<Arc> arcs;
+    std::vector<Spline> splines;
+    std::vector<Ellipse> ellipses;
+    std::vector<Text> texts;
     double unitScale = 1;     // millimetres per drawing unit
     bool unitsKnown = false;  // false when the file does not say ($INSUNITS unset or 0)
     std::map<std::string, int> skipped;  // entity types not imported, with counts
