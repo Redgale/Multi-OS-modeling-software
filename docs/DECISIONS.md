@@ -364,7 +364,11 @@ letters that join (Arabic), right-to-left reading, ligatures and the font's own 
 (GPOS). HarfBuzz is MIT ("Old MIT"), dynamically linked, and optional at build time; without
 it the old one-by-one placement is used. A line is one run with the direction HarfBuzz
 guesses from its first letters: mixed right-to-left and left-to-right text in one line
-(which needs the Unicode bidirectional algorithm, e.g. FriBidi) is not reordered yet.
+(which needs the Unicode bidirectional algorithm) was not reordered at first; since the same day a
+simplified version is built in (no new dependency): the line's direction from its first strong letter,
+letters by their script's direction, digits left to right, neutrals joining agreeing neighbours or else
+the line's direction, runs reversed in a right-to-left line. Embedding controls and bracket mirroring
+are not handled; FriBidi (LGPL) is the fallback if that matters.
 Evidence: `Text.JoinedScriptsAreShaped` (Arabic "salaam" in DejaVu Sans: three glyphs, with
 lam and alef as one ligature, the first letter rightmost in its joining form); the
 existing `Text.*` tests give the same results with shaping.

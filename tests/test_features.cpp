@@ -1726,6 +1726,21 @@ TEST(Text, JoinedScriptsAreShaped)
     EXPECT_NE(word.glyphs.back(), seen);  // the first letter, rightmost, in its joining form
     // the last letter is leftmost (right to left), on its own as Arabic writes it after alef
     EXPECT_EQ(word.glyphs.front(), meem);
+    // mixed: an Arabic word inside an English line keeps its own order, the English around it
+    // reads left to right; an Arabic line with a number puts the number (left to right) on the left
+    auto concat = [](std::initializer_list<std::vector<unsigned>> parts) {
+        std::vector<unsigned> out;
+        for (auto& p : parts) {
+            out.insert(out.end(), p.begin(), p.end());
+        }
+        return out;
+    };
+    const auto mixed = shape("abc \u0633\u0644\u0627\u0645 def");
+    const auto abc = shape("abc ").glyphs, def = shape(" def").glyphs;
+    EXPECT_EQ(mixed.glyphs, concat({abc, word.glyphs, def}));
+    const auto withNumber = shape("\u0633\u0644\u0627\u0645 123");
+    const auto num = shape("123").glyphs, space = shape(" ").glyphs;
+    EXPECT_EQ(withNumber.glyphs, concat({num, space, word.glyphs}));
 }
 
 TEST(Text, SeveralLinesStackAndCentre)

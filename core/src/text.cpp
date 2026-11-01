@@ -520,18 +520,74 @@ Result<TextOutline> textFaces(const SketchText& t, double x, double y, const gp_
     for (const std::string& lt : lineTexts) {
         std::vector<Placed> row;
         if (canShape) {
-            hb_buffer_t* buf = hb_buffer_create();
-            hb_buffer_add_utf8(buf, lt.c_str(), int(lt.size()), 0, int(lt.size()));
-            hb_buffer_guess_segment_properties(buf);  // script, language, direction from the text
-            hb_shape(hfont, buf, nullptr, 0);
-            unsigned n = 0;
-            const hb_glyph_info_t* info = hb_buffer_get_glyph_infos(buf, &n);
-            const hb_glyph_position_t* pos = hb_buffer_get_glyph_positions(buf, &n);
-            for (unsigned i = 0; i < n; ++i) {
-                row.push_back({FT_UInt(info[i].codepoint), double(pos[i].x_advance), double(pos[i].x_offset),
-                               double(pos[i].y_offset)});
+            // A simplified bidirectional layout: the line reads the way its first strong letter
+            // does; letters take their script's direction, digits read left to right, and
+            // spaces and punctuation join their neighbours when both agree (else the line's
+            // way). Each run is shaped on its own (with the whole line as context) and a right-
+            // to-left line places its runs in reverse order.
+            const std::vector<char32_t> cps = utf8(lt);
+            std::vector<uint32_t> cp32(cps.begin(), cps.end());
+            hb_unicode_funcs_t* uf = hb_unicode_funcs_get_default();
+            std::vector<int> dir(cps.size(), 0);  // 1 left to right, -1 right to left, 0 neutral
+            int para = 0;
+            for (size_t i = 0; i < cps.size(); ++i) {
+                const hb_codepoint_t c = cps[i];
+                if (hb_unicode_general_category(uf, c) == HB_UNICODE_GENERAL_CATEGORY_DECIMAL_NUMBER) {
+                    dir[i] = 1;
+                    continue;
+                }
+                const hb_script_t sc = hb_unicode_script(uf, c);
+                if (sc == HB_SCRIPT_COMMON || sc == HB_SCRIPT_INHERITED || sc == HB_SCRIPT_UNKNOWN) {
+                    continue;  // spaces, punctuation, marks: neutral (HarfBuzz calls them left to right)
+                }
+                const hb_direction_t d = hb_script_get_horizontal_direction(sc);
+                dir[i] = d == HB_DIRECTION_RTL ? -1 : d == HB_DIRECTION_LTR ? 1 : 0;
+                if (!para && dir[i]) {
+                    para = dir[i];
+                }
             }
-            hb_buffer_destroy(buf);
+            para = para ? para : 1;
+            for (size_t i = 0; i < cps.size(); ++i) {
+                if (dir[i]) {
+                    continue;
+                }
+                size_t j = i;
+                while (j < cps.size() && !dir[j]) {
+                    ++j;
+                }
+                const int before = i > 0 ? dir[i - 1] : para, after = j < cps.size() ? dir[j] : para;
+                for (size_t k = i; k < j; ++k) {
+                    dir[k] = before == after ? before : para;
+                }
+                i = j - 1;
+            }
+            std::vector<std::pair<size_t, size_t>> runs;  // [from, to) with one direction
+            for (size_t i = 0; i < cps.size();) {
+                size_t j = i;
+                while (j < cps.size() && dir[j] == dir[i]) {
+                    ++j;
+                }
+                runs.emplace_back(i, j);
+                i = j;
+            }
+            if (para < 0) {
+                std::reverse(runs.begin(), runs.end());
+            }
+            for (auto [from, to] : runs) {
+                hb_buffer_t* buf = hb_buffer_create();
+                hb_buffer_add_codepoints(buf, cp32.data(), int(cp32.size()), unsigned(from), int(to - from));
+                hb_buffer_set_direction(buf, dir[from] < 0 ? HB_DIRECTION_RTL : HB_DIRECTION_LTR);
+                hb_buffer_guess_segment_properties(buf);  // script and language from the text
+                hb_shape(hfont, buf, nullptr, 0);
+                unsigned n = 0;
+                const hb_glyph_info_t* info = hb_buffer_get_glyph_infos(buf, &n);
+                const hb_glyph_position_t* pos = hb_buffer_get_glyph_positions(buf, &n);
+                for (unsigned i = 0; i < n; ++i) {
+                    row.push_back({FT_UInt(info[i].codepoint), double(pos[i].x_advance), double(pos[i].x_offset),
+                                   double(pos[i].y_offset)});
+                }
+                hb_buffer_destroy(buf);
+            }
         }
         lines.push_back(std::move(row));
     }

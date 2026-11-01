@@ -60,7 +60,8 @@ timeline edit/rename/suppress/roll back/delete with dependents warning, Paramete
 - B-019 (sketch window selection, selection filter, Select Other, 3D box selection of edges, faces and bodies done).
 
 - B-020 Text (installed fonts by family and style, several lines, along any sketch curve, HarfBuzz shaping
-  done): reordering of lines that mix right-to-left and left-to-right writing (bidi, e.g. FriBidi).
+  done; a simplified bidirectional layout done): the full Unicode bidirectional algorithm (embeddings,
+  isolates, mirrored brackets; e.g. FriBidi) if users need it.
 
 ## Later v0.1 milestones
 
