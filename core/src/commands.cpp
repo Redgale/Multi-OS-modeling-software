@@ -722,6 +722,9 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
             s.addConstraint(ConstraintType::Diameter, c, 0, 0, de);
             s.addConstraint(ConstraintType::DistanceX, cp, 0, 0, pe->first);
             s.addConstraint(ConstraintType::DistanceY, cp, 0, 0, pe->second);
+            if (a.get("construction", "no") == "yes") {
+                s.setConstruction(c, true);  // a guide (a path for text or copies), not an outline
+            }
             return true;
         });
     }
@@ -859,7 +862,7 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
         return res;
     }
     if (a.verb == "text") {
-        // text center=x,y height=<len> text="ABC" [font=<file or name>] [angle=<angle>]
+        // text center=x,y height=<len> text="ABC" [font=<file or name>] [angle=<angle>] [along=x,y]
         const std::string sid = a.get("sketch", last_);
         return editSketch("Text", sid, [&](Sketch& s, const Document&) -> Result<bool> {
             auto pe = parsePairExpr(a.get("center", "0,0"));
@@ -880,6 +883,16 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
             const int anchor = s.texts().at(id).anchor;
             s.addConstraint(ConstraintType::DistanceX, anchor, 0, 0, pe->first);
             s.addConstraint(ConstraintType::DistanceY, anchor, 0, 0, pe->second);
+            if (a.has("along")) {  // bend along the circle or arc nearest this point
+                auto ae = parsePairExpr(a.get("along"));
+                auto qx = ae ? len(ae->first) : Result<double>(0.0), qy = ae ? len(ae->second) : Result<double>(0.0);
+                auto near = ae && qx && qy ? s.curveNear(qx.value(), qy.value(), true) : std::nullopt;
+                const SketchEntity* c = near ? s.entity(near->first) : nullptr;
+                if (!c || (c->type != EntityType::Circle && c->type != EntityType::Arc)) {
+                    return makeError("script.args", "along= needs a point on a circle or arc of the sketch.");
+                }
+                s.text(id)->path = near->first;
+            }
             return true;
         });
     }

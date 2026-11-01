@@ -7128,12 +7128,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
         <translation>[Týpé thé wörds (\ñ stárts á ñéw lîñé), Táb, thé sîzé, théñ préss Éñtér.~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+1" />
-        <source>Click where the middle of the text goes.</source>
-        <translation>[Çlîçk whéré thé mîddlé öf thé téxt göés.~~~~~~~~~~]</translation>
-    </message>
-    <message>
-        <location line="+2" />
+        <location line="+3" />
         <source>Click the piece of a curve to remove. It is cut where other curves cross it.</source>
         <translation>[Çlîçk thé pîéçé öf á çürvé tö rémövé. Ît îs çüt whéré öthér çürvés çröss ît.~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -7356,12 +7351,12 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
     </message>
     <message>
         <location line="+16" />
-        <location line="+870" />
+        <location line="+877" />
         <source>Minor radius</source>
         <translation>[Mîñör rádîüs~~~]</translation>
     </message>
     <message>
-        <location line="-849" />
+        <location line="-856" />
         <source>Ellipse</source>
         <translation>[Éllîpsé~~]</translation>
     </message>
@@ -7398,7 +7393,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
     <message>
         <location line="-273" />
         <location line="+284" />
-        <location line="+681" />
+        <location line="+688" />
         <location line="+101" />
         <location line="+27" />
         <location line="+3" />
@@ -7407,12 +7402,17 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
         <translation>[Léñgth~~]</translation>
     </message>
     <message>
-        <location line="-1585" />
+        <location line="-1592" />
         <source>Click the end, or type a length (Tab: angle) and press Enter. Drag from the last point for a tangent arc. Click the first point to close. Esc ends.</source>
         <translation>[Çlîçk thé éñd, ör týpé á léñgth (Táb: áñglé) áñd préss Éñtér. Drág fröm thé lást pöîñt för á táñgéñt árç. Çlîçk thé fîrst pöîñt tö çlösé. Ésç éñds.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+83" />
+        <location line="+52" />
+        <source>Click where the middle of the text goes (on a circle or arc, it bends along it).</source>
+        <translation>[Çlîçk whéré thé mîddlé öf thé téxt göés (öñ á çîrçlé ör árç, ît béñds álöñg ît).~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+31" />
         <source>Click an edge of a body (or a face, for its whole outline) to bring it into the sketch. The copy is fixed in place and follows the body when it changes.</source>
         <translation>[Çlîçk áñ édgé öf á bödý (ör á fáçé, för îts whölé öütlîñé) tö brîñg ît îñtö thé skétçh. Thé çöpý îs fîxéd îñ pláçé áñd föllöws thé bödý whéñ ît çháñgés.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -7425,7 +7425,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
         <location line="+387" />
         <location line="+284" />
         <location line="+77" />
-        <location line="+714" />
+        <location line="+721" />
         <location line="+18" />
         <location line="+18" />
         <location line="+100" />
@@ -7433,7 +7433,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
         <translation>[Áñglé~]</translation>
     </message>
     <message>
-        <location line="-887" />
+        <location line="-894" />
         <source>Center rectangle</source>
         <translation>[Çéñtér réçtáñglé~~~~~]</translation>
     </message>
@@ -7469,13 +7469,13 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
     </message>
     <message>
         <location line="+16" />
-        <location line="+636" />
+        <location line="+643" />
         <location line="+130" />
         <source>Width</source>
         <translation>[Wîdth~]</translation>
     </message>
     <message>
-        <location line="-734" />
+        <location line="-741" />
         <source>Slot</source>
         <translation>[Slöt~]</translation>
     </message>
@@ -7485,7 +7485,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
         <translation>[Téxt sîzé müst bé lárgér tháñ zérö.~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+7" />
+        <location line="+14" />
         <location line="+572" />
         <location line="+160" />
         <source>Text</source>

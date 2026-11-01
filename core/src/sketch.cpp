@@ -1913,6 +1913,9 @@ nlohmann::json Sketch::toJson() const
             if (t.angle != 0) {
                 jt["angle"] = t.angle;
             }
+            if (t.path) {
+                jt["path"] = t.path;
+            }
             txt.push_back(jt);
         }
         j["texts"] = txt;
@@ -2025,6 +2028,7 @@ Result<Sketch> Sketch::fromJson(const nlohmann::json& j)
             t.heightValue = jt.value("height_value", 5.0);
             t.font = jt.value("font", std::string {});
             t.angle = jt.value("angle", 0.0);
+            t.path = jt.value("path", 0);
             if (!s.entities_.count(t.anchor)) {
                 return makeError("file.sketch", "A text in this file has lost its anchor point.");
             }

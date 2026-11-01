@@ -1895,3 +1895,35 @@ TEST(SketchCopy, LinkedGridAndRingFollowTheOriginal)
     expectAllOk(*ring);
     EXPECT_NEAR(total(*ring), 6 * pi * 16, 1e-6);
 }
+
+TEST(Text, BendsAlongACircle)
+{
+    // "OOOOO" round the top of a 40 mm construction circle: every letter's middle stays
+    // about the radius from the centre, and they spread round it instead of along a line
+    auto doc = build("sketch id=s1 plane=XY\ncircle sketch=s1 center=0,0 d=40 construction=yes\n"
+                     "text sketch=s1 center=0,20 height=5 text=\"OOOOO\" along=20,0\n");
+    const auto& regions = doc->state().sketches.at("s1")->profiles.regions;
+    ASSERT_GE(regions.size(), 5u);
+    double ymin = 1e300;
+    for (auto& r : regions) {
+        GProp_GProps g;
+        BRepGProp::SurfaceProperties(r.face, g);
+        const gp_Pnt c = g.CentreOfMass();
+        EXPECT_NEAR(std::hypot(c.X(), c.Y()), 20, 1.5);
+        ymin = std::min(ymin, c.Y());
+    }
+    EXPECT_LT(ymin, 19.5);  // the outer letters come down round the curve
+    // the same text straight: every letter at the same height
+    auto flat = build("sketch id=s1 plane=XY\ntext sketch=s1 center=0,20 height=5 text=\"OOOOO\"\n");
+    for (auto& r : flat->state().sketches.at("s1")->profiles.regions) {
+        GProp_GProps g;
+        BRepGProp::SurfaceProperties(r.face, g);
+        EXPECT_NEAR(g.CentreOfMass().Y(), 20, 0.5);
+    }
+    // and it is kept with the design
+    const auto path = (tempDir() / "bent-text.jig").string();
+    ASSERT_TRUE(saveDocument(*doc, path).ok());
+    auto back = loadDocument(path);
+    ASSERT_TRUE(back.ok());
+    EXPECT_NE((*back)->state().sketches.at("s1")->solved.texts().begin()->second.path, 0);
+}

@@ -68,6 +68,7 @@ ounces) is shown in inches. The owner's standing instruction is in `CLAUDE.md`.
 | Move by dragging (M4 part) | The Move panel draws three arrows from the chosen bodies' centre (X, Y, Z, each labelled with its letter and value, not only coloured); dragging a grip changes that field in 0.5 mm (or 1/32 in) steps and the preview follows; looking straight down an arrow leaves it alone (use the field) | UI test `moveByDragging` (the X grip dragged 25 mm on screen: the field reads about 25, Y stays 0, the body moves by exactly the field's value) |
 | Move bodies point to point (M4 part) | Move panel: From point and To point (the origin or construction points); the turned From point lands on To, plus any typed shift; kept when the step is edited | `Bodies.MovePointToPoint` (a block's top-face centre moved onto a point; with a quarter turn first, bounds by hand; a missing point explained); UI test `movePointToPoint` |
 | Revolve up to a face or plane (M4 part) | Revolve panel: Extent "Up to a face" with origin planes, construction planes or a clicked face: a flat face or plane the axis lies in, or a curved face in the way (the turn is cut off where it first meets it); the profile turns the positive way until it reaches it (the angle field is hidden). A plane the axis does not lie in is explained | `Revolve.UpToAPlaneOrFaceThroughTheAxis` (YZ: a quarter of the full volume; a construction plane at 30 deg; a block face through the axis: half; XY refused); `Revolve.UpToACurvedFace` (a ring section stops at an upright pin's wall: less than a quarter turn, no overlap with the pin, an end face; a pin covering only part of the ring refused); UI test `revolveUpToPlane` (quarter turn, kept when reopened) |
+| Text along a circle or arc (M1 part, B-020) | Click the Text tool's centre on a circle or arc (construction ones are the usual guide) and the lettering bends along it: its middle at the click, reading round the top, letters standing outward, centred on the curve; it follows the curve when that changes size. Script `text … along=x,y` (a point on the curve); `circle … construction=yes` makes a guide | `Text.BendsAlongACircle` (five letters round a 40 mm circle: every letter's middle 20 ± 1.5 from the centre and the outer ones lower; the same text straight stays level; saved and reopened); UI test `textAlongCircle` |
 | Linked sketch patterns (M1 part) | Grid copy and Ring copy (tools, `grid`, `ring`) are linked: after every solve the copies are rebuilt from where the original now is and from the spacing or angle expressions (so a parameter drives them), held in place by fixed points; a ring around a clicked point follows that point. `linked=no` (scripts) makes plain copies | `SketchCopy.LinkedGridAndRingFollowTheOriginal` (a 3 × 2 grid of circles grows with the original's diameter and spreads with a pitch parameter, the sketch's freedom unchanged; a ring of 6 grows with the original) |
 | Offsets follow their source (M1 part) | Offset (tool or `offset`) links the copy to its source curves and its distance expression: after every solve (a drag, a dimension or parameter change) the copy is rebuilt from where the source now is, held by fixed points so it adds no freedom. The link is saved with the sketch; if the source is deleted the copy stays as it is. `linked=no` (scripts) makes a plain copy | `SketchOffset.CopiesFollowTheirSource` (a frame 3 mm round a 40 mm rectangle follows w = 60 and a gap of 5 by area, the sketch's freedom does not change, survives save and reopen; an unlinked copy does not follow) |
 | Projected curves follow the model (M1 part) | Project (tool or `project`) keeps a link from each copied line, circle or arc to its edge's persistent name; every recompute re-reads the edge in the model before the sketch and moves the copy's fixed points (and a circle's radius) to match, so resizing the body moves the sketch with it. The links are saved with the sketch. An edge that is gone or changed kind leaves the copy where it was, with a warning; `linked=no` makes a plain copy | `SketchProject.CopiesFollowTheModel` (a projected outline 20 mm above a block follows a width change from 40 to 60 mm and a hole from 8 to 12 mm, stays fully fixed, survives save and reopen; an unlinked copy stays put) |
@@ -162,7 +163,7 @@ screenshot (B-003). No real GPU on Windows or Linux has been tried. Builds are u
 - M4 still missing: free dragging in any direction (arrows along X, Y, Z done)
   or point-to-point; tangent plane and plane through three points
   (v0.2 list).
-- Text: complex-script shaping, text along a path (B-020).
+- Text: complex-script shaping (B-020); text along lines and smooth curves (circles and arcs done).
 - Not built yet:
   DXF splines/blocks/text, SVG strokes and text.
 - libslvs comparison (B-001).
@@ -171,6 +172,7 @@ screenshot (B-003). No real GPU on Windows or Linux has been tried. Builds are u
 
 - Rendering on Windows and macOS: verified only on CI runners (software OpenGL on Windows); no real Windows GPU driver yet. B-003.
 - The crash-recovery prompt has not been exercised with a real forced kill.
+- The UI test suite failed once (2026-11-01) in a parallel local `ctest -j8` run and passed on the two runs after it and on its own; the failing test was not captured. Watch CI for it.
 - Code of Conduct contact: the owner should add a dedicated contact address.
 
 ## Decisions waiting for the owner
@@ -182,7 +184,7 @@ screenshot (B-003). No real GPU on Windows or Linux has been tried. Builds are u
 
 ## Next three tasks
 
-1. Leftovers: constraints on ellipses and splines (and trim/extend/break of them), text along a path.
+1. Leftovers: constraints on ellipses and splines (and trim/extend/break of them); text along lines and smooth curves.
 2. M7/M8 leftovers: the step kind inside messages ("the extrude") as translatable words; first real
    language once a reviewer is found.
 3. Review THIRD_PARTY_DLLS.txt before the first release (B-011); B-001 libslvs

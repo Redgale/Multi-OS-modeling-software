@@ -545,11 +545,20 @@ Result<TextOutline> textFaces(const SketchText& t, double x, double y, const gp_
     }
     const gp_XY centre(0, (ymin + ymax) / 2);
     const double ca = std::cos(t.angle), sa = std::sin(t.angle);
+    // along a circle: the baseline's middle at the anchor's angle, reading clockwise round the
+    // top, letters standing outward; the text's middle height sits on the curve
+    const bool bent = t.pathR > 1e-9;
+    const double theta0 = std::atan2(y - t.pathCy, x - t.pathCx);
     auto to3d = [&](const gp_XY& fontPt, double penX, double pY) {
         const double u = (fontPt.X() + penX - centre.X()) * scale;
         const double v = (fontPt.Y() + pY - centre.Y()) * scale;
-        const double lx = x + u * ca - v * sa;
-        const double ly = y + u * sa + v * ca;
+        double lx = x + u * ca - v * sa;
+        double ly = y + u * sa + v * ca;
+        if (bent) {
+            const double th = theta0 - u / t.pathR, rho = t.pathR + v;
+            lx = t.pathCx + rho * std::cos(th);
+            ly = t.pathCy + rho * std::sin(th);
+        }
         return gp_Pnt(frame.Location().XYZ() + frame.XDirection().XYZ() * lx + frame.YDirection().XYZ() * ly);
     };
     const gp_Pln plane(frame);

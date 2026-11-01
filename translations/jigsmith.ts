@@ -7136,12 +7136,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
-        <source>Click where the middle of the text goes.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+2"/>
+        <location line="+3"/>
         <source>Click the piece of a curve to remove. It is cut where other curves cross it.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7366,12 +7361,12 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
     </message>
     <message>
         <location line="+16"/>
-        <location line="+870"/>
+        <location line="+877"/>
         <source>Minor radius</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-849"/>
+        <location line="-856"/>
         <source>Ellipse</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7408,7 +7403,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
     <message>
         <location line="-273"/>
         <location line="+284"/>
-        <location line="+681"/>
+        <location line="+688"/>
         <location line="+101"/>
         <location line="+27"/>
         <location line="+3"/>
@@ -7417,12 +7412,17 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1585"/>
+        <location line="-1592"/>
         <source>Click the end, or type a length (Tab: angle) and press Enter. Drag from the last point for a tangent arc. Click the first point to close. Esc ends.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+83"/>
+        <location line="+52"/>
+        <source>Click where the middle of the text goes (on a circle or arc, it bends along it).</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+31"/>
         <source>Click an edge of a body (or a face, for its whole outline) to bring it into the sketch. The copy is fixed in place and follows the body when it changes.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7435,7 +7435,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
         <location line="+387"/>
         <location line="+284"/>
         <location line="+77"/>
-        <location line="+714"/>
+        <location line="+721"/>
         <location line="+18"/>
         <location line="+18"/>
         <location line="+100"/>
@@ -7443,7 +7443,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-887"/>
+        <location line="-894"/>
         <source>Center rectangle</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7479,13 +7479,13 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
     </message>
     <message>
         <location line="+16"/>
-        <location line="+636"/>
+        <location line="+643"/>
         <location line="+130"/>
         <source>Width</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-734"/>
+        <location line="-741"/>
         <source>Slot</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7495,7 +7495,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+7"/>
+        <location line="+14"/>
         <location line="+572"/>
         <location line="+160"/>
         <source>Text</source>

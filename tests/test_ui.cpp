@@ -366,6 +366,39 @@ private slots:
     }
 
     // Text: click, type the words and a size; double-click the anchor to change them.
+    // Text placed on a circle bends along it.
+    void textAlongCircle()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        {
+            jig::ScriptRunner r(w.document());
+            QVERIFY(r.runText("sketch id=s1 plane=XY\ncircle sketch=s1 center=0,0 d=40 construction=yes\n").ok());
+        }
+        w.editFeature(0);
+        QTRY_VERIFY(w.sketchEditor() != nullptr);
+        SketchEditor* sk = w.sketchEditor();
+        Viewport* view = w.viewport();
+        w.runCommand("sketch.text");
+        const QPoint at = sk->screenOf(0, 20);
+        QTest::mouseMove(view, at);
+        QTest::mouseClick(view, Qt::LeftButton, Qt::NoModifier, at);
+        sk->typeValues({"OOO", "5 mm"});
+        QVERIFY2(sk->message().isEmpty(), qPrintable(sk->message()));
+        QCOMPARE(int(sk->sketch().texts().size()), 1);
+        QVERIFY(sk->sketch().texts().begin()->second.path != 0);
+        // the outer letters come down round the circle
+        double ymin = 1e9;
+        for (auto& rg : w.document().state().sketches.at("s1")->profiles.regions) {
+            GProp_GProps g;
+            BRepGProp::SurfaceProperties(rg.face, g);
+            ymin = std::min(ymin, g.CentreOfMass().Y());
+        }
+        QVERIFY2(ymin < 19.8, qPrintable(QString::number(ymin)));
+    }
+
     void textToolPlaceAndEdit()
     {
         MainWindow w;
