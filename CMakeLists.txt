@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 cmake_minimum_required(VERSION 3.24)
-project(Jigsmith VERSION 0.0.1 LANGUAGES C CXX
+project(Jigsmith VERSION 0.1.0 LANGUAGES C CXX
         DESCRIPTION "Free, open-source parametric CAD for hobbyists")
 
 set(CMAKE_CXX_STANDARD 20)

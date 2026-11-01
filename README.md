@@ -16,11 +16,12 @@ telemetry, no paywall. Your designs are files on your computer.
 > works today and how it was verified. Tools that are not ready are shown disabled with
 > the milestone they arrive in.
 
-## Download a development build
+## Download
 
-Every green build of the development branch is published as the
+The latest release, **[Jigsmith 0.1.0](https://github.com/Redgale/Multi-OS-modeling-software/releases/tag/v0.1.0)**
+(what is in it: [CHANGELOG.md](CHANGELOG.md)), and newer development builds as the
 [**continuous** pre-release](https://github.com/Redgale/Multi-OS-modeling-software/releases/tag/continuous)
-(no GitHub account needed):
+(no GitHub account needed for either):
 
 | Platform | File |
 |---|---|

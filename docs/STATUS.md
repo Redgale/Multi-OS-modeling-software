@@ -218,6 +218,10 @@ been bug-tested by hand; no Apple developer account, so the Mac app stays unsign
 explains how to open it); no translations until someone can review them (the strings stay
 ready, with the pseudo-translation as the check).
 
+## Releases
+
+- **0.1.0** (2026-11-01, owner's go-ahead): tag `v0.1.0`; CI builds every platform from the tag and publishes the release with the CHANGELOG section as its notes. v0.1 is complete except B-001 (a solver comparison spike, blocked) and hand tests on real Windows and macOS machines.
+
 ## Next three tasks
 
 0. v0.2 has started (owner, 2026-11-01: "continue with v0.1 and v0.2"); v0.1 is done except B-001 (blocked). Loft and Sweep are in; next: Pipe (a round tube along curves, no profile sketch), Coil, then primitives.
