@@ -684,6 +684,30 @@ void Document::setHiddenBodies(std::set<std::string> ids)
     }
 }
 
+Result<bool> Document::setAppearance(const std::string& body, const Appearance& a)
+{
+    if (a.color.empty()) {
+        if (appearances_.erase(body)) {
+            ++revision_;
+        }
+        return true;
+    }
+    const bool hex = a.color.size() == 7 && a.color[0] == '#' &&
+                     a.color.find_first_not_of("0123456789abcdefABCDEF", 1) == std::string::npos;
+    if (!hex) {
+        return makeError("appearance.color", "A colour is written #rrggbb, like #3a7bd5.");
+    }
+    if (a.finish != "matte" && a.finish != "satin" && a.finish != "glossy" && a.finish != "metal") {
+        return makeError("appearance.finish", "A finish is matte, satin, glossy or metal.");
+    }
+    auto it = appearances_.find(body);
+    if (it == appearances_.end() || !(it->second == a)) {
+        appearances_[body] = a;
+        ++revision_;
+    }
+    return true;
+}
+
 void Document::setShownSketches(std::set<std::string> ids)
 {
     if (ids != shownSketches_) {
@@ -747,8 +771,15 @@ nlohmann::json Document::toJson() const
     j["features"] = feats;
     j["rollback"] = model_.rollback;
     j["counters"] = model_.counters;
-    if (!hidden_.empty() || !folded_.empty() || !views_.empty() || !shownSketches_.empty()) {
+    if (!hidden_.empty() || !folded_.empty() || !views_.empty() || !shownSketches_.empty() || !appearances_.empty()) {
         j["view"] = {{"hidden_bodies", hidden_}, {"folded_groups", folded_}};
+        if (!appearances_.empty()) {
+            nlohmann::json ap = nlohmann::json::object();
+            for (auto& [id, a] : appearances_) {
+                ap[id] = {{"color", a.color}, {"finish", a.finish}};
+            }
+            j["view"]["appearances"] = ap;
+        }
         if (!shownSketches_.empty()) {
             j["view"]["shown_sketches"] = shownSketches_;
         }
@@ -828,6 +859,14 @@ Result<std::unique_ptr<Document>> Document::fromJson(const nlohmann::json& input
             doc->hidden_ = j["view"].value("hidden_bodies", std::set<std::string> {});
             doc->folded_ = j["view"].value("folded_groups", std::set<std::string> {});
             doc->shownSketches_ = j["view"].value("shown_sketches", std::set<std::string> {});
+            if (j["view"].contains("appearances") && j["view"]["appearances"].is_object()) {
+                for (auto& [k, v] : j["view"]["appearances"].items()) {
+                    if (v.is_object()) {
+                        // through the checks, so a damaged file cannot store nonsense
+                        (void)doc->setAppearance(k, {v.value("color", std::string {}), v.value("finish", std::string("satin"))});
+                    }
+                }
+            }
             if (j["view"].contains("named_views") && j["view"]["named_views"].is_object()) {
                 for (auto& [k, v] : j["view"]["named_views"].items()) {
                     doc->views_[k] = v;

@@ -3270,6 +3270,47 @@ private slots:
         QVERIFY(w.showInterference().contains("overlap by"));
     }
 
+    // Appearance: a body turns red and glossy in the view, is saved with the design and its
+    // 3MF export carries the colour; a bad colour is refused.
+    void bodyAppearance()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        {
+            jig::ScriptRunner r(w.document());
+            QVERIFY(r.runText("box id=bx1 length=30mm width=30mm height=30mm\n").ok());
+        }
+        w.refreshAll();
+        QVERIFY(w.setBodyAppearance("bx1", "#d0453a", "glossy"));
+        QCOMPARE(w.viewport()->appearances().at("bx1").color, QColor("#d0453a"));
+        QVERIFY(!w.setBodyAppearance("bx1", "red", "glossy"));
+        QVERIFY(!w.setBodyAppearance("bx1", "#d0453a", "shiny"));
+        w.viewport()->homeView();
+        QTRY_VERIFY(w.viewport()->meshesReady());
+        QTest::qWait(200);
+        const QImage shot = w.grab().toImage();
+        shot.save(shotPath("appearance"));
+        const QPoint mid = w.viewport()->mapTo(&w, QPoint(w.viewport()->width() / 2, w.viewport()->height() / 2 + 20));
+        const QColor at = shot.pixelColor(mid);
+        QVERIFY2(at.red() > at.blue() + 50 && at.red() > at.green() + 30, qPrintable(at.name()));
+        // saved and loaded; 3MF carries it
+        auto back = jig::Document::fromJson(w.document().toJson());
+        QVERIFY(back.ok());
+        QCOMPARE(QString::fromStdString((*back)->appearances().at("bx1").finish), QString("glossy"));
+        const QString mf = QDir::temp().filePath("jig-ui-colour.3mf");
+        {
+            jig::ScriptRunner r(w.document());
+            QVERIFY(r.runText("export 3mf " + mf.toStdString() + "\n").ok());
+        }
+        QFile f(mf);
+        QVERIFY(f.open(QIODevice::ReadOnly) && f.size() > 100);
+        // back to the theme colour
+        QVERIFY(w.setBodyAppearance("bx1", "", "satin"));
+        QVERIFY(w.viewport()->appearances().empty());
+    }
+
     // Areas of a sketch are picked by clicking them in the 3D view: a square with a circle in it
     // can become a round post (the circle) or a block with a hole (the ring), not only a block.
     void clickAreasToExtrude()

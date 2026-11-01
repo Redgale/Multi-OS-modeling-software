@@ -58,6 +58,9 @@ uniform int uHoverId;
 uniform int uSelId;
 uniform int uSection;   // 1 while a section view is on
 uniform vec3 uInside;   // colour of surfaces seen from inside the material
+uniform float uSpec;    // highlight strength (the finish)
+uniform float uShine;   // highlight tightness
+uniform int uMetal;     // 1: metal, highlights take the body's colour
 out vec4 frag;
 void main() {
     vec3 n = normalize(vN);
@@ -65,13 +68,15 @@ void main() {
     vec3 L = normalize(vec3(0.35, 0.55, 1.0));
     vec3 V = normalize(-vPosV);
     float d = max(dot(n, L), 0.0);
-    float s = pow(max(dot(reflect(-L, n), V), 0.0), 40.0) * 0.18;
+    float s = pow(max(dot(reflect(-L, n), V), 0.0), uShine) * uSpec;
     vec3 base = vPick == uSelId ? uSel : (vPick == uHoverId ? uHover : uColor);
     if (uSection == 1 && !gl_FrontFacing) {  // looking into the cut: flat, unlit
         frag = vec4(uInside, 1.0);
         return;
     }
-    frag = vec4(base * (0.38 + 0.62 * d) + vec3(s), 1.0);
+    vec3 lit = uMetal == 1 ? base * (0.30 + 0.45 * d) + base * s * 1.6 + vec3(s * 0.25)
+                           : base * (0.38 + 0.62 * d) + vec3(s);
+    frag = vec4(lit, 1.0);
 })";
 
 const char* kPickFs = R"(#version 330 core
@@ -556,6 +561,18 @@ void Viewport::drawScene(bool pickPass)
         prog->setUniformValue("uInside", col(QColor(205, 92, 72)));  // brick red, also lighter than the model
     }
     for (auto& m : meshes_) {
+        if (!pickPass) {
+            // each body's own colour and finish, unless a preview tints the whole model
+            auto ap = appearance_.find(m->body);
+            const bool own = ap != appearance_.end() && !tint_;
+            prog->setUniformValue("uColor", col(own ? ap->second.color : (tint_ ? *tint_ : colors_.model)));
+            const QString finish = ap != appearance_.end() ? ap->second.finish : QString("satin");
+            const float spec = finish == "matte" ? 0.03f : finish == "glossy" ? 0.45f : finish == "metal" ? 0.55f : 0.18f;
+            const float shine = finish == "matte" ? 8.0f : finish == "glossy" ? 90.0f : finish == "metal" ? 60.0f : 40.0f;
+            prog->setUniformValue("uSpec", spec);
+            prog->setUniformValue("uShine", shine);
+            prog->setUniformValue("uMetal", finish == "metal" ? 1 : 0);
+        }
         m->vaoTri.bind();
         glDrawElements(GL_TRIANGLES, m->indexCount, GL_UNSIGNED_INT, nullptr);
         m->vaoTri.release();
@@ -1028,6 +1045,12 @@ void Viewport::paintGL()
     drawScene(false);
     glDisable(GL_DEPTH_TEST);
     overlay_->update();  // gizmo and hints are painted by the raster overlay widget
+}
+
+void Viewport::setAppearances(std::map<std::string, BodyLook> looks)
+{
+    appearance_ = std::move(looks);
+    update();
 }
 
 void Viewport::setCanvases(std::vector<CanvasPicture> pictures)

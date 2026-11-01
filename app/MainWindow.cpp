@@ -16,6 +16,8 @@
 #include <QCheckBox>
 #include <QPainter>
 #include <QInputDialog>
+#include <QGridLayout>
+#include <QColorDialog>
 #include <QScrollArea>
 #include <QScrollBar>
 #include <QMenu>
@@ -1327,6 +1329,11 @@ void MainWindow::refreshDatums()
         pictures.push_back(std::move(pic));
     }
     view_->setCanvases(std::move(pictures));
+    std::map<std::string, Viewport::BodyLook> looks;
+    for (auto& [id, a] : doc_->appearances()) {
+        looks[id] = {QColor(q(a.color)), q(a.finish)};
+    }
+    view_->setAppearances(std::move(looks));
 }
 
 void MainWindow::refreshAll()
@@ -1869,6 +1876,9 @@ void MainWindow::runCommand(const QString& id)
     else if (id == "insert.svg") {
         importSvg();
     }
+    else if (id == "view.appearance") {
+        openAppearance();
+    }
     else if (id == "assemble.joint") {
         openJoint({});
     }
@@ -2175,11 +2185,14 @@ void MainWindow::exportAs(const QString& format)
     jig::Result<bool> r = true;
     if (format == "3mf") {
         std::vector<std::pair<std::string, TopoDS_Shape>> bodies;
+        std::vector<std::string> colors;
         for (auto& [id, b] : doc_->state().bodies) {
             const jig::Feature* f = doc_->feature(id);
             bodies.emplace_back(f ? f->name : id, b->shape());
+            auto ap = doc_->appearances().find(id);
+            colors.push_back(ap == doc_->appearances().end() ? std::string {} : ap->second.color);
         }
-        r = jig::export3mf(bodies, p.toStdString());
+        r = jig::export3mf(bodies, p.toStdString(), 0.02, colors);
     }
     else {
         auto shape = doc_->combinedShape();
@@ -3026,6 +3039,100 @@ bool MainWindow::importStepFile(const QString& path)
                                  .arg(QFileInfo(path).fileName()),
                              8000);
     return true;
+}
+
+bool MainWindow::setBodyAppearance(const std::string& body, const QString& color, const QString& finish)
+{
+    auto r = doc_->setAppearance(body, {color.toStdString(), finish.toStdString()});
+    if (!r) {
+        statusBar()->showMessage(coreText(r.error().message), 6000);
+        return false;
+    }
+    refreshAll();
+    return true;
+}
+
+void MainWindow::openAppearance()
+{
+    if (doc_->state().bodies.empty()) {
+        statusBar()->showMessage(tr("There is no body to colour yet: make a 3D body first."), 5000);
+        return;
+    }
+    QDialog dlg(this);
+    dlg.setWindowTitle(tr("Appearance"));
+    auto* form = new QFormLayout(&dlg);
+    auto* body = new QComboBox(&dlg);
+    for (auto& [id, b] : doc_->state().bodies) {
+        const jig::Feature* f = doc_->feature(id);
+        body->addItem(f ? q(f->name) : q(id), q(id));
+    }
+    if (const auto sel = view_->selection(); sel) {
+        body->setCurrentIndex(std::max(0, body->findData(q(sel->body))));
+    }
+    auto* finish = new QComboBox(&dlg);
+    finish->addItem(tr("Matte (no shine)"), "matte");
+    finish->addItem(tr("Satin (a little shine)"), "satin");
+    finish->addItem(tr("Glossy (shiny plastic)"), "glossy");
+    finish->addItem(tr("Metal"), "metal");
+    auto* swatches = new QWidget(&dlg);
+    auto* grid = new QGridLayout(swatches);
+    grid->setContentsMargins(0, 0, 0, 0);
+    // named colours (the name is in each button's text for screen readers and tooltips)
+    const std::vector<std::pair<QString, QString>> colours = {
+        {tr("White"), "#f2f2f0"},  {tr("Light grey"), "#b9bec6"}, {tr("Dark grey"), "#4a4f57"}, {tr("Black"), "#1c1d20"},
+        {tr("Red"), "#d0453a"},    {tr("Orange"), "#e98a2e"},     {tr("Yellow"), "#efc941"},    {tr("Green"), "#4aa865"},
+        {tr("Teal"), "#2f9e9a"},   {tr("Blue"), "#3a7bd5"},       {tr("Purple"), "#8a5cc7"},    {tr("Wood"), "#b07a4a"}};
+    QString chosen;
+    auto apply = [&] {
+        const std::string id = body->currentData().toString().toStdString();
+        setBodyAppearance(id, chosen, finish->currentData().toString());
+    };
+    for (size_t i = 0; i < colours.size(); ++i) {
+        auto* b = new QPushButton(&dlg);
+        b->setToolTip(colours[i].first);
+        b->setAccessibleName(colours[i].first);
+        b->setFixedSize(28, 28);
+        b->setStyleSheet(QString("background:%1; border:1px solid #888;").arg(colours[i].second));
+        grid->addWidget(b, int(i / 6), int(i % 6));
+        connect(b, &QPushButton::clicked, &dlg, [&, c = colours[i].second] {
+            chosen = c;
+            apply();
+        });
+    }
+    auto* other = new QPushButton(tr("Other colour…"), &dlg);
+    auto* reset = new QPushButton(tr("Back to the theme colour"), &dlg);
+    connect(other, &QPushButton::clicked, &dlg, [&] {
+        const QColor c = QColorDialog::getColor(chosen.isEmpty() ? QColor("#3a7bd5") : QColor(chosen), &dlg, tr("Colour"));
+        if (c.isValid()) {
+            chosen = c.name();
+            apply();
+        }
+    });
+    connect(reset, &QPushButton::clicked, &dlg, [&] {
+        chosen.clear();
+        apply();
+    });
+    auto load = [&] {
+        auto it = doc_->appearances().find(body->currentData().toString().toStdString());
+        chosen = it == doc_->appearances().end() ? QString() : q(it->second.color);
+        finish->setCurrentIndex(std::max(0, finish->findData(it == doc_->appearances().end() ? QString("satin") : q(it->second.finish))));
+    };
+    load();
+    connect(body, &QComboBox::currentIndexChanged, &dlg, [&] { load(); });
+    connect(finish, &QComboBox::currentIndexChanged, &dlg, [&] {
+        if (!chosen.isEmpty()) {
+            apply();
+        }
+    });
+    form->addRow(tr("Body"), body);
+    form->addRow(tr("Colour"), swatches);
+    form->addRow(QString(), other);
+    form->addRow(tr("Finish"), finish);
+    form->addRow(QString(), reset);
+    auto* close = new QDialogButtonBox(QDialogButtonBox::Close, &dlg);
+    connect(close, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
+    form->addRow(close);
+    dlg.exec();
 }
 
 void MainWindow::openJoint(const std::string& editId)

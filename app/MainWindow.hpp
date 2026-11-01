@@ -118,6 +118,9 @@ public:
     bool insertCanvasFile(const QString& path);
     void openCanvas(const std::string& editId);
     void openJoint(const std::string& editId);
+    // Colour ("#rrggbb", empty: the theme's) and finish of a body; false when refused.
+    bool setBodyAppearance(const std::string& body, const QString& color, const QString& finish);
+    void openAppearance();
     // Inspect ▸ Interference: which parts overlap and by how much (also shown in the status bar).
     QString showInterference();
     void saveVersionInteractive();

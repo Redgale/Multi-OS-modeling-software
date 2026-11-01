@@ -73,7 +73,8 @@ Result<TopoDS_Shape> solidFromMesh(const Mesh& mesh, size_t maxTriangles = 20000
 Result<std::string> insertMesh(Document& doc, const std::string& path, double unitMm = 1, std::string id = {});
 
 // 3MF (3D Manufacturing Format) with one object per body, units in millimetres.
+// `colors` (one per body, "#rrggbb" or empty) become the objects' display colours.
 Result<bool> export3mf(const std::vector<std::pair<std::string, TopoDS_Shape>>& bodies, const std::string& path,
-                       double deflection = 0.02);
+                       double deflection = 0.02, const std::vector<std::string>& colors = {});
 
 }  // namespace jig

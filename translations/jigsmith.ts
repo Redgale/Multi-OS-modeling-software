@@ -690,6 +690,16 @@
     </message>
     <message>
         <location line="+1"/>
+        <source>Appearance</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Give a body a colour and a finish (matte, satin, glossy or metal); 3MF exports carry the colour.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
         <source>Joint</source>
         <translation type="unfinished"></translation>
     </message>
@@ -714,7 +724,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+2"/>
+        <location line="+1"/>
         <source>Press pull</source>
         <translation type="unfinished"></translation>
     </message>
@@ -724,12 +734,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-10"/>
+        <location line="-12"/>
         <source>MODIFY</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+11"/>
+        <location line="+13"/>
         <source>Fillet</source>
         <translation type="unfinished"></translation>
     </message>
@@ -884,12 +894,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-33"/>
+        <location line="-38"/>
         <source>INSPECT</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+34"/>
+        <location line="+39"/>
         <source>Section view</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1428,6 +1438,11 @@
     </message>
     <message>
         <location line="+1"/>
+        <source>Give a body a colour and a finish (matte, satin, glossy or metal); 3MF exports carry the colour.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>Put one part against another and let it turn or slide: hinges, lids, sliders.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1744,6 +1759,16 @@
     <message>
         <location line="+1"/>
         <source>Suppressed: this step is skipped.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>A colour is written #rrggbb, like #3a7bd5.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>A finish is matte, satin, glossy or metal.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -4708,7 +4733,7 @@
 <context>
     <name>MainWindow</name>
     <message>
-        <location filename="../app/MainWindow.cpp" line="+538"/>
+        <location filename="../app/MainWindow.cpp" line="+540"/>
         <source>Rebuilding the design…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6270,14 +6295,14 @@
     <message>
         <location line="+9"/>
         <location line="+755"/>
-        <location line="+770"/>
-        <location line="+954"/>
+        <location line="+775"/>
+        <location line="+960"/>
         <location line="+27"/>
         <source>Sketch</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2504"/>
+        <location line="-2515"/>
         <source>Extrude</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6483,12 +6508,12 @@
     </message>
     <message>
         <location line="+4"/>
-        <location line="+880"/>
+        <location line="+885"/>
         <source>&lt;p&gt;Nothing selected.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-869"/>
+        <location line="-874"/>
         <source>&lt;h3&gt;Body&lt;/h3&gt;&lt;p&gt;&lt;b&gt;Name:&lt;/b&gt; %1&lt;br&gt;&lt;b&gt;Volume:&lt;/b&gt; %2&lt;br&gt;&lt;b&gt;Size:&lt;/b&gt; %3 × %4 × %5&lt;br&gt;&lt;b&gt;Faces:&lt;/b&gt; %6&lt;/p&gt;&lt;p&gt;Right-click it in the Browser to hide, isolate or rename it.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6574,12 +6599,12 @@
     </message>
     <message>
         <location line="+2"/>
-        <location line="+1663"/>
+        <location line="+1674"/>
         <source>Mouse and trackpad</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1661"/>
+        <location line="-1672"/>
         <source>Default (middle-drag pans, Shift+middle orbits)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6600,30 +6625,30 @@
     </message>
     <message>
         <location line="+11"/>
-        <location line="+1636"/>
+        <location line="+1647"/>
         <source>Theme</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1634"/>
-        <location line="+1589"/>
+        <location line="-1645"/>
+        <location line="+1600"/>
         <source>Light</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1589"/>
-        <location line="+1588"/>
+        <location line="-1600"/>
+        <location line="+1599"/>
         <source>Dark</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1587"/>
-        <location line="+1589"/>
+        <location line="-1598"/>
+        <location line="+1600"/>
         <source>High contrast</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1581"/>
+        <location line="-1592"/>
         <source>&amp;Help</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6740,12 +6765,12 @@
     </message>
     <message>
         <location line="+2"/>
-        <location line="+2415"/>
+        <location line="+2520"/>
         <source>Rename…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2412"/>
+        <location line="-2517"/>
         <source>Delete body</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6761,13 +6786,13 @@
     </message>
     <message>
         <location line="+5"/>
-        <location line="+1643"/>
+        <location line="+1654"/>
         <location line="+60"/>
         <source>Properties</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1697"/>
+        <location line="-1708"/>
         <source>Properties and help</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6853,12 +6878,12 @@
     </message>
     <message>
         <location line="+18"/>
-        <location line="+2294"/>
+        <location line="+2399"/>
         <source>Move rollback marker</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2097"/>
+        <location line="-2197"/>
         <source>Start here: every part begins as a flat sketch.
 Click Sketch on the toolbar, then click a plane.
 Or open the phone stand sample (File ▸ Open a sample).</source>
@@ -7057,12 +7082,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+0"/>
-        <location line="+416"/>
+        <location line="+419"/>
         <source>Jigsmith designs (*.jig)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-369"/>
+        <location line="-372"/>
         <source>Save view</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7077,7 +7102,7 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+112"/>
+        <location line="+115"/>
         <source>Interference</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7093,12 +7118,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+6"/>
-        <location line="+1216"/>
+        <location line="+1313"/>
         <source>Insert mesh</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1215"/>
+        <location line="-1312"/>
         <source>Meshes (*.stl *.obj *.3mf)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7253,12 +7278,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+0"/>
-        <location line="+1116"/>
+        <location line="+1213"/>
         <source>There is no 3D body yet.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1113"/>
+        <location line="-1210"/>
         <source>STL mesh for slicers (*.stl)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7278,7 +7303,7 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+21"/>
+        <location line="+24"/>
         <source>Could not export</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7541,6 +7566,122 @@ An empty design with the origin ready</source>
     </message>
     <message>
         <location line="+20"/>
+        <source>There is no body to colour yet: make a 3D body first.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Appearance</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+11"/>
+        <source>Matte (no shine)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Satin (a little shine)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Glossy (shiny plastic)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Metal</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>White</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Light grey</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Dark grey</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Black</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Red</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Orange</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Yellow</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Green</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Teal</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Blue</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Purple</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Wood</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+18"/>
+        <source>Other colour…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Back to the theme colour</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <location line="+23"/>
+        <source>Colour</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-1"/>
+        <source>Body</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Finish</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+22"/>
         <source>There is only one part, so nothing can overlap.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7591,8 +7732,8 @@ An empty design with the origin ready</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-119"/>
-        <location line="+125"/>
+        <location line="-213"/>
+        <location line="+219"/>
         <location line="+30"/>
         <location line="+25"/>
         <location line="+30"/>
@@ -10654,7 +10795,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::Viewport</name>
     <message>
-        <location filename="../app/Viewport.cpp" line="+454"/>
+        <location filename="../app/Viewport.cpp" line="+459"/>
         <source>none</source>
         <translation type="unfinished"></translation>
     </message>
@@ -10664,7 +10805,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+640"/>
+        <location line="+658"/>
         <source>touching</source>
         <translation type="unfinished"></translation>
     </message>

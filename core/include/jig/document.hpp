@@ -292,6 +292,20 @@ public:
         return shownSketches_;
     }
     void setShownSketches(std::set<std::string> ids);
+    // How each body looks: a colour ("#rrggbb") and a finish (matte, satin, glossy, metal).
+    // Bodies without one use the theme's colour. An empty colour removes the body's entry.
+    struct Appearance
+    {
+        std::string color;
+        std::string finish = "satin";
+        bool operator==(const Appearance&) const = default;
+    };
+    const std::map<std::string, Appearance>& appearances() const
+    {
+        return appearances_;
+    }
+    // Refuses colours that are not "#rrggbb" and unknown finishes.
+    Result<bool> setAppearance(const std::string& body, const Appearance& a);
     // Camera positions saved under a name (what is stored is up to the app); a null value
     // removes one.
     const std::map<std::string, nlohmann::json>& namedViews() const
@@ -336,6 +350,7 @@ private:
     bool busy_ = false;
     uint64_t revision_ = 0;
     std::set<std::string> hidden_, folded_, shownSketches_;
+    std::map<std::string, Appearance> appearances_;
     std::map<std::string, nlohmann::json> views_;
 };
 

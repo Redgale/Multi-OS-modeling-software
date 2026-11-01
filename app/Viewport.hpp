@@ -231,6 +231,17 @@ public:
         double opacity = 0.5;
     };
     void setCanvases(std::vector<CanvasPicture> pictures);
+    // Each body's colour and finish ("matte", "satin", "glossy", "metal"); others use the theme.
+    struct BodyLook
+    {
+        QColor color;
+        QString finish;
+    };
+    void setAppearances(std::map<std::string, BodyLook> looks);
+    const std::map<std::string, BodyLook>& appearances() const
+    {
+        return appearance_;
+    }
     int canvasCount() const
     {
         return int(canvases_.size());
@@ -414,6 +425,7 @@ private:
     jig::LengthUnit units_ = jig::LengthUnit::Millimetre;                                     // construction planes, always shown
     std::vector<std::pair<QString, QVector3D>> datumLabels_;
     std::vector<CanvasPicture> canvases_;
+    std::map<std::string, BodyLook> appearance_;
     bool overlayDirty_ = false;
     std::unique_ptr<QOpenGLShaderProgram> colorProg_;
     QOpenGLVertexArrayObject ovVao_;

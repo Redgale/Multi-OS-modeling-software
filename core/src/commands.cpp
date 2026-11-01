@@ -142,6 +142,7 @@ CommandRegistry::CommandRegistry()
     add({"solid.pattern_circ", "Ring copy", "Circular Pattern", "CREATE", "Repeat a feature around an axis.", "", {"array", "repeat around", "spokes"}, true, false, false, m3});
     add({"solid.draft", "Draft", "Draft", "MODIFY", "Slope faces by a small angle so the part leaves a mould, or prints without overhangs.", "", {"taper faces", "mould", "mold", "angle faces"}, false, false, true, m3});
     add({"solid.scale", "Scale", "Scale", "MODIFY", "Make bodies bigger or smaller about a point, evenly or by a factor along each axis.", "", {"resize", "enlarge", "shrink", "stretch"}, false, false, true, m3});
+    add({"view.appearance", "Appearance", "Appearance", "INSPECT", "Give a body a colour and a finish (matte, satin, glossy or metal); 3MF exports carry the colour.", "A", {"colour", "color", "material look", "paint", "finish"}, false, false, true, m3});
     add({"assemble.joint", "Joint", "Joint", "ASSEMBLE", "Put one part against another and let it turn or slide: hinges, lids, sliders.", "J", {"hinge", "assemble", "connect parts", "mate", "pivot"}, false, false, true, m3});
     add({"inspect.interference", "Interference", "Interference", "INSPECT", "Find parts that overlap each other, and by how much.", "", {"collision", "overlap", "clash", "check fit"}, false, false, true, m3});
     add({"solid.presspull", "Press pull", "Press Pull", "MODIFY", "Push or pull a flat face by a distance; on a rounded edge or hole it opens the step that made it.", "Q", {"push", "pull", "drag face"}, false, false, true, m3});
@@ -182,7 +183,7 @@ CommandRegistry::CommandRegistry()
         "constraint.symmetric", "constraint.equal", "solid.extrude", "solid.fillet", "solid.chamfer", "solid.shell",
         "solid.revolve", "solid.loft", "solid.sweep", "solid.pipe", "solid.coil", "solid.box", "solid.cylinder", "solid.sphere", "solid.torus", "solid.rib", "solid.emboss", "solid.thread", "solid.hole", "solid.mirror", "solid.pattern_rect", "solid.pattern_circ", "modify.parameters",
         "inspect.measure", "inspect.properties", "file.export_3mf", "construct.offset_plane", "construct.angle_plane",
-        "construct.midplane", "construct.tangent_plane", "construct.points_plane", "construct.path_plane", "construct.axis", "construct.point", "solid.draft", "solid.scale", "assemble.joint", "inspect.interference", "solid.presspull", "solid.combine", "solid.split", "solid.move",
+        "construct.midplane", "construct.tangent_plane", "construct.points_plane", "construct.path_plane", "construct.axis", "construct.point", "solid.draft", "solid.scale", "assemble.joint", "inspect.interference", "view.appearance", "solid.presspull", "solid.combine", "solid.split", "solid.move",
         "inspect.section", "insert.dxf", "insert.svg", "help.tutorial"};
     for (auto& c : commands_) {
         if (inApp.count(c.id)) {
@@ -1515,6 +1516,21 @@ Result<bool> ScriptRunner::runLineUnchecked(std::string_view rawLine)
         }
         return checkFeature(id);
     }
+    if (a.verb == "appearance") {
+        // appearance body=e1 color=3a7bd5 [finish=matte|satin|glossy|metal]   (color=none: back to the theme;
+        // no "#": in scripts it starts a comment)
+        if (!doc.state().bodies.count(a.get("body"))) {
+            return makeError("script.args", fmt("There is no body called '%1'.", {a.get("body")}));
+        }
+        std::string c = a.get("color", "none");
+        if (c == "none") {
+            c.clear();
+        }
+        else if (c[0] != '#') {
+            c = "#" + c;
+        }
+        return doc.setAppearance(a.get("body"), {c, a.get("finish", "satin")});
+    }
     if (a.verb == "joint") {
         // joint kind=rigid|revolute|slider|cylindrical|ball|planar from=edge:<name>|face:<name>
         //       [to=edge:<name>|face:<name>|origin] [angle=… angle_min=… angle_max=…]
@@ -2388,11 +2404,14 @@ Result<bool> ScriptRunner::runLineUnchecked(std::string_view rawLine)
         const std::string fmt = lower(a.positional[0]), path = a.positional[1];
         if (fmt == "3mf") {
             std::vector<std::pair<std::string, TopoDS_Shape>> bodies;
+            std::vector<std::string> colors;
             for (auto& [id, b] : doc.state().bodies) {
                 const Feature* f = doc.feature(id);
                 bodies.emplace_back(f ? f->name : id, b->shape());
+                auto ap = doc.appearances().find(id);
+                colors.push_back(ap == doc.appearances().end() ? std::string {} : ap->second.color);
             }
-            return export3mf(bodies, path);
+            return export3mf(bodies, path, 0.02, colors);
         }
         TopoDS_Shape s = doc.combinedShape();
         Result<bool> r = fmt == "stl"    ? exportStl(s, path)

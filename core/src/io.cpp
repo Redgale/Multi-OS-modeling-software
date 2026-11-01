@@ -383,7 +383,7 @@ Result<bool> exportStl(const TopoDS_Shape& shape, const std::string& path, doubl
 }
 
 Result<bool> export3mf(const std::vector<std::pair<std::string, TopoDS_Shape>>& bodies, const std::string& path,
-                       double deflection)
+                       double deflection, const std::vector<std::string>& colors)
 {
     namespace fs = std::filesystem;
     if (bodies.empty()) {
@@ -410,14 +410,35 @@ Result<bool> export3mf(const std::vector<std::pair<std::string, TopoDS_Shape>>& 
          "xmlns=\"http://schemas.microsoft.com/3dmanufacturing/core/2015/02\">\n"
       << " <metadata name=\"Application\">Jigsmith " << appVersion() << "</metadata>\n"
       << " <resources>\n";
+    // body colours as one set of base materials (resource 1), referred to by each object
+    bool coloured = false;
+    for (const auto& c : colors) {
+        coloured = coloured || !c.empty();
+    }
     int id = 0;
+    if (coloured) {
+        x << "  <basematerials id=\"" << ++id << "\">\n";
+        for (size_t i = 0; i < bodies.size(); ++i) {
+            const std::string c = i < colors.size() && !colors[i].empty() ? colors[i] : std::string("#a8b4c4");
+            x << "   <base name=\"" << xmlEscape(i < bodies.size() ? bodies[i].first : std::string {}) << "\" displaycolor=\""
+              << xmlEscape(c) << "\"/>\n";
+        }
+        x << "  </basematerials>\n";
+    }
+    const int firstObject = id + 1;
     try {
+        size_t index = 0;
         for (auto& [name, shape] : bodies) {
+            const size_t k = index++;
             const Mesh m = meshOf(shape, deflection);
             if (m.triangles.empty()) {
                 continue;
             }
-            x << "  <object id=\"" << ++id << "\" type=\"model\" name=\"" << xmlEscape(name) << "\">\n   <mesh>\n"
+            x << "  <object id=\"" << ++id << "\" type=\"model\" name=\"" << xmlEscape(name) << "\"";
+            if (coloured) {
+                x << " pid=\"1\" pindex=\"" << k << "\"";
+            }
+            x << ">\n   <mesh>\n"
               << "    <vertices>\n";
             for (size_t i = 0; i < m.xyz.size(); i += 3) {
                 x << "     <vertex x=\"" << m.xyz[i] << "\" y=\"" << m.xyz[i + 1] << "\" z=\"" << m.xyz[i + 2] << "\"/>\n";
@@ -433,11 +454,11 @@ Result<bool> export3mf(const std::vector<std::pair<std::string, TopoDS_Shape>>& 
     catch (const Standard_Failure&) {
         return makeError("export.3mf", "The 3MF file could not be created.");
     }
-    if (id == 0) {
+    if (id < firstObject) {
         return makeError("export.empty", "There is nothing to export yet.");
     }
     x << " </resources>\n <build>\n";
-    for (int i = 1; i <= id; ++i) {
+    for (int i = firstObject; i <= id; ++i) {
         x << "  <item objectid=\"" << i << "\"/>\n";
     }
     x << " </build>\n</model>\n";

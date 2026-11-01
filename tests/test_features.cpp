@@ -7,6 +7,7 @@
 #include <random>
 
 #include "helpers.hpp"
+#include "jig/files.hpp"
 #include "jig/io.hpp"
 #include "jig/picture.hpp"
 #include "jig/screws.hpp"
@@ -2982,4 +2983,33 @@ TEST(Joint, PartsMeetTurnSlideStopAtLimitsAndInterfere)
     r.strict = false;
     ASSERT_TRUE(r.runText(parts + "joint id=j1 kind=rigid from=face:b/bottom to=face:b/top\n").ok());
     EXPECT_EQ(self->status(2).level, StatusLevel::Error);
+}
+
+TEST(Appearance, ColoursAreCheckedSavedAndExported)
+{
+    auto doc = build("box id=bx1 length=10mm width=10mm height=10mm\nappearance body=bx1 color=3a7bd5 finish=metal\n");
+    ASSERT_EQ(doc->appearances().size(), 1u);
+    EXPECT_EQ(doc->appearances().at("bx1").finish, "metal");
+    EXPECT_FALSE(doc->setAppearance("bx1", {"#12345", "satin"}).ok());
+    EXPECT_FALSE(doc->setAppearance("bx1", {"#123456", "chrome"}).ok());
+    auto back = Document::fromJson(doc->toJson());
+    ASSERT_TRUE(back.ok());
+    EXPECT_EQ((*back)->appearances().at("bx1").color, "#3a7bd5");
+    // a damaged colour in a file is dropped, not kept
+    auto j = doc->toJson();
+    j["view"]["appearances"]["bx1"]["color"] = "javascript:";
+    auto damaged = Document::fromJson(j);
+    ASSERT_TRUE(damaged.ok());
+    EXPECT_TRUE((*damaged)->appearances().empty());
+    // the 3MF carries the colour as a base material the object refers to, and reads back
+    const std::string mf = (tempDir() / "blue.3mf").string();
+    ScriptRunner r(*doc);
+    ASSERT_TRUE(r.runText("export 3mf " + mf + "\n").ok());
+    auto mesh = readMeshFile(mf);
+    ASSERT_TRUE(mesh.ok());
+    auto bytes = readWholeFile(mf, 1 << 20);
+    ASSERT_TRUE(bytes.has_value());
+    auto d2 = std::make_unique<Document>();
+    ASSERT_TRUE(insertMesh(*d2, mf).ok());
+    EXPECT_NEAR(props(*d2).volume, 1000, 1e-6);
 }

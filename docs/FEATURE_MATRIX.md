@@ -38,7 +38,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Named views | 5 | v0.1 M8 | **app**: View ▸ Save view…; listed under Named views in the Browser (activate to go there; replace or delete from its menu); saved with the design | |
 | Document settings: units, up axis | 8 | v0.1 (mm, Z fixed) | shown in browser | Safe defaults |
 | Capture design history on/off | 8, 24 | v0.3+ | — | Direct modelling is later |
-| Appearances and physical material | 8, 34 | v0.2 (density in v0.1 Properties M6) | density chooser in Properties (not stored in the design yet) | Mass needs density |
+| Appearances and physical material | 8, 34 | v0.2 (density in v0.1 Properties M6) | **app** + scripts (`appearance`): colour and finish per body, saved, shown in the view, carried into 3MF; density chooser in Properties (not stored yet) | Mass needs density |
 
 ## Sketching (PDF ch. 9 to 12)
 
@@ -147,7 +147,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Properties: volume, area, mass, center of mass | 21 | v0.1 M6 | **app**: volume, weight by material or density, filament length, area, size, centre of mass; CLI `report` | |
 | Interference | 21 | v0.2 | **app**: Inspect ▸ Interference lists overlapping parts and their overlap volume | Highlighting the overlap in the view not yet |
 | Curvature comb, zebra, draft, curvature map, isocurve, accessibility, min radius | 21 | v0.3+ | — | Surface-quality tools |
-| Component colours | 21 | v0.2 | — | |
+| Component colours | 21 | v0.2 | Bodies are the parts: see Appearances | |
 | Insert SVG, DXF | 22 | v0.1 M5 | **app** + scripts: DXF (lines, arcs, circles, polylines with bulges, splines, ellipses, text, blocks; unit detection); SVG (filled paths and shapes, drawn outlines as bands, text, transforms, viewBox; as scalable artwork) | |
 | Insert STEP | 22 | v0.1 M6 | **app** + scripts (`import step`): an Import step with one body per solid, kept inside the design; faces named `<step>/face:<n>` for later steps | |
 | Insert mesh (STL/OBJ/3MF) | 22, 27 | v0.2 | **app** + scripts (`import mesh`): closed meshes become solids kept in the design | Up to 20,000 triangles; open meshes refused |
