@@ -56,7 +56,8 @@ public:
     ~MainWindow() override;
 
     bool openFile(const QString& path);
-    bool openSample(const QString& name);  // e.g. "phone_stand"
+    bool openSample(const QString& name);
+    bool openScript(const QString& path);  // a .jigs script, run into a new unsaved design  // e.g. "phone_stand"
     void newDesign();
     void showWelcome();
     void setTheme(Theme t);

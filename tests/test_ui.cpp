@@ -23,6 +23,9 @@
 #include <QTreeWidget>
 #include <QtTest>
 #include <QProgressDialog>
+#include <QLockFile>
+#include <QTemporaryDir>
+#include <QProcess>
 #include <QSysInfo>
 
 #include "FeaturePanels.hpp"
@@ -2632,6 +2635,52 @@ private slots:
         QCOMPARE(tried, 13 * int(junk.size()));
         w.runCommand("sketch.finish");
         QTRY_VERIFY(w.sketchEditor() == nullptr);
+    }
+
+    // B-031: the real app is killed while it has unsaved work; its autosave is left with a lock
+    // whose process is gone, which is how the next start recognises a crash (Linux: the data
+    // folder is moved with XDG_DATA_HOME so a developer's own recovery folder is not touched).
+    void realCrashLeavesARecoverableAutosave()
+    {
+#if !defined(__linux__)
+        QSKIP("uses XDG_DATA_HOME to keep the test's files apart");
+#else
+        const QString app = QCoreApplication::applicationDirPath() + "/../app/jigsmith";
+        if (!QFile::exists(app)) {
+            QSKIP("the app is not built next to the tests");
+        }
+        QTemporaryDir tmp;
+        QVERIFY(tmp.isValid());
+        const QString script = tmp.filePath("box.jigs");
+        {
+            QFile f(script);
+            QVERIFY(f.open(QIODevice::WriteOnly));
+            f.write("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=20 h=10\nextrude id=e1 sketch=s1 distance=5\n");
+        }
+        QProcess child;
+        auto env = QProcessEnvironment::systemEnvironment();
+        env.insert("XDG_DATA_HOME", tmp.filePath("data"));
+        env.insert("XDG_CONFIG_HOME", tmp.filePath("config"));
+        env.insert("JIG_AUTOSAVE_MS", "200");
+        child.setProcessEnvironment(env);
+        child.start(app, {script});
+        QVERIFY2(child.waitForStarted(10000), qPrintable(child.errorString()));
+        const QDir rec(tmp.filePath("data/Jigsmith/Jigsmith/recovery"));
+        QTRY_VERIFY_WITH_TIMEOUT(!rec.entryList({"autosave-*.jig"}).isEmpty(), 30000);
+        const QString saved = rec.filePath(rec.entryList({"autosave-*.jig"}).front());
+        const QString lockPath = QFileInfo(saved).absolutePath() + "/" + QFileInfo(saved).completeBaseName() + ".lock";
+        QLockFile probe(lockPath);
+        probe.setStaleLockTime(0);
+        QVERIFY2(!probe.tryLock(0), "the running app holds its lock");
+        child.kill();  // a hard crash: nothing is cleaned up
+        QVERIFY(child.waitForFinished(10000));
+        QVERIFY(QFile::exists(saved));
+        QVERIFY2(probe.tryLock(0), "the dead app's lock is stale: the autosave is offered on the next start");
+        probe.unlock();
+        auto doc = jig::loadDocument(saved.toStdString());
+        QVERIFY(doc.ok());
+        QCOMPARE(int((*doc)->state().bodies.size()), 1);
+#endif
     }
 
     // Move by the free grip: seen from above it moves in XY, from the front in XZ.

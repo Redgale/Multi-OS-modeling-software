@@ -4470,15 +4470,15 @@
     </message>
     <message>
         <location line="+9" />
-        <location line="+729" />
+        <location line="+731" />
         <location line="+738" />
-        <location line="+875" />
+        <location line="+895" />
         <location line="+27" />
         <source>Sketch</source>
         <translation>[Skétçh~~]</translation>
     </message>
     <message>
-        <location line="-2367" />
+        <location line="-2389" />
         <source>Extrude</source>
         <translation>[Éxtrüdé~~]</translation>
     </message>
@@ -4624,12 +4624,12 @@
     </message>
     <message>
         <location line="+4" />
-        <location line="+846" />
+        <location line="+848" />
         <source>&lt;p&gt;Nothing selected.&lt;/p&gt;</source>
         <translation>[&lt;p&gt;Ñöthîñg séléçtéd.&lt;/p&gt;~~~~~]</translation>
     </message>
     <message>
-        <location line="-835" />
+        <location line="-837" />
         <source>&lt;h3&gt;Body&lt;/h3&gt;&lt;p&gt;&lt;b&gt;Name:&lt;/b&gt; %1&lt;br&gt;&lt;b&gt;Volume:&lt;/b&gt; %2&lt;br&gt;&lt;b&gt;Size:&lt;/b&gt; %3 × %4 × %5&lt;br&gt;&lt;b&gt;Faces:&lt;/b&gt; %6&lt;/p&gt;&lt;p&gt;Right-click it in the Browser to hide, isolate or rename it.&lt;/p&gt;</source>
         <translation>[&lt;h3&gt;Bödý&lt;/h3&gt;&lt;p&gt;&lt;b&gt;Ñámé:&lt;/b&gt; %1&lt;br&gt;&lt;b&gt;Völümé:&lt;/b&gt; %2&lt;br&gt;&lt;b&gt;Sîzé:&lt;/b&gt; %3 × %4 × %5&lt;br&gt;&lt;b&gt;Fáçés:&lt;/b&gt; %6&lt;/p&gt;&lt;p&gt;Rîght-çlîçk ît îñ thé Bröwsér tö hîdé, îsöláté ör réñámé ît.&lt;/p&gt;~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -4639,7 +4639,7 @@
         <translation>[&lt;h3&gt;Fáçé&lt;/h3&gt;&lt;p&gt;&lt;b&gt;Ñámé:&lt;/b&gt; %1&lt;br&gt;&lt;b&gt;Sürfáçé:&lt;/b&gt; %2&lt;br&gt;&lt;b&gt;Áréá:&lt;/b&gt; %3&lt;br&gt;&lt;b&gt;Bödý:&lt;/b&gt; %4&lt;/p&gt;&lt;p&gt;Fáçés kéép théîr ñámé whéñ éárlîér stéps çháñgé, sö fîlléts áñd skétçhés stáý áttáçhéd.&lt;/p&gt;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+68" />
+        <location line="+70" />
         <source>Key: %1</source>
         <translation>[Kéý: %1~]</translation>
     </message>
@@ -4715,12 +4715,12 @@
     </message>
     <message>
         <location line="+2" />
-        <location line="+1552" />
+        <location line="+1572" />
         <source>Mouse and trackpad</source>
         <translation>[Möüsé áñd tráçkpád~~~~~]</translation>
     </message>
     <message>
-        <location line="-1550" />
+        <location line="-1570" />
         <source>Default (middle-drag pans, Shift+middle orbits)</source>
         <translation>[Défáült (mîddlé-drág páñs, Shîft+mîddlé örbîts)~~~~~~~~~~~~]</translation>
     </message>
@@ -4741,30 +4741,30 @@
     </message>
     <message>
         <location line="+11" />
-        <location line="+1525" />
+        <location line="+1545" />
         <source>Theme</source>
         <translation>[Thémé~]</translation>
     </message>
     <message>
-        <location line="-1523" />
-        <location line="+1478" />
+        <location line="-1543" />
+        <location line="+1498" />
         <source>Light</source>
         <translation>[Lîght~]</translation>
     </message>
     <message>
-        <location line="-1478" />
-        <location line="+1477" />
+        <location line="-1498" />
+        <location line="+1497" />
         <source>Dark</source>
         <translation>[Dárk~]</translation>
     </message>
     <message>
-        <location line="-1476" />
-        <location line="+1478" />
+        <location line="-1496" />
+        <location line="+1498" />
         <source>High contrast</source>
         <translation>[Hîgh çöñtrást~~~~]</translation>
     </message>
     <message>
-        <location line="-1470" />
+        <location line="-1490" />
         <source>&amp;Help</source>
         <translation>[&amp;Hélp~]</translation>
     </message>
@@ -4881,12 +4881,12 @@
     </message>
     <message>
         <location line="+2" />
-        <location line="+2074" />
+        <location line="+2094" />
         <source>Rename…</source>
         <translation>[Réñámé…~~]</translation>
     </message>
     <message>
-        <location line="-2071" />
+        <location line="-2091" />
         <source>Delete body</source>
         <translation>[Délété bödý~~~]</translation>
     </message>
@@ -4902,13 +4902,13 @@
     </message>
     <message>
         <location line="+5" />
-        <location line="+1532" />
+        <location line="+1552" />
         <location line="+58" />
         <source>Properties</source>
         <translation>[Pröpértîés~~~]</translation>
     </message>
     <message>
-        <location line="-1584" />
+        <location line="-1604" />
         <source>Properties and help</source>
         <translation>[Pröpértîés áñd hélp~~~~~]</translation>
     </message>
@@ -4994,12 +4994,12 @@
     </message>
     <message>
         <location line="+18" />
-        <location line="+1960" />
+        <location line="+1980" />
         <source>Move rollback marker</source>
         <translation>[Mövé röllbáçk márkér~~~~~~]</translation>
     </message>
     <message>
-        <location line="-1788" />
+        <location line="-1808" />
         <source>Start here: every part begins as a flat sketch.
 Click Sketch on the toolbar, then click a plane.
 Or open the phone stand sample (File ▸ Open a sample).</source>
@@ -5200,12 +5200,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+0" />
-        <location line="+337" />
+        <location line="+357" />
         <source>Jigsmith designs (*.jig)</source>
         <translation>[Jîgsmîth désîgñs (*.jîg)~~~~~~]</translation>
     </message>
     <message>
-        <location line="-290" />
+        <location line="-310" />
         <source>Save view</source>
         <translation>[Sávé vîéw~~]</translation>
     </message>
@@ -5246,11 +5246,22 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+18" />
+        <location line="+11" />
         <source>Could not open</source>
         <translation>[Çöüld ñöt öpéñ~~~~]</translation>
     </message>
     <message>
-        <location line="+18" />
+        <location line="+0" />
+        <source>The script %1 could not be read.</source>
+        <translation>[Thé sçrîpt %1 çöüld ñöt bé réád.~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+8" />
+        <source>Script problem</source>
+        <translation>[Sçrîpt pröblém~~~~]</translation>
+    </message>
+    <message>
+        <location line="+19" />
         <source>Sample problem</source>
         <translation>[Sámplé pröblém~~~~]</translation>
     </message>

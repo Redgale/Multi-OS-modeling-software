@@ -650,7 +650,9 @@ MainWindow::MainWindow()
     restoreGeometry(st.value("geometry").toByteArray());
 
     autosaveTimer_ = new QTimer(this);
-    autosaveTimer_->setInterval(60 * 1000);
+    autosaveTimer_->setInterval(qEnvironmentVariableIsSet("JIG_AUTOSAVE_MS")  // (tests: a short interval)
+                                    ? std::max(50, qEnvironmentVariableIntValue("JIG_AUTOSAVE_MS"))
+                                    : 60 * 1000);
     connect(autosaveTimer_, &QTimer::timeout, this, &MainWindow::autosave);
     autosaveTimer_->start();
 
@@ -1859,6 +1861,26 @@ bool MainWindow::openFile(const QString& path)
         return false;
     }
     setDocument(std::move(r.value()), path);
+    return true;
+}
+
+bool MainWindow::openScript(const QString& path)
+{
+    QFile f(path);
+    if (!f.open(QIODevice::ReadOnly)) {
+        QMessageBox::warning(this, tr("Could not open"), tr("The script %1 could not be read.").arg(path));
+        return false;
+    }
+    auto doc = blankDocument();
+    jig::ScriptRunner run(*doc);
+    run.strict = false;
+    auto r = run.runText(f.readAll().toStdString());
+    if (!r) {
+        QMessageBox::warning(this, tr("Script problem"), coreText(r.error().message));
+    }
+    setDocument(std::move(doc), {});
+    savedRevision_ = 0;  // a design made by a script is new: unsaved until saved (and autosaved meanwhile)
+    autosavedRevision_ = 0;
     return true;
 }
 

@@ -94,6 +94,6 @@ timeline edit/rename/suppress/roll back/delete with dependents warning, Paramete
   per step, but a hard crash inside OCCT would still end the program (autosave limits the loss).
   Not enabled yet: it installs process-wide signal handlers that can clash with Qt, the
   sanitizers and the rebuild thread; try it behind a setting with the fuzzers first.
-- **B-031 Real crash test of recovery**: kill the app mid-session on each platform and check the
-  recovery prompt (only a faked leftover session is tested).
+- ~~B-031 Real crash test of recovery~~ done on Linux (`realCrashLeavesARecoverableAutosave`); macOS
+  and Windows by hand.
 

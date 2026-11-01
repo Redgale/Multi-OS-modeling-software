@@ -41,7 +41,7 @@ int main(int argc, char** argv)
     QCommandLineOption select("select-face", "Screenshot helper: select a face by index.", "n");
     QCommandLineOption lang("lang", "Interface language code (e.g. qps for the test pseudo-language).", "code");
     cli.addOptions({shot, sample, size, theme, select, lang});
-    cli.addPositionalArgument("design", "A .jig file to open.");
+    cli.addPositionalArgument("design", "A .jig file to open, or a .jigs script to run into a new design.");
     cli.process(app);
     jigapp::installLanguage(cli.isSet(lang) ? cli.value(lang) : QSettings().value("language").toString());
 
@@ -64,7 +64,8 @@ int main(int argc, char** argv)
         w.openSample(cli.value(sample));
     }
     else if (!cli.positionalArguments().isEmpty()) {
-        w.openFile(cli.positionalArguments().first());
+        const QString file = cli.positionalArguments().first();
+        file.endsWith(".jigs", Qt::CaseInsensitive) ? w.openScript(file) : w.openFile(file);
     }
 
     if (screenshot) {
