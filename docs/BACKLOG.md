@@ -86,3 +86,14 @@ timeline edit/rename/suppress/roll back/delete with dependents warning, Paramete
 - Show the face name and "what made this face" when hovering a face, linking to the
   timeline step.
 - "Open in slicer" (PrusaSlicer, OrcaSlicer, Cura) once STL/3MF export is in the UI.
+
+## Robustness ideas (from the 2026-11-01 bug hunt)
+
+- **B-030 Kernel signals**: OCCT can turn access violations inside its algorithms into catchable
+  exceptions (`OSD::SetSignal` with `OCC_CATCH_SIGNALS`). Jigsmith catches OCCT's exceptions
+  per step, but a hard crash inside OCCT would still end the program (autosave limits the loss).
+  Not enabled yet: it installs process-wide signal handlers that can clash with Qt, the
+  sanitizers and the rebuild thread; try it behind a setting with the fuzzers first.
+- **B-031 Real crash test of recovery**: kill the app mid-session on each platform and check the
+  recovery prompt (only a faked leftover session is tested).
+

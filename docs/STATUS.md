@@ -218,8 +218,9 @@ ready, with the pseudo-translation as the check).
 ## Next three tasks
 
 1. Leftovers: open the Flatpak's and the universal Mac app's windows on real machines (only CI has run them).
-2. A bug hunt through the whole code (owner's request, 2026-11-01): sanitizers over the UI tests,
-   then reading the riskier code; each bug fixed with a test.
+2. Bug hunt (owner's request, 2026-11-01): four passes done (see "What is broken or unverified");
+   next: OCCT signal handling (B-030), a real kill-and-recover test (B-031), and reading the
+   remaining panels (FeaturePanels.cpp, InspectPanels.cpp).
 3. Review THIRD_PARTY_DLLS.txt before the first release (B-011); B-001 libslvs
    spike where building SolveSpace is allowed.
 
