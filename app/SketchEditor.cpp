@@ -125,7 +125,7 @@ SketchEditor::SketchEditor(Viewport* view, jig::Document& doc, std::string featu
                 auto x = doc_.evalLength(doc_.lengthInput(v.value(0).isEmpty() ? "0" : v.value(0).toStdString()));
                 auto y = doc_.evalLength(doc_.lengthInput(v.value(1).isEmpty() ? "0" : v.value(1).toStdString()));
                 if (!x || !y) {
-                    message_ = QString::fromStdString((!x ? x.error() : y.error()).message);
+                    message_ = coreText((!x ? x.error() : y.error()).message);
                     emit stateChanged();
                     return;
                 }
@@ -243,7 +243,8 @@ bool SketchEditor::commit(const QString& label, const jig::Sketch& next)
     jig::SolveReport rep = trial.solve(doc_.lookup());
     if (rep.state == jig::SolveState::Failed
         || (rep.state == jig::SolveState::OverConstrained && !rep.conflicting.empty())) {
-        message_ = tr("Not applied: %1").arg(QString::fromStdString(rep.message));
+        message_ = tr("Not applied: %1").arg(coreText(rep.message));
+        midSnaps_.clear();  // they belonged to the edit that was refused
         emit stateChanged();
         view_->update();
         return false;
@@ -258,6 +259,7 @@ bool SketchEditor::commit(const QString& label, const jig::Sketch& next)
     });
     if (!r) {
         message_ = coreText(r.error().message);
+        midSnaps_.clear();
         emit stateChanged();
         return false;
     }
@@ -3092,7 +3094,7 @@ void SketchEditor::paint(QPainter& p)
                       ? tr("■ Fully defined")
                       : tr("○ %n free degree(s) of freedom: hollow points can still move", "", report_.dof);
     if (report_.state == jig::SolveState::OverConstrained) {
-        dof = tr("⚠ ") + QString::fromStdString(report_.message);
+        dof = tr("⚠ ") + coreText(report_.message);
     }
     const QStringList lines {dof, toolHint(), message_};
     QFont f = view_->font();
