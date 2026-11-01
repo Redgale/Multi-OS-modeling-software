@@ -220,7 +220,7 @@ ready, with the pseudo-translation as the check).
 
 ## Releases
 
-- **0.1.0** (2026-11-01, owner's go-ahead): tag `v0.1.0`, made by a CI run started by hand with `release_tag=v0.1.0` (this environment cannot push tags); CI builds every platform and publishes the release with the CHANGELOG section as its notes. v0.1 is complete except B-001 (a solver comparison spike, blocked) and hand tests on real Windows and macOS machines.
+- **0.1.0** (2026-11-01, owner's go-ahead): tag `v0.1.0`, made by a CI run started by hand with `release_tag=v0.1.0` (this environment cannot push tags); published 17:57 UTC by CI run 3 (runs 1 and 2 failed: a missing include on macOS, an OCCT 8 type on Windows, then a test that sampled too late on a fast Mac; all fixed) with the AppImage, three .dmg files (Apple silicon, Intel, universal), the Windows installer and portable zip, and the CHANGELOG section as its notes: https://github.com/Redgale/Multi-OS-modeling-software/releases/tag/v0.1.0. v0.1 is complete except B-001 (a solver comparison spike, blocked) and hand tests on real Windows and macOS machines.
 
 ## Next three tasks
 
