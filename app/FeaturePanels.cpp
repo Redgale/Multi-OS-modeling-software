@@ -4341,6 +4341,145 @@ QString EmbossPanel::title() const
     return tr("emboss");
 }
 
+// ---------------------------------------------------------------- Draft
+
+DraftPanel::DraftPanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent)
+    : FeaturePanel(doc, view, std::move(editId), parent)
+{
+    form_->addWidget(heading(this, tr("Draft"),
+                             tr("Slope the sides of a part by a small angle, so it slides out of a mould or prints "
+                                "without overhangs. Click the faces to slope. They pivot on the neutral plane and "
+                                "keep their size there.")));
+    count_ = new QLabel(this);
+    plane_ = combo(this, {{tr("Floor (XY): sides narrow going up"), "\"XY\""},
+                          {tr("Front (XZ)"), "\"XZ\""},
+                          {tr("Side (YZ)"), "\"YZ\""}});
+    angle_ = new ExprField(doc, jig::Dim::ang(), this);
+    flip_ = new QCheckBox(tr("Slope the other way (wider going up)"), this);
+    addRow(tr("Faces"), count_);
+    addRow(tr("Neutral plane"), plane_);
+    addRow(tr("Angle"), angle_);
+    bindParam("angle", angle_);
+    form_->addWidget(flip_);
+    const auto before = stateBefore();
+    for (int i = 0; i < insertIndex(); ++i) {
+        const auto& f = doc_.model().features[size_t(i)];
+        if (f.kind == jig::FeatureKind::Plane && before->planes.count(f.id)) {
+            plane_->addItem(q(f.name), q(nlohmann::json(f.id).dump()));
+        }
+    }
+    if (const jig::Feature* edit = editId_.empty() ? nullptr : doc_.feature(editId_)) {
+        const auto& p = edit->params;
+        body_ = p.value("body", std::string {});
+        auto bit = before->bodies.find(body_);
+        for (auto& jr : p.value("faces", nlohmann::json::array())) {
+            if (bit != before->bodies.end()) {
+                auto res = jig::resolve(*bit->second, jig::ShapeRef::fromJson(jr));
+                if (res.index >= 0) {
+                    faces_.insert(res.index);
+                }
+            }
+        }
+        const QString key = q(p.value("plane", nlohmann::json("XY")).dump());
+        if (plane_->findData(key) >= 0) {
+            plane_->setCurrentIndex(plane_->findData(key));
+        }
+        angle_->setText(q(p.value("angle", std::string("3 deg"))));
+        flip_->setChecked(p.value("flip", false));
+    }
+    else {
+        angle_->setText(remembered().count("draft.angle") ? remembered()["draft.angle"] : QString("3 deg"));
+    }
+    if (body_.empty() && !before->bodies.empty()) {
+        body_ = before->bodies.begin()->first;
+    }
+    connect(angle_, &ExprField::changed, this, [this] { schedulePreview(); });
+    connect(plane_, &QComboBox::currentIndexChanged, this, [this] { schedulePreview(); });
+    connect(flip_, &QCheckBox::toggled, this, [this] { schedulePreview(); });
+    if (view_) {
+        connect(view_.data(), &Viewport::faceClicked, this,
+                [this](const QString& body, const QString& name, Qt::KeyboardModifiers) {
+                    toggleFaceByName(body.toStdString(), name.toStdString());
+                });
+        view_->setPickMode(PickMode::Faces);
+    }
+    refreshFaces();
+}
+
+DraftPanel::~DraftPanel()
+{
+    if (view_) {
+        view_->setFaceHighlight({}, {});
+    }
+}
+
+void DraftPanel::toggleFaceByName(const std::string& body, const std::string& name)
+{
+    const auto before = stateBefore();
+    auto bit = before->bodies.find(body);
+    if (bit == before->bodies.end()) {
+        return;
+    }
+    auto hits = bit->second->findFaces(name);
+    if (hits.size() != 1) {
+        return;
+    }
+    if (!faces_.empty() && body != body_) {
+        status_->setText("<b>✕ " + tr("Pick faces of one body at a time.") + "</b>");
+        return;
+    }
+    body_ = body;
+    if (!faces_.erase(hits[0])) {
+        faces_.insert(hits[0]);
+    }
+    refreshFaces();
+}
+
+void DraftPanel::refreshFaces()
+{
+    count_->setText(faces_.empty() ? tr("None yet: click the side faces to slope.")
+                                   : tr("%n face(s) to slope", "", int(faces_.size())));
+    if (view_) {
+        view_->setFaceHighlight(body_, std::vector<int>(faces_.begin(), faces_.end()));
+    }
+    schedulePreview();
+}
+
+QString DraftPanel::notReady() const
+{
+    return faces_.empty() ? tr("Click the faces to slope.") : QString();
+}
+
+jig::Feature DraftPanel::draft() const
+{
+    jig::Feature f = startDraft(doc_, editId_, "dr", tr("Draft"));
+    f.kind = jig::FeatureKind::Draft;
+    nlohmann::json refs = nlohmann::json::array();
+    const auto before = stateBefore();
+    if (auto bit = before->bodies.find(body_); bit != before->bodies.end()) {
+        for (int fi : faces_) {
+            refs.push_back(bit->second->faceRef(body_, fi).toJson());
+        }
+    }
+    const std::string pl = plane_->currentData().toString().toStdString();
+    f.params = {{"faces", refs},
+                {"body", body_},
+                {"plane", pl.empty() ? nlohmann::json("XY") : nlohmann::json::parse(pl, nullptr, false)},
+                {"angle", angle_->text().toStdString()},
+                {"flip", flip_->isChecked()}};
+    return f;
+}
+
+void DraftPanel::rememberValues()
+{
+    remembered()["draft.angle"] = angle_->text();
+}
+
+QString DraftPanel::title() const
+{
+    return tr("draft");
+}
+
 // ---------------------------------------------------------------- Move
 
 // Three arrows (X, Y, Z) from the bodies' centre; drag a grip to move along that axis.

@@ -448,6 +448,11 @@ Result<NamedShape> shellSolid(const std::string& featureId,
                               double thickness,
                               bool outside = false);
 
+// Slopes `faces` by `angle` (radians) away from `pull`, pivoting where they cross the
+// neutral plane (they keep their size there): draft for moulding and casting.
+Result<NamedShape> draftFaces(const std::string& featureId, const NamedShape& body, const std::vector<int>& faces,
+                              const gp_Pln& neutral, const gp_Dir& pull, double angle);
+
 // True when the point lies strictly inside the solid (used to choose Join or Cut).
 bool pointInside(const TopoDS_Shape& solid, double x, double y, double z);
 

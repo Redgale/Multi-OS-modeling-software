@@ -73,7 +73,8 @@ enum class FeatureKind
     Coil,       // a helix with a round or square section (springs)
     Primitive,  // a box, cylinder, sphere or torus placed on a plane, no sketch
     Rib,        // a thin wall from an open sketch curve to the body (a gusset)
-    Emboss      // a sketch's areas wrapped onto a round face, raised or sunk
+    Emboss,     // a sketch's areas wrapped onto a round face, raised or sunk
+    Draft       // faces of a body sloped by an angle around a neutral plane
 };
 
 const char* toString(FeatureKind k);

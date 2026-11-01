@@ -2697,3 +2697,46 @@ TEST(Plane, TangentThroughPointsAndAcrossAPath)
         EXPECT_EQ(e->status(last).level, StatusLevel::Error) << bad;
     }
 }
+
+TEST(Draft, SidesSlopeAroundTheNeutralPlane)
+{
+    // a 20 mm cube on the floor; its four sides sloped 5 degrees from the floor up: the top
+    // shrinks by 20 tan 5 on each side, the bottom stays (a frustum)
+    const std::string cube = "box id=bx1 length=20mm width=20mm height=20mm\n";
+    auto doc = build(cube + "draft id=dr1 faces=\"face:bx1/left;face:bx1/right;face:bx1/front;face:bx1/back\" "
+                            "plane=XY angle=5deg\n");
+    expectAllOk(*doc);
+    const double top = 20 - 2 * 20 * std::tan(5 * pi / 180);
+    const double want = 20.0 / 3 * (400 + top * top + 20 * top);
+    auto pr = props(*doc);
+    EXPECT_TRUE(pr.valid);
+    EXPECT_NEAR(pr.volume, want, 1e-3);
+    EXPECT_NEAR(pr.xmax - pr.xmin, 20, 1e-6);  // the bottom keeps its size
+    // the faces keep their names, so a fillet on the top edges still finds them
+    const auto& body = *doc->state().bodies.begin()->second;
+    for (const char* n : {"bx1/left", "bx1/top", "bx1/bottom"}) {
+        EXPECT_EQ(body.findFaces(n).size(), 1u) << n;
+    }
+    auto more = build(cube + "draft id=dr1 faces=\"face:bx1/left;face:bx1/right\" plane=XY angle=5deg\n"
+                             "fillet id=f1 edges=face:bx1/top radius=1mm\n");
+    expectAllOk(*more);
+    // flipped: the sides slope outwards going up
+    auto flip = build(cube + "draft id=dr1 faces=\"face:bx1/left\" plane=XY angle=5deg flip=yes\n");
+    expectAllOk(*flip);
+    EXPECT_NEAR(props(*flip).volume, 8000 + 0.5 * 20 * 20 * std::tan(5 * pi / 180) * 20, 1e-3);
+    // neutral plane halfway up (a construction plane): the middle keeps its size
+    auto mid = build(cube + "plane id=pl1 base=XY distance=10mm\n"
+                            "draft id=dr1 faces=\"face:bx1/left;face:bx1/right\" plane=pl1 angle=5deg\n");
+    expectAllOk(*mid);
+    EXPECT_NEAR(props(*mid).volume, 8000, 1e-3);
+    // the top (across the pull) and a right angle are refused with a reason
+    for (const std::string& bad : {cube + "draft id=dr1 faces=face:bx1/top plane=XY angle=5deg\n",
+                                   cube + "draft id=dr1 faces=face:bx1/left plane=XY angle=90deg\n"}) {
+        auto d = std::make_unique<Document>();
+        ScriptRunner r(*d);
+        r.strict = false;
+        ASSERT_TRUE(r.runText(bad).ok());
+        EXPECT_EQ(d->status(1).level, StatusLevel::Error) << bad;
+        EXPECT_FALSE(d->status(1).message.empty());
+    }
+}

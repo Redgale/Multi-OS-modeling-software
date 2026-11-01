@@ -2071,6 +2071,68 @@ FeatureOutcome applyEmboss(const Document& doc, const Feature& f, const std::sha
     }
 }
 
+// ---------------------------------------------------------------- draft
+
+// Slopes the picked faces of a body by an angle, pivoting on a neutral plane (they keep their
+// size where they cross it): the sides of a part leave a mould, or print without overhang.
+FeatureOutcome applyDraft(const Document& doc, const Feature& f, const std::shared_ptr<const ModelState>& in)
+{
+    const auto& p = f.params;
+    FeatureStatus status;
+    std::string bodyId = p.value("body", std::string {});
+    std::vector<int> faces;
+    int missing = 0;
+    for (auto& jr : p.value("faces", nlohmann::json::array())) {
+        ShapeRef ref = ShapeRef::fromJson(jr);
+        if (bodyId.empty()) {
+            bodyId = ref.body;
+        }
+        auto bit = in->bodies.find(ref.body);
+        if (bit == in->bodies.end()) {
+            ++missing;
+            continue;
+        }
+        Resolution res = resolve(*bit->second, ref);
+        if (res.status == ResolveStatus::Exact || res.status == ResolveStatus::Rebound) {
+            faces.push_back(res.index);
+            if (res.status == ResolveStatus::Rebound && status.level == StatusLevel::Ok) {
+                status.level = StatusLevel::Warning;
+                status.message = "A face changed; the most similar face is used. Check it.";
+            }
+        }
+        else {
+            ++missing;
+        }
+    }
+    if (missing) {
+        return failed("Some of the faces to slope no longer exist or were split.",
+                      {"Edit the draft and pick the faces again."});
+    }
+    auto bit = in->bodies.find(bodyId);
+    if (bit == in->bodies.end()) {
+        return failed("The body to slope no longer exists.", {"Edit the draft and pick faces of a body."});
+    }
+    auto plane = planeFrame(p.value("plane", nlohmann::json("XY")), in, status);
+    if (!plane) {
+        return failed(plane.error());
+    }
+    auto a = doc.evalAngle(p.value("angle", std::string("3 deg")));
+    if (!a) {
+        return failed(a.error());
+    }
+    gp_Dir pull = plane->Direction();
+    if (p.value("flip", false)) {
+        pull.Reverse();
+    }
+    auto res = draftFaces(f.id, *bit->second, faces, gp_Pln(*plane), pull, a.value());
+    if (!res) {
+        return failed(res.error(), "angle");
+    }
+    auto out = copyState(in);
+    out->bodies[bodyId] = std::make_shared<NamedShape>(std::move(res.value()));
+    return {out, status};
+}
+
 // ---------------------------------------------------------------- press pull
 
 // Pushes or pulls a flat face straight along its normal: out adds material, in removes it.
@@ -3111,6 +3173,8 @@ FeatureOutcome applyFeature(const Document& doc, const Feature& f, const std::sh
                 return applyRib(doc, f, in);
             case FeatureKind::Emboss:
                 return applyEmboss(doc, f, in);
+            case FeatureKind::Draft:
+                return applyDraft(doc, f, in);
             case FeatureKind::Hole:
                 return applyHole(doc, f, in);
             case FeatureKind::Pattern:

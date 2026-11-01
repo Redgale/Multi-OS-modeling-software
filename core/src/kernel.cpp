@@ -33,6 +33,7 @@
 #include <BRepFilletAPI_MakeChamfer.hxx>
 #include <BRepFilletAPI_MakeFillet.hxx>
 #include <BRepGProp.hxx>
+#include <BRepOffsetAPI_DraftAngle.hxx>
 #include <BRepLProp_SLProps.hxx>
 #include <BRepMesh_IncrementalMesh.hxx>
 #include <BRepOffsetAPI_MakeOffset.hxx>
@@ -2529,4 +2530,63 @@ Result<TopoDS_Shape> sectionFaces(const TopoDS_Shape& solid, const gp_Pln& plane
     }
 }
 
+}  // namespace jig
+
+namespace jig
+{
+Result<NamedShape> draftFaces(const std::string& featureId, const NamedShape& body, const std::vector<int>& faces,
+                              const gp_Pln& neutral, const gp_Dir& pull, double angle)
+{
+    if (faces.empty()) {
+        return makeError("draft.faces", "Pick the faces to slope.", {"Click the side faces of the body."});
+    }
+    if (!(std::abs(angle) > 1e-9) || std::abs(angle) >= std::numbers::pi / 2 - 1e-6) {
+        return makeError("draft.angle", "The draft angle must be more than 0 and less than 90 degrees.");
+    }
+    try {
+        BRepOffsetAPI_DraftAngle draft(body.shape());
+        for (int i : faces) {
+            const TopoDS_Face face = TopoDS::Face(body.face(i));
+            draft.Add(face, pull, angle, neutral);
+            if (!draft.AddDone()) {
+                return makeError("draft.face",
+                                 fmt("The face %1 cannot be sloped this way.", {body.faceName(i)}),
+                                 {"Draft works on faces along the pull direction (the sides, not the top or "
+                                  "bottom).",
+                                  "Leave out faces that meet the neutral plane at a sharp curve."});
+            }
+        }
+        draft.Build();
+        if (!draft.IsDone() || draft.Shape().IsNull()) {
+            return makeError("draft.failed", "These faces could not be sloped.",
+                             {"Try a smaller angle, or fewer faces at once."});
+        }
+        NamedShape out(draft.Shape());
+        propagateFaceNames(draft, {&body}, out);
+        // the sloped faces are not in the general history: ask for each face's replacement
+        for (int i = 0; i < body.faceCount(); ++i) {
+            try {
+                const TopoDS_Shape m = draft.ModifiedShape(body.face(i));
+                const int j = m.IsNull() ? -1 : out.faceIndex(m);
+                if (j >= 0 && out.faceName(j).empty()) {
+                    out.setFaceName(j, body.faceName(i));
+                }
+            }
+            catch (const Standard_Failure&) {
+                // not in the result
+            }
+        }
+        int other = 0;
+        for (int i = 0; i < out.faceCount(); ++i) {
+            if (out.faceName(i).empty()) {
+                out.setFaceName(i, featureId + "/face" + std::to_string(++other));
+            }
+        }
+        out.deriveEdgeNames();
+        return out;
+    }
+    catch (const Standard_Failure& f) {
+        return makeError("draft.failed", "These faces could not be sloped.", {"Try a smaller angle."}, kernelText(f));
+    }
+}
 }  // namespace jig

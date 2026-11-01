@@ -931,6 +931,47 @@ private:
     ExprField* depth_;
 };
 
+// Modify ▸ Draft: slope faces of a body by a small angle around a neutral plane.
+class DraftPanel : public FeaturePanel
+{
+    Q_OBJECT
+public:
+    DraftPanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent = nullptr);
+    ~DraftPanel() override;
+    void toggleFaceByName(const std::string& body, const std::string& name);  // a click in the view
+    size_t faceCount() const
+    {
+        return faces_.size();
+    }
+    QComboBox* plane() const
+    {
+        return plane_;
+    }
+    ExprField* angle() const
+    {
+        return angle_;
+    }
+    QCheckBox* flip() const
+    {
+        return flip_;
+    }
+
+protected:
+    QString notReady() const override;
+    jig::Feature draft() const override;
+    QString title() const override;
+    void rememberValues() override;
+
+private:
+    void refreshFaces();
+    std::string body_;
+    std::set<int> faces_;
+    QLabel* count_;
+    QComboBox* plane_;
+    ExprField* angle_;
+    QCheckBox* flip_;
+};
+
 class MoveHandle;
 
 // Move / copy bodies: shift along X, Y, Z and turn around an origin axis.

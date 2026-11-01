@@ -3028,6 +3028,48 @@ private slots:
         }
     }
 
+    // Draft from the panel: click two side faces, OK slopes them; editing keeps the faces.
+    void draftPanel()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        {
+            jig::ScriptRunner r(w.document());
+            QVERIFY(r.runText("box id=bx1 length=20mm width=20mm height=20mm\n").ok());
+        }
+        w.refreshAll();
+        w.runCommand("solid.draft");
+        auto* dp = qobject_cast<DraftPanel*>(w.featurePanel());
+        QVERIFY(dp);
+        QTest::qWait(200);
+        QVERIFY(!dp->previewOk());  // no faces yet
+        dp->toggleFaceByName("bx1", "bx1/left");
+        dp->toggleFaceByName("bx1", "bx1/right");
+        dp->toggleFaceByName("bx1", "bx1/front");
+        dp->toggleFaceByName("bx1", "bx1/front");  // a second click leaves it out again
+        QCOMPARE(int(dp->faceCount()), 2);
+        dp->angle()->setText("5 deg");
+        QTRY_VERIFY(dp->previewOk());
+        w.viewport()->homeView();
+        QTRY_VERIFY(w.viewport()->meshesReady());
+        QTest::qWait(200);
+        w.grab().save(shotPath("draft-panel"));
+        QVERIFY(dp->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        // two opposite sides sloped: a prism with a trapezoid end, (20 + top) / 2 x 20 x 20
+        const double top = 20 - 2 * 20 * std::tan(5 * std::numbers::pi / 180);
+        const double want = (20 + top) / 2 * 20 * 20;
+        QVERIFY(std::abs(jig::massProperties(w.document().state().bodies.begin()->second->shape()).volume - want) < 1e-3);
+        w.editFeature(1);
+        dp = qobject_cast<DraftPanel*>(w.featurePanel());
+        QVERIFY(dp);
+        QCOMPARE(int(dp->faceCount()), 2);
+        QCOMPARE(dp->angle()->text(), QString("5 deg"));
+        dp->cancel();
+    }
+
     // Areas of a sketch are picked by clicking them in the 3D view: a square with a circle in it
     // can become a round post (the circle) or a block with a hole (the ring), not only a block.
     void clickAreasToExtrude()

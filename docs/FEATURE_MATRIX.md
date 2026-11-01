@@ -124,7 +124,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Tangent chain selection | 18, 23 | v0.1 M3 | **app** | |
 | Chamfer: equal, two distances, distance+angle | 18 | v0.1 M3 | **app** + scripts: all three | |
 | Shell (inside/outside, openings) | 18 | v0.1 M3 | **app** + scripts (`direction=outside`): inside or outside, openings or closed hollow | |
-| Draft | 18 | v0.2 | — | |
+| Draft | 18 | v0.2 | **app** + scripts (`draft`): faces sloped around a neutral plane (origin, construction or face), either way | Parting-line draft not yet |
 | Scale | 17, 18 | v0.2 | — | |
 | Combine join/cut/intersect, keep tools | 17 | v0.1 M4 | **app** + scripts (`combine`) | |
 | Offset face, replace face, split face, silhouette split | 17 | v0.3+ | — | Direct modelling |

@@ -660,6 +660,16 @@
     </message>
     <message>
         <location line="+1"/>
+        <source>Draft</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Slope faces by a small angle so the part leaves a mould, or prints without overhangs.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
         <source>Press pull</source>
         <translation type="unfinished"></translation>
     </message>
@@ -669,12 +679,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
+        <location line="-2"/>
         <source>MODIFY</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
+        <location line="+3"/>
         <source>Fillet</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1338,6 +1348,11 @@
     </message>
     <message>
         <location line="+1"/>
+        <source>Slope faces by a small angle so the part leaves a mould, or prints without overhangs.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>Push or pull a flat face by a distance; on a rounded edge or hole it opens the step that made it.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1564,6 +1579,11 @@
     <message>
         <location line="+1"/>
         <source>Shell faces are given as face:&lt;face name&gt;.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Draft faces are given as face:&lt;face name&gt;.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -2418,6 +2438,31 @@
     </message>
     <message>
         <location line="+1"/>
+        <source>A face changed; the most similar face is used. Check it.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Some of the faces to slope no longer exist or were split.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Edit the draft and pick the faces again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The body to slope no longer exists.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Edit the draft and pick faces of a body.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>The body of the face to push or pull no longer exists.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2967,7 +3012,47 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+22"/>
+        <location line="+2"/>
+        <source>Pick the faces to slope.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Click the side faces of the body.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The draft angle must be more than 0 and less than 90 degrees.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Draft works on faces along the pull direction (the sides, not the top or bottom).</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Leave out faces that meet the neutral plane at a sharp curve.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>These faces could not be sloped.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Try a smaller angle, or fewer faces at once.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Try a smaller angle.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+21"/>
         <source>A smooth curve can be made tangent only where it meets the other curve at one of its ends.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3423,6 +3508,11 @@
     </message>
     <message>
         <location line="+1"/>
+        <source>The face %1 cannot be sloped this way.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>There is no screw size called &apos;%1&apos; in the clearance table.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3457,12 +3547,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-239"/>
+        <location line="-248"/>
         <source>There is nothing to export yet.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-251"/>
+        <location line="-256"/>
         <source>This DXF has no lines, circles, arcs, curves, text or blocks to bring in.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3502,7 +3592,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+164"/>
+        <location line="+169"/>
         <source>The 3MF file could not be created.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3792,7 +3882,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
+        <location line="+9"/>
         <source>Use M2 to M12, or #4, #6, #8, #10, 1/4&quot;, 5/16&quot;, 3/8&quot;, 1/2&quot;.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4105,7 +4195,7 @@
 <context>
     <name>CoreWords</name>
     <message>
-        <location line="+102"/>
+        <location line="+103"/>
         <source>ball face (sphere)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4213,7 +4303,7 @@
 <context>
     <name>MainWindow</name>
     <message>
-        <location filename="../app/MainWindow.cpp" line="+525"/>
+        <location filename="../app/MainWindow.cpp" line="+527"/>
         <source>Rebuilding the design…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4691,9 +4781,85 @@
     </message>
 </context>
 <context>
+    <name>jigapp::DraftPanel</name>
+    <message>
+        <location filename="../app/FeaturePanels.cpp" line="+869"/>
+        <location line="+106"/>
+        <source>Draft</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-105"/>
+        <source>Slope the sides of a part by a small angle, so it slides out of a mould or prints without overhangs. Click the faces to slope. They pivot on the neutral plane and keep their size there.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Floor (XY): sides narrow going up</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Front (XZ)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Side (YZ)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Slope the other way (wider going up)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Faces</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Neutral plane</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Angle</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+67"/>
+        <source>Pick faces of one body at a time.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+12"/>
+        <source>None yet: click the side faces to slope.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message numerus="yes">
+        <location line="+1"/>
+        <source>%n face(s) to slope</source>
+        <translation type="unfinished">
+            <numerusform></numerusform>
+        </translation>
+    </message>
+    <message>
+        <location line="+9"/>
+        <source>Click the faces to slope.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+30"/>
+        <source>draft</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>jigapp::EmbossPanel</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="+715"/>
+        <location line="-285"/>
         <location line="+113"/>
         <source>Emboss</source>
         <translation type="unfinished"></translation>
@@ -5419,7 +5585,7 @@
 <context>
     <name>jigapp::MainWindow</name>
     <message>
-        <location filename="../app/MainWindow.cpp" line="-158"/>
+        <location filename="../app/MainWindow.cpp" line="-160"/>
         <source>OK</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5445,15 +5611,15 @@
     </message>
     <message>
         <location line="+9"/>
-        <location line="+745"/>
+        <location line="+747"/>
         <location line="+738"/>
-        <location line="+922"/>
+        <location line="+925"/>
         <location line="+27"/>
         <source>Sketch</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2430"/>
+        <location line="-2435"/>
         <source>Extrude</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5565,6 +5731,11 @@
     <message>
         <location line="+2"/>
         <source>Emboss</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Draft</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -5725,12 +5896,12 @@
     </message>
     <message>
         <location line="+2"/>
-        <location line="+1599"/>
+        <location line="+1602"/>
         <source>Mouse and trackpad</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1597"/>
+        <location line="-1600"/>
         <source>Default (middle-drag pans, Shift+middle orbits)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5751,30 +5922,30 @@
     </message>
     <message>
         <location line="+11"/>
-        <location line="+1572"/>
+        <location line="+1575"/>
         <source>Theme</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1570"/>
-        <location line="+1525"/>
+        <location line="-1573"/>
+        <location line="+1528"/>
         <source>Light</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1525"/>
-        <location line="+1524"/>
+        <location line="-1528"/>
+        <location line="+1527"/>
         <source>Dark</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1523"/>
-        <location line="+1525"/>
+        <location line="-1526"/>
+        <location line="+1528"/>
         <source>High contrast</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1517"/>
+        <location line="-1520"/>
         <source>&amp;Help</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5891,12 +6062,12 @@
     </message>
     <message>
         <location line="+2"/>
-        <location line="+2205"/>
+        <location line="+2220"/>
         <source>Rename…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2202"/>
+        <location line="-2217"/>
         <source>Delete body</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5912,13 +6083,13 @@
     </message>
     <message>
         <location line="+5"/>
-        <location line="+1579"/>
+        <location line="+1582"/>
         <location line="+58"/>
         <source>Properties</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1631"/>
+        <location line="-1634"/>
         <source>Properties and help</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6004,12 +6175,12 @@
     </message>
     <message>
         <location line="+18"/>
-        <location line="+2091"/>
+        <location line="+2106"/>
         <source>Move rollback marker</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1919"/>
+        <location line="-1934"/>
         <source>Start here: every part begins as a flat sketch.
 Click Sketch on the toolbar, then click a plane.
 Or open the phone stand sample (File ▸ Open a sample).</source>
@@ -6208,12 +6379,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+0"/>
-        <location line="+384"/>
+        <location line="+387"/>
         <source>Jigsmith designs (*.jig)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-337"/>
+        <location line="-340"/>
         <source>Save view</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6228,7 +6399,7 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+98"/>
+        <location line="+101"/>
         <source>Import STEP</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6378,12 +6549,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+0"/>
-        <location line="+985"/>
+        <location line="+994"/>
         <source>There is no 3D body yet.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-982"/>
+        <location line="-991"/>
         <source>STL mesh for slicers (*.stl)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6653,7 +6824,7 @@ An empty design with the origin ready</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+146"/>
+        <location line="+155"/>
         <source>That face was made by %1: change its size here.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6769,7 +6940,7 @@ An empty design with the origin ready</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+48"/>
+        <location line="+51"/>
         <source>Edit…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7082,7 +7253,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::MovePanel</name>
     <message>
-        <location line="+1952"/>
+        <location line="+2091"/>
         <source>free %1</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7275,7 +7446,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::PatternPanel</name>
     <message>
-        <location line="-2672"/>
+        <location line="-2811"/>
         <location line="+154"/>
         <source>Pattern</source>
         <translation type="unfinished"></translation>

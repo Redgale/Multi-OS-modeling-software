@@ -138,6 +138,7 @@ CommandRegistry::CommandRegistry()
     add({"solid.mirror", "Mirror", "Mirror", "CREATE", "Copy a body across a plane, e.g. to make a symmetric part.", "", {"symmetric", "flip copy"}, false, false, false, m3});
     add({"solid.pattern_rect", "Grid copy", "Rectangular Pattern", "CREATE", "Repeat a feature in rows and columns.", "", {"array", "grid", "repeat"}, false, false, false, m3});
     add({"solid.pattern_circ", "Ring copy", "Circular Pattern", "CREATE", "Repeat a feature around an axis.", "", {"array", "repeat around", "spokes"}, true, false, false, m3});
+    add({"solid.draft", "Draft", "Draft", "MODIFY", "Slope faces by a small angle so the part leaves a mould, or prints without overhangs.", "", {"taper faces", "mould", "mold", "angle faces"}, false, false, true, m3});
     add({"solid.presspull", "Press pull", "Press Pull", "MODIFY", "Push or pull a flat face by a distance; on a rounded edge or hole it opens the step that made it.", "Q", {"push", "pull", "drag face"}, false, false, true, m3});
     add({"solid.fillet", "Fillet", "Fillet", "MODIFY", "Round off edges so parts look finished and are comfortable to hold.", "F", {"round the edges", "round", "soften", "radius"}, true, false, true, m3});
     add({"solid.chamfer", "Chamfer", "Chamfer", "MODIFY", "Cut a flat bevel on edges; great for the bottom of 3D prints.", "", {"bevel", "angled edge", "elephant foot"}, true, false, true, m3});
@@ -174,7 +175,7 @@ CommandRegistry::CommandRegistry()
         "constraint.symmetric", "constraint.equal", "solid.extrude", "solid.fillet", "solid.chamfer", "solid.shell",
         "solid.revolve", "solid.loft", "solid.sweep", "solid.pipe", "solid.coil", "solid.box", "solid.cylinder", "solid.sphere", "solid.torus", "solid.rib", "solid.emboss", "solid.hole", "solid.mirror", "solid.pattern_rect", "solid.pattern_circ", "modify.parameters",
         "inspect.measure", "inspect.properties", "file.export_3mf", "construct.offset_plane", "construct.angle_plane",
-        "construct.midplane", "construct.tangent_plane", "construct.points_plane", "construct.path_plane", "construct.axis", "construct.point", "solid.presspull", "solid.combine", "solid.split", "solid.move",
+        "construct.midplane", "construct.tangent_plane", "construct.points_plane", "construct.path_plane", "construct.axis", "construct.point", "solid.draft", "solid.presspull", "solid.combine", "solid.split", "solid.move",
         "inspect.section", "insert.dxf", "insert.svg", "help.tutorial"};
     for (auto& c : commands_) {
         if (inApp.count(c.id)) {
@@ -1498,6 +1499,65 @@ Result<bool> ScriptRunner::runLineUnchecked(std::string_view rawLine)
             if (a.get("direction", "inside") == "outside") {
                 f.params["direction"] = "outside";
             }
+            id = f.id;
+            insertFeature(m, std::move(f));
+            return true;
+        });
+        if (!r) {
+            return r;
+        }
+        return checkFeature(id);
+    }
+    if (a.verb == "draft") {
+        // draft faces="face:<name>;…" [plane=XY|<plane id>|face:<name>] angle=3deg [flip=yes] [body=e1]
+        const ModelState& st = doc.state();
+        nlohmann::json refs = nlohmann::json::array();
+        std::string bodyId = a.get("body");
+        for (auto& one : split(a.get("faces"), ';')) {
+            if (one.rfind("face:", 0) != 0) {
+                return makeError("script.args", "Draft faces are given as face:<face name>.");
+            }
+            bool found = false;
+            for (auto& [bid, body] : st.bodies) {
+                if (!bodyId.empty() && bid != bodyId) {
+                    continue;
+                }
+                auto hits = body->findFaces(one.substr(5));
+                if (hits.size() == 1) {
+                    refs.push_back(body->faceRef(bid, hits[0]).toJson());
+                    bodyId = bid;
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                return makeError("script.args", "No single face called '" + one.substr(5) + "'.");
+            }
+        }
+        nlohmann::json plane = a.get("plane", "XY");
+        if (a.get("plane", "").rfind("face:", 0) == 0) {
+            plane = nullptr;
+            for (auto& [bid, body] : st.bodies) {
+                auto hits = body->findFaces(a.get("plane").substr(5));
+                if (hits.size() == 1) {
+                    plane = {{"face", body->faceRef(bid, hits[0]).toJson()}};
+                }
+            }
+            if (plane.is_null()) {
+                return makeError("script.args", "There is no single face called '" + a.get("plane").substr(5) + "'.");
+            }
+        }
+        std::string id;
+        auto r = doc.transact("Draft", [&](Model& m) -> Result<bool> {
+            Feature f;
+            f.id = a.get("id", Document::newId(m, "dr"));
+            if (findFeature(m, f.id)) {
+                return makeError("script.args", "The id '" + f.id + "' is already used.");
+            }
+            f.name = a.get("name", stepName("Draft", f.id, "dr"));
+            f.kind = FeatureKind::Draft;
+            f.params = {{"faces", refs}, {"body", bodyId}, {"plane", plane}, {"angle", a.get("angle", "3 deg")},
+                        {"flip", a.get("flip", "no") == "yes"}};
             id = f.id;
             insertFeature(m, std::move(f));
             return true;

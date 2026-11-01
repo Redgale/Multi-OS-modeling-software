@@ -96,6 +96,7 @@ const std::map<QString, QString>& icons()
         {"solid.torus", "E12 12 9 5 E12 12 4 1.8"},
         {"solid.rib", "M4 20 L20 20 L20 17 L7 17 L7 4 L4 4 Z f M7 17 L7 12 L15 17 Z"},
         {"solid.emboss", "M5 4 L5 20 M19 4 L19 20 E12 4 7 2 a M9 9 L12 15 L15 9"},
+        {"solid.draft", "M3 20 L21 20 M7 20 L9 6 L15 6 L17 20 d M12 3 L12 21"},
         {"solid.loft", "M5 19 L19 19 L16 13 L8 13 Z M8 13 L10 5 L14 5 L16 13"},
         {"solid.revolve", "M8 4 L8 20 d M12 3 L12 21 a M17 9 A12 12 5 0 -270 M12 7 L15 6"},
         {"solid.hole", "M3 9 L9 5 L21 5 L15 9 Z M3 9 L3 19 L15 19 L15 9 M15 19 L21 15 L21 5 f E12 7 3 1.2 a M9 9 L9 16 M15 9 L15 16"},
