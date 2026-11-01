@@ -1851,7 +1851,7 @@ bool SketchEditor::mouseRelease(QMouseEvent* e)
             }
             auto near = work_.curveNear(loc->x(), loc->y());
             if (!near || near->second > 8 * view_->worldPerPixel()) {
-                message_ = tool_ == Tool::Extend ? tr("Click on a line or arc, near the end to lengthen.")
+                message_ = tool_ == Tool::Extend ? tr("Click on a line, arc or open smooth curve, near the end to lengthen.")
                                                  : tr("Click on a curve to break it.");
                 break;
             }

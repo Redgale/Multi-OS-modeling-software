@@ -975,8 +975,25 @@ TEST(SketchExtend, LinesRunOnToEllipsesAndSmoothCurves)
     c.addSpline({{50, -10}, {52, 0}, {50, 10}});
     ASSERT_TRUE(c.extend(m, 39, 0).ok());
     EXPECT_NEAR(c.pointXY(c.entity(m)->p2).first, 52, 0.05);
-    // the curves themselves are not extended
+    // an ellipse is closed: nothing to extend
     EXPECT_FALSE(s.extend(el, 40, 0).ok());
+    // an open smooth curve runs on straight from its end, the way it leaves it: through
+    // (0,0), (10,5), (20,0) it leaves along (10,-5) and meets the line x = 30 at (30,-5)
+    Sketch o;
+    const int sp = o.addSpline({{0, 0}, {10, 5}, {20, 0}});
+    o.addLine(30, -20, 30, 20);
+    auto e = o.extend(sp, 19, 0);
+    ASSERT_TRUE(e.ok()) << e.error().message;
+    ASSERT_EQ(o.entity(sp)->pts.size(), 4u);
+    EXPECT_NEAR(o.pointXY(o.entity(sp)->pts.back()).first, 30, 1e-9);
+    EXPECT_NEAR(o.pointXY(o.entity(sp)->pts.back()).second, -5, 1e-9);
+    EXPECT_NE(o.solve().state, SolveState::Failed);
+    EXPECT_NEAR(o.pointXY(o.entity(sp)->pts.back()).first, 30, 1e-9);  // held on the line
+    // its other end: leaves along (-10,-5); nothing there
+    EXPECT_FALSE(o.extend(sp, 1, 0).ok());
+    // a closed one has no ends
+    Sketch cl;
+    EXPECT_FALSE(cl.extend(cl.addSpline({{0, 0}, {10, 5}, {20, 0}}, true), 20, 0).ok());
 }
 
 TEST(SketchBreak, CurvesSplitWhereOthersCross)

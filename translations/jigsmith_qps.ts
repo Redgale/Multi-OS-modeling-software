@@ -2341,12 +2341,7 @@
         <translation>[Á smööth çürvé çáñ bé mádé táñgéñt öñlý whéré ît mééts thé öthér çürvé át öñé öf îts éñds.~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+20" />
-        <source>Extend works on lines and arcs. An ellipse or smooth curve can be what they run to, but not extended itself.</source>
-        <translation>[Éxtéñd wörks öñ lîñés áñd árçs. Áñ éllîpsé ör smööth çürvé çáñ bé whát théý rüñ tö, büt ñöt éxtéñdéd îtsélf.~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
-    </message>
-    <message>
-        <location line="+3" />
+        <location line="+24" />
         <source>Click a curve to break it.</source>
         <translation>[Çlîçk á çürvé tö bréák ît.~~~~~~]</translation>
     </message>
@@ -2726,7 +2721,7 @@
         <translation>[Thé föñt '%1' îs ñöt áváîláblé héré; üsîñg thé büîlt-îñ föñt (Îñtér).~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="-216" />
+        <location line="-217" />
         <source>There is nothing to export yet.</source>
         <translation>[Théré îs ñöthîñg tö éxpört ýét.~~~~~~~~]</translation>
     </message>
@@ -3256,7 +3251,17 @@
         <translation>[Á skétçh îñ thîs fîlé îs dámágéd.~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+2" />
+        <location line="+1" />
+        <source>A closed curve has no end to extend.</source>
+        <translation>[Á çlöséd çürvé hás ñö éñd tö éxtéñd.~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Extend works on lines, arcs and open smooth curves. An ellipse is closed: it has no end to extend.</source>
+        <translation>[Éxtéñd wörks öñ lîñés, árçs áñd öpéñ smööth çürvés. Áñ éllîpsé îs çlöséd: ît hás ñö éñd tö éxtéñd.~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
         <source>That end is joined to another curve. Only a loose end can be extended.</source>
         <translation>[Thát éñd îs jöîñéd tö áñöthér çürvé. Öñlý á löösé éñd çáñ bé éxtéñdéd.~~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -7412,7 +7417,12 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
         <translation>[Lîñé~]</translation>
     </message>
     <message>
-        <location line="+1245" />
+        <location line="+589" />
+        <source>Click on a line, arc or open smooth curve, near the end to lengthen.</source>
+        <translation>[Çlîçk öñ á lîñé, árç ör öpéñ smööth çürvé, ñéár thé éñd tö léñgthéñ.~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+656" />
         <source>Select a line and a curve, or two curves.</source>
         <translation>[Séléçt á lîñé áñd á çürvé, ör twö çürvés.~~~~~~~~~~]</translation>
     </message>
@@ -7567,12 +7577,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
         <translation>[Dîstáñçé~~]</translation>
     </message>
     <message>
-        <location line="-96" />
-        <source>Click on a line or arc, near the end to lengthen.</source>
-        <translation>[Çlîçk öñ á lîñé ör árç, ñéár thé éñd tö léñgthéñ.~~~~~~~~~~~~]</translation>
-    </message>
-    <message>
-        <location line="+1" />
+        <location line="-95" />
         <source>Click on a curve to break it.</source>
         <translation>[Çlîçk öñ á çürvé tö bréák ît.~~~~~~~]</translation>
     </message>

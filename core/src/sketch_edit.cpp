@@ -121,19 +121,38 @@ std::pair<double, double> reflect(double x, double y, double ax, double ay, doub
 Result<int> Sketch::extend(int entityId, double x, double y)
 {
     const SketchEntity* t = entity(entityId);
-    if (!t || (t->type != EntityType::Line && t->type != EntityType::Arc)) {
-        return editError("sketch.extend", "Extend works on lines and arcs. An ellipse or smooth curve can be what they run to, but not extended itself.");
+    const bool smooth = t && t->type == EntityType::Spline;
+    if (smooth && (t->closed || t->pts.size() < 2)) {
+        return editError("sketch.extend", "A closed curve has no end to extend.");
     }
-    const Geo T = geoOf(*this, *t);
+    if (!t || (t->type != EntityType::Line && t->type != EntityType::Arc && !smooth)) {
+        return editError("sketch.extend", "Extend works on lines, arcs and open smooth curves. An ellipse is closed: it has no end to extend.");
+    }
     // the end nearest the click
-    const int endA = t->p1, endB = t->p2;
+    const int endA = smooth ? t->pts.front() : t->p1, endB = smooth ? t->pts.back() : t->p2;
     auto [axx, ayy] = pointXY(endA);
     auto [bxx, byy] = pointXY(endB);
-    const bool atEnd = std::hypot(x - bxx, y - byy) < std::hypot(x - axx, y - ayy);
-    const int endPt = atEnd ? endB : endA;
+    const bool nearB = std::hypot(x - bxx, y - byy) < std::hypot(x - axx, y - ayy);
+    const int endPt = nearB ? endB : endA;
+    // a smooth curve runs on straight, the way it leaves that end: a line from its neighbouring
+    // fit point to the end, extended past the end
+    Geo T;
+    bool atEnd = nearB;
+    if (smooth) {
+        const int nb = nearB ? t->pts[t->pts.size() - 2] : t->pts[1];
+        T.line = true;
+        std::tie(T.ax, T.ay) = pointXY(nb);
+        std::tie(T.bx, T.by) = pointXY(endPt);
+        atEnd = true;
+    }
+    else {
+        T = geoOf(*this, *t);
+    }
     // a loose end only: nothing else may share or pin that point
     for (auto& [id, e] : entities_) {
-        if (id != entityId && e.type != EntityType::Point && (e.p1 == endPt || e.p2 == endPt || e.center == endPt)) {
+        const int f0 = e.pts.empty() ? 0 : e.pts.front(), f1 = e.pts.empty() ? 0 : e.pts.back();
+        if (id != entityId && e.type != EntityType::Point &&
+            (e.p1 == endPt || e.p2 == endPt || e.center == endPt || f0 == endPt || f1 == endPt)) {
             return editError("sketch.extend", "That end is joined to another curve. Only a loose end can be extended.");
         }
     }
@@ -200,6 +219,19 @@ Result<int> Sketch::extend(int entityId, double x, double y)
     }
     if (best >= 1e299) {
         return editError("sketch.extend", "Nothing lies ahead of that end to extend it to.");
+    }
+    if (smooth) {
+        // the crossing becomes a new end point, the old end a point it passes through
+        const int np = attachedPoint(entityId, hit.first, hit.second);
+        auto& pts = entities_.at(entityId).pts;
+        if (nearB) {
+            pts.push_back(np);
+        }
+        else {
+            pts.insert(pts.begin(), np);
+        }
+        syncCurvePoints();
+        return np;
     }
     // the old end's own constraints (a fixed spot, a distance) would hold it back
     std::erase_if(constraints_, [&](const auto& kv) {

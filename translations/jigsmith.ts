@@ -2342,12 +2342,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+20"/>
-        <source>Extend works on lines and arcs. An ellipse or smooth curve can be what they run to, but not extended itself.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+3"/>
+        <location line="+24"/>
         <source>Click a curve to break it.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2727,7 +2722,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-216"/>
+        <location line="-217"/>
         <source>There is nothing to export yet.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3257,7 +3252,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+2"/>
+        <location line="+1"/>
+        <source>A closed curve has no end to extend.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Extend works on lines, arcs and open smooth curves. An ellipse is closed: it has no end to extend.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>That end is joined to another curve. Only a loose end can be extended.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7422,7 +7427,12 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1245"/>
+        <location line="+589"/>
+        <source>Click on a line, arc or open smooth curve, near the end to lengthen.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+656"/>
         <source>Select a line and a curve, or two curves.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7577,12 +7587,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-96"/>
-        <source>Click on a line or arc, near the end to lengthen.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+1"/>
+        <location line="-95"/>
         <source>Click on a curve to break it.</source>
         <translation type="unfinished"></translation>
     </message>
