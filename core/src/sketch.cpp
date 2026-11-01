@@ -1793,7 +1793,39 @@ nlohmann::json Sketch::toJson() const
         }
         j["artworks"] = arts;
     }
+    if (!links_.empty()) {
+        j["links"] = links_;
+    }
     return j;
+}
+
+bool Sketch::moveFixedPoint(int pointId, double x, double y)
+{
+    bool moved = false;
+    for (auto& [cid, c] : constraints_) {
+        if (c.type == ConstraintType::Fix && c.a == pointId) {
+            c.fx = x;
+            c.fy = y;
+            moved = true;
+        }
+    }
+    if (moved) {
+        if (auto* e = entity(pointId)) {
+            e->x = x;
+            e->y = y;
+        }
+    }
+    return moved;
+}
+
+bool Sketch::setConstraintExpr(int constraintId, std::string expr)
+{
+    auto it = constraints_.find(constraintId);
+    if (it == constraints_.end()) {
+        return false;
+    }
+    it->second.expr = std::move(expr);
+    return true;
 }
 
 Result<Sketch> Sketch::fromJson(const nlohmann::json& j)
@@ -1878,6 +1910,9 @@ Result<Sketch> Sketch::fromJson(const nlohmann::json& j)
                 return makeError("file.sketch", "Artwork in this file has lost its anchor point.");
             }
             s.artworks_[a.id] = std::move(a);
+        }
+        for (auto& jl : j.value("links", nlohmann::json::array())) {
+            s.links_.push_back(jl);
         }
         s.nextId_ = j.value("next_id", 1);
         int maxId = 0;

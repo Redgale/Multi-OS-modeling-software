@@ -1772,3 +1772,45 @@ TEST(Bodies, SplitWithACurvedFace)
     EXPECT_NE(miss->status(int(miss->model().features.size()) - 1).message.find("all the way"), std::string::npos)
         << miss->status(int(miss->model().features.size()) - 1).message;
 }
+
+TEST(SketchProject, CopiesFollowTheModel)
+{
+    // the top outline of a block (with a round hole) projected 20 mm above, extruded 3 mm;
+    // making the block wider and the hole bigger moves and resizes the copy too
+    auto doc = build("param w = 40 mm\nparam d = 8 mm\n"
+                     "sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=w h=20\nextrude id=e1 sketch=s1 distance=10\n"
+                     "sketch id=s3 on=e1/end\ncircle sketch=s3 center=5,0 d=d\nextrude id=h sketch=s3 extent=all op=cut\n"
+                     "sketch id=s2 plane=XY offset=20mm\nproject face:e1/end sketch=s2\n"
+                     "extrude id=e2 sketch=s2 distance=3 op=new\n");
+    auto lid = [&] { return massProperties(doc->state().bodies.at("e2")->shape()); };
+    auto disk = [&] {  // the smallest closed area of the projected sketch: the hole's copy
+        double a = 1e300;
+        for (auto& r : doc->state().sketches.at("s2")->profiles.regions) {
+            a = std::min(a, r.area);
+        }
+        return a;
+    };
+    EXPECT_NEAR(lid().volume, 40 * 20 * 3, 1e-3);  // all areas extruded: the disk too
+    EXPECT_NEAR(disk(), pi * 16, 1e-6);
+    run(*doc, "param w = 60 mm");
+    expectAllOk(*doc);
+    EXPECT_NEAR(lid().volume, 60 * 20 * 3, 1e-3);
+    EXPECT_NEAR(lid().xmax, 30, 1e-6);
+    run(*doc, "param d = 12 mm");
+    expectAllOk(*doc);
+    EXPECT_NEAR(disk(), pi * 36, 1e-6);
+    EXPECT_EQ(doc->state().sketches.at("s2")->report.dof, 0);  // still fixed in place
+    // the links are kept with the design
+    const auto path = (tempDir() / "linked-project.jig").string();
+    ASSERT_TRUE(saveDocument(*doc, path).ok());
+    auto back = loadDocument(path);
+    ASSERT_TRUE(back.ok());
+    run(**back, "param w = 50 mm");
+    EXPECT_NEAR(massProperties((*back)->state().bodies.at("e2")->shape()).volume, 50 * 20 * 3, 1e-3);
+    // linked=no keeps a copy that stays put
+    auto fixedCopy = build("param w = 40 mm\nsketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=w h=20\nextrude id=e1 sketch=s1 distance=10\n"
+                           "sketch id=s2 plane=XY offset=20mm\nproject face:e1/end sketch=s2 linked=no\n"
+                           "extrude id=e2 sketch=s2 distance=3 op=new\n");
+    run(*fixedCopy, "param w = 60 mm");
+    EXPECT_NEAR(massProperties(fixedCopy->state().bodies.at("e2")->shape()).volume, 40 * 20 * 3, 1e-3);
+}

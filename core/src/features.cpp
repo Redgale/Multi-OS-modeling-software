@@ -542,6 +542,22 @@ FeatureOutcome applySketch(const Document& doc, const Feature& f, const std::sha
         return failed(sk.error());
     }
     st->solved = std::move(sk.value());
+    // projected edges follow the model as it is before this sketch
+    for (const auto& link : st->solved.links()) {
+        ShapeRef ref = ShapeRef::fromJson(link.value("ref", nlohmann::json::object()));
+        auto bit = in->bodies.find(ref.body);
+        Resolution r = bit == in->bodies.end() ? Resolution {} : resolve(*bit->second, ref);
+        TopoDS_Shape edge;
+        if (bit != in->bodies.end() && r.status != ResolveStatus::Missing && r.status != ResolveStatus::Ambiguous) {
+            edge = bit->second->edge(r.index);
+        }
+        auto followed = followLink(st->solved, st->frame, link, edge);
+        if (!followed && status.level == StatusLevel::Ok) {
+            status.level = StatusLevel::Warning;
+            status.message = followed.error().message;
+            status.suggestions = followed.error().suggestions;
+        }
+    }
     st->report = st->solved.solve(doc.lookup());
     if (st->report.state == SolveState::Failed
         || (st->report.state == SolveState::OverConstrained && !st->report.conflicting.empty())) {

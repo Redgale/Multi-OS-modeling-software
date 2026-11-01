@@ -2373,6 +2373,21 @@
     </message>
     <message>
         <location line="+1"/>
+        <source>A projected edge is gone; its copy stays where it was.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>A projected edge changed shape; its copy stays where it was.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Delete the copy and project the edge again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>A wall along open curves needs a thickness.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2712,7 +2727,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-212"/>
+        <location line="-215"/>
         <source>There is nothing to export yet.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3451,7 +3466,7 @@
 <context>
     <name>jigapp::AxisPanel</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="+2292"/>
+        <location filename="../app/FeaturePanels.cpp" line="+2318"/>
         <source>Construction axis</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3678,7 +3693,7 @@
 <context>
     <name>jigapp::ExprField</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="-2839"/>
+        <location filename="../app/FeaturePanels.cpp" line="-2865"/>
         <source>e.g. 45 deg</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4116,7 +4131,7 @@
 <context>
     <name>jigapp::HolePanel</name>
     <message>
-        <location line="+353"/>
+        <location line="+379"/>
         <location line="+143"/>
         <source>Hole</source>
         <translation type="unfinished"></translation>
@@ -5887,7 +5902,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::MovePanel</name>
     <message>
-        <location line="+1140"/>
+        <location line="+1143"/>
         <source>Move / copy</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5957,7 +5972,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+37"/>
+        <location line="+46"/>
         <source>There is no body to move yet.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6075,7 +6090,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::PatternPanel</name>
     <message>
-        <location line="-1704"/>
+        <location line="-1716"/>
         <location line="+154"/>
         <source>Pattern</source>
         <translation type="unfinished"></translation>
@@ -6860,7 +6875,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::ShellPanel</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="-332"/>
+        <location filename="../app/FeaturePanels.cpp" line="-358"/>
         <source>Shell</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6905,7 +6920,8 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+62"/>
+        <location line="+59"/>
+        <location line="+29"/>
         <source>Pick faces of one body at a time.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7355,12 +7371,12 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
     </message>
     <message>
         <location line="+16"/>
-        <location line="+853"/>
+        <location line="+857"/>
         <source>Minor radius</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-832"/>
+        <location line="-836"/>
         <source>Ellipse</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7397,7 +7413,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
     <message>
         <location line="-260"/>
         <location line="+271"/>
-        <location line="+677"/>
+        <location line="+681"/>
         <location line="+101"/>
         <location line="+27"/>
         <location line="+3"/>
@@ -7406,7 +7422,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1568"/>
+        <location line="-1572"/>
         <source>Click the end, or type a length (Tab: angle) and press Enter. Drag from the last point for a tangent arc. Click the first point to close. Esc ends.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7419,7 +7435,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
         <location line="+387"/>
         <location line="+271"/>
         <location line="+77"/>
-        <location line="+710"/>
+        <location line="+714"/>
         <location line="+18"/>
         <location line="+18"/>
         <location line="+100"/>
@@ -7427,7 +7443,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-883"/>
+        <location line="-887"/>
         <source>Center rectangle</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7463,13 +7479,13 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
     </message>
     <message>
         <location line="+16"/>
-        <location line="+632"/>
+        <location line="+636"/>
         <location line="+130"/>
         <source>Width</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-730"/>
+        <location line="-734"/>
         <source>Slot</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7480,13 +7496,13 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
     </message>
     <message>
         <location line="+7"/>
-        <location line="+568"/>
+        <location line="+572"/>
         <location line="+160"/>
         <source>Text</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-715"/>
+        <location line="-719"/>
         <source>A polygon needs 3 to 64 sides.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7501,12 +7517,12 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+75"/>
+        <location line="+78"/>
         <source>Click an edge or face of a body made before this sketch.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+13"/>
+        <location line="+14"/>
         <source>Project</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8036,7 +8052,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+52"/>
+        <location line="+122"/>
         <source>Face “%1” · %2 · %3</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8051,7 +8067,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+147"/>
+        <location line="+146"/>
         <source>Edge “%1”</source>
         <translation type="unfinished"></translation>
     </message>

@@ -234,7 +234,13 @@ int addDxfToSketch(Sketch& s, const DxfDrawing& d, double scale, double dx = 0, 
 // Projects a body edge onto a sketch plane and adds it as fixed sketch geometry (lines,
 // circles and arcs; a circle seen at a slant would be an ellipse and is refused). Ends
 // meeting points already in the sketch share them. Returns the new curve ids.
-Result<std::vector<int>> projectEdge(Sketch& sketch, const gp_Ax3& frame, const TopoDS_Shape& edge);
+// With `ref` (the edge's ShapeRef as JSON), the copy is linked: followLink moves it when
+// the edge moves.
+Result<std::vector<int>> projectEdge(Sketch& sketch, const gp_Ax3& frame, const TopoDS_Shape& edge,
+                                     const nlohmann::json& ref = nullptr);
+// Moves a linked projection to where its edge is now. Refused (nothing changed) when the
+// edge is no longer the same kind of curve.
+Result<bool> followLink(Sketch& sketch, const gp_Ax3& frame, const nlohmann::json& link, const TopoDS_Shape& edge);
 
 // Offset copy of sketch curves: a single line (to its left for a positive distance), a
 // single circle or arc (bigger radius for positive), or one closed outline (outward for

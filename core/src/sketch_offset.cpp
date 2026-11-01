@@ -170,8 +170,9 @@ Result<std::vector<int>> offsetCurves(Sketch& s, const std::vector<int>& curves,
     }
 }
 
-Result<std::vector<int>> projectEdge(Sketch& s, const gp_Ax3& frame, const TopoDS_Shape& shape)
+Result<std::vector<int>> projectEdge(Sketch& s, const gp_Ax3& frame, const TopoDS_Shape& shape, const nlohmann::json& ref)
 {
+    const bool link = !ref.is_null();
     if (shape.IsNull() || shape.ShapeType() != TopAbs_EDGE) {
         return makeError("project.kind", "Pick an edge to project.");
     }
@@ -203,7 +204,11 @@ Result<std::vector<int>> projectEdge(Sketch& s, const gp_Ax3& frame, const TopoD
         if (std::hypot(bx - ax, by - ay) < 1e-7) {
             return makeError("project.point", "This edge points straight at the sketch, so it projects to a point.");
         }
-        made.push_back(s.addLine(pointAt(ax, ay), pointAt(bx, by)));
+        const int pa = pointAt(ax, ay), pb = pointAt(bx, by);
+        made.push_back(s.addLine(pa, pb));
+        if (link) {
+            s.addLink({{"ref", ref}, {"kind", "line"}, {"points", {pa, pb}}});
+        }
         return made;
     }
     if (c.GetType() == GeomAbs_Circle) {
@@ -218,9 +223,13 @@ Result<std::vector<int>> projectEdge(Sketch& s, const gp_Ax3& frame, const TopoD
         const bool closed = BRep_Tool::IsClosed(edge) || a.Distance(b) < 1e-7;
         if (closed) {
             const int id = s.addCircle(cx, cy, r);
-            s.addConstraint(ConstraintType::Fix, s.entity(id)->center);
-            s.addConstraint(ConstraintType::Radius, id, 0, 0, std::to_string(r) + " mm");
+            const int centre = s.entity(id)->center;
+            s.addConstraint(ConstraintType::Fix, centre);
+            const int rc = s.addConstraint(ConstraintType::Radius, id, 0, 0, std::to_string(r) + " mm");
             made.push_back(id);
+            if (link) {
+                s.addLink({{"ref", ref}, {"kind", "circle"}, {"points", {centre}}, {"radius", rc}});
+            }
             return made;
         }
         // an arc: counter-clockwise in the sketch, from whichever end that makes it
@@ -237,9 +246,52 @@ Result<std::vector<int>> projectEdge(Sketch& s, const gp_Ax3& frame, const TopoD
         const int p1 = aToB ? pointAt(ax, ay) : pointAt(bx, by);
         const int p2 = aToB ? pointAt(bx, by) : pointAt(ax, ay);
         made.push_back(s.addArcOn(center, p1, p2, r, a0, a0 + sweep));
+        if (link) {
+            // the points at the edge's first and last ends, whichever way the arc runs
+            s.addLink({{"ref", ref}, {"kind", "arc"}, {"points", {center, aToB ? p1 : p2, aToB ? p2 : p1}}});
+        }
         return made;
     }
     return makeError("project.curve", "Only straight and round edges can be projected yet.");
+}
+
+Result<bool> followLink(Sketch& s, const gp_Ax3& frame, const nlohmann::json& link, const TopoDS_Shape& shape)
+{
+    if (shape.IsNull() || shape.ShapeType() != TopAbs_EDGE) {
+        return makeError("project.gone", "A projected edge is gone; its copy stays where it was.");
+    }
+    const TopoDS_Edge& edge = TopoDS::Edge(shape);
+    BRepAdaptor_Curve c(edge);
+    auto local = [&](const gp_Pnt& p) {
+        const gp_Vec v(frame.Location(), p);
+        return std::pair {v.Dot(gp_Vec(frame.XDirection())), v.Dot(gp_Vec(frame.YDirection()))};
+    };
+    const std::string kind = link.value("kind", std::string {});
+    const auto pts = link.value("points", std::vector<int> {});
+    const gp_Pnt a = BRep_Tool::Pnt(TopExp::FirstVertex(edge, true)), b = BRep_Tool::Pnt(TopExp::LastVertex(edge, true));
+    auto move = [&](int id, const gp_Pnt& p) {
+        auto [x, y] = local(p);
+        s.moveFixedPoint(id, x, y);
+    };
+    if (kind == "line" && c.GetType() == GeomAbs_Line && pts.size() == 2) {
+        move(pts[0], a);
+        move(pts[1], b);
+        return true;
+    }
+    if ((kind == "circle" || kind == "arc") && c.GetType() == GeomAbs_Circle && !pts.empty()) {
+        const gp_Circ circ = c.Circle();
+        move(pts[0], circ.Location());
+        if (kind == "circle" && link.contains("radius")) {
+            s.setConstraintExpr(link["radius"].get<int>(), std::to_string(circ.Radius()) + " mm");
+        }
+        if (kind == "arc" && pts.size() == 3) {
+            move(pts[1], a);
+            move(pts[2], b);
+        }
+        return true;
+    }
+    return makeError("project.changed", "A projected edge changed shape; its copy stays where it was.",
+                     {"Delete the copy and project the edge again."});
 }
 
 // ---------------------------------------------------------------- walls along open curves

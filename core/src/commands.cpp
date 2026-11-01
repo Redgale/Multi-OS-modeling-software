@@ -936,16 +936,19 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
         const std::string what = a.positional[0];
         const ModelState& st = doc.state();
         std::vector<TopoDS_Shape> edges;
+        std::vector<nlohmann::json> refs;  // so the copies follow the edges
         for (auto& [bid, body] : st.bodies) {
             if (what.rfind("edge:", 0) == 0) {
                 for (int i : body->findEdges(what.substr(5))) {
                     edges.push_back(body->edge(i));
+                    refs.push_back(body->edgeRef(bid, i).toJson());
                 }
             }
             else if (what.rfind("face:", 0) == 0) {
                 for (int f : body->findFaces(what.substr(5))) {
                     for (int e : body->edgesOfFace(f)) {
                         edges.push_back(body->edge(e));
+                        refs.push_back(body->edgeRef(bid, e).toJson());
                     }
                 }
             }
@@ -960,8 +963,8 @@ Result<bool> ScriptRunner::runLine(std::string_view rawLine)
         }
         const gp_Ax3 frame = sst->second->frame;
         return editSketch("Project", sid, [&](Sketch& s, const Document&) -> Result<bool> {
-            for (auto& e : edges) {
-                auto r = projectEdge(s, frame, e);
+            for (size_t k = 0; k < edges.size(); ++k) {
+                auto r = projectEdge(s, frame, edges[k], a.get("linked", "yes") == "no" ? nlohmann::json() : refs[k]);
                 if (!r) {
                     return r.error();
                 }

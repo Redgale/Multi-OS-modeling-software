@@ -582,7 +582,7 @@ QString SketchEditor::toolHint() const
                           : tr("Click the centre to repeat the selected curves around.");
         case Tool::Project:
             return tr("Click an edge of a body (or a face, for its whole outline) to bring it into the sketch. "
-                      "The copy is fixed in place; it does not follow later changes yet.");
+                      "The copy is fixed in place and follows the body when it changes.");
         case Tool::CircleTangent:
             return tanLines_.empty()      ? tr("Click the first line the circle touches.")
                    : tanLines_.size() == 1 ? tr("Click the second line. The circle goes in the corner between the parts you clicked.")
@@ -1709,6 +1709,7 @@ bool SketchEditor::mouseRelease(QMouseEvent* e)
             // the bodies as they were before this sketch (a sketch cannot project its own result)
             const jig::ModelState before = doc_.stateBefore(doc_.featureIndex(id_));
             std::vector<TopoDS_Shape> edges;
+            std::vector<nlohmann::json> refs;  // so the copies follow the edges
             if (auto h = view_->pickEdgeAt(pos.toPoint())) {
                 auto it = before.bodies.find(h->body);
                 // the view shows the current bodies: map the edge over by its name
@@ -1716,6 +1717,7 @@ bool SketchEditor::mouseRelease(QMouseEvent* e)
                 if (it != before.bodies.end() && cur != doc_.state().bodies.end()) {
                     for (int e : it->second->findEdges(cur->second->edgeName(h->edge))) {
                         edges.push_back(it->second->edge(e));
+                        refs.push_back(it->second->edgeRef(h->body, e).toJson());
                     }
                 }
             }
@@ -1726,6 +1728,7 @@ bool SketchEditor::mouseRelease(QMouseEvent* e)
                     for (int fi : it->second->findFaces(cur->second->faceName(f->face))) {
                         for (int e : it->second->edgesOfFace(fi)) {
                             edges.push_back(it->second->edge(e));
+                            refs.push_back(it->second->edgeRef(f->body, e).toJson());
                         }
                     }
                 }
@@ -1735,8 +1738,9 @@ bool SketchEditor::mouseRelease(QMouseEvent* e)
                 break;
             }
             jig::Sketch s = work_;
-            for (auto& edge : edges) {
-                auto r = jig::projectEdge(s, frame_, edge);
+            for (size_t k = 0; k < edges.size(); ++k) {
+                const auto& edge = edges[k];
+                auto r = jig::projectEdge(s, frame_, edge, refs[k]);
                 if (!r) {
                     message_ = coreText(r.error().message);
                     if (edges.size() == 1) {

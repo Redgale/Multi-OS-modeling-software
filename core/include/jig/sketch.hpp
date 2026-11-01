@@ -273,10 +273,27 @@ public:
     // Point coordinates by point id (curves' endpoints are kept in sync on solve).
     std::pair<double, double> pointXY(int pointId) const;
 
+    // Projected edges that follow the model: each link holds the edge's persistent reference
+    // ("ref"), what was made ("kind": line, circle, arc), the fixed points it moves ("points")
+    // and, for a circle, its radius constraint ("radius"). Kept with the sketch.
+    const std::vector<nlohmann::json>& links() const
+    {
+        return links_;
+    }
+    void addLink(nlohmann::json link)
+    {
+        links_.push_back(std::move(link));
+    }
+    // Moves a fixed point (its Fix constraint) to (x, y); false if it has none.
+    bool moveFixedPoint(int pointId, double x, double y);
+    // Changes a dimension's value text (a projected circle's radius).
+    bool setConstraintExpr(int constraintId, std::string expr);
+
     nlohmann::json toJson() const;
     static Result<Sketch> fromJson(const nlohmann::json& j);
 
 private:
+    std::vector<nlohmann::json> links_;
     SolveReport runSolver(const ParamLookup& lookup, const int* dragPoint, double dx, double dy,
                           const std::vector<int>& skip = {});
     void syncCurvePoints();
