@@ -1073,7 +1073,7 @@ std::optional<SweptWire> sweepWire(const TopoDS_Wire& spine, const TopoDS_Wire& 
     out.first = pipe.FirstShape();
     out.last = pipe.LastShape();
     for (TopExp_Explorer ex(outline, TopAbs_EDGE); ex.More(); ex.Next()) {
-        const TopTools_ListOfShape& made = pipe.Generated(ex.Current());
+        const auto& made = pipe.Generated(ex.Current());
         out.sides.push_back(made.IsEmpty() ? TopoDS_Shape() : made.First());
     }
     return out;
@@ -1168,7 +1168,7 @@ FeatureOutcome applySweep(const Document& doc, const Feature& f, const std::shar
                 }
                 // the named faces survive the cut as (modified) faces of the result
                 for (auto& [face, name] : names) {
-                    const TopTools_ListOfShape& mod = cut.Modified(face);
+                    const auto& mod = cut.Modified(face);
                     if (!mod.IsEmpty()) {
                         face = mod.First();
                     }
@@ -1181,7 +1181,7 @@ FeatureOutcome applySweep(const Document& doc, const Feature& f, const std::shar
             else {
                 BRepAlgoAPI_Fuse fuse(result, solid);
                 for (auto& [face, name] : names) {
-                    const TopTools_ListOfShape& mod = fuse.Modified(face);
+                    const auto& mod = fuse.Modified(face);
                     if (!mod.IsEmpty()) {
                         face = mod.First();
                     }

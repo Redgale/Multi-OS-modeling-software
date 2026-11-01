@@ -22,6 +22,7 @@
 #include <QTimer>
 #include <QTreeWidget>
 #include <QtTest>
+#include <numbers>
 #include <QProgressDialog>
 #include <QLockFile>
 #include <QTemporaryDir>
@@ -2792,7 +2793,7 @@ private slots:
             QTest::qWait(300);
             if (at.x() > 1) {
                 view->homeView();
-                QTest::qWaitFor([&] { return view->meshesReady(); }, 5000);
+                (void)QTest::qWaitFor([&] { return view->meshesReady(); }, 5000);
                 QTest::qWait(200);
                 w.grab().save(shotPath("pick-areas"));
             }
