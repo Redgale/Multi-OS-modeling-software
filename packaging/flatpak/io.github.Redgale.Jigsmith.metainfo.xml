@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-License-Identifier: CC0-1.0 -->
+<component type="desktop-application">
+  <id>io.github.Redgale.Jigsmith</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>Jigsmith</name>
+  <summary>Free parametric CAD for hobbyists and makers</summary>
+  <description>
+    <p>
+      Jigsmith is a parametric 3D CAD program for people who design things to 3D print,
+      cut or build. Sketch on a plane, add dimensions and constraints, then extrude,
+      revolve, fillet, shell and drill; change a number later and the whole design follows.
+    </p>
+    <p>
+      It works in millimetres or inches, opens and saves STEP, exports STL and 3MF, imports
+      SVG and DXF drawings, and never sends anything over the network.
+    </p>
+  </description>
+  <developer id="io.github.redgale">
+    <name>The Jigsmith contributors</name>
+  </developer>
+  <launchable type="desktop-id">io.github.Redgale.Jigsmith.desktop</launchable>
+  <url type="homepage">https://github.com/Redgale/Multi-OS-modeling-software</url>
+  <url type="bugtracker">https://github.com/Redgale/Multi-OS-modeling-software/issues</url>
+  <content_rating type="oars-1.1"/>
+  <categories>
+    <category>Graphics</category>
+    <category>Engineering</category>
+  </categories>
+  <releases>
+    <release version="0.0.1" date="2026-11-01" type="development"/>
+  </releases>
+</component>

@@ -19,7 +19,9 @@ decision or finding). Move items to STATUS.md when started.
   `lipo`-merged universal .dmg and document signing/notarisation (secrets never in repo).
 - ~~B-006 Windows installer~~ done (Inno Setup, tested in CI by silent install, run, uninstall); try
   on a clean machine by hand.
-- **B-007 Flatpak manifest** (brief: AppImage and Flatpak).
+- **B-007 Flatpak manifest** (brief: AppImage and Flatpak): manifest and AppStream metainfo in
+  `packaging/flatpak`, built by the "Flatpak" CI job on [full ci]. Left: a green CI run, then
+  pinning OCCT's git commit and submitting to Flathub (an account decision for the owner).
 - ~~B-008 Endpoint tangency~~ done (angle via the shared point); collinear/concentric done.
 - **B-012 OCCT 8 deprecations**: `TopTools_*`/`TColStd_*` typedef headers are deprecated in
   8.0 (warnings on Windows). Switch to `NCollection_*` types once 7.6 support is dropped, or

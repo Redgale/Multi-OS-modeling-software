@@ -298,6 +298,29 @@ jobs:
       - name: Test (headless; UI tests run in the Linux job)
         run: cd src && ctest --test-dir build --output-on-failure -j4 -LE ui
 
+  flatpak:
+    # B-007: the Flatpak manifest builds (OCCT from source, cached by flatpak-builder) and is
+    # bundled; the CLI inside the sandbox then runs the phone stand sample.
+    name: Flatpak
+    if: ${{ github.event_name != 'push' || github.ref == 'refs/heads/main' || contains(github.event.head_commit.message, '[full ci]') }}
+    runs-on: ubuntu-24.04
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:kde-6.8
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v4
+      - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        with:
+          bundle: Jigsmith.flatpak
+          manifest-path: packaging/flatpak/io.github.Redgale.Jigsmith.yml
+          cache-key: flatpak-builder-${{ hashFiles('packaging/flatpak/io.github.Redgale.Jigsmith.yml') }}
+      - name: Run the CLI inside the sandbox
+        run: |
+          flatpak install -y --noninteractive --bundle Jigsmith.flatpak
+          cp samples/phone_stand.jigs /tmp/
+          flatpak run --command=jigsmith-cli --filesystem=/tmp io.github.Redgale.Jigsmith \
+            --run /tmp/phone_stand.jigs --report -
+
   occt-from-source:
     # For distributions without an OCCT package: scripts/build-occt.sh, then Jigsmith.
     name: Linux, OCCT built from source

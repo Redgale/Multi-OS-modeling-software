@@ -1,0 +1,116 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Flatpak build of Jigsmith (B-007). Built and bundled by the "Flatpak" CI job on [full ci];
+# by hand: flatpak-builder --user --install-deps-from=flathub --force-clean build-flatpak \
+#   packaging/flatpak/io.github.Redgale.Jigsmith.yml
+# The KDE runtime brings Qt 6, FreeType and HarfBuzz; OCCT, Eigen, Boost.Graph's headers and
+# nlohmann/json are built here (no network during the build, so miniz is fetched up front).
+app-id: io.github.Redgale.Jigsmith
+runtime: org.kde.Platform
+runtime-version: '6.8'
+sdk: org.kde.Sdk
+command: jigsmith
+rename-desktop-file: jigsmith.desktop
+rename-icon: jigsmith
+finish-args:
+  - --share=ipc
+  - --socket=fallback-x11
+  - --socket=wayland
+  - --device=dri
+  # designs, STEP/STL/3MF files and fonts live anywhere in the home folder
+  - --filesystem=home
+cleanup:
+  - /include
+  - /lib/cmake
+  - /lib/pkgconfig
+  - /share/eigen3
+  - '*.a'
+modules:
+  - name: occt
+    buildsystem: cmake-ninja
+    builddir: true
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DBUILD_LIBRARY_TYPE=Shared
+      - -DBUILD_MODULE_ApplicationFramework=OFF
+      - -DBUILD_MODULE_Draw=OFF
+      - -DBUILD_MODULE_Visualization=OFF
+      - -DBUILD_MODULE_DETools=OFF
+      - -DBUILD_MODULE_FoundationClasses=ON
+      - -DBUILD_MODULE_ModelingData=ON
+      - -DBUILD_MODULE_ModelingAlgorithms=ON
+      - -DBUILD_MODULE_DataExchange=ON
+      - -DUSE_FREETYPE=OFF
+      - -DUSE_FREEIMAGE=OFF
+      - -DUSE_TBB=OFF
+      - -DUSE_VTK=OFF
+      - -DUSE_RAPIDJSON=OFF
+      - -DUSE_TK=OFF
+      - -DUSE_OPENGL=OFF
+      - -DUSE_GLES2=OFF
+      - -DBUILD_DOC_Overview=OFF
+      - -DINSTALL_SAMPLES=OFF
+      - -DINSTALL_TEST_CASES=OFF
+    sources:
+      - type: git
+        url: https://github.com/Open-Cascade-SAS/OCCT.git
+        tag: V7_9_3
+
+  - name: eigen
+    buildsystem: cmake-ninja
+    builddir: true
+    config-opts:
+      - -DBUILD_TESTING=OFF
+      - -DEIGEN_BUILD_DOC=OFF
+    sources:
+      - type: archive
+        url: https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.tar.bz2
+        sha256: b4c198460eba6f28d34894e3a5710998818515104d6e74e5cc331ce31e46e626
+
+  - name: boost-headers
+    # header-only Boost.Graph for planegcs: copy the headers, build nothing
+    buildsystem: simple
+    build-commands:
+      - mkdir -p /app/include
+      - cp -r boost /app/include/
+    sources:
+      - type: archive
+        url: https://archives.boost.io/release/1.86.0/source/boost_1_86_0.tar.bz2
+        sha256: 1bed88e40401b2cb7a1f76d4bab499e352fa4d0c5f31c0dbae64e24d34d7513b
+
+  - name: nlohmann-json
+    buildsystem: cmake-ninja
+    builddir: true
+    config-opts:
+      - -DJSON_BuildTests=OFF
+    sources:
+      - type: archive
+        url: https://github.com/nlohmann/json/releases/download/v3.11.3/json.tar.xz
+        sha256: d6c65aca6b1ed68e7a182f4757257b107ae403032760ed6ef121c9d55e81757d
+
+  - name: jigsmith
+    buildsystem: cmake-ninja
+    builddir: true
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DJIG_BUILD_TESTS=OFF
+      - -DJIG_BUILD_BENCH=OFF
+      - -DFETCHCONTENT_FULLY_DISCONNECTED=ON
+      - -DFETCHCONTENT_SOURCE_DIR_MINIZ=/run/build/jigsmith/flatpak-deps/miniz
+    post-install:
+      - install -Dm644 packaging/linux/jigsmith.desktop /app/share/applications/jigsmith.desktop
+      - install -Dm644 packaging/linux/jigsmith.svg /app/share/icons/hicolor/scalable/apps/jigsmith.svg
+      - install -Dm644 packaging/linux/jigsmith.png /app/share/icons/hicolor/256x256/apps/jigsmith.png
+      - install -Dm644 packaging/flatpak/io.github.Redgale.Jigsmith.metainfo.xml /app/share/metainfo/io.github.Redgale.Jigsmith.metainfo.xml
+    sources:
+      - type: dir
+        path: ../..
+        skip:
+          - build
+          - deps
+          - build-flatpak
+          - .flatpak-builder
+      - type: archive
+        url: https://github.com/richgel999/miniz/releases/download/3.0.2/miniz-3.0.2.zip
+        sha256: ada38db0b703a56d3dd6d57bf84a9c5d664921d870d8fea4db153979fb5332c5
+        dest: flatpak-deps/miniz
+        strip-components: 0
