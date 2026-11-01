@@ -518,6 +518,12 @@ Result<Quantity> evaluate(std::string_view text, const ParamLookup& lookup, Dim 
     if (!std::isfinite(v.v)) {
         return makeError("expr.domain", "The expression does not give a finite number.");
     }
+    // the geometry kernel's tolerances are made for parts, not continents: past 10 km its
+    // results are meaningless, so say so instead of failing somewhere deep inside it
+    if (v.dim == Dim::len() && std::abs(v.v) > 1e7) {
+        return makeError("expr.range", "That length is more than 10 km, which is larger than Jigsmith can model.",
+                         {"Check the units and the number of zeros."});
+    }
     return Quantity {v.v, v.dim};
 }
 

@@ -1537,6 +1537,16 @@
     </message>
     <message>
         <location line="+1" />
+        <source>That length is more than 10 km, which is larger than Jigsmith can model.</source>
+        <translation>[Thát léñgth îs möré tháñ 10 km, whîçh îs lárgér tháñ Jîgsmîth çáñ mödél.~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Check the units and the number of zeros.</source>
+        <translation>[Çhéçk thé üñîts áñd thé ñümbér öf zérös.~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
         <source>Pick another plane.</source>
         <translation>[Pîçk áñöthér pláñé.~~~~~]</translation>
     </message>
@@ -2356,7 +2366,12 @@
         <translation>[Á smööth çürvé çáñ bé mádé táñgéñt öñlý whéré ît mééts thé öthér çürvé át öñé öf îts éñds.~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+16" />
+        <location line="+15" />
+        <source>A sketch in this file has an impossible id; the file is damaged.</source>
+        <translation>[Á skétçh îñ thîs fîlé hás áñ împössîblé îd; thé fîlé îs dámágéd.~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+2" />
         <source>A curve in this sketch refers to a point that is not there; the file is damaged.</source>
         <translation>[Á çürvé îñ thîs skétçh référs tö á pöîñt thát îs ñöt théré; thé fîlé îs dámágéd.~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -2746,12 +2761,12 @@
         <translation>[Thé föñt '%1' îs ñöt áváîláblé héré; üsîñg thé büîlt-îñ föñt (Îñtér).~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="-219" />
+        <location line="-220" />
         <source>There is nothing to export yet.</source>
         <translation>[Théré îs ñöthîñg tö éxpört ýét.~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="-168" />
+        <location line="-170" />
         <source>This DXF has no lines, circles, arcs, curves, text or blocks to bring in.</source>
         <translation>[Thîs DXF hás ñö lîñés, çîrçlés, árçs, çürvés, téxt ör blöçks tö brîñg îñ.~~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -2761,7 +2776,7 @@
         <translation>[Hátçhés áñd dîméñsîöñs áré ñöt împörtéd: éxplödé thém tö lîñés fîrst.~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+69" />
+        <location line="+71" />
         <source>The face this extrude goes up to no longer exists.</source>
         <translation>[Thé fáçé thîs éxtrüdé göés üp tö ñö löñgér éxîsts.~~~~~~~~~~~~~]</translation>
     </message>
@@ -3251,7 +3266,7 @@
         <translation>[1 dégréé öf fréédöm léft: sömé géömétrý çáñ stîll mövé.~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+1" />
+        <location line="+2" />
         <source>The file contains an unknown sketch shape.</source>
         <translation>[Thé fîlé çöñtáîñs áñ üñkñöwñ skétçh shápé.~~~~~~~~~~~]</translation>
     </message>
@@ -7897,7 +7912,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
         <translation>[Çöñstrüçtîöñ~~~~]</translation>
     </message>
     <message>
-        <location line="+33" />
+        <location line="+21" />
         <source>Delete</source>
         <translation>[Délété~~]</translation>
     </message>

@@ -221,6 +221,88 @@ TEST(Document, DamagedFilesNeverCrash)
     EXPECT_FALSE(loadDocumentFromMemory(junk.data(), junk.size()).ok());
 }
 
+// Damage inside valid JSON (byte damage mostly breaks the zip's checksum and never gets this
+// far): values of the wrong kind, numbers far out of range, ids pointing elsewhere, missing
+// keys. Every design must open with an explanation or rebuild without crashing.
+TEST(Document, DamagedDesignsNeverCrash)
+{
+    std::vector<nlohmann::json> designs;
+    for (const char* name : {"phone_stand.jigs", "knob.jigs", "pen_cup.jigs"}) {
+        designs.push_back(buildSample(name)->toJson());
+    }
+    // sketch curves, constraints, text and linked copies
+    designs.push_back(build("sketch id=s1 plane=XY\n"
+                            "rect sketch=s1 center=0,0 w=40 h=20\n"
+                            "ellipse sketch=s1 center=40,0 radius=10 minor=5\n"
+                            "spline sketch=s1 points=-30,0;-20,10;-10,0\n"
+                            "text sketch=s1 at=0,-20 text=\"Ab\" size=6mm\n"
+                            "extrude id=e1 sketch=s1 distance=5\n")
+                          ->toJson());
+    const int rounds = std::getenv("JIG_FUZZ_ROUNDS") ? std::atoi(std::getenv("JIG_FUZZ_ROUNDS")) : 60;
+    std::mt19937 rng(2026);
+    const std::vector<nlohmann::json> replacements {
+        nlohmann::json(nullptr), nlohmann::json(-1), nlohmann::json(0), nlohmann::json(1), nlohmann::json(7),
+        nlohmann::json(2147483647), nlohmann::json(-1e300), nlohmann::json(1e300), nlohmann::json(0.5),
+        nlohmann::json(""), nlohmann::json("x"), nlohmann::json("e1"), nlohmann::json("s1"),
+        nlohmann::json("-5 mm"), nlohmann::json("0 mm"), nlohmann::json("1/0"), nlohmann::json(true),
+        nlohmann::json::array(), nlohmann::json::object(), nlohmann::json::array({1, 2, 3})};
+    int opened = 0, total = 0;
+    for (const auto& good : designs) {
+        const auto flat = good.flatten();
+        std::vector<std::string> keys;
+        for (auto it = flat.begin(); it != flat.end(); ++it) {
+            keys.push_back(it.key());
+        }
+        ASSERT_FALSE(keys.empty());
+        for (int i = 0; i < rounds; ++i) {
+            nlohmann::json bad = good;
+            for (int k = 0; k < 1 + int(rng() % 3); ++k) {
+                const nlohmann::json::json_pointer ptr(keys[rng() % keys.size()]);
+                if (!bad.contains(ptr)) {
+                    continue;
+                }
+                if (rng() % 5 == 0) {  // remove the key (or the array element)
+                    const auto parent = ptr.parent_pointer();
+                    auto& p = bad[parent];
+                    if (p.is_object()) {
+                        p.erase(ptr.back());
+                    }
+                    else if (p.is_array() && !p.empty()) {
+                        p.erase(p.begin() + long(rng() % p.size()));
+                    }
+                }
+                else {
+                    bad[ptr] = replacements[rng() % replacements.size()];
+                }
+            }
+            ++total;
+            std::unique_ptr<Document> doc;
+            ASSERT_NO_THROW({
+                auto r = Document::fromJson(bad);
+                if (r.ok()) {
+                    doc = std::move(r.value());
+                }
+                else {
+                    EXPECT_FALSE(r.error().message.empty());
+                }
+            }) << bad.dump().substr(0, 400);
+            if (!doc) {
+                continue;
+            }
+            ++opened;
+            ASSERT_NO_THROW({
+                doc->recompute();
+                (void)doc->toJson();
+                (void)doc->state();
+                for (int f = 0; f < int(doc->model().features.size()); ++f) {
+                    (void)doc->status(f);
+                }
+            });
+        }
+    }
+    SUCCEED() << opened << " of " << total << " damaged designs opened and rebuilt";
+}
+
 TEST(Document, AtomicSaveLeavesNoPartialFile)
 {
     auto doc = build("param w = 10 mm\n");

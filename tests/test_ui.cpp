@@ -489,6 +489,43 @@ private slots:
         QVERIFY(atMiddle);
     }
 
+    // Deleting a smooth curve's point in the editor (this left the curve pointing at a point
+    // that was gone, and the next solve crashed): the curve no longer passes through it.
+    void deleteSmoothCurvePoint()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        {
+            jig::ScriptRunner r(w.document());
+            QVERIFY(r.runText("sketch id=s1 plane=XY\nspline sketch=s1 points=0,0;10,10;20,0;30,10\n").ok());
+        }
+        w.editFeature(0);
+        QTRY_VERIFY(w.sketchEditor() != nullptr);
+        SketchEditor* sk = w.sketchEditor();
+        Viewport* view = w.viewport();
+        auto splinePoints = [&] {
+            for (auto& [id, e] : sk->sketch().entities()) {
+                if (e.type == jig::EntityType::Spline) {
+                    return int(e.pts.size());
+                }
+            }
+            return 0;
+        };
+        QCOMPARE(splinePoints(), 4);
+        sk->setTool(SketchEditor::Tool::Select);
+        const QPoint at = sk->screenOf(10, 10);
+        QTest::mouseMove(view, at);
+        QTest::mouseClick(view, Qt::LeftButton, Qt::NoModifier, at);
+        QCOMPARE(int(sk->selection().size()), 1);
+        QTest::keyClick(view, Qt::Key_Delete);
+        QTRY_COMPARE(splinePoints(), 3);
+        QVERIFY(w.document().status(0).level != jig::StatusLevel::Error);
+        w.runCommand("sketch.finish");
+        QTRY_VERIFY(w.sketchEditor() == nullptr);
+    }
+
     // Text placed on a circle bends along it.
     void textAlongCircle()
     {

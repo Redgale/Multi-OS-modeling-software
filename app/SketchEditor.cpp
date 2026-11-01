@@ -2598,19 +2598,7 @@ void SketchEditor::deleteSelection()
         if (!e) {
             continue;
         }
-        if (e->type == jig::EntityType::Point) {
-            // deleting a point removes the curves that use it
-            std::vector<int> users;
-            for (auto& [cid, c] : s.entities()) {
-                if (c.p1 == id || c.p2 == id || c.center == id) {
-                    users.push_back(cid);
-                }
-            }
-            for (int u : users) {
-                s.remove(u);
-            }
-        }
-        s.remove(id);
+        s.remove(id);  // a point takes the curves built on it (a smooth curve just loses that point)
     }
     selection_.clear();
     commit(tr("Delete"), s);

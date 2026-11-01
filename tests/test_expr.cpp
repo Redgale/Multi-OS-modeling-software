@@ -85,6 +85,11 @@ TEST(Expr, Parameters)
 
 TEST(Expr, ErrorsAreExplainedNotThrown)
 {
+    // lengths past 10 km are refused with a reason (the kernel fails deep inside otherwise)
+    EXPECT_FALSE(evaluate("1e300*10", {}, Dim::len()).ok());
+    EXPECT_FALSE(evaluate("20000 m", {}, Dim::len()).ok());
+    EXPECT_TRUE(evaluate("5000 m", {}, Dim::len()).ok());
+
     auto bad = [](std::string_view s, Dim d = Dim::len()) {
         auto r = evaluate(s, {}, d);
         EXPECT_FALSE(r.ok()) << s;

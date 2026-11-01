@@ -780,6 +780,9 @@ Result<std::unique_ptr<Document>> Document::fromJson(const nlohmann::json& input
         }
         m.rollback = j.value("rollback", -1);
         m.counters = j.value("counters", std::map<std::string, int> {});
+        for (auto& [prefix, n] : m.counters) {
+            n = std::clamp(n, 1, 1'000'000'000);  // a damaged count must not overflow when it grows
+        }
         auto doc = std::make_unique<Document>();
         doc->resetModel(std::move(m));
         if (j.contains("view") && j["view"].is_object()) {

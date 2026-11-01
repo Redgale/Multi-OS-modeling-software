@@ -251,7 +251,44 @@ TEST(Solver, MalformedJsonIsRejectedNotCrashing)
     EXPECT_EQ(back->links().at(0).value("kind", std::string {}), "pattern-unlinked");
     // two huge grid counts are refused, not multiplied past what an int holds
     EXPECT_FALSE(g.patternRect({l}, 100000, 1, 0, 100000, 0, 1).ok());
+    // an id at the top of the int range (found by the structured fuzzer under UBSan: the next
+    // id overflowed) is refused
+    auto big = good.toJson();
+    big["entities"][0]["id"] = 2147483647;
+    EXPECT_FALSE(Sketch::fromJson(big).ok());
+    auto bigNext = good.toJson();
+    bigNext["next_id"] = 2147483647;
+    EXPECT_TRUE(Sketch::fromJson(bigNext).ok());
     // a link whose list is not numbers is refused when the file is read
     jg["links"][0]["source"] = "x";
     EXPECT_FALSE(Sketch::fromJson(jg).ok());
 }
+
+TEST(Solver, DeletingAPointTakesTheCurvesBuiltOnIt)
+{
+    // a line between two points of the user's own: deleting one end deletes the line (it used to
+    // be left pointing at nothing, and the next solve crashed)
+    Sketch s;
+    const int p = s.addPoint(0, 0), q = s.addPoint(10, 0);
+    const int l = s.addLine(p, q);
+    ASSERT_TRUE(s.remove(p));
+    EXPECT_EQ(s.entity(l), nullptr);
+    EXPECT_NE(s.entity(q), nullptr);  // the other end stays: it is the user's point
+    EXPECT_NE(s.solve().state, SolveState::Failed);
+    // a smooth curve loses only that point while it has enough left
+    Sketch t;
+    const int sp = t.addSpline({{0, 0}, {5, 5}, {10, 0}, {15, 5}});
+    const int mid = t.entity(sp)->pts[1];
+    ASSERT_TRUE(t.remove(mid));
+    ASSERT_NE(t.entity(sp), nullptr);
+    EXPECT_EQ(t.entity(sp)->pts.size(), 3u);
+    EXPECT_NE(t.solve().state, SolveState::Failed);
+    // ... down to two (an open curve needs two), and goes when it would be left with one
+    t.remove(t.entity(sp)->pts[1]);
+    ASSERT_NE(t.entity(sp), nullptr);
+    EXPECT_EQ(t.entity(sp)->pts.size(), 2u);
+    t.remove(t.entity(sp)->pts[0]);
+    EXPECT_EQ(t.entity(sp), nullptr);
+    EXPECT_NE(t.solve().state, SolveState::Failed);
+}
+

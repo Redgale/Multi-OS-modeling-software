@@ -1538,6 +1538,16 @@
     </message>
     <message>
         <location line="+1"/>
+        <source>That length is more than 10 km, which is larger than Jigsmith can model.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Check the units and the number of zeros.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>Pick another plane.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2357,7 +2367,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+16"/>
+        <location line="+15"/>
+        <source>A sketch in this file has an impossible id; the file is damaged.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
         <source>A curve in this sketch refers to a point that is not there; the file is damaged.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2747,12 +2762,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-219"/>
+        <location line="-220"/>
         <source>There is nothing to export yet.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-168"/>
+        <location line="-170"/>
         <source>This DXF has no lines, circles, arcs, curves, text or blocks to bring in.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2762,7 +2777,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+69"/>
+        <location line="+71"/>
         <source>The face this extrude goes up to no longer exists.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3252,7 +3267,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
+        <location line="+2"/>
         <source>The file contains an unknown sketch shape.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7907,7 +7922,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+33"/>
+        <location line="+21"/>
         <source>Delete</source>
         <translation type="unfinished"></translation>
     </message>

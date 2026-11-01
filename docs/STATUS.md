@@ -191,6 +191,11 @@ screenshot (B-003). No real GPU on Windows or Linux has been tried. Builds are u
   - Fixed: a script line with a word where a number belongs (`reorder e1 to=abc`) **aborted the program**; every line now reports such values as that line's error (`Commands.ScriptErrorsNameTheLine`).
   - Fixed: DXF group codes such as `-` or eleven digits, and a units value that is not a number, could throw; now refused or ignored (`DxfImport.InchDrawing…`).
   - Hardened: previews and autosave wait while a rebuild runs on the worker thread.
+- Bug hunt, second pass:
+  - A structured fuzzer (`Document.DamagedDesignsNeverCrash`): the three samples and a sketch with an ellipse, a smooth curve and text, damaged inside valid JSON (wrong kinds of value, huge and negative numbers, ids pointing elsewhere, missing keys), opened and rebuilt; 60 rounds each in the suite, 250 each run once under ASan + UBSan (1000 designs): no crash. UBSan found one signed overflow: an id of 2147483647 made the next id overflow. Ids are now limited to 1 to 10⁹ when read, and the document's id counters are clamped.
+  - Fixed, **crash**: deleting a point that a line used as an end (possible with points shared between curves) left the line pointing at nothing; the next solve crashed. Deleting a point now deletes the curves built on it, in the core (`Solver.DeletingAPointTakesTheCurvesBuiltOnIt`).
+  - Fixed: deleting one point of a smooth curve in the sketch editor left the curve listing the deleted point (it was drawn through 0,0). The curve now just no longer passes through it, and goes only when fewer than two points would remain (UI test `deleteSmoothCurvePoint`, which fails on the old code).
+  - About 60 degenerate script inputs (zero and negative sizes, 100000-sided polygons and copies, 1e300 values, zero angles, duplicate points, …) run one by one: no crash, hang or NaN. Lengths over 10 km are now refused with a reason instead of failing deep inside the kernel.
 - Code of Conduct contact: the owner should add a dedicated contact address.
 
 ## Decisions waiting for the owner

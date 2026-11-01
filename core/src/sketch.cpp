@@ -1183,6 +1183,28 @@ bool Sketch::remove(int entityId)
     if (it == entities_.end()) {
         return false;
     }
+    if (it->second.type == EntityType::Point) {
+        // a point other curves end at (or are centred on): those curves go with it, as they
+        // cannot exist without it
+        std::vector<int> users;
+        for (auto& [id, o] : entities_) {
+            const bool inPts = std::find(o.pts.begin(), o.pts.end(), entityId) != o.pts.end();
+            if (inPts && o.type == EntityType::Spline && o.pts.size() > (o.closed ? 3u : 2u)) {
+                std::erase(o.pts, entityId);  // a smooth curve simply no longer passes through it
+                continue;
+            }
+            if (o.p1 == entityId || o.p2 == entityId || o.center == entityId || inPts) {
+                users.push_back(id);
+            }
+        }
+        for (int u : users) {
+            remove(u);
+        }
+        it = entities_.find(entityId);
+        if (it == entities_.end()) {
+            return true;  // it was an internal point and went with its last curve
+        }
+    }
     std::set<int> gone {entityId};
     const SketchEntity e = it->second;
     entities_.erase(it);
@@ -2311,6 +2333,15 @@ bool Sketch::setConstraintExpr(int constraintId, std::string expr)
     return true;
 }
 
+namespace
+{
+constexpr int kMaxId = 1'000'000'000;  // ids count up from 1; anything near INT_MAX is damage
+bool validId(int id)
+{
+    return id > 0 && id < kMaxId;
+}
+}  // namespace
+
 Result<Sketch> Sketch::fromJson(const nlohmann::json& j)
 {
     Sketch s;
@@ -2318,6 +2349,9 @@ Result<Sketch> Sketch::fromJson(const nlohmann::json& j)
         for (auto& je : j.at("entities")) {
             SketchEntity e;
             e.id = je.at("id").get<int>();
+            if (!validId(e.id)) {
+                return makeError("file.sketch", "A sketch in this file has an impossible id; the file is damaged.");
+            }
             auto t = entityTypeFromString(je.at("type").get<std::string>());
             if (!t) {
                 return makeError("file.sketch", "The file contains an unknown sketch shape.");
@@ -2376,6 +2410,9 @@ Result<Sketch> Sketch::fromJson(const nlohmann::json& j)
         for (auto& jc : j.at("constraints")) {
             SketchConstraint k;
             k.id = jc.at("id").get<int>();
+            if (!validId(k.id)) {
+                return makeError("file.sketch", "A sketch in this file has an impossible id; the file is damaged.");
+            }
             auto t = constraintTypeFromString(jc.at("type").get<std::string>());
             if (!t) {
                 return makeError("file.sketch", "The file contains an unknown constraint.");
@@ -2393,6 +2430,9 @@ Result<Sketch> Sketch::fromJson(const nlohmann::json& j)
         for (auto& jt : j.value("texts", nlohmann::json::array())) {
             SketchText t;
             t.id = jt.at("id").get<int>();
+            if (!validId(t.id)) {
+                return makeError("file.sketch", "A sketch in this file has an impossible id; the file is damaged.");
+            }
             t.anchor = jt.at("anchor").get<int>();
             t.text = jt.value("text", std::string {});
             t.height = jt.value("height", std::string("5 mm"));
@@ -2408,6 +2448,9 @@ Result<Sketch> Sketch::fromJson(const nlohmann::json& j)
         for (auto& ja : j.value("artworks", nlohmann::json::array())) {
             SketchArtwork a;
             a.id = ja.at("id").get<int>();
+            if (!validId(a.id)) {
+                return makeError("file.sketch", "A sketch in this file has an impossible id; the file is damaged.");
+            }
             a.anchor = ja.at("anchor").get<int>();
             a.name = ja.value("name", std::string {});
             a.naturalWidth = ja.value("natural_width", 1.0);
@@ -2458,7 +2501,7 @@ Result<Sketch> Sketch::fromJson(const nlohmann::json& j)
             }
             s.links_.push_back(jl);
         }
-        s.nextId_ = j.value("next_id", 1);
+        s.nextId_ = std::clamp(j.value("next_id", 1), 1, kMaxId);
         int maxId = 0;
         for (auto& [id, t] : s.texts_) {
             maxId = std::max(maxId, id);
