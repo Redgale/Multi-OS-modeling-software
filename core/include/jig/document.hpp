@@ -72,7 +72,8 @@ enum class FeatureKind
     Pipe,       // a round tube or rod along a path of sketch curves
     Coil,       // a helix with a round or square section (springs)
     Primitive,  // a box, cylinder, sphere or torus placed on a plane, no sketch
-    Rib         // a thin wall from an open sketch curve to the body (a gusset)
+    Rib,        // a thin wall from an open sketch curve to the body (a gusset)
+    Emboss      // a sketch's areas wrapped onto a round face, raised or sunk
 };
 
 const char* toString(FeatureKind k);

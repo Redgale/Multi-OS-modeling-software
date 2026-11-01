@@ -14,6 +14,11 @@
 
 #include <BRepAdaptor_Curve.hxx>
 #include <BRepBndLib.hxx>
+#include <ShapeFix_Face.hxx>
+#include <GCE2d_MakeSegment.hxx>
+#include <GCPnts_QuasiUniformDeflection.hxx>
+#include <BRepTools_WireExplorer.hxx>
+#include <BRepOffsetAPI_MakeThickSolid.hxx>
 #include <BRepPrimAPI_MakePrism.hxx>
 #include <BRepClass3d_SolidClassifier.hxx>
 #include <gp_Cylinder.hxx>
@@ -1770,6 +1775,195 @@ FeatureOutcome applyRib(const Document& doc, const Feature& f, const std::shared
     }
 }
 
+// ---------------------------------------------------------------- emboss
+
+namespace
+{
+// A sketch's closed area wrapped onto a cylinder: the sketch plane runs along the axis; its
+// distance across (perpendicular to the axis) becomes the distance around, its distance along
+// the axis stays. Curves are followed closely by short pieces on the round surface.
+std::optional<TopoDS_Face> wrapOntoCylinder(const TopoDS_Face& region, const Handle(Geom_CylindricalSurface)& cyl,
+                                            const gp_Pnt& c, const gp_Dir& axisDir, const gp_Dir& across, double R,
+                                            double sign)
+{
+    auto uv = [&](const gp_Pnt& q) {
+        const gp_Vec rel(c, q);
+        return gp_Pnt2d(sign * rel.Dot(gp_Vec(across)) / R, rel.Dot(gp_Vec(axisDir)));
+    };
+    std::vector<TopoDS_Wire> wires;
+    const TopoDS_Wire outer = BRepTools::OuterWire(region);
+    std::vector<TopoDS_Wire> order {outer};
+    for (TopExp_Explorer ex(region, TopAbs_WIRE); ex.More(); ex.Next()) {
+        if (!ex.Current().IsSame(outer)) {
+            order.push_back(TopoDS::Wire(ex.Current()));
+        }
+    }
+    for (const TopoDS_Wire& w : order) {
+        std::vector<gp_Pnt2d> pts;
+        for (BRepTools_WireExplorer we(w, region); we.More(); we.Next()) {
+            BRepAdaptor_Curve ac(we.Current());
+            GCPnts_QuasiUniformDeflection d(ac, 0.01);
+            if (!d.IsDone() || d.NbPoints() < 2) {
+                return std::nullopt;
+            }
+            std::vector<gp_Pnt2d> e;
+            for (int i = 1; i <= d.NbPoints(); ++i) {
+                e.push_back(uv(d.Value(i)));
+            }
+            if (we.Current().Orientation() == TopAbs_REVERSED) {
+                std::reverse(e.begin(), e.end());
+            }
+            for (size_t i = pts.empty() ? 0 : 1; i < e.size(); ++i) {
+                pts.push_back(e[i]);
+            }
+        }
+        if (pts.size() < 3) {
+            return std::nullopt;
+        }
+        if (pts.front().Distance(pts.back()) > 1e-9) {
+            pts.push_back(pts.front());
+        }
+        else {
+            pts.back() = pts.front();
+        }
+        BRepBuilderAPI_MakeWire mw;
+        for (size_t i = 0; i + 1 < pts.size(); ++i) {
+            if (pts[i].Distance(pts[i + 1]) < 1e-9) {
+                continue;
+            }
+            Handle(Geom2d_TrimmedCurve) seg = GCE2d_MakeSegment(pts[i], pts[i + 1]).Value();
+            TopoDS_Edge edge = BRepBuilderAPI_MakeEdge(seg, cyl).Edge();
+            BRepLib::BuildCurves3d(edge);
+            mw.Add(edge);
+        }
+        if (!mw.IsDone()) {
+            return std::nullopt;
+        }
+        wires.push_back(mw.Wire());
+    }
+    BRepBuilderAPI_MakeFace mf(cyl, wires.front(), true);
+    for (size_t i = 1; i < wires.size(); ++i) {
+        mf.Add(wires[i]);
+    }
+    if (!mf.IsDone()) {
+        return std::nullopt;
+    }
+    ShapeFix_Face fix(mf.Face());
+    fix.FixOrientation();
+    fix.Perform();
+    return TopoDS::Face(fix.Face());
+}
+}  // namespace
+
+// A sketch's closed areas (text, a logo) wrapped onto a round face of the body and raised out
+// of it or sunk into it by a depth: lettering around a pen cup or a knob.
+FeatureOutcome applyEmboss(const Document& doc, const Feature& f, const std::shared_ptr<const ModelState>& in)
+{
+    const auto& p = f.params;
+    FeatureStatus status;
+    const std::string sketchId = p.value("sketch", std::string {});
+    const SketchState* skp = findSketch(in, sketchId);
+    if (!skp) {
+        return missingSketch(word("emboss"), sketchId);
+    }
+    std::vector<const Profile*> profiles;
+    if (auto bad = selectProfiles(*skp, p, status, word("emboss"), profiles)) {
+        return *bad;
+    }
+    ShapeRef ref = ShapeRef::fromJson(p.value("face", nlohmann::json::object()));
+    auto bit = in->bodies.find(ref.body);
+    if (bit == in->bodies.end()) {
+        return failed("The body of the face to emboss no longer exists.", {"Edit the step and click a round face."});
+    }
+    Resolution r = resolve(*bit->second, ref);
+    if (r.status == ResolveStatus::Missing || r.status == ResolveStatus::Ambiguous) {
+        return failed("The face to emboss no longer exists.", {"Edit the step and click a round face."});
+    }
+    if (r.status == ResolveStatus::Rebound) {
+        status.level = StatusLevel::Warning;
+        status.message = "The original face changed; the most similar face is used. Check it.";
+    }
+    const TopoDS_Face face = TopoDS::Face(bit->second->face(r.index));
+    BRepAdaptor_Surface sa(face);
+    if (sa.GetType() != GeomAbs_Cylinder) {
+        return failed("Emboss wraps onto round (cylindrical) faces.",
+                      {"For a flat face, extrude the sketch from the face instead (Join to raise, Cut to sink)."});
+    }
+    auto d = doc.evalLength(p.value("depth", std::string("1 mm")));
+    if (!d) {
+        return failed(d.error());
+    }
+    if (d.value() <= 1e-6) {
+        return failed("The emboss depth must be more than zero.");
+    }
+    const bool sink = p.value("op", std::string("join")) == "cut";
+    try {
+        const gp_Cylinder cy = sa.Cylinder();
+        const double R = cy.Radius();
+        const gp_Dir axisDir = cy.Axis().Direction();
+        const gp_Pnt c = cy.Location();
+        const gp_Dir n = skp->frame.Direction();
+        if (std::abs(n.Dot(axisDir)) > 1e-6) {
+            return failed("The sketch must be on a plane along the round face's axis (for example a plane "
+                          "touching the side of a cylinder).",
+                          {"Sketch on an offset plane parallel to the axis, in front of the round face."});
+        }
+        // around the axis towards the sketch plane: the sketch's centre faces the middle of the wrap
+        const double sign = gp_Vec(c, skp->frame.Location()).Dot(gp_Vec(n)) >= 0 ? 1.0 : -1.0;
+        const gp_Dir toward = sign > 0 ? n : n.Reversed();
+        const gp_Dir across = axisDir.Crossed(n);
+        const gp_Ax3 ax(c, axisDir, toward);
+        Handle(Geom_CylindricalSurface) surf = new Geom_CylindricalSurface(ax, R);
+        // with this frame, positive u turns towards axisDir x toward
+        const double turn = gp_Vec(axisDir.Crossed(toward)).Dot(gp_Vec(across)) > 0 ? 1.0 : -1.0;
+        TopoDS_Shape result;
+        for (const Profile* pr : profiles) {
+            auto wrapped = wrapOntoCylinder(pr->face, surf, c, axisDir, across, R, turn);
+            if (!wrapped) {
+                return failed("This area could not be wrapped onto the round face.");
+            }
+            BRepOffsetAPI_MakeThickSolid thick;
+            thick.MakeThickSolidBySimple(*wrapped, sink ? -d.value() : d.value());
+            if (!thick.IsDone()) {
+                return failed("This area could not be raised from the round face.",
+                              {"Try a smaller depth."});
+            }
+            // the solid's skin can come out facing inwards (negative volume): turn it the right way
+            TopoDS_Shape piece = thick.Shape();
+            GProp_GProps gp;
+            BRepGProp::VolumeProperties(piece, gp);
+            if (gp.Mass() < 0) {
+                piece.Reverse();
+            }
+            if (result.IsNull()) {
+                result = piece;
+            }
+            else {
+                BRepAlgoAPI_Fuse fuse(result, piece);
+                result = fuse.Shape();
+            }
+        }
+        NamedShape tool(result);
+        int other = 0;
+        for (int i = 0; i < tool.faceCount(); ++i) {
+            BRepAdaptor_Surface fs(TopoDS::Face(tool.face(i)));
+            std::string name;
+            if (fs.GetType() == GeomAbs_Cylinder) {
+                const double rr = fs.Cylinder().Radius();
+                name = std::abs(rr - R) < 1e-6 ? "base" : "top";
+            }
+            tool.setFaceName(i, name.empty() ? f.id + "/side" + std::to_string(++other) : f.id + "/" + name);
+        }
+        Feature g = f;
+        g.params["target"] = ref.body;
+        return applyTool(g, sink ? BoolOp::Cut : BoolOp::Join, std::move(tool), in, status);
+    }
+    catch (const Standard_Failure& e) {
+        const char* m = e.GetMessageString();
+        return failed("This sketch could not be embossed onto the round face.", {"Try a smaller depth."}, m ? m : "");
+    }
+}
+
 // ---------------------------------------------------------------- press pull
 
 // Pushes or pulls a flat face straight along its normal: out adds material, in removes it.
@@ -2808,6 +3002,8 @@ FeatureOutcome applyFeature(const Document& doc, const Feature& f, const std::sh
                 return applyPrimitive(doc, f, in);
             case FeatureKind::Rib:
                 return applyRib(doc, f, in);
+            case FeatureKind::Emboss:
+                return applyEmboss(doc, f, in);
             case FeatureKind::Hole:
                 return applyHole(doc, f, in);
             case FeatureKind::Pattern:

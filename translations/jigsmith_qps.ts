@@ -609,6 +609,16 @@
     </message>
     <message>
         <location line="+1" />
+        <source>Emboss</source>
+        <translation>[Émböss~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Wrap a sketch's text or shapes onto a round face, raised out of it or sunk in.</source>
+        <translation>[Wráp á skétçh's téxt ör shápés öñtö á röüñd fáçé, ráîséd öüt öf ît ör süñk îñ.~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
         <source>Hole</source>
         <translation>[Hölé~]</translation>
     </message>
@@ -1269,6 +1279,11 @@
         <location line="+1" />
         <source>A thin wall from an open sketch curve to the body: gussets that stiffen corners.</source>
         <translation>[Á thîñ wáll fröm áñ öpéñ skétçh çürvé tö thé bödý: güsséts thát stîfféñ çörñérs.~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Wrap a sketch's text or shapes onto a round face, raised out of it or sunk in.</source>
+        <translation>[Wráp á skétçh's téxt ör shápés öñtö á röüñd fáçé, ráîséd öüt öf ît ör süñk îñ.~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <location line="+1" />
@@ -2224,6 +2239,66 @@
         <location line="+1" />
         <source>This rib has an unknown operation.</source>
         <translation>[Thîs rîb hás áñ üñkñöwñ öpérátîöñ.~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The body of the face to emboss no longer exists.</source>
+        <translation>[Thé bödý öf thé fáçé tö émböss ñö löñgér éxîsts.~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Edit the step and click a round face.</source>
+        <translation>[Édît thé stép áñd çlîçk á röüñd fáçé.~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The face to emboss no longer exists.</source>
+        <translation>[Thé fáçé tö émböss ñö löñgér éxîsts.~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Emboss wraps onto round (cylindrical) faces.</source>
+        <translation>[Émböss wráps öñtö röüñd (çýlîñdrîçál) fáçés.~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>For a flat face, extrude the sketch from the face instead (Join to raise, Cut to sink).</source>
+        <translation>[För á flát fáçé, éxtrüdé thé skétçh fröm thé fáçé îñstéád (Jöîñ tö ráîsé, Çüt tö sîñk).~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The emboss depth must be more than zero.</source>
+        <translation>[Thé émböss dépth müst bé möré tháñ zérö.~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The sketch must be on a plane along the round face's axis (for example a plane touching the side of a cylinder).</source>
+        <translation>[Thé skétçh müst bé öñ á pláñé álöñg thé röüñd fáçé's áxîs (för éxámplé á pláñé töüçhîñg thé sîdé öf á çýlîñdér).~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Sketch on an offset plane parallel to the axis, in front of the round face.</source>
+        <translation>[Skétçh öñ áñ öffsét pláñé párállél tö thé áxîs, îñ fröñt öf thé röüñd fáçé.~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>This area could not be wrapped onto the round face.</source>
+        <translation>[Thîs áréá çöüld ñöt bé wráppéd öñtö thé röüñd fáçé.~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>This area could not be raised from the round face.</source>
+        <translation>[Thîs áréá çöüld ñöt bé ráîséd fröm thé röüñd fáçé.~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Try a smaller depth.</source>
+        <translation>[Trý á smállér dépth.~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>This sketch could not be embossed onto the round face.</source>
+        <translation>[Thîs skétçh çöüld ñöt bé émbösséd öñtö thé röüñd fáçé.~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <location line="+1" />
@@ -3261,7 +3336,7 @@
         <translation>[Théré îs ñöthîñg tö éxpört ýét.~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="-225" />
+        <location line="-237" />
         <source>This DXF has no lines, circles, arcs, curves, text or blocks to bring in.</source>
         <translation>[Thîs DXF hás ñö lîñés, çîrçlés, árçs, çürvés, téxt ör blöçks tö brîñg îñ.~~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -3301,7 +3376,7 @@
         <translation>[Thát fáçé îs lévél wîth thé skétçh, sö théré îs ñö wáý tö téll whîçh wáý tö éxtrüdé.~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+152" />
+        <location line="+164" />
         <source>The 3MF file could not be created.</source>
         <translation>[Thé 3MF fîlé çöüld ñöt bé çréátéd.~~~~~~~~]</translation>
     </message>
@@ -3930,6 +4005,11 @@
     </message>
     <message>
         <location line="+1" />
+        <source>emboss</source>
+        <translation>[émböss~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
         <source>extrude</source>
         <translation>[éxtrüdé~~]</translation>
     </message>
@@ -4007,7 +4087,7 @@
 <context>
     <name>MainWindow</name>
     <message>
-        <location filename="../app/MainWindow.cpp" line="+523" />
+        <location filename="../app/MainWindow.cpp" line="+525" />
         <source>Rebuilding the design…</source>
         <translation>[Rébüîldîñg thé désîgñ…~~~~~~]</translation>
     </message>
@@ -4020,7 +4100,7 @@
 <context>
     <name>QObject</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="+127" />
+        <location filename="../app/FeaturePanels.cpp" line="+128" />
         <source>Area %1 · %2</source>
         <translation>[Áréá %1 · %2~]</translation>
     </message>
@@ -4485,9 +4565,78 @@
     </message>
 </context>
 <context>
+    <name>jigapp::EmbossPanel</name>
+    <message>
+        <location filename="../app/FeaturePanels.cpp" line="+715" />
+        <location line="+113" />
+        <source>Emboss</source>
+        <translation>[Émböss~~]</translation>
+    </message>
+    <message>
+        <location line="-112" />
+        <source>Wrap text or shapes onto a round face: raised out of it or sunk in. Sketch on a plane along the face's axis (an offset plane in front of a cylinder works), then click the round face.</source>
+        <translation>[Wráp téxt ör shápés öñtö á röüñd fáçé: ráîséd öüt öf ît ör süñk îñ. Skétçh öñ á pláñé álöñg thé fáçé's áxîs (áñ öffsét pláñé îñ fröñt öf á çýlîñdér wörks), théñ çlîçk thé röüñd fáçé.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+8" />
+        <source>Raise out of the face</source>
+        <translation>[Ráîsé öüt öf thé fáçé~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+0" />
+        <source>Sink into the face</source>
+        <translation>[Sîñk îñtö thé fáçé~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Text or shapes (sketch)</source>
+        <translation>[Téxt ör shápés (skétçh)~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Closed areas</source>
+        <translation>[Çlöséd áréás~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Round face</source>
+        <translation>[Röüñd fáçé~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Depth</source>
+        <translation>[Dépth~]</translation>
+    </message>
+    <message>
+        <location line="+2" />
+        <source>Direction</source>
+        <translation>[Dîréçtîöñ~~~]</translation>
+    </message>
+    <message>
+        <location line="+54" />
+        <source>Emboss needs a body with a round face and a sketch with text or closed shapes.</source>
+        <translation>[Émböss ñééds á bödý wîth á röüñd fáçé áñd á skétçh wîth téxt ör çlöséd shápés.~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+17" />
+        <source>Click a round face: emboss wraps onto cylinders.</source>
+        <translation>[Çlîçk á röüñd fáçé: émböss wráps öñtö çýlîñdérs.~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+13" />
+        <source>Area %1 · %2</source>
+        <translation>[Áréá %1 · %2~]</translation>
+    </message>
+    <message>
+        <location line="+47" />
+        <source>emboss</source>
+        <translation>[émböss~~]</translation>
+    </message>
+</context>
+<context>
     <name>jigapp::ExprField</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="-2943" />
+        <location line="-3804" />
         <source>e.g. 45 deg</source>
         <translation>[é.g. 45 dég~]</translation>
     </message>
@@ -5142,7 +5291,7 @@
 <context>
     <name>jigapp::MainWindow</name>
     <message>
-        <location filename="../app/MainWindow.cpp" line="-156" />
+        <location filename="../app/MainWindow.cpp" line="-158" />
         <source>OK</source>
         <translation>[ÖK~]</translation>
     </message>
@@ -5168,15 +5317,15 @@
     </message>
     <message>
         <location line="+9" />
-        <location line="+743" />
+        <location line="+745" />
         <location line="+738" />
-        <location line="+913" />
+        <location line="+916" />
         <location line="+27" />
         <source>Sketch</source>
         <translation>[Skétçh~~]</translation>
     </message>
     <message>
-        <location line="-2419" />
+        <location line="-2424" />
         <source>Extrude</source>
         <translation>[Éxtrüdé~~]</translation>
     </message>
@@ -5284,6 +5433,11 @@
         <location line="+2" />
         <source>Rib</source>
         <translation>[Rîb~]</translation>
+    </message>
+    <message>
+        <location line="+2" />
+        <source>Emboss</source>
+        <translation>[Émböss~~]</translation>
     </message>
     <message>
         <location line="+2" />
@@ -5443,12 +5597,12 @@
     </message>
     <message>
         <location line="+2" />
-        <location line="+1590" />
+        <location line="+1593" />
         <source>Mouse and trackpad</source>
         <translation>[Möüsé áñd tráçkpád~~~~~]</translation>
     </message>
     <message>
-        <location line="-1588" />
+        <location line="-1591" />
         <source>Default (middle-drag pans, Shift+middle orbits)</source>
         <translation>[Défáült (mîddlé-drág páñs, Shîft+mîddlé örbîts)~~~~~~~~~~~~]</translation>
     </message>
@@ -5469,30 +5623,30 @@
     </message>
     <message>
         <location line="+11" />
-        <location line="+1563" />
+        <location line="+1566" />
         <source>Theme</source>
         <translation>[Thémé~]</translation>
     </message>
     <message>
-        <location line="-1561" />
-        <location line="+1516" />
+        <location line="-1564" />
+        <location line="+1519" />
         <source>Light</source>
         <translation>[Lîght~]</translation>
     </message>
     <message>
-        <location line="-1516" />
-        <location line="+1515" />
+        <location line="-1519" />
+        <location line="+1518" />
         <source>Dark</source>
         <translation>[Dárk~]</translation>
     </message>
     <message>
-        <location line="-1514" />
-        <location line="+1516" />
+        <location line="-1517" />
+        <location line="+1519" />
         <source>High contrast</source>
         <translation>[Hîgh çöñtrást~~~~]</translation>
     </message>
     <message>
-        <location line="-1508" />
+        <location line="-1511" />
         <source>&amp;Help</source>
         <translation>[&amp;Hélp~]</translation>
     </message>
@@ -5609,12 +5763,12 @@
     </message>
     <message>
         <location line="+2" />
-        <location line="+2184" />
+        <location line="+2199" />
         <source>Rename…</source>
         <translation>[Réñámé…~~]</translation>
     </message>
     <message>
-        <location line="-2181" />
+        <location line="-2196" />
         <source>Delete body</source>
         <translation>[Délété bödý~~~]</translation>
     </message>
@@ -5630,13 +5784,13 @@
     </message>
     <message>
         <location line="+5" />
-        <location line="+1570" />
+        <location line="+1573" />
         <location line="+58" />
         <source>Properties</source>
         <translation>[Pröpértîés~~~]</translation>
     </message>
     <message>
-        <location line="-1622" />
+        <location line="-1625" />
         <source>Properties and help</source>
         <translation>[Pröpértîés áñd hélp~~~~~]</translation>
     </message>
@@ -5722,12 +5876,12 @@
     </message>
     <message>
         <location line="+18" />
-        <location line="+2070" />
+        <location line="+2085" />
         <source>Move rollback marker</source>
         <translation>[Mövé röllbáçk márkér~~~~~~]</translation>
     </message>
     <message>
-        <location line="-1898" />
+        <location line="-1913" />
         <source>Start here: every part begins as a flat sketch.
 Click Sketch on the toolbar, then click a plane.
 Or open the phone stand sample (File ▸ Open a sample).</source>
@@ -5928,12 +6082,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+0" />
-        <location line="+375" />
+        <location line="+378" />
         <source>Jigsmith designs (*.jig)</source>
         <translation>[Jîgsmîth désîgñs (*.jîg)~~~~~~]</translation>
     </message>
     <message>
-        <location line="-328" />
+        <location line="-331" />
         <source>Save view</source>
         <translation>[Sávé vîéw~~]</translation>
     </message>
@@ -5948,7 +6102,7 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
         <translation>[Vîéw %1~]</translation>
     </message>
     <message>
-        <location line="+89" />
+        <location line="+92" />
         <source>Import STEP</source>
         <translation>[Împört STÉP~~~]</translation>
     </message>
@@ -6096,12 +6250,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+0" />
-        <location line="+976" />
+        <location line="+985" />
         <source>There is no 3D body yet.</source>
         <translation>[Théré îs ñö 3D bödý ýét.~~~~~]</translation>
     </message>
     <message>
-        <location line="-973" />
+        <location line="-982" />
         <source>STL mesh for slicers (*.stl)</source>
         <translation>[STL mésh för slîçérs (*.stl)~~~~~~]</translation>
     </message>
@@ -6372,7 +6526,7 @@ An empty design with the origin ready</source>
         <translation>[Théré îs ñö 3D bödý ýét: skétçh áñd éxtrüdé fîrst.~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+137" />
+        <location line="+146" />
         <source>That face was made by %1: change its size here.</source>
         <translation>[Thát fáçé wás mádé bý %1: çháñgé îts sîzé héré.~~~~~~~~~~~]</translation>
     </message>
@@ -6484,7 +6638,7 @@ An empty design with the origin ready</source>
         <translation>[Áñ împörtéd sölîd hás ñö séttîñgs tö çháñgé. Tö üsé á ñéwér çöpý öf thé fîlé, délété thîs stép áñd împört ît ágáîñ.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+45" />
+        <location line="+48" />
         <source>Edit…</source>
         <translation>[Édît…~]</translation>
     </message>
@@ -6799,7 +6953,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
 <context>
     <name>jigapp::MovePanel</name>
     <message>
-        <location line="+1707" />
+        <location line="+1861" />
         <source>free %1</source>
         <translation>[fréé %1~]</translation>
     </message>
@@ -6990,7 +7144,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
 <context>
     <name>jigapp::PatternPanel</name>
     <message>
-        <location line="-2427" />
+        <location line="-2581" />
         <location line="+154" />
         <source>Pattern</source>
         <translation>[Páttérñ~~]</translation>

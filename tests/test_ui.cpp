@@ -2938,6 +2938,44 @@ private slots:
         QVERIFY(w.document().status(2).level == jig::StatusLevel::Ok);  // the edge sketch: no warning
     }
 
+    // Emboss from the panel: lettering wrapped onto a cylinder's side, picked by clicking it.
+    void embossPanel()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        {
+            jig::ScriptRunner r(w.document());
+            QVERIFY(r.runText("cylinder id=cy1 diameter=40mm height=30mm\nplane id=pl1 base=XZ distance=25mm\n"
+                              "sketch id=s2 plane=pl1\ntext sketch=s2 center=0,15 height=8mm text=\"JIG\"\n").ok());
+        }
+        w.refreshAll();
+        const double before = jig::massProperties(w.document().state().bodies.begin()->second->shape()).volume;
+        w.runCommand("solid.emboss");
+        auto* ep = qobject_cast<EmbossPanel*>(w.featurePanel());
+        QVERIFY(ep);
+        QCOMPARE(ep->sketch()->currentData().toString(), QString("s2"));
+        QCOMPARE(ep->areas()->count(), 3);  // J, I, G
+        ep->face()->setCurrentIndex(-1);
+        ep->pickFace("cy1", "cy1/top");  // flat: not offered
+        QCOMPARE(ep->face()->currentIndex(), -1);
+        ep->pickFace("cy1", "cy1/side");
+        QCOMPARE(ep->face()->currentText(), QString("cy1/side"));
+        ep->depth()->setText("1 mm");
+        QTRY_VERIFY(ep->previewOk());
+        w.viewport()->viewFront();
+        QTRY_VERIFY(w.viewport()->meshesReady());
+        QTest::qWait(200);
+        w.grab().save(shotPath("emboss-panel"));
+        QVERIFY(ep->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        const auto& st = w.document().state();
+        QCOMPARE(int(st.bodies.size()), 1);
+        QVERIFY(jig::massProperties(st.bodies.begin()->second->shape()).volume > before + 10);
+        QVERIFY(w.document().status(int(w.document().model().features.size()) - 1).level == jig::StatusLevel::Ok);
+    }
+
     // Areas of a sketch are picked by clicking them in the 3D view: a square with a circle in it
     // can become a round post (the circle) or a block with a hole (the ring), not only a block.
     void clickAreasToExtrude()

@@ -14,6 +14,7 @@
 #include <BRepGProp.hxx>
 #include <BRepTools_WireExplorer.hxx>
 #include <TopExp_Explorer.hxx>
+#include <BRepAdaptor_Surface.hxx>
 #include <TopoDS.hxx>
 #include <GProp_GProps.hxx>
 #include <QAbstractItemView>
@@ -4093,6 +4094,160 @@ void RibPanel::rememberValues()
 QString RibPanel::title() const
 {
     return tr("rib");
+}
+
+// ---------------------------------------------------------------- Emboss
+
+EmbossPanel::EmbossPanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent)
+    : FeaturePanel(doc, view, std::move(editId), parent)
+{
+    form_->addWidget(heading(this, tr("Emboss"),
+                             tr("Wrap text or shapes onto a round face: raised out of it or sunk in. Sketch on a "
+                                "plane along the face's axis (an offset plane in front of a cylinder works), then "
+                                "click the round face.")));
+    sketch_ = new QComboBox(this);
+    areas_ = new QListWidget(this);
+    areas_->setMaximumHeight(90);
+    face_ = new QComboBox(this);
+    depth_ = new ExprField(doc, jig::Dim::len(), this);
+    op_ = combo(this, {{tr("Raise out of the face"), "join"}, {tr("Sink into the face"), "cut"}});
+    addRow(tr("Text or shapes (sketch)"), sketch_);
+    addRow(tr("Closed areas"), areas_);
+    addRow(tr("Round face"), face_);
+    addRow(tr("Depth"), depth_);
+    bindParam("depth", depth_);
+    addRow(tr("Direction"), op_);
+    const auto before = stateBefore();
+    for (int i = 0; i < insertIndex(); ++i) {
+        const auto& f = doc_.model().features[size_t(i)];
+        auto it = before->sketches.find(f.id);
+        if (f.kind == jig::FeatureKind::Sketch && it != before->sketches.end() && !it->second->profiles.regions.empty()) {
+            sketch_->addItem(q(f.name), q(f.id));
+        }
+    }
+    // the round faces of the bodies, by name (a click in the view picks one too)
+    for (auto& [bid, body] : before->bodies) {
+        for (int i = 0; i < body->faceCount(); ++i) {
+            BRepAdaptor_Surface sa(TopoDS::Face(body->face(i)));
+            if (sa.GetType() == GeomAbs_Cylinder && !body->faceName(i).empty()) {
+                face_->addItem(q(body->faceName(i)), q(body->faceRef(bid, i).toJson().dump()));
+            }
+        }
+    }
+    nlohmann::json wanted = "all";
+    if (const jig::Feature* edit = editId_.empty() ? nullptr : doc_.feature(editId_)) {
+        select(sketch_, edit->params.value("sketch", std::string {}));
+        const jig::ShapeRef ref = jig::ShapeRef::fromJson(edit->params.value("face", nlohmann::json::object()));
+        const int k = face_->findText(q(ref.name));
+        if (k >= 0) {
+            face_->setCurrentIndex(k);
+        }
+        depth_->setText(q(edit->params.value("depth", std::string("1 mm"))));
+        select(op_, edit->params.value("op", std::string("join")));
+        wanted = edit->params.value("profiles", nlohmann::json("all"));
+    }
+    else {
+        if (sketch_->count() > 0) {
+            sketch_->setCurrentIndex(sketch_->count() - 1);
+        }
+        depth_->setText(remembered().count("emboss.depth") ? remembered()["emboss.depth"] : q(doc_.defaultLength(1, 0.04)));
+    }
+    fillAreas(wanted);
+    connect(sketch_, &QComboBox::currentIndexChanged, this, [this] {
+        fillAreas("all");
+        schedulePreview();
+    });
+    connect(areas_, &QListWidget::itemChanged, this, [this] { schedulePreview(); });
+    connect(depth_, &ExprField::changed, this, [this] { schedulePreview(); });
+    for (auto* c : {face_, op_}) {
+        connect(c, &QComboBox::currentIndexChanged, this, [this] { schedulePreview(); });
+    }
+    if (view_) {
+        view_->setPickMode(PickMode::Faces);
+        connect(view_.data(), &Viewport::faceClicked, this,
+                [this](const QString& body, const QString& name, Qt::KeyboardModifiers) {
+                    pickFace(body.toStdString(), name.toStdString());
+                });
+    }
+    if (sketch_->count() == 0 || face_->count() == 0) {
+        status_->setText("<b>✕ " + tr("Emboss needs a body with a round face and a sketch with text or closed shapes.") +
+                         "</b>");
+        ok_->setEnabled(false);
+    }
+    else {
+        schedulePreview();
+    }
+}
+
+void EmbossPanel::pickFace(const std::string& body, const std::string& name)
+{
+    (void)body;
+    const int k = face_->findText(q(name));
+    if (k >= 0) {
+        face_->setCurrentIndex(k);
+    }
+    else {
+        status_->setText("<b>✕ " + tr("Click a round face: emboss wraps onto cylinders.") + "</b>");
+    }
+}
+
+void EmbossPanel::fillAreas(const nlohmann::json& wanted)
+{
+    areas_->blockSignals(true);
+    areas_->clear();
+    const auto before = stateBefore();
+    auto it = before->sketches.find(current(sketch_));
+    if (it != before->sketches.end()) {
+        int n = 1;
+        for (auto& r : it->second->profiles.regions) {
+            auto* item = new QListWidgetItem(tr("Area %1 · %2").arg(n++).arg(q(jig::formatArea(r.area, doc_.units()))),
+                                             areas_);
+            item->setData(Qt::UserRole, q(r.key));
+            item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+            const bool on = wanted == nlohmann::json("all") ||
+                            (wanted.is_array() && std::find(wanted.begin(), wanted.end(), r.key) != wanted.end());
+            item->setCheckState(on ? Qt::Checked : Qt::Unchecked);
+        }
+    }
+    areas_->blockSignals(false);
+}
+
+jig::Feature EmbossPanel::draft() const
+{
+    jig::Feature f = startDraft(doc_, editId_, "em", tr("Emboss"));
+    f.kind = jig::FeatureKind::Emboss;
+    nlohmann::json keys = nlohmann::json::array();
+    bool all = true;
+    for (int i = 0; i < areas_->count(); ++i) {
+        if (areas_->item(i)->checkState() == Qt::Checked) {
+            keys.push_back(areas_->item(i)->data(Qt::UserRole).toString().toStdString());
+        }
+        else {
+            all = false;
+        }
+    }
+    const std::string ref = face_->currentData().toString().toStdString();
+    f.params = {{"sketch", current(sketch_)},
+                {"profiles", all ? nlohmann::json("all") : keys},
+                {"face", ref.empty() ? nlohmann::json::object() : nlohmann::json::parse(ref, nullptr, false)},
+                {"depth", depth_->text().toStdString()},
+                {"op", current(op_)}};
+    return f;
+}
+
+QString EmbossPanel::notReady() const
+{
+    return pickAreasHint(areas_);
+}
+
+void EmbossPanel::rememberValues()
+{
+    remembered()["emboss.depth"] = depth_->text();
+}
+
+QString EmbossPanel::title() const
+{
+    return tr("emboss");
 }
 
 // ---------------------------------------------------------------- Move

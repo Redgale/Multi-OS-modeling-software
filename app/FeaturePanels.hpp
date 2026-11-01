@@ -873,6 +873,47 @@ private:
     ExprField* thickness_;
 };
 
+// Create ▸ Emboss: a sketch's areas (text, a logo) wrapped onto a round face, raised or sunk.
+class EmbossPanel : public FeaturePanel
+{
+    Q_OBJECT
+public:
+    EmbossPanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent = nullptr);
+    QComboBox* sketch() const
+    {
+        return sketch_;
+    }
+    QComboBox* face() const
+    {
+        return face_;
+    }
+    QListWidget* areas() const
+    {
+        return areas_;
+    }
+    ExprField* depth() const
+    {
+        return depth_;
+    }
+    QComboBox* operation() const
+    {
+        return op_;
+    }
+    void pickFace(const std::string& body, const std::string& name);  // a click in the view
+
+protected:
+    QString notReady() const override;
+    jig::Feature draft() const override;
+    QString title() const override;
+    void rememberValues() override;
+
+private:
+    void fillAreas(const nlohmann::json& wanted);
+    QComboBox *sketch_, *face_, *op_;
+    QListWidget* areas_;
+    ExprField* depth_;
+};
+
 class MoveHandle;
 
 // Move / copy bodies: shift along X, Y, Z and turn around an origin axis.

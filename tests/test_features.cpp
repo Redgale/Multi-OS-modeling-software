@@ -2611,3 +2611,43 @@ TEST(Rib, GussetFillsFromTheEdgeToTheWalls)
         EXPECT_FALSE(d->status(int(d->model().features.size()) - 1).message.empty());
     }
 }
+
+TEST(Emboss, WrapsAreasOntoRoundFacesRaisedOrSunk)
+{
+    // a 40 mm cylinder 30 high; a plane 25 mm in front of its axis; a 10 x 10 square on it
+    // wraps 10 mm round (0.5 rad of the 20 mm radius) and 10 mm up
+    const std::string cup = "cylinder id=cy1 diameter=40mm height=30mm\nplane id=pl1 base=XZ distance=-25mm\n"
+                            "sketch id=s2 plane=pl1\nrect sketch=s2 center=0,15 w=10 h=10\n";
+    auto base = build(cup);
+    const double v0 = props(*base).volume;
+    auto raised = build(cup + "emboss id=em1 sketch=s2 face=cy1/side depth=1mm\n");
+    expectAllOk(*raised);
+    auto pr = props(*raised);
+    EXPECT_TRUE(pr.valid);
+    EXPECT_EQ(raised->state().bodies.size(), 1u);
+    EXPECT_NEAR(pr.volume - v0, 0.25 * (21 * 21 - 400) * 10, 0.2);
+    // it is on the side facing the sketch's plane, between 10 and 20 mm up
+    EXPECT_NEAR(pr.zmax, 30, 1e-6);
+    auto sunk = build(cup + "emboss id=em1 sketch=s2 face=cy1/side depth=1mm op=cut\n");
+    expectAllOk(*sunk);
+    EXPECT_NEAR(v0 - props(*sunk).volume, 0.25 * (400 - 19 * 19) * 10, 0.2);
+    // lettering: every letter raised, holes in letters kept
+    auto text = build("cylinder id=cy1 diameter=40mm height=30mm\nplane id=pl1 base=XZ distance=-25mm\n"
+                      "sketch id=s2 plane=pl1\ntext sketch=s2 center=0,15 height=8mm text=\"Jig 8\"\n"
+                      "emboss id=em1 sketch=s2 face=cy1/side depth=0.8mm\n");
+    expectAllOk(*text);
+    EXPECT_TRUE(props(*text).valid);
+    EXPECT_GT(props(*text).volume, v0 + 5);
+    // a flat face and a plane across the axis are explained
+    for (const std::string& bad : {cup + "emboss id=em1 sketch=s2 face=cy1/top depth=1mm\n",
+                                   std::string("cylinder id=cy1 diameter=40mm height=30mm\nsketch id=s2 plane=XY\n"
+                                               "rect sketch=s2 center=0,0 w=5 h=5\nemboss id=em1 sketch=s2 face=cy1/side\n")}) {
+        auto d = std::make_unique<Document>();
+        ScriptRunner r(*d);
+        r.strict = false;
+        ASSERT_TRUE(r.runText(bad).ok());
+        const int last = int(d->model().features.size()) - 1;
+        EXPECT_EQ(d->status(last).level, StatusLevel::Error) << bad;
+        EXPECT_FALSE(d->status(last).message.empty());
+    }
+}

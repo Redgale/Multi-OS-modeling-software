@@ -610,6 +610,16 @@
     </message>
     <message>
         <location line="+1"/>
+        <source>Emboss</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Wrap a sketch&apos;s text or shapes onto a round face, raised out of it or sunk in.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>Hole</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1269,6 +1279,11 @@
     <message>
         <location line="+1"/>
         <source>A thin wall from an open sketch curve to the body: gussets that stiffen corners.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Wrap a sketch&apos;s text or shapes onto a round face, raised out of it or sunk in.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -2224,6 +2239,66 @@
     <message>
         <location line="+1"/>
         <source>This rib has an unknown operation.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The body of the face to emboss no longer exists.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Edit the step and click a round face.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The face to emboss no longer exists.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Emboss wraps onto round (cylindrical) faces.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>For a flat face, extrude the sketch from the face instead (Join to raise, Cut to sink).</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The emboss depth must be more than zero.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The sketch must be on a plane along the round face&apos;s axis (for example a plane touching the side of a cylinder).</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Sketch on an offset plane parallel to the axis, in front of the round face.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>This area could not be wrapped onto the round face.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>This area could not be raised from the round face.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Try a smaller depth.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>This sketch could not be embossed onto the round face.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -3262,7 +3337,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-225"/>
+        <location line="-237"/>
         <source>This DXF has no lines, circles, arcs, curves, text or blocks to bring in.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3302,7 +3377,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+152"/>
+        <location line="+164"/>
         <source>The 3MF file could not be created.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3931,6 +4006,11 @@
     </message>
     <message>
         <location line="+1"/>
+        <source>emboss</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>extrude</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4008,7 +4088,7 @@
 <context>
     <name>MainWindow</name>
     <message>
-        <location filename="../app/MainWindow.cpp" line="+523"/>
+        <location filename="../app/MainWindow.cpp" line="+525"/>
         <source>Rebuilding the design…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4021,7 +4101,7 @@
 <context>
     <name>QObject</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="+127"/>
+        <location filename="../app/FeaturePanels.cpp" line="+128"/>
         <source>Area %1 · %2</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4486,9 +4566,78 @@
     </message>
 </context>
 <context>
+    <name>jigapp::EmbossPanel</name>
+    <message>
+        <location filename="../app/FeaturePanels.cpp" line="+715"/>
+        <location line="+113"/>
+        <source>Emboss</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-112"/>
+        <source>Wrap text or shapes onto a round face: raised out of it or sunk in. Sketch on a plane along the face&apos;s axis (an offset plane in front of a cylinder works), then click the round face.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>Raise out of the face</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Sink into the face</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Text or shapes (sketch)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Closed areas</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Round face</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Depth</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Direction</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+54"/>
+        <source>Emboss needs a body with a round face and a sketch with text or closed shapes.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+17"/>
+        <source>Click a round face: emboss wraps onto cylinders.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+13"/>
+        <source>Area %1 · %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+47"/>
+        <source>emboss</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>jigapp::ExprField</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="-2943"/>
+        <location line="-3804"/>
         <source>e.g. 45 deg</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5145,7 +5294,7 @@
 <context>
     <name>jigapp::MainWindow</name>
     <message>
-        <location filename="../app/MainWindow.cpp" line="-156"/>
+        <location filename="../app/MainWindow.cpp" line="-158"/>
         <source>OK</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5171,15 +5320,15 @@
     </message>
     <message>
         <location line="+9"/>
-        <location line="+743"/>
+        <location line="+745"/>
         <location line="+738"/>
-        <location line="+913"/>
+        <location line="+916"/>
         <location line="+27"/>
         <source>Sketch</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2419"/>
+        <location line="-2424"/>
         <source>Extrude</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5286,6 +5435,11 @@
     <message>
         <location line="+2"/>
         <source>Rib</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Emboss</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -5446,12 +5600,12 @@
     </message>
     <message>
         <location line="+2"/>
-        <location line="+1590"/>
+        <location line="+1593"/>
         <source>Mouse and trackpad</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1588"/>
+        <location line="-1591"/>
         <source>Default (middle-drag pans, Shift+middle orbits)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5472,30 +5626,30 @@
     </message>
     <message>
         <location line="+11"/>
-        <location line="+1563"/>
+        <location line="+1566"/>
         <source>Theme</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1561"/>
-        <location line="+1516"/>
+        <location line="-1564"/>
+        <location line="+1519"/>
         <source>Light</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1516"/>
-        <location line="+1515"/>
+        <location line="-1519"/>
+        <location line="+1518"/>
         <source>Dark</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1514"/>
-        <location line="+1516"/>
+        <location line="-1517"/>
+        <location line="+1519"/>
         <source>High contrast</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1508"/>
+        <location line="-1511"/>
         <source>&amp;Help</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5612,12 +5766,12 @@
     </message>
     <message>
         <location line="+2"/>
-        <location line="+2184"/>
+        <location line="+2199"/>
         <source>Rename…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2181"/>
+        <location line="-2196"/>
         <source>Delete body</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5633,13 +5787,13 @@
     </message>
     <message>
         <location line="+5"/>
-        <location line="+1570"/>
+        <location line="+1573"/>
         <location line="+58"/>
         <source>Properties</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1622"/>
+        <location line="-1625"/>
         <source>Properties and help</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5725,12 +5879,12 @@
     </message>
     <message>
         <location line="+18"/>
-        <location line="+2070"/>
+        <location line="+2085"/>
         <source>Move rollback marker</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1898"/>
+        <location line="-1913"/>
         <source>Start here: every part begins as a flat sketch.
 Click Sketch on the toolbar, then click a plane.
 Or open the phone stand sample (File ▸ Open a sample).</source>
@@ -5929,12 +6083,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+0"/>
-        <location line="+375"/>
+        <location line="+378"/>
         <source>Jigsmith designs (*.jig)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-328"/>
+        <location line="-331"/>
         <source>Save view</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5949,7 +6103,7 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+89"/>
+        <location line="+92"/>
         <source>Import STEP</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6099,12 +6253,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+0"/>
-        <location line="+976"/>
+        <location line="+985"/>
         <source>There is no 3D body yet.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-973"/>
+        <location line="-982"/>
         <source>STL mesh for slicers (*.stl)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6374,7 +6528,7 @@ An empty design with the origin ready</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+137"/>
+        <location line="+146"/>
         <source>That face was made by %1: change its size here.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6490,7 +6644,7 @@ An empty design with the origin ready</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+45"/>
+        <location line="+48"/>
         <source>Edit…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6803,7 +6957,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::MovePanel</name>
     <message>
-        <location line="+1707"/>
+        <location line="+1861"/>
         <source>free %1</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6996,7 +7150,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::PatternPanel</name>
     <message>
-        <location line="-2427"/>
+        <location line="-2581"/>
         <location line="+154"/>
         <source>Pattern</source>
         <translation type="unfinished"></translation>
