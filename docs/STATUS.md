@@ -152,7 +152,7 @@ Earlier full run: run 41161765171 on commit 31d7fb5, all 13 jobs green.
 | Windows 2022 (conda-forge, MSVC): build, 78 tests, bench, portable zip | 8.0.x | ✓ |
 | Void Linux glibc and musl, Fedora, Arch, openSUSE Tumbleweed (containers, `scripts/install-deps.sh` only): build + 78 tests | distribution packages | ✓ (5 jobs) |
 | OCCT built from source (`scripts/build-occt.sh`) | source | ✓ |
-| macOS universal (B-005, added 2026-11-01): the two apps joined with `lipo` by `packaging/macos/make-universal.sh`, opened natively and under Rosetta, .dmg | 7.9.x (Homebrew) | not yet run |
+| macOS universal (B-005, added 2026-11-01): built once for both architectures (official universal Qt; OCCT 7.9.3 and FreeType built from source; no HarfBuzz yet), tests natively and `test_features` under Rosetta, opened both ways, .dmg. The first attempt, joining the two Homebrew apps with `lipo`, failed in run 150: their libraries differ (ICU 79 vs 78, OpenSSL 4 vs 3, different Qt image plugins) | 7.9.3 (source) | not yet run |
 | Flatpak (B-007, added 2026-11-01): `packaging/flatpak` manifest on the KDE 6.8 runtime, OCCT 7.9.3 built in it, bundle, CLI runs the phone stand inside the sandbox | 7.9.3 | not yet run |
 | Publish `continuous` pre-release | — | ✓ [AppImage, two .dmg, Windows zip](https://github.com/Redgale/Multi-OS-modeling-software/releases/tag/continuous) |
 

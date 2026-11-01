@@ -15,9 +15,9 @@ decision or finding). Move items to STATUS.md when started.
   driver; manual check of trackpad pinch on a real Mac.
 - **B-004 macOS renderer path**: verify GL 4.1 core on Apple silicon; spike a Qt RHI
   (Metal) backend for `Viewport`.
-- **B-005 Universal macOS binary**: the "macOS universal" CI job joins the two builds with
-  `packaging/macos/make-universal.sh` (lipo, ad hoc signature) and opens the result natively and
-  under Rosetta. Left: a green run; signing and notarisation need an Apple developer account (an
+- **B-005 Universal macOS binary**: the "macOS universal" CI job builds for both architectures at
+  once (official Qt, OCCT and FreeType from source; joining two Homebrew apps failed because their
+  library versions differ). Left: a green run; HarfBuzz in that build; signing and notarisation need an Apple developer account (an
   owner decision; secrets never in the repository).
 - ~~B-006 Windows installer~~ done (Inno Setup, tested in CI by silent install, run, uninstall); try
   on a clean machine by hand.

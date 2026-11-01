@@ -149,31 +149,64 @@ jobs:
             bench-macos.json
 
   macos-universal:
-    # B-005: one app for both kinds of Mac, joined from the two builds above with lipo; it is
-    # opened natively and under Rosetta before the .dmg is made (unsigned, ad hoc signature)
+    # B-005: one app for both kinds of Mac. Homebrew's Apple-silicon and Intel libraries differ
+    # in version, so their two apps cannot be joined; this builds everything for both
+    # architectures at once instead: the official (universal) Qt, OCCT and FreeType from source
+    # (cached), Eigen, Boost and nlohmann/json headers from Homebrew. No HarfBuzz yet (letters
+    # are placed one by one). Tested natively and under Rosetta, then packaged.
     name: macOS universal
-    needs: macos
+    if: ${{ github.event_name != 'push' || github.ref == 'refs/heads/main' || contains(github.event.head_commit.message, '[full ci]') }}
     runs-on: macos-15
+    env:
+      ARCHS: arm64;x86_64
+      UNI: ${{ github.workspace }}/deps/universal
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - name: Header-only dependencies and tools
+        run: brew install ninja eigen boost nlohmann-json
+      - uses: jurplel/install-qt-action@v4
         with:
-          pattern: jigsmith-macos-*
-      - name: Take the apps out of the two .dmg files
+          version: '6.8.*'
+          cache: true
+      - name: Cache universal OCCT and FreeType
+        id: uni-cache
+        uses: actions/cache@v4
+        with:
+          path: deps/universal
+          key: macos-universal-occt-7.9.3-freetype-2.13.3-${{ hashFiles('scripts/build-occt.sh') }}
+      - name: Build FreeType and OCCT for both architectures
+        if: steps.uni-cache.outputs.cache-hit != 'true'
         run: |
-          for a in macos-15:arm64 macos-15-intel:x86_64; do
-            name="${a%%:*}"; arch="${a##*:}"
-            hdiutil attach -nobrowse -readonly -mountpoint "/tmp/mnt-$arch" "jigsmith-$name/Jigsmith-$name.dmg"
-            mkdir -p "$arch" && cp -R "/tmp/mnt-$arch/jigsmith.app" "$arch/"
-            hdiutil detach "/tmp/mnt-$arch"
-          done
-      - name: Join them
-        run: sh packaging/macos/make-universal.sh arm64/jigsmith.app x86_64/jigsmith.app universal/jigsmith.app
-      - name: Open it natively and under Rosetta
+          curl -fsSL -o ft.tar.xz https://download.savannah.gnu.org/releases/freetype/freetype-2.13.3.tar.xz
+          tar -xf ft.tar.xz
+          cmake -S freetype-2.13.3 -B ft-build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="$ARCHS" \
+            -DCMAKE_INSTALL_PREFIX="$UNI" -DBUILD_SHARED_LIBS=ON -DFT_DISABLE_ZLIB=ON -DFT_DISABLE_BZIP2=ON \
+            -DFT_DISABLE_PNG=ON -DFT_DISABLE_HARFBUZZ=ON -DFT_DISABLE_BROTLI=ON
+          cmake --build ft-build && cmake --install ft-build
+          JIG_OCCT_PREFIX="$UNI" JIG_OCCT_CMAKE_ARGS="-DCMAKE_OSX_ARCHITECTURES=$ARCHS" sh scripts/build-occt.sh 7.9.3
+      - name: Configure
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="$ARCHS" \
+            -DCMAKE_PREFIX_PATH="$QT_ROOT_DIR;$UNI;$(brew --prefix)" -DCMAKE_DISABLE_FIND_PACKAGE_PkgConfig=ON \
+            -DCMAKE_DISABLE_FIND_PACKAGE_GTest=ON
+      - name: Build
+        run: cmake --build build
+      - name: Both halves are there
+        run: lipo -archs build/app/jigsmith.app/Contents/MacOS/jigsmith | grep -q "x86_64 arm64"
+      - name: Test natively, and the core again under Rosetta
         run: |
           softwareupdate --install-rosetta --agree-to-license || true
+          export DYLD_LIBRARY_PATH="$UNI/lib"
+          ctest --test-dir build --output-on-failure -j3 -LE ui
+          arch -x86_64 ./build/tests/test_features
+      - name: Package .dmg (unsigned) and open it both ways
+        run: |
+          export DYLD_LIBRARY_PATH="$UNI/lib"
+          "$QT_ROOT_DIR/bin/macdeployqt" build/app/jigsmith.app -libpath="$UNI/lib"
+          lipo -archs build/app/jigsmith.app/Contents/Frameworks/libTKernel*.dylib
+          unset DYLD_LIBRARY_PATH
           for arch in arm64 x86_64; do
-            arch -$arch universal/jigsmith.app/Contents/MacOS/jigsmith --sample phone_stand \
+            arch -$arch build/app/jigsmith.app/Contents/MacOS/jigsmith --sample phone_stand \
               --screenshot "screenshot-universal-$arch.png" &
             pid=$!
             for i in $(seq 1 120); do kill -0 $pid 2>/dev/null || break; sleep 1; done
@@ -181,8 +214,7 @@ jobs:
             wait $pid
             test -s "screenshot-universal-$arch.png"
           done
-      - name: Package the universal .dmg
-        run: hdiutil create -volname Jigsmith -srcfolder universal/jigsmith.app -ov -format UDZO Jigsmith-macos-universal.dmg
+          hdiutil create -volname Jigsmith -srcfolder build/app/jigsmith.app -ov -format UDZO Jigsmith-macos-universal.dmg
       - uses: actions/upload-artifact@v4
         with:
           name: jigsmith-macos-universal
