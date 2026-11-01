@@ -422,12 +422,15 @@ FeatureOutcome applyImport(const Feature& f, const std::shared_ptr<const ModelSt
     return {out, {}};
 }
 
+const SketchState* findSketch(const std::shared_ptr<const ModelState>& in, const std::string& id);
+
 FeatureOutcome applyPlane(const Document& doc, const Feature& f, const std::shared_ptr<const ModelState>& in)
 {
     const auto& p = f.params;
     FeatureStatus status;
     const std::string kind = p.value("kind", std::string("offset"));
-    auto base = planeFrame(p.value("base", nlohmann::json("XY")), in, status);
+    // a tangent plane faces the front by default (an upright cylinder's front)
+    auto base = planeFrame(p.value("base", nlohmann::json(kind == "tangent" ? "XZ" : "XY")), in, status);
     if (!base) {
         return failed(base.error());
     }
@@ -487,6 +490,110 @@ FeatureOutcome applyPlane(const Document& doc, const Feature& f, const std::shar
         }
         const double gap = gp_Vec(frame.Location(), other->Location()).Dot(gp_Vec(n1));
         frame.Translate(gp_Vec(n1) * (gap / 2));
+    }
+    else if (kind == "tangent") {
+        // touching a round face, on the side the base plane faces, turned by an angle around
+        // the face's axis; x runs around the face, y along its axis
+        const nlohmann::json fj = p.value("face", nlohmann::json::object());
+        ShapeRef fr = ShapeRef::fromJson(fj.is_object() && fj.contains("face") ? fj["face"] : fj);
+        auto bit = in->bodies.find(fr.body);
+        if (bit == in->bodies.end()) {
+            return failed("The body of the round face this plane touches no longer exists.");
+        }
+        Resolution r = resolve(*bit->second, fr);
+        if (r.status == ResolveStatus::Missing || r.status == ResolveStatus::Ambiguous) {
+            return failed("The round face this plane touches no longer exists.", {"Edit the plane and pick the face."});
+        }
+        const TopoDS_Face face = TopoDS::Face(bit->second->face(r.index));
+        BRepAdaptor_Surface sa(face);
+        if (sa.GetType() != GeomAbs_Cylinder) {
+            return failed("A tangent plane touches a round (cylindrical) face.",
+                          {"For a flat face, use an offset plane at distance 0."});
+        }
+        auto ang = doc.evalAngle(p.value("angle", std::string("0 deg")));
+        if (!ang) {
+            return failed(ang.error());
+        }
+        const gp_Cylinder cy = sa.Cylinder();
+        const gp_Dir axisDir = cy.Axis().Direction();
+        gp_Vec toward = gp_Vec(frame.Direction());
+        toward -= gp_Vec(axisDir) * toward.Dot(gp_Vec(axisDir));
+        if (toward.Magnitude() < 1e-9) {
+            return failed("The base plane faces along the round face's axis, so it gives no side to touch.",
+                          {"Pick a base plane along the axis (for an upright cylinder: the front or side plane)."});
+        }
+        gp_Dir d(toward);
+        d.Rotate(cy.Axis(), ang.value());
+        // halfway up the face, on its axis
+        Bnd_Box fb;
+        BRepBndLib::Add(face, fb);
+        double x0, y0, z0, x1, y1, z1;
+        fb.Get(x0, y0, z0, x1, y1, z1);
+        const gp_Pnt mid((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
+        const gp_Pnt c = cy.Location();
+        const gp_Pnt onAxis = c.Translated(gp_Vec(axisDir) * gp_Vec(c, mid).Dot(gp_Vec(axisDir)));
+        const gp_Pnt touch = onAxis.Translated(gp_Vec(d) * cy.Radius());
+        frame = gp_Ax3(touch, d, axisDir.Crossed(d));
+    }
+    else if (kind == "points") {
+        const nlohmann::json pts = p.value("points", nlohmann::json::array());
+        std::vector<gp_Pnt> q;
+        for (const auto& id : pts) {
+            const std::string name = id.is_string() ? id.get<std::string>() : std::string {};
+            auto it = in->points.find(name);
+            if (it == in->points.end()) {
+                return failed(fmt("The point '%1' is missing or comes later in the timeline.", {name}),
+                              {"Edit the plane and pick three construction points."});
+            }
+            q.push_back(it->second);
+        }
+        if (q.size() != 3) {
+            return failed("A plane through points needs exactly three points.");
+        }
+        const gp_Vec u(q[0], q[1]), v(q[0], q[2]);
+        const gp_Vec n = u.Crossed(v);
+        if (u.Magnitude() < 1e-9 || n.Magnitude() < 1e-9 * u.Magnitude() * std::max(1.0, v.Magnitude())) {
+            return failed("These three points are in a line (or two are the same), so no single plane passes "
+                          "through them.",
+                          {"Pick a third point off the line."});
+        }
+        frame = gp_Ax3(q[0], gp_Dir(n), gp_Dir(u));
+    }
+    else if (kind == "path") {
+        // square across a path of sketch curves, at a fraction of the way along it
+        const nlohmann::json pj = p.value("path", nlohmann::json::object());
+        const std::string sid = pj.is_object() ? pj.value("sketch", std::string {}) : std::string {};
+        const SketchState* sk = findSketch(in, sid);
+        if (!sk) {
+            return failed(fmt("The sketch with this plane's path (%1) is missing or comes later.", {sid}),
+                          {"Edit the plane and pick the sketch with the path."});
+        }
+        std::vector<int> curves;
+        for (auto& [id, e] : sk->solved.entities()) {
+            if (e.type != EntityType::Point && !e.construction) {
+                curves.push_back(id);
+            }
+        }
+        auto path = sketchPath(sk->solved, sk->frame, curves);
+        if (!path) {
+            return failed(path.error());
+        }
+        auto pos = evaluate(p.value("position", std::string("0")), doc.lookup());
+        if (!pos || !(pos->dim == Dim::none()) || pos->value < 0 || pos->value > 1) {
+            return failed("The position along the path is a fraction from 0 (the start) to 1 (the end).");
+        }
+        gp_Pnt at;
+        gp_Vec tan;
+        pathAt(*path, pos->value * path->length, at, tan);
+        if (tan.Magnitude() < 1e-12) {
+            return failed("The path has no direction at that point.");
+        }
+        // x stays in the path's sketch plane, so sketches on it come out upright
+        gp_Vec x = gp_Vec(sk->frame.Direction()).Crossed(tan);
+        if (x.Magnitude() < 1e-9) {
+            x = gp_Vec(sk->frame.XDirection());
+        }
+        frame = gp_Ax3(at, gp_Dir(tan), gp_Dir(x));
     }
     else {
         return failed("This construction plane has an unknown kind.");

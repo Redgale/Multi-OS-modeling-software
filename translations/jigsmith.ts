@@ -770,6 +770,36 @@
     </message>
     <message>
         <location line="+1"/>
+        <source>Tangent plane</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>A plane touching a round face, turned to any angle around it: for text and holes on cylinders.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Plane through 3 points</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>A plane through three construction points.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Plane along path</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>A plane square across a path of sketch curves, at a fraction of the way along: for sweep and loft sections.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>Axis</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1358,6 +1388,21 @@
     </message>
     <message>
         <location line="+1"/>
+        <source>A plane touching a round face, turned to any angle around it: for text and holes on cylinders.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>A plane through three construction points.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>A plane square across a path of sketch curves, at a fraction of the way along: for sweep and loft sections.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>A reference axis for revolves, patterns and turning bodies: along an edge, through a hole or where two planes meet.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1859,6 +1904,76 @@
     <message>
         <location line="+1"/>
         <source>Pick two faces that face each other.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The body of the round face this plane touches no longer exists.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The round face this plane touches no longer exists.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Edit the plane and pick the face.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>A tangent plane touches a round (cylindrical) face.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>For a flat face, use an offset plane at distance 0.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The base plane faces along the round face&apos;s axis, so it gives no side to touch.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Pick a base plane along the axis (for an upright cylinder: the front or side plane).</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Edit the plane and pick three construction points.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>A plane through points needs exactly three points.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>These three points are in a line (or two are the same), so no single plane passes through them.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Pick a third point off the line.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Edit the plane and pick the sketch with the path.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The position along the path is a fraction from 0 (the start) to 1 (the end).</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The path has no direction at that point.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -3103,6 +3218,16 @@
     </message>
     <message>
         <location line="+1"/>
+        <source>The point &apos;%1&apos; is missing or comes later in the timeline.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The sketch with this plane&apos;s path (%1) is missing or comes later.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>%1 line ends are not connected.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3247,7 +3372,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-48"/>
+        <location line="-50"/>
         <source>The id &apos;%1&apos; is already used.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3257,7 +3382,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+64"/>
+        <location line="+66"/>
         <source>A wall of %1 does not fit this outline.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3332,12 +3457,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-237"/>
+        <location line="-239"/>
         <source>There is nothing to export yet.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-237"/>
+        <location line="-251"/>
         <source>This DXF has no lines, circles, arcs, curves, text or blocks to bring in.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3352,7 +3477,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+70"/>
+        <location line="+84"/>
         <source>The face this extrude goes up to no longer exists.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3980,7 +4105,7 @@
 <context>
     <name>CoreWords</name>
     <message>
-        <location line="+100"/>
+        <location line="+102"/>
         <source>ball face (sphere)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4212,7 +4337,7 @@
 <context>
     <name>jigapp::AxisPanel</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="+2396"/>
+        <location filename="../app/FeaturePanels.cpp" line="+2487"/>
         <source>Construction axis</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4637,7 +4762,7 @@
 <context>
     <name>jigapp::ExprField</name>
     <message>
-        <location line="-3804"/>
+        <location line="-3895"/>
         <source>e.g. 45 deg</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5235,7 +5360,7 @@
 <context>
     <name>jigapp::LoftPanel</name>
     <message>
-        <location line="+1328"/>
+        <location line="+1419"/>
         <location line="+50"/>
         <source>Loft</source>
         <translation type="unfinished"></translation>
@@ -5322,13 +5447,13 @@
         <location line="+9"/>
         <location line="+745"/>
         <location line="+738"/>
-        <location line="+916"/>
+        <location line="+922"/>
         <location line="+27"/>
         <source>Sketch</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2424"/>
+        <location line="-2430"/>
         <source>Extrude</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5600,12 +5725,12 @@
     </message>
     <message>
         <location line="+2"/>
-        <location line="+1593"/>
+        <location line="+1599"/>
         <source>Mouse and trackpad</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1591"/>
+        <location line="-1597"/>
         <source>Default (middle-drag pans, Shift+middle orbits)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5626,30 +5751,30 @@
     </message>
     <message>
         <location line="+11"/>
-        <location line="+1566"/>
+        <location line="+1572"/>
         <source>Theme</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1564"/>
-        <location line="+1519"/>
+        <location line="-1570"/>
+        <location line="+1525"/>
         <source>Light</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1519"/>
-        <location line="+1518"/>
+        <location line="-1525"/>
+        <location line="+1524"/>
         <source>Dark</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1517"/>
-        <location line="+1519"/>
+        <location line="-1523"/>
+        <location line="+1525"/>
         <source>High contrast</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1511"/>
+        <location line="-1517"/>
         <source>&amp;Help</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5766,12 +5891,12 @@
     </message>
     <message>
         <location line="+2"/>
-        <location line="+2199"/>
+        <location line="+2205"/>
         <source>Rename…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2196"/>
+        <location line="-2202"/>
         <source>Delete body</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5787,13 +5912,13 @@
     </message>
     <message>
         <location line="+5"/>
-        <location line="+1573"/>
+        <location line="+1579"/>
         <location line="+58"/>
         <source>Properties</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1625"/>
+        <location line="-1631"/>
         <source>Properties and help</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5879,12 +6004,12 @@
     </message>
     <message>
         <location line="+18"/>
-        <location line="+2085"/>
+        <location line="+2091"/>
         <source>Move rollback marker</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1913"/>
+        <location line="-1919"/>
         <source>Start here: every part begins as a flat sketch.
 Click Sketch on the toolbar, then click a plane.
 Or open the phone stand sample (File ▸ Open a sample).</source>
@@ -6083,12 +6208,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+0"/>
-        <location line="+378"/>
+        <location line="+384"/>
         <source>Jigsmith designs (*.jig)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-331"/>
+        <location line="-337"/>
         <source>Save view</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6103,7 +6228,7 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+92"/>
+        <location line="+98"/>
         <source>Import STEP</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6877,7 +7002,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::MirrorPanel</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="-1168"/>
+        <location filename="../app/FeaturePanels.cpp" line="-1259"/>
         <location line="+97"/>
         <source>Mirror</source>
         <translation type="unfinished"></translation>
@@ -6957,7 +7082,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::MovePanel</name>
     <message>
-        <location line="+1861"/>
+        <location line="+1952"/>
         <source>free %1</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7150,7 +7275,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::PatternPanel</name>
     <message>
-        <location line="-2581"/>
+        <location line="-2672"/>
         <location line="+154"/>
         <source>Pattern</source>
         <translation type="unfinished"></translation>
@@ -7309,7 +7434,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::PipePanel</name>
     <message>
-        <location line="+1323"/>
+        <location line="+1414"/>
         <location line="+62"/>
         <source>Pipe</source>
         <translation type="unfinished"></translation>
@@ -7378,7 +7503,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::PlanePanel</name>
     <message>
-        <location line="-1275"/>
+        <location line="-1366"/>
         <source>Construction plane</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7403,6 +7528,21 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location line="+1"/>
+        <source>Tangent: touching a round face</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Through three points</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Along a path: square across it</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <location line="+3"/>
         <source>X axis</source>
         <translation type="unfinished"></translation>
@@ -7418,8 +7558,13 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+5"/>
+        <location line="+11"/>
         <source>Kind</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Round face</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -7448,7 +7593,32 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+2"/>
+        <location line="+1"/>
+        <source>First point</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Second point</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Third point</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Path (sketch)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Position (0 = start, 1 = end)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+30"/>
         <source>Floor (XY)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7464,18 +7634,23 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
     </message>
     <message>
         <location line="+25"/>
-        <location line="+81"/>
+        <location line="+108"/>
         <source>Face %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-78"/>
-        <location line="+104"/>
+        <location line="-105"/>
+        <location line="+131"/>
         <source>Edge %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-37"/>
+        <location line="-42"/>
+        <source>A tangent plane touches a round face. Click a cylinder&apos;s side.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
         <source>That face is curved. Click a flat face.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7485,12 +7660,12 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+34"/>
+        <location line="+41"/>
         <source>Plane</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+54"/>
+        <location line="+68"/>
         <source>construction plane</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7944,7 +8119,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::RevolvePanel</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="-2187"/>
+        <location filename="../app/FeaturePanels.cpp" line="-2278"/>
         <location line="+199"/>
         <source>Revolve</source>
         <translation type="unfinished"></translation>
@@ -8064,7 +8239,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::RibPanel</name>
     <message>
-        <location line="+2074"/>
+        <location line="+2165"/>
         <location line="+50"/>
         <source>Rib</source>
         <translation type="unfinished"></translation>
@@ -8196,7 +8371,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::ShellPanel</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="-2528"/>
+        <location filename="../app/FeaturePanels.cpp" line="-2619"/>
         <source>Shell</source>
         <translation type="unfinished"></translation>
     </message>
@@ -9177,7 +9352,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::SplitPanel</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="+1676"/>
+        <location filename="../app/FeaturePanels.cpp" line="+1767"/>
         <source>Split body</source>
         <translation type="unfinished"></translation>
     </message>

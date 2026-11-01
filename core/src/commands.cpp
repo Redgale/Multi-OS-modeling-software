@@ -148,6 +148,9 @@ CommandRegistry::CommandRegistry()
     add({"construct.offset_plane", "Offset plane", "Offset Plane", "CONSTRUCT", "A plane parallel to a face or plane at a set distance.", "", {"parallel plane", "work plane"}, true, false, true, m4});
     add({"construct.angle_plane", "Plane at angle", "Plane at Angle", "CONSTRUCT", "A plane tilted around an edge or axis.", "", {"tilted plane", "slanted"}, false, false, false, m4});
     add({"construct.midplane", "Midplane", "Midplane", "CONSTRUCT", "A plane halfway between two faces or planes.", "", {"middle plane", "center plane"}, false, false, false, m4});
+    add({"construct.tangent_plane", "Tangent plane", "Tangent Plane", "CONSTRUCT", "A plane touching a round face, turned to any angle around it: for text and holes on cylinders.", "", {"touching plane", "plane on cylinder"}, false, false, false, m4});
+    add({"construct.points_plane", "Plane through 3 points", "Plane Through Three Points", "CONSTRUCT", "A plane through three construction points.", "", {"three point plane", "3 points"}, false, false, false, m4});
+    add({"construct.path_plane", "Plane along path", "Plane Along Path", "CONSTRUCT", "A plane square across a path of sketch curves, at a fraction of the way along: for sweep and loft sections.", "", {"normal to path", "perpendicular plane"}, false, false, false, m4});
     add({"construct.axis", "Axis", "Axis", "CONSTRUCT", "A reference axis for revolves, patterns and turning bodies: along an edge, through a hole or where two planes meet.", "", {"center line", "rotation axis"}, false, false, true, m4});
     add({"construct.point", "Reference point", "Construction Point", "CONSTRUCT", "A reference point: typed coordinates, the end or centre of an edge, or the centre of a face.", "", {"work point", "reference point"}, false, false, true, m4});
     add({"inspect.measure", "Measure", "Measure", "INSPECT", "Read distances, angles, lengths and areas.", "I", {"distance", "how big", "ruler", "size"}, true, false, false, m6});
@@ -171,7 +174,7 @@ CommandRegistry::CommandRegistry()
         "constraint.symmetric", "constraint.equal", "solid.extrude", "solid.fillet", "solid.chamfer", "solid.shell",
         "solid.revolve", "solid.loft", "solid.sweep", "solid.pipe", "solid.coil", "solid.box", "solid.cylinder", "solid.sphere", "solid.torus", "solid.rib", "solid.emboss", "solid.hole", "solid.mirror", "solid.pattern_rect", "solid.pattern_circ", "modify.parameters",
         "inspect.measure", "inspect.properties", "file.export_3mf", "construct.offset_plane", "construct.angle_plane",
-        "construct.midplane", "construct.axis", "construct.point", "solid.presspull", "solid.combine", "solid.split", "solid.move",
+        "construct.midplane", "construct.tangent_plane", "construct.points_plane", "construct.path_plane", "construct.axis", "construct.point", "solid.presspull", "solid.combine", "solid.split", "solid.move",
         "inspect.section", "insert.dxf", "insert.svg", "help.tutorial"};
     for (auto& c : commands_) {
         if (inApp.count(c.id)) {
@@ -1686,6 +1689,26 @@ Result<bool> ScriptRunner::runLineUnchecked(std::string_view rawLine)
         }
         if (isAxis && a.has("at")) {
             params["at"] = a.get("at");  // the point a square-on axis runs through
+        }
+        if (!isAxis && !isPoint) {
+            // tangent: face=face:<round face> [base=…] [angle=…]; points: points=pt1;pt2;pt3;
+            // path: path=<sketch> [position=0.5]
+            if (a.has("face")) {
+                auto r = ref(a.get("face"));
+                if (!r) {
+                    return r.error();
+                }
+                params["face"] = r.value();
+            }
+            if (a.has("points")) {
+                params["points"] = split(a.get("points"), ';');
+            }
+            if (a.has("path")) {
+                params["path"] = {{"sketch", a.get("path")}, {"curves", "all"}};
+            }
+            if (a.has("position")) {
+                params["position"] = a.get("position");
+            }
         }
         for (const char* key : {"base", "base2", "axis", "through", "plane", "normal"}) {
             if (a.has(key)) {

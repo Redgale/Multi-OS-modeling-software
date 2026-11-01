@@ -75,6 +75,9 @@ QT_TRANSLATE_NOOP("Core", "Move, rotate or copy bodies.")
 QT_TRANSLATE_NOOP("Core", "A plane parallel to a face or plane at a set distance.")
 QT_TRANSLATE_NOOP("Core", "A plane tilted around an edge or axis.")
 QT_TRANSLATE_NOOP("Core", "A plane halfway between two faces or planes.")
+QT_TRANSLATE_NOOP("Core", "A plane touching a round face, turned to any angle around it: for text and holes on cylinders.")
+QT_TRANSLATE_NOOP("Core", "A plane through three construction points.")
+QT_TRANSLATE_NOOP("Core", "A plane square across a path of sketch curves, at a fraction of the way along: for sweep and loft sections.")
 QT_TRANSLATE_NOOP("Core", "A reference axis for revolves, patterns and turning bodies: along an edge, through a hole or where two planes meet.")
 QT_TRANSLATE_NOOP("Core", "A reference point: typed coordinates, the end or centre of an edge, or the centre of a face.")
 QT_TRANSLATE_NOOP("Core", "Read distances, angles, lengths and areas.")
@@ -179,6 +182,20 @@ QT_TRANSLATE_NOOP("Core", "The turning axis must lie in the base plane (it is no
 QT_TRANSLATE_NOOP("Core", "Pick an axis or edge that lies in the base plane.")
 QT_TRANSLATE_NOOP("Core", "A midplane needs two parallel faces or planes.")
 QT_TRANSLATE_NOOP("Core", "Pick two faces that face each other.")
+QT_TRANSLATE_NOOP("Core", "The body of the round face this plane touches no longer exists.")
+QT_TRANSLATE_NOOP("Core", "The round face this plane touches no longer exists.")
+QT_TRANSLATE_NOOP("Core", "Edit the plane and pick the face.")
+QT_TRANSLATE_NOOP("Core", "A tangent plane touches a round (cylindrical) face.")
+QT_TRANSLATE_NOOP("Core", "For a flat face, use an offset plane at distance 0.")
+QT_TRANSLATE_NOOP("Core", "The base plane faces along the round face's axis, so it gives no side to touch.")
+QT_TRANSLATE_NOOP("Core", "Pick a base plane along the axis (for an upright cylinder: the front or side plane).")
+QT_TRANSLATE_NOOP("Core", "Edit the plane and pick three construction points.")
+QT_TRANSLATE_NOOP("Core", "A plane through points needs exactly three points.")
+QT_TRANSLATE_NOOP("Core", "These three points are in a line (or two are the same), so no single plane passes through them.")
+QT_TRANSLATE_NOOP("Core", "Pick a third point off the line.")
+QT_TRANSLATE_NOOP("Core", "Edit the plane and pick the sketch with the path.")
+QT_TRANSLATE_NOOP("Core", "The position along the path is a fraction from 0 (the start) to 1 (the end).")
+QT_TRANSLATE_NOOP("Core", "The path has no direction at that point.")
 QT_TRANSLATE_NOOP("Core", "This construction plane has an unknown kind.")
 QT_TRANSLATE_NOOP("Core", "The body this sketch sits on no longer exists.")
 QT_TRANSLATE_NOOP("Core", "Edit the sketch and choose a new plane or face.")
@@ -559,6 +576,8 @@ inline const char* const kCorePatterns[] = {
     QT_TRANSLATE_NOOP("Core", "Only a circle or an arc has a centre; this is a %1."),
     QT_TRANSLATE_NOOP("Core", "A point on an edge sits at its start, end, middle or centre, not at '%1'."),
     QT_TRANSLATE_NOOP("Core", "The body this step removes (%1) no longer exists."),
+    QT_TRANSLATE_NOOP("Core", "The point '%1' is missing or comes later in the timeline."),
+    QT_TRANSLATE_NOOP("Core", "The sketch with this plane's path (%1) is missing or comes later."),
     QT_TRANSLATE_NOOP("Core", "%1 line ends are not connected."),
     QT_TRANSLATE_NOOP("Core", "The smallest gap is %1: drag those ends together to close it."),
     QT_TRANSLATE_NOOP("Core", "The sketch's closed area changed shape; the %1 now uses its only closed area. Check the result."),

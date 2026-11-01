@@ -1788,8 +1788,14 @@ void MainWindow::runCommand(const QString& id)
     else if (id == "solid.combine" || id == "solid.split" || id == "solid.move") {
         openBodyTool(id.toStdString());
     }
-    else if (id == "construct.offset_plane" || id == "construct.angle_plane" || id == "construct.midplane") {
-        openPlane({}, id == "construct.angle_plane" ? "angle" : id == "construct.midplane" ? "midplane" : "offset");
+    else if (id == "construct.offset_plane" || id == "construct.angle_plane" || id == "construct.midplane" ||
+             id == "construct.tangent_plane" || id == "construct.points_plane" || id == "construct.path_plane") {
+        openPlane({}, id == "construct.angle_plane"     ? "angle"
+                      : id == "construct.midplane"      ? "midplane"
+                      : id == "construct.tangent_plane" ? "tangent"
+                      : id == "construct.points_plane"  ? "points"
+                      : id == "construct.path_plane"    ? "path"
+                                                        : "offset");
     }
     else if (id == "construct.axis") {
         openAxis();

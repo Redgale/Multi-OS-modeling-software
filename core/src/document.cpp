@@ -614,7 +614,8 @@ void Document::recompute()
             }
             // a path for a sweep or a pattern is meant to be open
             const nlohmann::json path = g.params.value("path", nlohmann::json::object());
-            if ((g.kind == FeatureKind::Sweep || g.kind == FeatureKind::Pipe || g.kind == FeatureKind::Pattern) && path.is_object() &&
+            if ((g.kind == FeatureKind::Sweep || g.kind == FeatureKind::Pipe || g.kind == FeatureKind::Pattern ||
+                 g.kind == FeatureKind::Plane) && path.is_object() &&
                 path.value("sketch", std::string {}) == f.id && statuses_[size_t(j)].level != StatusLevel::Error) {
                 statuses_[size_t(i)] = {};
                 statuses_[size_t(i)].message = fmt("Open curves, used as a path by %1.", {g.name});

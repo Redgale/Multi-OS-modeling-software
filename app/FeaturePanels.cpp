@@ -2501,7 +2501,10 @@ PlanePanel::PlanePanel(jig::Document& doc, Viewport* view, std::string editId, Q
                                 "in the view; for a tilted plane, click a straight edge to turn around.")));
     kind_ = combo(this, {{tr("Offset: parallel, at a distance"), "offset"},
                          {tr("At an angle: turned around an axis or edge"), "angle"},
-                         {tr("Midplane: halfway between two faces"), "midplane"}});
+                         {tr("Midplane: halfway between two faces"), "midplane"},
+                         {tr("Tangent: touching a round face"), "tangent"},
+                         {tr("Through three points"), "points"},
+                         {tr("Along a path: square across it"), "path"}});
     base_ = new QComboBox(this);
     base2_ = new QComboBox(this);
     axis_ = combo(this, {{tr("X axis"), "\"X\""}, {tr("Y axis"), "\"Y\""}, {tr("Z axis"), "\"Z\""}});
@@ -2509,12 +2512,52 @@ PlanePanel::PlanePanel(jig::Document& doc, Viewport* view, std::string editId, Q
                         [](const std::string& id) { return q(nlohmann::json(id).dump()); });
     distance_ = new ExprField(doc, jig::Dim::len(), this);
     angle_ = new ExprField(doc, jig::Dim::ang(), this);
+    roundFace_ = new QComboBox(this);
+    path_ = new QComboBox(this);
+    position_ = new ExprField(doc, jig::Dim::none(), this);
+    for (auto& c : points_) {
+        c = new QComboBox(this);
+    }
     addRow(tr("Kind"), kind_);
+    addRow(tr("Round face"), roundFace_);
     addRow(tr("From"), base_);
     addRow(tr("And"), base2_);
     addRow(tr("Distance"), distance_);
     addRow(tr("Turn around"), axis_);
     addRow(tr("Angle"), angle_);
+    addRow(tr("First point"), points_[0]);
+    addRow(tr("Second point"), points_[1]);
+    addRow(tr("Third point"), points_[2]);
+    addRow(tr("Path (sketch)"), path_);
+    addRow(tr("Position (0 = start, 1 = end)"), position_);
+    {
+        const auto b = stateBefore();
+        for (auto& [bid, body] : b->bodies) {
+            for (int i = 0; i < body->faceCount(); ++i) {
+                BRepAdaptor_Surface sa(TopoDS::Face(body->face(i)));
+                if (sa.GetType() == GeomAbs_Cylinder && !body->faceName(i).empty()) {
+                    roundFace_->addItem(q(body->faceName(i)), q(nlohmann::json {{"face", body->faceRef(bid, i).toJson()}}.dump()));
+                }
+            }
+        }
+        for (int i = 0; i < insertIndex(); ++i) {
+            const auto& f = doc_.model().features[size_t(i)];
+            if (f.kind == jig::FeatureKind::Point && b->points.count(f.id)) {
+                for (auto* c : points_) {
+                    c->addItem(q(f.name), q(f.id));
+                }
+            }
+            if (f.kind == jig::FeatureKind::Sketch && b->sketches.count(f.id)) {
+                path_->addItem(q(f.name), q(f.id));
+            }
+        }
+        for (int i = 0; i < 3; ++i) {
+            points_[size_t(i)]->setCurrentIndex(std::min(i, points_[size_t(i)]->count() - 1));
+        }
+        if (path_->count() > 0) {
+            path_->setCurrentIndex(path_->count() - 1);
+        }
+    }
     for (auto* c : {base_, base2_}) {
         c->addItem(tr("Floor (XY)"), "\"XY\"");
         c->addItem(tr("Front (XZ)"), "\"XZ\"");
@@ -2563,23 +2606,40 @@ PlanePanel::PlanePanel(jig::Document& doc, Viewport* view, std::string editId, Q
             selectJson(axis_, p["axis"], labelOf(p["axis"]));
         }
         distance_->setText(q(p.value("distance", std::string("10 mm"))));
-        angle_->setText(q(p.value("angle", std::string("45 deg"))));
+        angle_->setText(q(p.value("angle", std::string(p.value("kind", std::string()) == "tangent" ? "0 deg" : "45 deg"))));
+        if (p.contains("face")) {
+            selectJson(roundFace_, p["face"], labelOf(p["face"]).mid(5));
+        }
+        const nlohmann::json pts = p.value("points", nlohmann::json::array());
+        for (size_t i = 0; i < 3 && i < pts.size(); ++i) {
+            if (pts[i].is_string()) {
+                select(points_[i], pts[i].get<std::string>());
+            }
+        }
+        if (p.contains("path") && p["path"].is_object()) {
+            select(path_, p["path"].value("sketch", std::string {}));
+        }
+        position_->setText(q(p.value("position", std::string("0"))));
     }
     else {
         select(kind_, kind);
         distance_->setText(q(doc_.defaultLength(10, 0.5)));
-        angle_->setText("45 deg");
+        angle_->setText(kind == "tangent" ? "0 deg" : "45 deg");
+        position_->setText("0");
+        if (kind == "tangent") {
+            base_->setCurrentIndex(base_->findData("\"XZ\""));  // an upright cylinder's front
+        }
         if (kind == "midplane") {
             base2_->setCurrentIndex(base2_->findData("\"XY\""));
         }
     }
-    for (auto* c : {kind_, base_, base2_, axis_}) {
+    for (auto* c : {kind_, base_, base2_, axis_, roundFace_, path_, points_[0], points_[1], points_[2]}) {
         connect(c, &QComboBox::currentIndexChanged, this, [this] {
             updateVisibility();
             schedulePreview();
         });
     }
-    for (auto* e : {distance_, angle_}) {
+    for (auto* e : {distance_, angle_, position_}) {
         connect(e, &ExprField::changed, this, [this] { schedulePreview(); });
     }
     if (view_) {
@@ -2610,6 +2670,16 @@ void PlanePanel::useFace(const std::string& body, const std::string& name)
     }
     auto hits = it->second->findFaces(name);
     if (hits.empty()) {
+        return;
+    }
+    if (current(kind_) == "tangent") {
+        const int k = roundFace_->findText(q(name));
+        if (k >= 0) {
+            roundFace_->setCurrentIndex(k);
+        }
+        else {
+            status_->setText("<b>✕ " + tr("A tangent plane touches a round face. Click a cylinder's side.") + "</b>");
+        }
         return;
     }
     if (jig::measureItem(it->second->face(hits[0])).kind != "flat face") {
@@ -2668,10 +2738,17 @@ void PlanePanel::updateVisibility()
             }
         }
     };
+    show(base_, k != "points" && k != "path");
     show(base2_, k == "midplane");
     show(distance_, k == "offset");
     show(axis_, k == "angle");
-    show(angle_, k == "angle");
+    show(angle_, k == "angle" || k == "tangent");
+    show(roundFace_, k == "tangent");
+    for (auto* c : points_) {
+        show(c, k == "points");
+    }
+    show(path_, k == "path");
+    show(position_, k == "path");
 }
 
 jig::Feature PlanePanel::draft() const
@@ -2690,6 +2767,20 @@ jig::Feature PlanePanel::draft() const
     else if (k == "angle") {
         f.params["axis"] = json(axis_);
         f.params["angle"] = text(angle_, "45 deg");
+    }
+    else if (k == "tangent") {
+        const std::string d = roundFace_->currentData().toString().toStdString();
+        f.params["face"] = d.empty() ? nlohmann::json::object() : nlohmann::json::parse(d, nullptr, false);
+        f.params["angle"] = text(angle_, "0 deg");
+    }
+    else if (k == "points") {
+        f.params.erase("base");
+        f.params["points"] = {current(points_[0]), current(points_[1]), current(points_[2])};
+    }
+    else if (k == "path") {
+        f.params.erase("base");
+        f.params["path"] = {{"sketch", current(path_)}, {"curves", "all"}};
+        f.params["position"] = text(position_, "0");
     }
     else {
         f.params["base2"] = json(base2_);

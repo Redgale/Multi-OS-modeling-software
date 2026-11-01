@@ -585,6 +585,22 @@ public:
     {
         return angle_;
     }
+    QComboBox* roundFace() const
+    {
+        return roundFace_;
+    }
+    QComboBox* point(int i) const
+    {
+        return points_[size_t(i)];
+    }
+    QComboBox* path() const
+    {
+        return path_;
+    }
+    ExprField* position() const
+    {
+        return position_;
+    }
 
 protected:
     jig::Feature draft() const override;
@@ -593,8 +609,9 @@ protected:
 
 private:
     void updateVisibility();
-    QComboBox *kind_, *base_, *base2_, *axis_;
-    ExprField *distance_, *angle_;
+    QComboBox *kind_, *base_, *base2_, *axis_, *roundFace_, *path_;
+    std::array<QComboBox*, 3> points_ {};
+    ExprField *distance_, *angle_, *position_;
     bool nextIsSecond_ = false;  // midplane: the next clicked face fills the second plane
 };
 

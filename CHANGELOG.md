@@ -7,6 +7,7 @@
 - Basic shapes: box, cylinder, sphere and torus without drawing a sketch.
 - Rib: a gusset from an open sketch edge to the body.
 - Emboss: text or shapes wrapped onto a round face, raised or sunk.
+- Construction planes: tangent to a round face, through three points, across a path.
 - Fixed: a fillet or chamfer on the edges of a loft or sweep could lose its edges when an earlier step changed.
 
 ## 0.1.0 (2026-11-01)

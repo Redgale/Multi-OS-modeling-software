@@ -2651,3 +2651,49 @@ TEST(Emboss, WrapsAreasOntoRoundFacesRaisedOrSunk)
         EXPECT_FALSE(d->status(last).message.empty());
     }
 }
+
+TEST(Plane, TangentThroughPointsAndAcrossAPath)
+{
+    // tangent to an upright 40 mm cylinder: on the front (the front plane's side), then turned
+    // 90 degrees around the axis; text sketched on it wraps with Emboss
+    auto doc = build("cylinder id=cy1 diameter=40mm height=30mm\n"
+                     "plane id=pl1 kind=tangent face=face:cy1/side\n"
+                     "plane id=pl2 kind=tangent face=face:cy1/side angle=90deg\n"
+                     "point id=p1 at=0,0,0\npoint id=p2 at=10,0,0\npoint id=p3 at=0,10,10\n"
+                     "plane id=pl3 kind=points points=p1;p2;p3\n"
+                     "sketch id=s1 plane=XY\nline sketch=s1 p1=0,0 p2=0,40\n"
+                     "plane id=pl4 kind=path path=s1 position=0.25\n"
+                     "sketch id=s2 plane=pl1\nrect sketch=s2 center=0,0 w=6 h=6\n"
+                     "emboss id=em1 sketch=s2 face=cy1/side depth=1mm\n");
+    expectAllOk(*doc);
+    const auto& pl = doc->state().planes;
+    const gp_Ax3 a = pl.at("pl1"), b = pl.at("pl2"), c = pl.at("pl3"), d = pl.at("pl4");
+    // touches the cylinder 20 mm from the axis, halfway up, facing out
+    const gp_Pnt la = a.Location(), lb = b.Location();
+    EXPECT_NEAR(std::hypot(la.X(), la.Y()), 20, 1e-6);
+    EXPECT_NEAR(la.Z(), 15, 1e-6);
+    EXPECT_NEAR(gp_Vec(la.X(), la.Y(), 0).Normalized().Dot(gp_Vec(a.Direction())), 1, 1e-9);
+    EXPECT_NEAR(std::abs(a.YDirection().Z()), 1, 1e-9);  // y runs up the axis
+    EXPECT_NEAR(std::hypot(lb.X(), lb.Y()), 20, 1e-6);
+    EXPECT_NEAR(gp_Vec(a.Direction()).Dot(gp_Vec(b.Direction())), 0, 1e-9);  // a quarter turn apart
+    // the three points lie on pl3
+    for (const gp_Pnt& q : {gp_Pnt(0, 0, 0), gp_Pnt(10, 0, 0), gp_Pnt(0, 10, 10)}) {
+        EXPECT_NEAR(gp_Vec(c.Location(), q).Dot(gp_Vec(c.Direction())), 0, 1e-9);
+    }
+    // a quarter of the way along a 40 mm line up Y, square across it
+    EXPECT_NEAR(d.Location().Y(), 10, 1e-6);
+    EXPECT_NEAR(std::abs(d.Direction().Y()), 1, 1e-9);
+    // the square wrapped onto the side through the tangent plane adds 6 x 6 wrapped, 1 mm out
+    EXPECT_NEAR(props(*doc).volume - pi * 400 * 30, 6 / 20.0 / 2 * (21 * 21 - 400) * 6, 0.2);
+    // points in a line, a flat face and a base along the axis are explained
+    for (const char* bad : {"point id=p1 at=0,0,0\npoint id=p2 at=1,0,0\npoint id=p3 at=2,0,0\nplane id=pl kind=points points=p1;p2;p3\n",
+                            "cylinder id=cy1 diameter=40mm height=30mm\nplane id=pl kind=tangent face=face:cy1/top\n",
+                            "cylinder id=cy1 diameter=40mm height=30mm\nplane id=pl kind=tangent face=face:cy1/side base=XY\n"}) {
+        auto e = std::make_unique<Document>();
+        ScriptRunner r(*e);
+        r.strict = false;
+        ASSERT_TRUE(r.runText(bad).ok());
+        const int last = int(e->model().features.size()) - 1;
+        EXPECT_EQ(e->status(last).level, StatusLevel::Error) << bad;
+    }
+}

@@ -2976,6 +2976,58 @@ private slots:
         QVERIFY(w.document().status(int(w.document().model().features.size()) - 1).level == jig::StatusLevel::Ok);
     }
 
+    // The new construction planes from the panel: tangent (clicking the round face), through
+    // three points, across a path; each shows only its own fields.
+    void tangentPointsAndPathPlanes()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        {
+            jig::ScriptRunner r(w.document());
+            QVERIFY(r.runText("cylinder id=cy1 diameter=40mm height=30mm\n"
+                              "point id=p1 at=0,0,0\npoint id=p2 at=10,0,0\npoint id=p3 at=0,10,10\n"
+                              "sketch id=s1 plane=XY\nline sketch=s1 p1=50,0 p2=50,40\n").ok());
+        }
+        w.refreshAll();
+        w.runCommand("construct.tangent_plane");
+        auto* pp = qobject_cast<PlanePanel*>(w.featurePanel());
+        QVERIFY(pp);
+        QCOMPARE(pp->kind()->currentData().toString(), QString("tangent"));
+        QVERIFY(pp->roundFace()->isVisibleTo(pp) && pp->angle()->isVisibleTo(pp) && !pp->distance()->isVisibleTo(pp));
+        pp->roundFace()->setCurrentIndex(-1);
+        pp->useFace("cy1", "cy1/side");
+        QCOMPARE(pp->roundFace()->currentText(), QString("cy1/side"));
+        QTRY_VERIFY(pp->previewOk());
+        QVERIFY(pp->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        const gp_Pnt t = w.document().state().planes.begin()->second.Location();
+        QVERIFY(std::abs(std::hypot(t.X(), t.Y()) - 20) < 1e-6);
+        w.runCommand("construct.points_plane");
+        pp = qobject_cast<PlanePanel*>(w.featurePanel());
+        QVERIFY(pp && pp->point(2)->isVisibleTo(pp) && !pp->base()->isVisibleTo(pp));
+        QCOMPARE(pp->point(0)->currentData().toString(), QString("p1"));
+        QCOMPARE(pp->point(2)->currentData().toString(), QString("p3"));
+        QTRY_VERIFY(pp->previewOk());
+        QVERIFY(pp->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        w.runCommand("construct.path_plane");
+        pp = qobject_cast<PlanePanel*>(w.featurePanel());
+        QVERIFY(pp && pp->path()->isVisibleTo(pp));
+        QCOMPARE(pp->path()->currentData().toString(), QString("s1"));
+        pp->position()->setText("0.5");
+        QTRY_VERIFY(pp->previewOk());
+        QVERIFY(pp->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        QCOMPARE(int(w.document().state().planes.size()), 3);
+        const auto& last = w.document().model().features.back();
+        QVERIFY(std::abs(w.document().state().planes.at(last.id).Location().Y() - 20) < 1e-6);
+        for (int i = 0; i < int(w.document().model().features.size()); ++i) {
+            QVERIFY(w.document().status(i).level == jig::StatusLevel::Ok);
+        }
+    }
+
     // Areas of a sketch are picked by clicking them in the 3D view: a square with a circle in it
     // can become a round post (the circle) or a block with a hole (the ring), not only a block.
     void clickAreasToExtrude()

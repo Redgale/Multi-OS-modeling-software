@@ -114,6 +114,9 @@ const std::map<QString, QString>& icons()
         {"construct.offset_plane", "M2 19 L7 15 L22 15 L17 19 Z a M2 11 L7 7 L22 7 L17 11 Z t M12 10 L12 16"},
         {"construct.angle_plane", "M2 19 L8 15 L22 15 L16 19 Z a M8 15 L5 5 L19 5 L22 15 t M5 19 A5 19 4 90 -40"},
         {"construct.midplane", "M2 7 L7 4 L22 4 L17 7 Z M2 21 L7 18 L22 18 L17 21 Z a M2 14 L7 11 L22 11 L17 14 Z"},
+        {"construct.tangent_plane", "O9 14 6 a M15 4 L15 22"},
+        {"construct.points_plane", "M2 18 L8 8 L22 8 L16 18 Z f O6 16 1.8 O11 9 1.8 O18 15 1.8"},
+        {"construct.path_plane", "M3 20 Q3 6 21 6 a M7 6 L7 18 L13 14 L13 2 Z"},
         {"construct.axis", "M4 20 L20 4 a M14 4 L20 4 L20 10 M10 20 L4 20 L4 14"},
         {"construct.point", "M3 17 L9 12 L21 12 L15 17 Z f O12 8 2.4 a M12 10 L12 14.5"},
         // inspect / insert / modify / help

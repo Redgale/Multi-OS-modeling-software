@@ -138,7 +138,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Pattern compute options (optimised/identical/adjust) | 19 | v0.2 | — | Adjust only in v0.1 |
 | Mirror (features, bodies) | 19 | v0.1 M3 | **app** + scripts: bodies and single steps, across origin planes, construction planes or a clicked flat face | |
 | Construct: offset plane, plane at angle, midplane | 20 | v0.1 M4 | **app** + scripts (`plane`): from origin planes, construction planes or flat faces; angle around an origin or construction axis or straight edge | |
-| Tangent plane, plane through edges/points, along path | 20 | v0.2 | — | Needed for sweep and pen cup emboss |
+| Tangent plane, plane through edges/points, along path | 20 | v0.2 | **app** + scripts (`plane kind=tangent\|points\|path`) | Plane through two edges not yet |
 | Axis (through cylinder, two points, perpendicular) | 20 | v0.1 M4 | **app** + scripts (`axis`): along a straight edge, through a round edge or face, where two planes meet, through two points (or a point and the origin), square to a plane or flat face through a point | |
 | Point (vertex, edges, planes, center) | 20 | v0.1 M4 | **app** + scripts (`point … at=x,y,z` or `through=`): typed coordinates (parameters allowed), start, end, middle or centre of an edge, centre of a face, where an edge crosses a plane | |
 | Pattern construction geometry, user coordinate system | 20 | v0.3+ | — | |
