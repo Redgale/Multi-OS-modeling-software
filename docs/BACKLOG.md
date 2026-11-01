@@ -97,3 +97,14 @@ timeline edit/rename/suppress/roll back/delete with dependents warning, Paramete
 - ~~B-031 Real crash test of recovery~~ done on Linux (`realCrashLeavesARecoverableAutosave`); macOS
   and Windows by hand.
 
+
+## v0.2 leftovers
+
+- **B-040 Mesh reduce**: inserting a mesh over 20,000 triangles is refused with a suggestion to
+  simplify it elsewhere. Tried (2026-11-01): vertex clustering on a grid before sewing. A 40 mm ball
+  came out 5 % small and not a valid solid (clustering makes edges shared by more than two
+  triangles), and it took 20 s, so it was not kept. Next attempt: quadric edge collapse that
+  refuses non-manifold collapses, or sewing large meshes in parallel chunks.
+- **B-041 In-app Python console** (D-018): needs a Python runtime in every package.
+- **B-042 As-built joints, rigid groups, nested components**; conic curves; mesh plane cut (Split
+  with a plane already cuts solids made from meshes).
