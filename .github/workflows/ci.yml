@@ -148,6 +148,48 @@ jobs:
             screenshot-*.png
             bench-macos.json
 
+  macos-universal:
+    # B-005: one app for both kinds of Mac, joined from the two builds above with lipo; it is
+    # opened natively and under Rosetta before the .dmg is made (unsigned, ad hoc signature)
+    name: macOS universal
+    needs: macos
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: jigsmith-macos-*
+      - name: Take the apps out of the two .dmg files
+        run: |
+          for a in macos-15:arm64 macos-15-intel:x86_64; do
+            name="${a%%:*}"; arch="${a##*:}"
+            hdiutil attach -nobrowse -readonly -mountpoint "/tmp/mnt-$arch" "jigsmith-$name/Jigsmith-$name.dmg"
+            mkdir -p "$arch" && cp -R "/tmp/mnt-$arch/jigsmith.app" "$arch/"
+            hdiutil detach "/tmp/mnt-$arch"
+          done
+      - name: Join them
+        run: sh packaging/macos/make-universal.sh arm64/jigsmith.app x86_64/jigsmith.app universal/jigsmith.app
+      - name: Open it natively and under Rosetta
+        run: |
+          softwareupdate --install-rosetta --agree-to-license || true
+          for arch in arm64 x86_64; do
+            arch -$arch universal/jigsmith.app/Contents/MacOS/jigsmith --sample phone_stand \
+              --screenshot "screenshot-universal-$arch.png" &
+            pid=$!
+            for i in $(seq 1 120); do kill -0 $pid 2>/dev/null || break; sleep 1; done
+            if kill -0 $pid 2>/dev/null; then kill $pid; echo "timed out ($arch)"; exit 1; fi
+            wait $pid
+            test -s "screenshot-universal-$arch.png"
+          done
+      - name: Package the universal .dmg
+        run: hdiutil create -volname Jigsmith -srcfolder universal/jigsmith.app -ov -format UDZO Jigsmith-macos-universal.dmg
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jigsmith-macos-universal
+          path: |
+            Jigsmith-macos-universal.dmg
+            screenshot-universal-*.png
+
   windows:
     name: Windows (x64)
     if: ${{ github.event_name != 'push' || github.ref == 'refs/heads/main' || contains(github.event.head_commit.message, '[full ci]') }}

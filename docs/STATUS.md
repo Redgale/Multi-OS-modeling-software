@@ -152,6 +152,7 @@ Earlier full run: run 41161765171 on commit 31d7fb5, all 13 jobs green.
 | Windows 2022 (conda-forge, MSVC): build, 78 tests, bench, portable zip | 8.0.x | ✓ |
 | Void Linux glibc and musl, Fedora, Arch, openSUSE Tumbleweed (containers, `scripts/install-deps.sh` only): build + 78 tests | distribution packages | ✓ (5 jobs) |
 | OCCT built from source (`scripts/build-occt.sh`) | source | ✓ |
+| macOS universal (B-005, added 2026-11-01): the two apps joined with `lipo` by `packaging/macos/make-universal.sh`, opened natively and under Rosetta, .dmg | 7.9.x (Homebrew) | not yet run |
 | Flatpak (B-007, added 2026-11-01): `packaging/flatpak` manifest on the KDE 6.8 runtime, OCCT 7.9.3 built in it, bundle, CLI runs the phone stand inside the sandbox | 7.9.3 | not yet run |
 | Publish `continuous` pre-release | — | ✓ [AppImage, two .dmg, Windows zip](https://github.com/Redgale/Multi-OS-modeling-software/releases/tag/continuous) |
 
