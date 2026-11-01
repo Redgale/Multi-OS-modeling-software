@@ -722,10 +722,10 @@ Result<bool> Sketch::moveCurves(const std::vector<int>& ids, double dx, double d
 Result<std::vector<int>> Sketch::patternRect(const std::vector<int>& ids, int n1, double dx1, double dy1, int n2,
                                              double dx2, double dy2)
 {
-    if (n1 < 1 || n2 < 1 || n1 * n2 < 2) {
+    if (n1 < 1 || n2 < 1 || static_cast<long long>(n1) * n2 < 2) {
         return editError("sketch.pattern", "A grid copy needs at least two in all.");
     }
-    if (n1 * n2 > 400) {
+    if (static_cast<long long>(n1) * n2 > 400) {  // (in 64 bits: two large counts must not wrap)
         return editError("sketch.pattern", "That is more than 400 copies. Use fewer rows or columns.");
     }
     std::vector<int> out;

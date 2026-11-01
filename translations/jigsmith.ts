@@ -1263,6 +1263,16 @@
     </message>
     <message>
         <location line="+1"/>
+        <source>A value on this line is not what the command expects.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Check the numbers on this line (see docs/SCRIPTING.md).</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>Use letters, digits and _, starting with a letter, e.g. wall_t.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2347,7 +2357,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+24"/>
+        <location line="+16"/>
+        <source>A curve in this sketch refers to a point that is not there; the file is damaged.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>A linked copy in this sketch is damaged.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
         <source>Click a curve to break it.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2727,7 +2747,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-217"/>
+        <location line="-219"/>
         <source>There is nothing to export yet.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3237,7 +3257,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
+        <location line="+2"/>
         <source>The file contains an unknown constraint.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3252,7 +3272,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
+        <location line="+2"/>
         <source>A sketch in this file is damaged.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3557,7 +3577,7 @@
 <context>
     <name>jigapp::AxisPanel</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="+2318"/>
+        <location filename="../app/FeaturePanels.cpp" line="+2322"/>
         <source>Construction axis</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3784,7 +3804,7 @@
 <context>
     <name>jigapp::ExprField</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="-2865"/>
+        <location filename="../app/FeaturePanels.cpp" line="-2869"/>
         <source>e.g. 45 deg</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3797,7 +3817,7 @@
 <context>
     <name>jigapp::ExtrudePanel</name>
     <message>
-        <location line="+396"/>
+        <location line="+400"/>
         <source>Extrude</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4013,7 +4033,7 @@
 <context>
     <name>jigapp::FeaturePanel</name>
     <message>
-        <location line="-739"/>
+        <location line="-743"/>
         <source>OK</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4033,7 +4053,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+157"/>
+        <location line="+161"/>
         <source>Preview</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4410,13 +4430,13 @@
         <location line="+9"/>
         <location line="+722"/>
         <location line="+738"/>
-        <location line="+834"/>
+        <location line="+835"/>
         <location line="+27"/>
         <source>Sketch</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2319"/>
+        <location line="-2320"/>
         <source>Extrude</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4653,12 +4673,12 @@
     </message>
     <message>
         <location line="+2"/>
-        <location line="+1511"/>
+        <location line="+1512"/>
         <source>Mouse and trackpad</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1509"/>
+        <location line="-1510"/>
         <source>Default (middle-drag pans, Shift+middle orbits)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4679,30 +4699,30 @@
     </message>
     <message>
         <location line="+11"/>
-        <location line="+1484"/>
+        <location line="+1485"/>
         <source>Theme</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1482"/>
-        <location line="+1437"/>
+        <location line="-1483"/>
+        <location line="+1438"/>
         <source>Light</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1437"/>
-        <location line="+1436"/>
+        <location line="-1438"/>
+        <location line="+1437"/>
         <source>Dark</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1435"/>
-        <location line="+1437"/>
+        <location line="-1436"/>
+        <location line="+1438"/>
         <source>High contrast</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1429"/>
+        <location line="-1430"/>
         <source>&amp;Help</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4819,12 +4839,12 @@
     </message>
     <message>
         <location line="+2"/>
-        <location line="+2033"/>
+        <location line="+2034"/>
         <source>Rename…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2030"/>
+        <location line="-2031"/>
         <source>Delete body</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4840,13 +4860,13 @@
     </message>
     <message>
         <location line="+5"/>
-        <location line="+1491"/>
+        <location line="+1492"/>
         <location line="+58"/>
         <source>Properties</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1543"/>
+        <location line="-1544"/>
         <source>Properties and help</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4932,12 +4952,12 @@
     </message>
     <message>
         <location line="+18"/>
-        <location line="+1919"/>
+        <location line="+1920"/>
         <source>Move rollback marker</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1747"/>
+        <location line="-1748"/>
         <source>Start here: every part begins as a flat sketch.
 Click Sketch on the toolbar, then click a plane.
 Or open the phone stand sample (File ▸ Open a sample).</source>
@@ -5295,12 +5315,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+0"/>
-        <location line="+881"/>
+        <location line="+882"/>
         <source>There is no 3D body yet.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-878"/>
+        <location line="-879"/>
         <source>STL mesh for slicers (*.stl)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5340,7 +5360,7 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+39"/>
+        <location line="+40"/>
         <source>Recover your work?</source>
         <translation type="unfinished"></translation>
     </message>

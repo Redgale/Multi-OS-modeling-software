@@ -2069,7 +2069,8 @@ QString MainWindow::recoveryPath() const
 
 void MainWindow::autosave()
 {
-    if (!doc_ || doc_->revision() == autosavedRevision_ || doc_->revision() == savedRevision_) {
+    if (!doc_ || doc_->recomputing() || doc_->revision() == autosavedRevision_ ||
+        doc_->revision() == savedRevision_) {
         return;
     }
     if (jig::saveDocument(*doc_, recoveryPath().toStdString())) {

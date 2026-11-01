@@ -88,6 +88,7 @@ public:
     bool strict = true;
 
 private:
+    Result<bool> runLineUnchecked(std::string_view line);
     Document& doc_;
     std::vector<std::string> output_;
     std::string last_;

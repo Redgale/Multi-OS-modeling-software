@@ -183,6 +183,14 @@ screenshot (B-003). No real GPU on Windows or Linux has been tried. Builds are u
 - Fixed (2026-11-01, found by reading the code while chasing a rare `boxSelectBodies` failure): when the bodies of one update finished meshing in different frames, each frame's first result cleared the view again, so bodies meshed earlier could vanish until the next change. The view now remembers which update its meshes belong to. No test forces the meshes apart (they usually finish in one frame); the UI test now shows its bodies explicitly and waits for both meshes, and the full suite passed after the change.
 - Fixed (2026-11-01, CI run 140 on macOS Intel): trimming an ellipse or smooth curve with a line through one of its sample points could miss the crossing or count it twice, depending on how the platform rounds (there, cos(π/2)), so a half ellipse closed by a line found no area. Crossings within 1e-9 of a sample point now count once. `SketchTrim.EllipsesAndSmoothCurves` repeats the case with the line nudged by ±1e-15 to ±1e-11; without the fix a nudged case fails here on Linux the same way.
 - AppImage packaging (2026-11-01): the continuous appimagetool build now insists on a PNG icon for `.DirIcon`; a 256 px PNG rendered from the SVG is shipped (CI run 139 failed on this).
+- Bug hunt (2026-11-01, owner's request), first pass:
+  - The whole app built with AddressSanitizer + UndefinedBehaviorSanitizer and every test run under it, the UI tests included (before, only the core was): no memory errors or undefined behaviour found.
+  - Fixed: a damaged file whose sketch curve named a point that was not there **crashed** the solver (null pointer; reproduced under ASan). Sketches are now checked when read and refused with an explanation (`Solver.MalformedJsonIsRejectedNotCrashing`: every curve field of a line, circle, arc, ellipse and smooth curve pointed at a missing id or at a curve).
+  - Fixed: a damaged linked copy (a pattern count that is not a number) threw out of the sketch solver, which the sketch editor does not catch; such a copy now stops following its source. Links with lists that are not numbers, or that list their own source as a copy, are refused when read.
+  - Fixed: a grid copy multiplied its two counts in 32 bits, so two huge counts could wrap past the 400-copy limit.
+  - Fixed: a script line with a word where a number belongs (`reorder e1 to=abc`) **aborted the program**; every line now reports such values as that line's error (`Commands.ScriptErrorsNameTheLine`).
+  - Fixed: DXF group codes such as `-` or eleven digits, and a units value that is not a number, could throw; now refused or ignored (`DxfImport.InchDrawing…`).
+  - Hardened: previews and autosave wait while a rebuild runs on the worker thread.
 - Code of Conduct contact: the owner should add a dedicated contact address.
 
 ## Decisions waiting for the owner

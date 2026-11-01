@@ -78,7 +78,8 @@ Result<DxfDrawing> parseDxfImpl(const std::string& text)
     std::string codeLine, valueLine;
     while (std::getline(in, codeLine) && std::getline(in, valueLine)) {
         const std::string c = trim(codeLine);
-        if (c.empty() || c.find_first_not_of("-0123456789") != std::string::npos) {
+        if (c.empty() || c.size() > 6 || c.find_first_not_of("-0123456789") != std::string::npos ||
+            c.find_first_of("0123456789") == std::string::npos || c.find('-', 1) != std::string::npos) {
             return makeError("dxf.format", "This is not a text DXF file (or it is damaged).",
                              {"Save it from your drawing program as ASCII DXF (R12 or newer)."});
         }
@@ -91,7 +92,9 @@ Result<DxfDrawing> parseDxfImpl(const std::string& text)
     // header: $INSUNITS
     for (size_t i = 0; i + 1 < pairs.size(); ++i) {
         if (pairs[i].code == 9 && pairs[i].value == "$INSUNITS" && pairs[i + 1].code == 70) {
-            if (auto s = unitScale(std::stoi(pairs[i + 1].value))) {
+            const std::string& v = pairs[i + 1].value;
+            const bool number = !v.empty() && v.size() < 6 && v.find_first_not_of("0123456789") == std::string::npos;
+            if (auto s = number ? unitScale(std::stoi(v)) : std::nullopt) {
                 d.unitScale = *s;
                 d.unitsKnown = true;
             }

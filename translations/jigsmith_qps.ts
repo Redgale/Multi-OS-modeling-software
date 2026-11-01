@@ -1262,6 +1262,16 @@
     </message>
     <message>
         <location line="+1" />
+        <source>A value on this line is not what the command expects.</source>
+        <translation>[Á válüé öñ thîs lîñé îs ñöt whát thé çömmáñd éxpéçts.~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Check the numbers on this line (see docs/SCRIPTING.md).</source>
+        <translation>[Çhéçk thé ñümbérs öñ thîs lîñé (séé döçs/SÇRÎPTÎÑG.md).~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
         <source>Use letters, digits and _, starting with a letter, e.g. wall_t.</source>
         <translation>[Üsé léttérs, dîgîts áñd _, stártîñg wîth á léttér, é.g. wáll_t.~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -2346,7 +2356,17 @@
         <translation>[Á smööth çürvé çáñ bé mádé táñgéñt öñlý whéré ît mééts thé öthér çürvé át öñé öf îts éñds.~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+24" />
+        <location line="+16" />
+        <source>A curve in this sketch refers to a point that is not there; the file is damaged.</source>
+        <translation>[Á çürvé îñ thîs skétçh référs tö á pöîñt thát îs ñöt théré; thé fîlé îs dámágéd.~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+4" />
+        <source>A linked copy in this sketch is damaged.</source>
+        <translation>[Á lîñkéd çöpý îñ thîs skétçh îs dámágéd.~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+6" />
         <source>Click a curve to break it.</source>
         <translation>[Çlîçk á çürvé tö bréák ît.~~~~~~]</translation>
     </message>
@@ -2726,7 +2746,7 @@
         <translation>[Thé föñt '%1' îs ñöt áváîláblé héré; üsîñg thé büîlt-îñ föñt (Îñtér).~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="-217" />
+        <location line="-219" />
         <source>There is nothing to export yet.</source>
         <translation>[Théré îs ñöthîñg tö éxpört ýét.~~~~~~~~]</translation>
     </message>
@@ -3236,7 +3256,7 @@
         <translation>[Thé fîlé çöñtáîñs áñ üñkñöwñ skétçh shápé.~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+1" />
+        <location line="+2" />
         <source>The file contains an unknown constraint.</source>
         <translation>[Thé fîlé çöñtáîñs áñ üñkñöwñ çöñstráîñt.~~~~~~~~~~~]</translation>
     </message>
@@ -3251,7 +3271,7 @@
         <translation>[Ártwörk îñ thîs fîlé hás löst îts áñçhör pöîñt.~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+1" />
+        <location line="+2" />
         <source>A sketch in this file is damaged.</source>
         <translation>[Á skétçh îñ thîs fîlé îs dámágéd.~~~~~~~~]</translation>
     </message>
@@ -3556,7 +3576,7 @@
 <context>
     <name>jigapp::AxisPanel</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="+2318" />
+        <location filename="../app/FeaturePanels.cpp" line="+2322" />
         <source>Construction axis</source>
         <translation>[Çöñstrüçtîöñ áxîs~~~~~]</translation>
     </message>
@@ -3783,7 +3803,7 @@
 <context>
     <name>jigapp::ExprField</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="-2865" />
+        <location filename="../app/FeaturePanels.cpp" line="-2869" />
         <source>e.g. 45 deg</source>
         <translation>[é.g. 45 dég~]</translation>
     </message>
@@ -3796,7 +3816,7 @@
 <context>
     <name>jigapp::ExtrudePanel</name>
     <message>
-        <location line="+396" />
+        <location line="+400" />
         <source>Extrude</source>
         <translation>[Éxtrüdé~~]</translation>
     </message>
@@ -4012,7 +4032,7 @@
 <context>
     <name>jigapp::FeaturePanel</name>
     <message>
-        <location line="-739" />
+        <location line="-743" />
         <source>OK</source>
         <translation>[ÖK~]</translation>
     </message>
@@ -4032,7 +4052,7 @@
         <translation>[Çlösé wîthöüt çháñgîñg áñýthîñg (Ésç).~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+157" />
+        <location line="+161" />
         <source>Preview</source>
         <translation>[Prévîéw~~]</translation>
     </message>
@@ -4407,13 +4427,13 @@
         <location line="+9" />
         <location line="+722" />
         <location line="+738" />
-        <location line="+834" />
+        <location line="+835" />
         <location line="+27" />
         <source>Sketch</source>
         <translation>[Skétçh~~]</translation>
     </message>
     <message>
-        <location line="-2319" />
+        <location line="-2320" />
         <source>Extrude</source>
         <translation>[Éxtrüdé~~]</translation>
     </message>
@@ -4650,12 +4670,12 @@
     </message>
     <message>
         <location line="+2" />
-        <location line="+1511" />
+        <location line="+1512" />
         <source>Mouse and trackpad</source>
         <translation>[Möüsé áñd tráçkpád~~~~~]</translation>
     </message>
     <message>
-        <location line="-1509" />
+        <location line="-1510" />
         <source>Default (middle-drag pans, Shift+middle orbits)</source>
         <translation>[Défáült (mîddlé-drág páñs, Shîft+mîddlé örbîts)~~~~~~~~~~~~]</translation>
     </message>
@@ -4676,30 +4696,30 @@
     </message>
     <message>
         <location line="+11" />
-        <location line="+1484" />
+        <location line="+1485" />
         <source>Theme</source>
         <translation>[Thémé~]</translation>
     </message>
     <message>
-        <location line="-1482" />
-        <location line="+1437" />
+        <location line="-1483" />
+        <location line="+1438" />
         <source>Light</source>
         <translation>[Lîght~]</translation>
     </message>
     <message>
-        <location line="-1437" />
-        <location line="+1436" />
+        <location line="-1438" />
+        <location line="+1437" />
         <source>Dark</source>
         <translation>[Dárk~]</translation>
     </message>
     <message>
-        <location line="-1435" />
-        <location line="+1437" />
+        <location line="-1436" />
+        <location line="+1438" />
         <source>High contrast</source>
         <translation>[Hîgh çöñtrást~~~~]</translation>
     </message>
     <message>
-        <location line="-1429" />
+        <location line="-1430" />
         <source>&amp;Help</source>
         <translation>[&amp;Hélp~]</translation>
     </message>
@@ -4816,12 +4836,12 @@
     </message>
     <message>
         <location line="+2" />
-        <location line="+2033" />
+        <location line="+2034" />
         <source>Rename…</source>
         <translation>[Réñámé…~~]</translation>
     </message>
     <message>
-        <location line="-2030" />
+        <location line="-2031" />
         <source>Delete body</source>
         <translation>[Délété bödý~~~]</translation>
     </message>
@@ -4837,13 +4857,13 @@
     </message>
     <message>
         <location line="+5" />
-        <location line="+1491" />
+        <location line="+1492" />
         <location line="+58" />
         <source>Properties</source>
         <translation>[Pröpértîés~~~]</translation>
     </message>
     <message>
-        <location line="-1543" />
+        <location line="-1544" />
         <source>Properties and help</source>
         <translation>[Pröpértîés áñd hélp~~~~~]</translation>
     </message>
@@ -4929,12 +4949,12 @@
     </message>
     <message>
         <location line="+18" />
-        <location line="+1919" />
+        <location line="+1920" />
         <source>Move rollback marker</source>
         <translation>[Mövé röllbáçk márkér~~~~~~]</translation>
     </message>
     <message>
-        <location line="-1747" />
+        <location line="-1748" />
         <source>Start here: every part begins as a flat sketch.
 Click Sketch on the toolbar, then click a plane.
 Or open the phone stand sample (File ▸ Open a sample).</source>
@@ -5292,12 +5312,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+0" />
-        <location line="+881" />
+        <location line="+882" />
         <source>There is no 3D body yet.</source>
         <translation>[Théré îs ñö 3D bödý ýét.~~~~~]</translation>
     </message>
     <message>
-        <location line="-878" />
+        <location line="-879" />
         <source>STL mesh for slicers (*.stl)</source>
         <translation>[STL mésh för slîçérs (*.stl)~~~~~~]</translation>
     </message>
@@ -5337,7 +5357,7 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
         <translation>[Thîs désîgñ hás çháñgés thát áré ñöt sávéd ýét.~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+39" />
+        <location line="+40" />
         <source>Recover your work?</source>
         <translation>[Réçövér ýöür wörk?~~~~~]</translation>
     </message>

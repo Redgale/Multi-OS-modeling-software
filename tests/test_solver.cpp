@@ -200,4 +200,58 @@ TEST(Solver, MalformedJsonIsRejectedNotCrashing)
         auto r = Sketch::fromJson(nlohmann::json::parse(text));
         EXPECT_FALSE(r.ok()) << text;
     }
+    // a curve whose points are missing or are not points (this used to crash the solver)
+    Sketch good;
+    good.addLine(0, 0, 10, 0);
+    good.addCircle(5, 5, 2);
+    good.addArc(0, 0, 5, 0, 1);
+    good.addEllipse(0, 0, 8, 0, 3);
+    good.addSpline({{0, 0}, {5, 5}, {10, 0}});
+    const auto base = good.toJson();
+    ASSERT_TRUE(Sketch::fromJson(base).ok());
+    int broken = 0;
+    for (size_t i = 0; i < base["entities"].size(); ++i) {
+        if (base["entities"][i]["type"] == "point") {
+            continue;
+        }
+        for (const char* field : {"p1", "p2", "center", "points"}) {
+            if (!base["entities"][i].contains(field)) {
+                continue;
+            }
+            for (const nlohmann::json bad : {nlohmann::json(999), nlohmann::json(base["entities"][i]["id"])}) {
+                auto j = base;
+                auto& f = j["entities"][i][field];
+                if (f.is_array()) {
+                    f[0] = bad;
+                }
+                else if (f.get<int>() != 0) {
+                    f = bad;
+                }
+                else {
+                    continue;
+                }
+                auto r = Sketch::fromJson(j);
+                EXPECT_FALSE(r.ok()) << j["entities"][i].dump();
+                ++broken;
+            }
+        }
+    }
+    EXPECT_GE(broken, 10);
+
+    // a linked grid whose count is damaged: the solve does not throw, the copies stop following
+    Sketch g;
+    const int l = g.addLine(0, 0, 10, 0);
+    ASSERT_TRUE(g.patternLinked({l}, {{"kind", "grid"}, {"n1", 3}, {"s1", "20 mm"}}, {}).ok());
+    auto jg = g.toJson();
+    ASSERT_FALSE(jg["links"].empty());
+    jg["links"][0]["spec"]["n1"] = "three";
+    auto back = Sketch::fromJson(jg);
+    ASSERT_TRUE(back.ok());
+    EXPECT_NO_THROW(back->solve());
+    EXPECT_EQ(back->links().at(0).value("kind", std::string {}), "pattern-unlinked");
+    // two huge grid counts are refused, not multiplied past what an int holds
+    EXPECT_FALSE(g.patternRect({l}, 100000, 1, 0, 100000, 0, 1).ok());
+    // a link whose list is not numbers is refused when the file is read
+    jg["links"][0]["source"] = "x";
+    EXPECT_FALSE(Sketch::fromJson(jg).ok());
 }

@@ -1457,15 +1457,24 @@ bool Sketch::rebuildOffsets(const ParamLookup& lookup)
         if (!d) {
             continue;
         }
-        for (int id : link.value("made", std::vector<int> {})) {
-            remove(id);
-        }
+        // a damaged pattern spec (a count that is not a number, say) unlinks the copies
+        // instead of throwing out of the solve
+        Result<std::vector<int>> made = std::vector<int> {};
         std::set<int> keep;
-        for (auto& [cid, c] : constraints_) {
-            keep.insert(cid);
+        try {
+            const auto spec = link.value("spec", nlohmann::json::object());
+            for (int id : link.value("made", std::vector<int> {})) {
+                remove(id);
+            }
+            for (auto& [cid, c] : constraints_) {
+                keep.insert(cid);
+            }
+            made = kind == "offset" ? offsetCurves(*this, source, d->value) : makePattern(*this, source, spec, lookup);
         }
-        auto made = kind == "offset" ? offsetCurves(*this, source, d->value)
-                                     : makePattern(*this, source, link.value("spec", nlohmann::json::object()), lookup);
+        catch (const nlohmann::json::exception&) {
+            link["kind"] = kind + "-unlinked";
+            continue;
+        }
         link["made"] = made ? made.value() : std::vector<int> {};
         if (made) {
             holdInPlace(*this, made.value(), keep);
@@ -2328,6 +2337,42 @@ Result<Sketch> Sketch::fromJson(const nlohmann::json& j)
             e.closed = je.value("closed", false);
             s.entities_[e.id] = e;
         }
+        // every curve's points must be points of this sketch (a damaged file could name others)
+        auto isPointId = [&](int id) {
+            auto it = s.entities_.find(id);
+            return it != s.entities_.end() && it->second.type == EntityType::Point;
+        };
+        for (auto& [id, e] : s.entities_) {
+            std::vector<int> need;
+            switch (e.type) {
+                case EntityType::Point:
+                    break;
+                case EntityType::Line:
+                    need = {e.p1, e.p2};
+                    break;
+                case EntityType::Circle:
+                    need = {e.center};
+                    break;
+                case EntityType::Arc:
+                    need = {e.center, e.p1, e.p2};
+                    break;
+                case EntityType::Ellipse:
+                    need = {e.center, e.p1};
+                    break;
+                case EntityType::Spline:
+                    need = e.pts;
+                    if (e.pts.size() < 2) {
+                        need.push_back(0);  // too few points: refused below
+                    }
+                    break;
+            }
+            for (int q : need) {
+                if (!isPointId(q)) {
+                    return makeError("file.sketch", "A curve in this sketch refers to a point that is not there; the "
+                                                    "file is damaged.");
+                }
+            }
+        }
         for (auto& jc : j.at("constraints")) {
             SketchConstraint k;
             k.id = jc.at("id").get<int>();
@@ -2355,7 +2400,7 @@ Result<Sketch> Sketch::fromJson(const nlohmann::json& j)
             t.font = jt.value("font", std::string {});
             t.angle = jt.value("angle", 0.0);
             t.path = jt.value("path", 0);
-            if (!s.entities_.count(t.anchor)) {
+            if (!isPointId(t.anchor)) {
                 return makeError("file.sketch", "A text in this file has lost its anchor point.");
             }
             s.texts_[t.id] = t;
@@ -2381,12 +2426,36 @@ Result<Sketch> Sketch::fromJson(const nlohmann::json& j)
                 }
                 a.contours.push_back(std::move(c));
             }
-            if (!s.entities_.count(a.anchor)) {
+            if (!isPointId(a.anchor)) {
                 return makeError("file.sketch", "Artwork in this file has lost its anchor point.");
             }
             s.artworks_[a.id] = std::move(a);
         }
         for (auto& jl : j.value("links", nlohmann::json::array())) {
+            // a link names curves of this sketch: its lists must be lists of numbers, and the
+            // copies it made never include what it copies
+            if (!jl.is_object()) {
+                return makeError("file.sketch", "A linked copy in this sketch is damaged.");
+            }
+            for (const char* key : {"source", "made", "points"}) {
+                if (jl.contains(key) && (!jl[key].is_array() || !std::all_of(jl[key].begin(), jl[key].end(), [](const auto& v) {
+                                             return v.is_number_integer();
+                                         }))) {
+                    return makeError("file.sketch", "A linked copy in this sketch is damaged.");
+                }
+            }
+            if ((jl.contains("kind") && !jl["kind"].is_string()) ||
+                (jl.contains("distance") && !jl["distance"].is_string()) ||
+                (jl.contains("spec") && !jl["spec"].is_object()) ||
+                (jl.contains("radius") && !jl["radius"].is_number_integer())) {
+                return makeError("file.sketch", "A linked copy in this sketch is damaged.");
+            }
+            const auto src = jl.value("source", std::vector<int> {});
+            for (int m : jl.value("made", std::vector<int> {})) {
+                if (std::find(src.begin(), src.end(), m) != src.end()) {
+                    return makeError("file.sketch", "A linked copy in this sketch is damaged.");
+                }
+            }
             s.links_.push_back(jl);
         }
         s.nextId_ = j.value("next_id", 1);

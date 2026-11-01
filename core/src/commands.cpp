@@ -455,6 +455,18 @@ Result<bool> ScriptRunner::runFile(const std::string& path)
 
 Result<bool> ScriptRunner::runLine(std::string_view rawLine)
 {
+    // a value of the wrong kind ("to=abc" where a number belongs) is the line's error, never a crash
+    try {
+        return runLineUnchecked(rawLine);
+    }
+    catch (const std::exception& ex) {
+        return makeError("script.args", "A value on this line is not what the command expects.",
+                         {"Check the numbers on this line (see docs/SCRIPTING.md)."}, ex.what());
+    }
+}
+
+Result<bool> ScriptRunner::runLineUnchecked(std::string_view rawLine)
+{
     std::string line(rawLine);
     if (auto h = line.find('#'); h != std::string::npos) {
         line.erase(h);

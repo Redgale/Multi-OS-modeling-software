@@ -404,6 +404,10 @@ void FeaturePanel::runPreview()
     if (done_) {
         return;
     }
+    if (doc_.recomputing()) {
+        timer_->start();  // the design is being rebuilt on another thread: preview after that
+        return;
+    }
     const jig::Feature f = draft();
     const auto before = stateBefore();
     jig::FeatureOutcome o = jig::applyFeature(doc_, f, before);

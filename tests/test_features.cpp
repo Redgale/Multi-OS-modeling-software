@@ -673,6 +673,11 @@ TEST(DxfImport, InchDrawingWithPolylinesBulgesArcsAndCircles)
     }
     EXPECT_NEAR(total, 8 + stadium, 1e-6);  // the same numbers, read as millimetres
     EXPECT_FALSE(parseDxf("this is not a dxf").ok());
+    // group codes that are not numbers ("-", too long) and a units value that is not one:
+    // refused or ignored, never an exception
+    EXPECT_NO_THROW(EXPECT_FALSE(parseDxf("0\nSECTION\n-\nHEADER\n").ok()));
+    EXPECT_NO_THROW(EXPECT_FALSE(parseDxf("0\nSECTION\n99999999999\nHEADER\n").ok()));
+    EXPECT_NO_THROW(parseDxf("0\nSECTION\n2\nHEADER\n9\n$INSUNITS\n70\nmm\n0\nENDSEC\n0\nEOF\n"));
     EXPECT_FALSE(parseDxf("0\nSECTION\n2\nENTITIES\n0\nENDSEC\n0\nEOF\n").ok());
 }
 

@@ -91,4 +91,14 @@ TEST(Commands, ScriptErrorsNameTheLine)
     auto r = run.runText("param a = 5 mm\n\nfrobnicate x=1\n");
     ASSERT_FALSE(r.ok());
     EXPECT_NE(r.error().message.find("Line 3"), std::string::npos);
+    // a word where a number belongs is that line's error, not a crash (this used to abort)
+    Document d2;
+    ScriptRunner run2(d2);
+    auto bad = run2.runText("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=10 h=10\n"
+                            "extrude id=e1 sketch=s1 distance=10\nreorder e1 to=abc\n");
+    ASSERT_FALSE(bad.ok());
+    EXPECT_NE(bad.error().message.find("Line 4"), std::string::npos);
+    for (const char* line : {"undo many", "redo x", "rollback y", "constrain sketch=s1 type=fix a=q"}) {
+        EXPECT_NO_THROW((void)run2.runLine(line)) << line;
+    }
 }
