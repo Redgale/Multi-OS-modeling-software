@@ -27,6 +27,7 @@ Every green build of the development branch is published as the
 | Linux x86_64 (glibc) | `Jigsmith-linux-x86_64.AppImage`: `chmod +x` it and run |
 | macOS Apple silicon | `Jigsmith-macos-15.dmg` |
 | macOS Intel | `Jigsmith-macos-15-intel.dmg` |
+| macOS, either kind (universal) | `Jigsmith-macos-universal.dmg` (text shaping for joined scripts not in this one yet) |
 | Windows x64 | `Jigsmith-windows-x64-portable.zip`: unzip, run `jigsmith.exe` |
 
 They are unsigned, so macOS Gatekeeper and Windows SmartScreen will warn the first time.

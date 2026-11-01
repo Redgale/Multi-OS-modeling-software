@@ -17,7 +17,7 @@ decision or finding). Move items to STATUS.md when started.
   (Metal) backend for `Viewport`.
 - **B-005 Universal macOS binary**: the "macOS universal" CI job builds for both architectures at
   once (official Qt, OCCT and FreeType from source; joining two Homebrew apps failed because their
-  library versions differ). Left: a green run; HarfBuzz in that build. No signing or notarisation: the owner decided against a
+  library versions differ). Green (run 41304373107). Left: HarfBuzz in that build. No signing or notarisation: the owner decided against a
   paid Apple developer account (2026-11-01); README says how to open the unsigned app.
 - ~~B-006 Windows installer~~ done (Inno Setup, tested in CI by silent install, run, uninstall); try
   on a clean machine by hand.

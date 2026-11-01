@@ -153,7 +153,7 @@ Earlier full run: run 41161765171 on commit 31d7fb5, all 13 jobs green.
 | Windows 2022 (conda-forge, MSVC): build, 78 tests, bench, portable zip | 8.0.x | ✓ |
 | Void Linux glibc and musl, Fedora, Arch, openSUSE Tumbleweed (containers, `scripts/install-deps.sh` only): build + 78 tests | distribution packages | ✓ (5 jobs) |
 | OCCT built from source (`scripts/build-occt.sh`) | source | ✓ |
-| macOS universal (B-005, added 2026-11-01): built once for both architectures (official universal Qt; OCCT 7.9.3 and FreeType built from source; no HarfBuzz yet), tests natively and `test_features` under Rosetta, opened both ways, .dmg. The first attempt, joining the two Homebrew apps with `lipo`, failed in run 150: their libraries differ (ICU 79 vs 78, OpenSSL 4 vs 3, different Qt image plugins) | 7.9.3 (source) | not yet run |
+| macOS universal (B-005, added 2026-11-01): built once for both architectures (official universal Qt; OCCT 7.9.3 and FreeType built from source; no HarfBuzz yet), tests natively and `test_features` under Rosetta, opened both ways, .dmg. The first attempt, joining the two Homebrew apps with `lipo`, failed in run 150: their libraries differ (ICU 79 vs 78, OpenSSL 4 vs 3, different Qt image plugins) | 7.9.3 (source) | ✓ run 41304373107 (44 min building OCCT and FreeType for both, cached afterwards; tests natively and under Rosetta; opened both ways) |
 | Flatpak (B-007, added 2026-11-01): `packaging/flatpak` manifest on the KDE 6.8 runtime, OCCT 7.9.3 built in it, bundle, CLI runs the phone stand inside the sandbox | 7.9.3 | ✓ run 41299218517 (64 min with OCCT; the run before failed only on the post-install paths). The bundle is a CI artifact; the GUI inside the sandbox has not been opened yet |
 | Publish `continuous` pre-release | — | ✓ [AppImage, two .dmg, Windows zip](https://github.com/Redgale/Multi-OS-modeling-software/releases/tag/continuous) |
 
@@ -212,7 +212,7 @@ ready, with the pseudo-translation as the check).
 
 ## Next three tasks
 
-1. Leftovers: universal macOS binary (B-005); open the Flatpak's window on a real desktop.
+1. Leftovers: open the Flatpak's and the universal Mac app's windows on real machines (only CI has run them).
 2. A bug hunt through the whole code (owner's request, 2026-11-01): sanitizers over the UI tests,
    then reading the riskier code; each bug fixed with a test.
 3. Review THIRD_PARTY_DLLS.txt before the first release (B-011); B-001 libslvs

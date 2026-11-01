@@ -427,7 +427,7 @@ jobs:
     # without a GitHub account: https://github.com/<owner>/<repo>/releases/tag/continuous
     name: Publish builds (continuous pre-release)
     if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || contains(github.event.head_commit.message, '[full ci]')) }}
-    needs: [linux, macos, windows]
+    needs: [linux, macos, macos-universal, windows]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
