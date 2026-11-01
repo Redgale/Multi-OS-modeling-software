@@ -1737,6 +1737,21 @@
     </message>
     <message>
         <location line="+1" />
+        <source>Give the variant a name (up to 80 letters).</source>
+        <translation>[Gîvé thé várîáñt á ñámé (üp tö 80 léttérs).~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>There are no parameters to save yet.</source>
+        <translation>[Théré áré ñö párámétérs tö sávé ýét.~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Add parameters (Modify ▸ Parameters) and use them in sizes first.</source>
+        <translation>[Ádd párámétérs (Mödîfý ▸ Párámétérs) áñd üsé thém îñ sîzés fîrst.~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
         <source>Change one of the expressions so they don't refer to each other in a loop.</source>
         <translation>[Çháñgé öñé öf thé éxpréssîöñs sö théý döñ't référ tö éáçh öthér îñ á lööp.~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -3622,6 +3637,11 @@
     </message>
     <message>
         <location line="+1" />
+        <source>There is no variant called '%1'.</source>
+        <translation>[Théré îs ñö várîáñt çálléd '%1'.~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
         <source>There is no parameter called '%1'.</source>
         <translation>[Théré îs ñö párámétér çálléd '%1'.~~~~~~~~]</translation>
     </message>
@@ -3881,7 +3901,7 @@
         <translation>[%1 édgés wéré ré-áttáçhéd bý shápé sîmîlárîtý áftér áñ éárlîér çháñgé. Çhéçk thé résült.~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="-53" />
+        <location line="-54" />
         <source>The id '%1' is already used.</source>
         <translation>[Thé îd '%1' îs álréádý üséd.~~~~~~]</translation>
     </message>
@@ -3891,7 +3911,7 @@
         <translation>[Thîs SVG hás ñö shápés, öütlîñés ör téxt tö brîñg îñ.~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+69" />
+        <location line="+70" />
         <source>A wall of %1 does not fit this outline.</source>
         <translation>[Á wáll öf %1 döés ñöt fît thîs öütlîñé.~~~~~~~~~]</translation>
     </message>
@@ -3976,7 +3996,7 @@
         <translation>[Thé föñt '%1' îs ñöt áváîláblé héré; üsîñg thé büîlt-îñ föñt (Îñtér).~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="-277" />
+        <location line="-278" />
         <source>There is nothing to export yet.</source>
         <translation>[Théré îs ñöthîñg tö éxpört ýét.~~~~~~~~]</translation>
     </message>
@@ -4624,7 +4644,7 @@
 <context>
     <name>CoreWords</name>
     <message>
-        <location line="+107" />
+        <location line="+108" />
         <source>ball face (sphere)</source>
         <translation>[báll fáçé (sphéré)~~~~]</translation>
     </message>
@@ -4745,7 +4765,7 @@
 <context>
     <name>QObject</name>
     <message>
-        <location filename="../app/FeaturePanels.cpp" line="+128" />
+        <location filename="../app/FeaturePanels.cpp" line="+130" />
         <source>Area %1 · %2</source>
         <translation>[Áréá %1 · %2~]</translation>
     </message>
@@ -6760,12 +6780,12 @@
     </message>
     <message>
         <location line="+2" />
-        <location line="+2520" />
+        <location line="+2521" />
         <source>Rename…</source>
         <translation>[Réñámé…~~]</translation>
     </message>
     <message>
-        <location line="-2517" />
+        <location line="-2518" />
         <source>Delete body</source>
         <translation>[Délété bödý~~~]</translation>
     </message>
@@ -6873,12 +6893,12 @@
     </message>
     <message>
         <location line="+18" />
-        <location line="+2399" />
+        <location line="+2400" />
         <source>Move rollback marker</source>
         <translation>[Mövé röllbáçk márkér~~~~~~]</translation>
     </message>
     <message>
-        <location line="-2197" />
+        <location line="-2198" />
         <source>Start here: every part begins as a flat sketch.
 Click Sketch on the toolbar, then click a plane.
 Or open the phone stand sample (File ▸ Open a sample).</source>
@@ -7810,7 +7830,7 @@ An empty design with the origin ready</source>
         <translation>[Théré îs ñöthîñg tö méásüré ýét: máké á 3D bödý fîrst.~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+88" />
+        <location line="+89" />
         <source>This step takes bodies out of the design. To bring them back, delete the step (or suppress it from its menu).</source>
         <translation>[Thîs stép tákés bödîés öüt öf thé désîgñ. Tö brîñg thém báçk, délété thé stép (ör süppréss ît fröm îts méñü).~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -8278,7 +8298,52 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
         <translation>[Rémövé séléçtéd~~~~]</translation>
     </message>
     <message>
-        <location line="+51" />
+        <location line="+8" />
+        <source>Variants</source>
+        <translation>[Várîáñts~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Use</source>
+        <translation>[Üsé~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Save these values as…</source>
+        <translation>[Sávé thésé válüés ás…~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Delete variant</source>
+        <translation>[Délété várîáñt~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Variants:</source>
+        <translation>[Várîáñts:~~]</translation>
+    </message>
+    <message>
+        <location line="+32" />
+        <source>Using “%1”.</source>
+        <translation>[Üsîñg “%1”.~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Using “%1”; it also has values for parameters this design no longer has: %2.</source>
+        <translation>[Üsîñg “%1”; ît álsö hás válüés för párámétérs thîs désîgñ ñö löñgér hás: %2.~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+12" />
+        <source>Save variant</source>
+        <translation>[Sávé várîáñt~~~]</translation>
+    </message>
+    <message>
+        <location line="+0" />
+        <source>Name for these values:</source>
+        <translation>[Ñámé för thésé válüés:~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+59" />
         <source>Length</source>
         <translation>[Léñgth~~]</translation>
     </message>
@@ -8313,7 +8378,12 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
         <translation>[Évérýthîñg wörks. Çháñgés üpdáté thé whölé désîgñ whéñ ýöü préss ÖK.~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+10" />
+        <location line="+14" />
+        <source>Saved as “%1”.</source>
+        <translation>[Sávéd ás “%1”.~~]</translation>
+    </message>
+    <message>
+        <location line="+11" />
         <source>Some parameters need attention first (see the Result column).</source>
         <translation>[Sömé párámétérs ñééd áttéñtîöñ fîrst (séé thé Résült çölümñ).~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -8326,7 +8396,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
 <context>
     <name>jigapp::PatternPanel</name>
     <message>
-        <location line="-3352" />
+        <location line="-3432" />
         <location line="+154" />
         <source>Pattern</source>
         <translation>[Páttérñ~~]</translation>

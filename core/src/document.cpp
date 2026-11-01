@@ -753,6 +753,13 @@ nlohmann::json Document::toJson() const
         params.push_back(jp);
     }
     j["parameters"] = params;
+    if (!model_.variants.empty()) {
+        nlohmann::json vs = nlohmann::json::array();
+        for (auto& v : model_.variants) {
+            vs.push_back({{"name", v.name}, {"values", v.values}});
+        }
+        j["variants"] = vs;
+    }
     nlohmann::json feats = nlohmann::json::array();
     for (auto& f : model_.features) {
         nlohmann::json jf = f.extra;
@@ -808,7 +815,7 @@ Result<std::unique_ptr<Document>> Document::fromJson(const nlohmann::json& input
         }
         Model m;
         static const std::set<std::string> known {"format_version", "units", "up_axis", "parameters",
-                                                  "features", "rollback", "counters", "view"};
+                                                  "features", "rollback", "counters", "view", "variants"};
         for (auto& [k, val] : j.items()) {
             if (!known.count(k)) {
                 m.extra[k] = val;
@@ -821,6 +828,22 @@ Result<std::unique_ptr<Document>> Document::fromJson(const nlohmann::json& input
             p.kind = paramKindFromString(jp.value("kind", std::string("length")));
             p.comment = jp.value("comment", std::string {});
             m.parameters.push_back(p);
+        }
+        if (j.contains("variants") && j["variants"].is_array()) {
+            for (auto& jv : j["variants"]) {
+                Variant v;
+                v.name = jv.value("name", std::string {});
+                if (jv.contains("values") && jv["values"].is_object()) {
+                    for (auto& [k, val] : jv["values"].items()) {
+                        if (val.is_string()) {
+                            v.values[k] = val.get<std::string>();
+                        }
+                    }
+                }
+                if (!v.name.empty()) {
+                    m.variants.push_back(std::move(v));
+                }
+            }
         }
         static const std::set<std::string> fknown {"id", "name", "kind", "suppressed", "group", "params"};
         for (auto& jf : j.at("features")) {

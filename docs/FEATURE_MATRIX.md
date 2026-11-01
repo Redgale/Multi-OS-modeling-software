@@ -175,7 +175,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | AI assistant | 29, 42 | never (for now) | Requires network/cloud; violates "free means free" defaults |
 | Components, joints (7 types), limits, drive, as-built, rigid group | 7, 30, 31 | v0.2 | Bodies are the parts (D-006). Joints: rigid, revolute, slider, cylindrical, ball, planar, with limits and drive by value or parameter (**app** + scripts `joint`); pin-slot, as-built joints, rigid groups and nested components not yet |
 | Motion link, contact sets, motion study | 31 | v0.3+ | |
-| Configurations | 33 | v0.2 as parameter sets ("variants") | Brief |
+| Configurations | 33 | v0.2 as parameter sets ("variants") | **app** (Parameters dialog) + scripts (`variant`) + Python (`run`): save, use, delete named sets of parameter values |
 | Render workspace, appearances library | 34 | v0.2 (basic viewport rendering) | |
 | Animation, exploded views | 35 | v0.3+ | |
 | 2D drawings | 36 | v0.3+ | |

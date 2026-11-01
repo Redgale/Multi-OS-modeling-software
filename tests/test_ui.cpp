@@ -3311,6 +3311,31 @@ private slots:
         QVERIFY(w.viewport()->appearances().empty());
     }
 
+    // Variants in the Parameters dialog: save the table as "Large", go back to "Small".
+    void parameterVariants()
+    {
+        MainWindow w;
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        {
+            jig::ScriptRunner r(w.document());
+            QVERIFY(r.runText("param w = 30 mm\nbox id=bx1 length=w width=20mm height=10mm\nvariant save name=Small\n").ok());
+        }
+        w.refreshAll();
+        ParametersDialog d(w.document(), &w);
+        QCOMPARE(d.variants()->count(), 1);
+        auto* table = d.findChild<QTableWidget*>();
+        QVERIFY(table);
+        table->item(0, 1)->setText("60 mm");
+        QVERIFY(d.saveVariantAs("Large"));
+        auto vol = [&] { return jig::massProperties(w.document().state().bodies.begin()->second->shape()).volume; };
+        QVERIFY(std::abs(vol() - 12000) < 1e-6);
+        QCOMPARE(int(w.document().model().variants.size()), 2);
+        auto r = jig::useVariant(w.document(), "Small");
+        QVERIFY(r.ok());
+        QVERIFY(std::abs(vol() - 6000) < 1e-6);
+    }
+
     // Areas of a sketch are picked by clicking them in the 3D view: a square with a circle in it
     // can become a round post (the circle) or a block with a hole (the ring), not only a block.
     void clickAreasToExtrude()

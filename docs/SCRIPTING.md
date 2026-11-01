@@ -27,6 +27,7 @@ Units you can type anywhere: `mm`, `cm`, `m`, `um`, `in`, `ft`, `yd`, `thou`/`mi
 | Command | Example |
 |---|---|
 | `param <name> = <expr> [kind=length\|angle\|number]` | `param wall = 2.4 mm` · `param lean = 75 deg` · `param n = 6 kind=number` |
+| `variant save\|use\|delete name=<name>` | Variants: the design's parameter values saved under a name (saving again updates it), set again in one step, or forgotten. Each is one undo step; saved with the design |
 
 A new parameter's kind is inferred from its value (`75 deg` is an angle). A change that
 would make a parameter invalid (unknown name, or depending on itself) is refused and

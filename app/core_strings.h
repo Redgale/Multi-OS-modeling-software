@@ -128,6 +128,9 @@ QT_TRANSLATE_NOOP("Core", "There is nothing more to redo.")
 QT_TRANSLATE_NOOP("Core", "Say which body to measure with body=<id>.")
 QT_TRANSLATE_NOOP("Core", "Use face:<name> or edge:<name>; the faces command lists face names.")
 QT_TRANSLATE_NOOP("Core", "See docs/SCRIPTING.md for the list of script commands.")
+QT_TRANSLATE_NOOP("Core", "Give the variant a name (up to 80 letters).")
+QT_TRANSLATE_NOOP("Core", "There are no parameters to save yet.")
+QT_TRANSLATE_NOOP("Core", "Add parameters (Modify ▸ Parameters) and use them in sizes first.")
 QT_TRANSLATE_NOOP("Core", "Change one of the expressions so they don't refer to each other in a loop.")
 QT_TRANSLATE_NOOP("Core", "That step no longer exists.")
 QT_TRANSLATE_NOOP("Core", "Try another place in the timeline.")
@@ -640,6 +643,7 @@ inline const char* const kCorePatterns[] = {
     QT_TRANSLATE_NOOP("Core", "There is no body called '%1'."),
     QT_TRANSLATE_NOOP("Core", "The id '%1' is already used."),
     QT_TRANSLATE_NOOP("Core", "There is no sketch called '%1' to use as the path."),
+    QT_TRANSLATE_NOOP("Core", "There is no variant called '%1'."),
     QT_TRANSLATE_NOOP("Core", "There is no parameter called '%1'."),
     QT_TRANSLATE_NOOP("Core", "Parameter '%1' depends on itself."),
     QT_TRANSLATE_NOOP("Core", "“%1” uses “%2”, so it must stay after it."),

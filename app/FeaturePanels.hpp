@@ -1212,6 +1212,15 @@ public:
     // Applies the table as one undoable change. Returns false (and explains) if a
     // name is invalid or a value does not work.
     bool apply();
+    // Applies the table, then keeps its values as a variant under `name`.
+    bool saveVariantAs(const QString& name);
+    QComboBox* variants() const
+    {
+        return variants_;
+    }
+
+signals:
+    void variantUsed();  // the design changed to a variant's values
 
 private:
     void addRow(const jig::Parameter& p);
@@ -1219,6 +1228,7 @@ private:
     jig::Document& doc_;
     QTableWidget* table_;
     QLabel* note_;
+    QComboBox* variants_ = nullptr;
 };
 
 }  // namespace jigapp

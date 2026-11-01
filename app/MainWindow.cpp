@@ -3392,12 +3392,13 @@ void MainWindow::openProperties()
 void MainWindow::openParameters()
 {
     ParametersDialog d(*doc_, this);
-    if (d.exec() == QDialog::Accepted) {
-        if (sketch_) {
-            sketch_->refreshFromDocument();
-        }
-        refreshAll();
+    connect(&d, &ParametersDialog::variantUsed, this, [this] { refreshAll(); });
+    d.exec();
+    // a variant used or saved changes the design even when the dialog is cancelled afterwards
+    if (sketch_) {
+        sketch_->refreshFromDocument();
     }
+    refreshAll();
 }
 
 void MainWindow::escape()

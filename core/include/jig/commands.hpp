@@ -59,6 +59,13 @@ private:
 
 // ---------------------------------------------------------------- scripting
 
+// Variants: the design's parameters saved under a name, and set again from it (one undo step
+// each). Using a variant sets only the parameters it has that the design still has; it says
+// which ones it could not set.
+Result<bool> saveVariant(Document& doc, const std::string& name);
+Result<std::vector<std::string>> useVariant(Document& doc, const std::string& name);  // the names left out
+Result<bool> deleteVariant(Document& doc, const std::string& name);
+
 // Runs Jigsmith command scripts (one command per line, `#` comments). This is the
 // headless entry point behind `jigsmith-cli --run`, used by every geometry test.
 // Syntax: `verb key=value key="quoted value"`. See docs/SCRIPTING.md.

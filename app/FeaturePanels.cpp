@@ -2,6 +2,7 @@
 #include "FeaturePanels.hpp"
 #include "Translations.hpp"
 
+#include "jig/commands.hpp"
 #include "jig/screws.hpp"
 
 #include <cctype>
@@ -17,6 +18,7 @@
 #include <BRepAdaptor_Surface.hxx>
 #include <TopoDS.hxx>
 #include <GProp_GProps.hxx>
+#include <QInputDialog>
 #include <QAbstractItemView>
 #include <QAbstractSpinBox>
 #include <QCheckBox>
@@ -5406,6 +5408,71 @@ ParametersDialog::ParametersDialog(jig::Document& doc, QWidget* parent)
     row->addWidget(del);
     row->addStretch();
     lay->addLayout(row);
+    // variants: named sets of these values ("small", "large"), switched in one step
+    auto* vrow = new QHBoxLayout();
+    variants_ = new QComboBox(this);
+    variants_->setAccessibleName(tr("Variants"));
+    auto* use = new QPushButton(tr("Use"), this);
+    auto* save = new QPushButton(tr("Save these values as…"), this);
+    auto* forget = new QPushButton(tr("Delete variant"), this);
+    vrow->addWidget(new QLabel(tr("Variants:"), this));
+    vrow->addWidget(variants_, 1);
+    vrow->addWidget(use);
+    vrow->addWidget(save);
+    vrow->addWidget(forget);
+    lay->addLayout(vrow);
+    auto fillVariants = [this] {
+        variants_->clear();
+        for (const auto& v : doc_.model().variants) {
+            variants_->addItem(q(v.name));
+        }
+    };
+    fillVariants();
+    auto reload = [this] {
+        table_->blockSignals(true);
+        table_->setRowCount(0);
+        table_->blockSignals(false);
+        for (auto& p : doc_.model().parameters) {
+            addRow(p);
+        }
+        revalidate();
+    };
+    connect(use, &QPushButton::clicked, this, [this, reload] {
+        if (variants_->currentText().isEmpty()) {
+            return;
+        }
+        auto r = jig::useVariant(doc_, variants_->currentText().toStdString());
+        if (!r) {
+            note_->setText("<b>✕ " + coreText(r.error().message) + "</b>");
+            return;
+        }
+        reload();
+        note_->setText(r->empty() ? tr("Using “%1”.").arg(variants_->currentText())
+                                  : tr("Using “%1”; it also has values for parameters this design no longer has: %2.")
+                                        .arg(variants_->currentText(), [&] {
+                                            QStringList l;
+                                            for (const auto& n : *r) {
+                                                l << q(n);
+                                            }
+                                            return l.join(", ");
+                                        }()));
+        emit variantUsed();
+    });
+    connect(save, &QPushButton::clicked, this, [this, fillVariants] {
+        bool ok = false;
+        const QString name = QInputDialog::getText(this, tr("Save variant"), tr("Name for these values:"), QLineEdit::Normal,
+                                                   variants_->currentText(), &ok);
+        if (ok) {
+            saveVariantAs(name);
+            fillVariants();
+            variants_->setCurrentText(name);
+        }
+    });
+    connect(forget, &QPushButton::clicked, this, [this, fillVariants] {
+        if (!variants_->currentText().isEmpty() && jig::deleteVariant(doc_, variants_->currentText().toStdString())) {
+            fillVariants();
+        }
+    });
     auto* bb = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
     lay->addWidget(bb);
     for (auto& p : doc_.model().parameters) {
@@ -5517,6 +5584,21 @@ void ParametersDialog::revalidate()
     table_->blockSignals(false);
     note_->setText(bad ? tr("%n parameter(s) need attention before you can apply.", "", bad)
                        : tr("Everything works. Changes update the whole design when you press OK."));
+}
+
+bool ParametersDialog::saveVariantAs(const QString& name)
+{
+    // the table as shown, applied first, so the variant holds what the user sees
+    if (!apply()) {
+        return false;
+    }
+    auto r = jig::saveVariant(doc_, name.trimmed().toStdString());
+    if (!r) {
+        note_->setText("<b>✕ " + coreText(r.error().message) + "</b>");
+        return false;
+    }
+    note_->setText(tr("Saved as “%1”.").arg(name.trimmed()));
+    return true;
 }
 
 bool ParametersDialog::apply()

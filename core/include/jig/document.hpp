@@ -95,9 +95,18 @@ struct Feature
     nlohmann::json extra = nlohmann::json::object();   // unknown fields, preserved on save
 };
 
+// A named set of parameter values (a variant: "small", "large", "for M4 screws"); using it
+// sets those parameters at once.
+struct Variant
+{
+    std::string name;
+    std::map<std::string, std::string> values;  // parameter name -> expression
+};
+
 struct Model
 {
     std::vector<Parameter> parameters;
+    std::vector<Variant> variants;
     std::vector<Feature> features;
     int rollback = -1;  // number of active features; -1 = all
     std::map<std::string, int> counters;  // next id number per prefix

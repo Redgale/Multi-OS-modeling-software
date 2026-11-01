@@ -3013,3 +3013,35 @@ TEST(Appearance, ColoursAreCheckedSavedAndExported)
     ASSERT_TRUE(insertMesh(*d2, mf).ok());
     EXPECT_NEAR(props(*d2).volume, 1000, 1e-6);
 }
+
+TEST(Variant, NamedSetsOfParameterValues)
+{
+    auto doc = build("param w = 30 mm\nparam h = 10 mm\nbox id=bx1 length=w width=20mm height=h\n"
+                     "variant save name=Small\nparam w = 60 mm\nparam h = 20 mm\nvariant save name=Large\n");
+    expectAllOk(*doc);
+    EXPECT_NEAR(props(*doc).volume, 60 * 20 * 20, 1e-6);
+    ScriptRunner r(*doc);
+    ASSERT_TRUE(r.runText("variant use name=Small\n").ok());
+    EXPECT_NEAR(props(*doc).volume, 30 * 20 * 10, 1e-6);
+    // one undo step each
+    ASSERT_TRUE(doc->undo());
+    EXPECT_NEAR(props(*doc).volume, 60 * 20 * 20, 1e-6);
+    // saved with the design
+    auto back = Document::fromJson(doc->toJson());
+    ASSERT_TRUE(back.ok());
+    ASSERT_EQ((*back)->model().variants.size(), 2u);
+    EXPECT_EQ((*back)->model().variants[0].values.at("w"), "30 mm");
+    // saving under the same name updates it; a parameter the design no longer has is reported
+    ASSERT_TRUE(r.runText("param w = 45 mm\nvariant save name=Small\n").ok());
+    EXPECT_EQ(doc->model().variants.size(), 2u);
+    auto left = useVariant(*doc, "Small");
+    ASSERT_TRUE(left.ok());
+    EXPECT_TRUE(left->empty());
+    EXPECT_NEAR(props(*doc).volume, 45 * 20 * 20, 1e-6);
+    // delete; unknown names and a design with no parameters are refused
+    ASSERT_TRUE(deleteVariant(*doc, "Large").ok());
+    EXPECT_FALSE(useVariant(*doc, "Large").ok());
+    auto empty = std::make_unique<Document>();
+    EXPECT_FALSE(saveVariant(*empty, "A").ok());
+    EXPECT_FALSE(saveVariant(*doc, "").ok());
+}

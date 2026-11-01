@@ -1516,6 +1516,24 @@ Result<bool> ScriptRunner::runLineUnchecked(std::string_view rawLine)
         }
         return checkFeature(id);
     }
+    if (a.verb == "variant") {
+        // variant save|use|delete name=<name>
+        const std::string what = a.positional.empty() ? std::string {} : lower(a.positional[0]);
+        if (what == "save") {
+            return saveVariant(doc, a.get("name"));
+        }
+        if (what == "use") {
+            auto r = useVariant(doc, a.get("name"));
+            if (!r) {
+                return r.error();
+            }
+            return true;
+        }
+        if (what == "delete") {
+            return deleteVariant(doc, a.get("name"));
+        }
+        return makeError("script.args", "Use: variant save|use|delete name=<name>");
+    }
     if (a.verb == "appearance") {
         // appearance body=e1 color=3a7bd5 [finish=matte|satin|glossy|metal]   (color=none: back to the theme;
         // no "#": in scripts it starts a comment)
@@ -2427,6 +2445,70 @@ Result<bool> ScriptRunner::runLineUnchecked(std::string_view rawLine)
     }
     return makeError("script.unknown", "Unknown command '" + a.verb + "'.",
                      {"See docs/SCRIPTING.md for the list of script commands."});
+}
+
+Result<bool> saveVariant(Document& doc, const std::string& name)
+{
+    if (name.empty() || name.size() > 80) {
+        return makeError("variant.name", "Give the variant a name (up to 80 letters).");
+    }
+    if (doc.model().parameters.empty()) {
+        return makeError("variant.empty", "There are no parameters to save yet.",
+                         {"Add parameters (Modify ▸ Parameters) and use them in sizes first."});
+    }
+    return doc.transact(fmt("Save variant %1", {name}), [&](Model& m) -> Result<bool> {
+        Variant v {name, {}};
+        for (auto& p : m.parameters) {
+            v.values[p.name] = p.expr;
+        }
+        auto it = std::find_if(m.variants.begin(), m.variants.end(), [&](const Variant& x) { return x.name == name; });
+        if (it == m.variants.end()) {
+            m.variants.push_back(std::move(v));
+        }
+        else {
+            *it = std::move(v);  // saving under the same name updates it
+        }
+        return true;
+    });
+}
+
+Result<std::vector<std::string>> useVariant(Document& doc, const std::string& name)
+{
+    const auto& vs = doc.model().variants;
+    auto it = std::find_if(vs.begin(), vs.end(), [&](const Variant& x) { return x.name == name; });
+    if (it == vs.end()) {
+        return makeError("variant.missing", fmt("There is no variant called '%1'.", {name}));
+    }
+    const Variant v = *it;
+    std::vector<std::string> missing;
+    auto r = doc.transact(fmt("Use variant %1", {name}), [&](Model& m) -> Result<bool> {
+        for (auto& [pname, expr] : v.values) {
+            auto p = std::find_if(m.parameters.begin(), m.parameters.end(), [&](const Parameter& x) { return x.name == pname; });
+            if (p == m.parameters.end()) {
+                missing.push_back(pname);
+            }
+            else {
+                p->expr = expr;
+            }
+        }
+        return true;
+    });
+    if (!r) {
+        return r.error();
+    }
+    return missing;
+}
+
+Result<bool> deleteVariant(Document& doc, const std::string& name)
+{
+    const auto& vs = doc.model().variants;
+    if (std::none_of(vs.begin(), vs.end(), [&](const Variant& x) { return x.name == name; })) {
+        return makeError("variant.missing", fmt("There is no variant called '%1'.", {name}));
+    }
+    return doc.transact(fmt("Delete variant %1", {name}), [&](Model& m) -> Result<bool> {
+        std::erase_if(m.variants, [&](const Variant& x) { return x.name == name; });
+        return true;
+    });
 }
 
 }  // namespace jig
