@@ -12,6 +12,7 @@
 - Scale: bodies bigger or smaller about a point, evenly or per axis.
 - Thread: real screw threads on shafts and in holes, metric pitches offered.
 - Insert mesh: closed STL, OBJ and 3MF meshes become solids you can change.
+- Picture to trace: a see-through photo or drawing on a plane.
 - Fixed: a fillet or chamfer on the edges of a loft or sweep could lose its edges when an earlier step changed.
 
 ## 0.1.0 (2026-11-01)

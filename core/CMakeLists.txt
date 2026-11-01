@@ -13,6 +13,7 @@ add_library(jig_core STATIC
     src/features.cpp
     src/io.cpp
     src/mesh_import.cpp
+    src/picture.cpp
     src/kernel.cpp
     src/sketch.cpp
     src/sketch_offset.cpp

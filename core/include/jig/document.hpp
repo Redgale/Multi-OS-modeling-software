@@ -76,7 +76,8 @@ enum class FeatureKind
     Emboss,     // a sketch's areas wrapped onto a round face, raised or sunk
     Draft,      // faces of a body sloped by an angle around a neutral plane
     Scale,      // bodies made bigger or smaller about a point (or stretched per axis)
-    Thread      // a helical thread cut into a shaft or the wall of a hole
+    Thread,     // a helical thread cut into a shaft or the wall of a hole
+    Canvas      // a picture placed on a plane to trace over (display only)
 };
 
 const char* toString(FeatureKind k);
@@ -147,6 +148,14 @@ struct ModelState
     std::map<std::string, gp_Ax3> planes;  // construction planes by feature id
     std::map<std::string, gp_Ax1> axes;    // construction axes by feature id
     std::map<std::string, gp_Pnt> points;  // construction points by feature id
+    // pictures placed on planes to trace over (display only): the frame's origin is the
+    // picture's centre, x along its width, y along its height
+    struct Canvas
+    {
+        gp_Ax3 frame;
+        double width = 0, height = 0, opacity = 0.5;
+    };
+    std::map<std::string, Canvas> canvases;
 };
 
 class Document

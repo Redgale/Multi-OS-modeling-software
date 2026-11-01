@@ -910,6 +910,16 @@
     </message>
     <message>
         <location line="+1"/>
+        <source>Picture to trace…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Place a photo or drawing on a plane, see-through, to trace over with sketch curves.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>Import SVG…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1489,6 +1499,11 @@
     <message>
         <location line="+1"/>
         <source>Bring in a closed mesh (STL, OBJ or 3MF) as a solid you can change, kept inside the design.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Place a photo or drawing on a plane, see-through, to trace over with sketch curves.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -2563,6 +2578,21 @@
     </message>
     <message>
         <location line="+1"/>
+        <source>The picture&apos;s width must be more than zero.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>This picture is missing from the design.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Delete the step and insert the picture again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>The body of the face to push or pull no longer exists.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3292,6 +3322,21 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location line="+1"/>
+        <source>The picture could not be read (it is missing, unreadable or larger than 20 MB).</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Jigsmith places PNG and JPEG pictures.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Save the picture as PNG or JPEG in an image editor, then place it again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <location line="+21"/>
         <source>A smooth curve can be made tangent only where it meets the other curve at one of its ends.</source>
         <translation type="unfinished"></translation>
@@ -3797,12 +3842,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-272"/>
+        <location line="-275"/>
         <source>There is nothing to export yet.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-273"/>
+        <location line="-276"/>
         <source>This DXF has no lines, circles, arcs, curves, text or blocks to bring in.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3842,7 +3887,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+186"/>
+        <location line="+189"/>
         <source>The 3MF file could not be created.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4132,7 +4177,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+31"/>
+        <location line="+34"/>
         <source>Use M2 to M12, or #4, #6, #8, #10, 1/4&quot;, 5/16&quot;, 3/8&quot;, 1/2&quot;.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4553,7 +4598,7 @@
 <context>
     <name>MainWindow</name>
     <message>
-        <location filename="../app/MainWindow.cpp" line="+531"/>
+        <location filename="../app/MainWindow.cpp" line="+534"/>
         <source>Rebuilding the design…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4800,9 +4845,87 @@
     </message>
 </context>
 <context>
+    <name>jigapp::CanvasPanel</name>
+    <message>
+        <location line="+1574"/>
+        <source>Picture to trace</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>A see-through picture on a plane. Set its width to a size you know (measure something in the photo), then sketch on the same plane and trace over it.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Floor (XY)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Front (XZ)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Side (YZ)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+7"/>
+        <source>See-through</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Plane</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Centre across the plane</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Centre up the plane</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Width</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Turn</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Strength (faint ↔ solid)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+26"/>
+        <source>Place a picture with Insert ▸ Picture to trace.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+10"/>
+        <source>Picture</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+12"/>
+        <source>picture</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>jigapp::CoilPanel</name>
     <message>
-        <location line="+717"/>
+        <location line="-922"/>
         <location line="+80"/>
         <source>Coil</source>
         <translation type="unfinished"></translation>
@@ -5835,7 +5958,7 @@
 <context>
     <name>jigapp::MainWindow</name>
     <message>
-        <location filename="../app/MainWindow.cpp" line="-164"/>
+        <location filename="../app/MainWindow.cpp" line="-166"/>
         <source>OK</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5861,15 +5984,15 @@
     </message>
     <message>
         <location line="+9"/>
-        <location line="+751"/>
-        <location line="+738"/>
-        <location line="+938"/>
+        <location line="+753"/>
+        <location line="+763"/>
+        <location line="+945"/>
         <location line="+27"/>
         <source>Sketch</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2452"/>
+        <location line="-2486"/>
         <source>Extrude</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6000,6 +6123,11 @@
     </message>
     <message>
         <location line="+2"/>
+        <source>Picture</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
         <source>Move</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6065,12 +6193,12 @@
     </message>
     <message>
         <location line="+4"/>
-        <location line="+848"/>
+        <location line="+873"/>
         <source>&lt;p&gt;Nothing selected.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-837"/>
+        <location line="-862"/>
         <source>&lt;h3&gt;Body&lt;/h3&gt;&lt;p&gt;&lt;b&gt;Name:&lt;/b&gt; %1&lt;br&gt;&lt;b&gt;Volume:&lt;/b&gt; %2&lt;br&gt;&lt;b&gt;Size:&lt;/b&gt; %3 × %4 × %5&lt;br&gt;&lt;b&gt;Faces:&lt;/b&gt; %6&lt;/p&gt;&lt;p&gt;Right-click it in the Browser to hide, isolate or rename it.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6156,12 +6284,12 @@
     </message>
     <message>
         <location line="+2"/>
-        <location line="+1615"/>
+        <location line="+1647"/>
         <source>Mouse and trackpad</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1613"/>
+        <location line="-1645"/>
         <source>Default (middle-drag pans, Shift+middle orbits)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6182,30 +6310,30 @@
     </message>
     <message>
         <location line="+11"/>
-        <location line="+1588"/>
+        <location line="+1620"/>
         <source>Theme</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1586"/>
-        <location line="+1541"/>
+        <location line="-1618"/>
+        <location line="+1573"/>
         <source>Light</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1541"/>
-        <location line="+1540"/>
+        <location line="-1573"/>
+        <location line="+1572"/>
         <source>Dark</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1539"/>
-        <location line="+1541"/>
+        <location line="-1571"/>
+        <location line="+1573"/>
         <source>High contrast</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1533"/>
+        <location line="-1565"/>
         <source>&amp;Help</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6322,12 +6450,12 @@
     </message>
     <message>
         <location line="+2"/>
-        <location line="+2300"/>
+        <location line="+2362"/>
         <source>Rename…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2297"/>
+        <location line="-2359"/>
         <source>Delete body</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6343,13 +6471,13 @@
     </message>
     <message>
         <location line="+5"/>
-        <location line="+1595"/>
+        <location line="+1627"/>
         <location line="+58"/>
         <source>Properties</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1647"/>
+        <location line="-1679"/>
         <source>Properties and help</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6435,12 +6563,12 @@
     </message>
     <message>
         <location line="+18"/>
-        <location line="+2186"/>
+        <location line="+2248"/>
         <source>Move rollback marker</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2014"/>
+        <location line="-2051"/>
         <source>Start here: every part begins as a flat sketch.
 Click Sketch on the toolbar, then click a plane.
 Or open the phone stand sample (File ▸ Open a sample).</source>
@@ -6639,12 +6767,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+0"/>
-        <location line="+400"/>
+        <location line="+407"/>
         <source>Jigsmith designs (*.jig)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-353"/>
+        <location line="-360"/>
         <source>Save view</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6660,12 +6788,22 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+107"/>
-        <location line="+1155"/>
+        <source>Picture to trace</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Pictures (*.png *.jpg *.jpeg)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <location line="+1182"/>
         <source>Insert mesh</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1154"/>
+        <location line="-1181"/>
         <source>Meshes (*.stl *.obj *.3mf)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6820,12 +6958,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+0"/>
-        <location line="+1055"/>
+        <location line="+1082"/>
         <source>There is no 3D body yet.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1052"/>
+        <location line="-1079"/>
         <source>STL mesh for slicers (*.stl)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7107,7 +7245,12 @@ An empty design with the origin ready</source>
         </translation>
     </message>
     <message>
-        <location line="+18"/>
+        <location line="+14"/>
+        <source>Could not place the picture</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+31"/>
         <source>Millimetres (most 3D-printing files)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7138,8 +7281,8 @@ An empty design with the origin ready</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-60"/>
-        <location line="+66"/>
+        <location line="-87"/>
+        <location line="+93"/>
         <location line="+30"/>
         <location line="+25"/>
         <location line="+30"/>
@@ -7234,7 +7377,7 @@ An empty design with the origin ready</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+57"/>
+        <location line="+60"/>
         <source>Edit…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7547,7 +7690,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::MovePanel</name>
     <message>
-        <location line="+2333"/>
+        <location line="+2406"/>
         <source>free %1</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7740,7 +7883,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::PatternPanel</name>
     <message>
-        <location line="-3053"/>
+        <location line="-3126"/>
         <location line="+154"/>
         <source>Pattern</source>
         <translation type="unfinished"></translation>
@@ -10211,7 +10354,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+604"/>
+        <location line="+640"/>
         <source>touching</source>
         <translation type="unfinished"></translation>
     </message>

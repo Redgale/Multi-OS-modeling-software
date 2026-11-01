@@ -909,6 +909,16 @@
     </message>
     <message>
         <location line="+1" />
+        <source>Picture to trace…</source>
+        <translation>[Pîçtüré tö tráçé…~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Place a photo or drawing on a plane, see-through, to trace over with sketch curves.</source>
+        <translation>[Pláçé á phötö ör dráwîñg öñ á pláñé, séé-thröügh, tö tráçé övér wîth skétçh çürvés.~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
         <source>Import SVG…</source>
         <translation>[Împört SVG…~~~]</translation>
     </message>
@@ -1489,6 +1499,11 @@
         <location line="+1" />
         <source>Bring in a closed mesh (STL, OBJ or 3MF) as a solid you can change, kept inside the design.</source>
         <translation>[Brîñg îñ á çlöséd mésh (STL, ÖBJ ör 3MF) ás á sölîd ýöü çáñ çháñgé, képt îñsîdé thé désîgñ.~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Place a photo or drawing on a plane, see-through, to trace over with sketch curves.</source>
+        <translation>[Pláçé á phötö ör dráwîñg öñ á pláñé, séé-thröügh, tö tráçé övér wîth skétçh çürvés.~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <location line="+1" />
@@ -2562,6 +2577,21 @@
     </message>
     <message>
         <location line="+1" />
+        <source>The picture's width must be more than zero.</source>
+        <translation>[Thé pîçtüré's wîdth müst bé möré tháñ zérö.~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>This picture is missing from the design.</source>
+        <translation>[Thîs pîçtüré îs mîssîñg fröm thé désîgñ.~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Delete the step and insert the picture again.</source>
+        <translation>[Délété thé stép áñd îñsért thé pîçtüré ágáîñ.~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
         <source>The body of the face to push or pull no longer exists.</source>
         <translation>[Thé bödý öf thé fáçé tö püsh ör püll ñö löñgér éxîsts.~~~~~~~~~~~~~~]</translation>
     </message>
@@ -3291,6 +3321,21 @@
         <translation>[Thé mésh's üñît müst bé möré tháñ zérö.~~~~~~~~~~]</translation>
     </message>
     <message>
+        <location line="+1" />
+        <source>The picture could not be read (it is missing, unreadable or larger than 20 MB).</source>
+        <translation>[Thé pîçtüré çöüld ñöt bé réád (ît îs mîssîñg, üñréádáblé ör lárgér tháñ 20 MB).~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Jigsmith places PNG and JPEG pictures.</source>
+        <translation>[Jîgsmîth pláçés PÑG áñd JPÉG pîçtürés.~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Save the picture as PNG or JPEG in an image editor, then place it again.</source>
+        <translation>[Sávé thé pîçtüré ás PÑG ör JPÉG îñ áñ îmágé édîtör, théñ pláçé ît ágáîñ.~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
         <location line="+21" />
         <source>A smooth curve can be made tangent only where it meets the other curve at one of its ends.</source>
         <translation>[Á smööth çürvé çáñ bé mádé táñgéñt öñlý whéré ît mééts thé öthér çürvé át öñé öf îts éñds.~~~~~~~~~~~~~~~~~~~~~~~]</translation>
@@ -3796,12 +3841,12 @@
         <translation>[Thé föñt '%1' îs ñöt áváîláblé héré; üsîñg thé büîlt-îñ föñt (Îñtér).~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="-272" />
+        <location line="-275" />
         <source>There is nothing to export yet.</source>
         <translation>[Théré îs ñöthîñg tö éxpört ýét.~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="-273" />
+        <location line="-276" />
         <source>This DXF has no lines, circles, arcs, curves, text or blocks to bring in.</source>
         <translation>[Thîs DXF hás ñö lîñés, çîrçlés, árçs, çürvés, téxt ör blöçks tö brîñg îñ.~~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -3841,7 +3886,7 @@
         <translation>[Thát fáçé îs lévél wîth thé skétçh, sö théré îs ñö wáý tö téll whîçh wáý tö éxtrüdé.~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+186" />
+        <location line="+189" />
         <source>The 3MF file could not be created.</source>
         <translation>[Thé 3MF fîlé çöüld ñöt bé çréátéd.~~~~~~~~]</translation>
     </message>
@@ -4131,7 +4176,7 @@
         <translation>[Thé çüt çöüld ñöt bé wörkéd öüt för thîs shápé.~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+31" />
+        <location line="+34" />
         <source>Use M2 to M12, or #4, #6, #8, #10, 1/4", 5/16", 3/8", 1/2".</source>
         <translation>[Üsé M2 tö M12, ör #4, #6, #8, #10, 1/4", 5/16", 3/8", 1/2".~~~]</translation>
     </message>
@@ -4552,7 +4597,7 @@
 <context>
     <name>MainWindow</name>
     <message>
-        <location filename="../app/MainWindow.cpp" line="+531" />
+        <location filename="../app/MainWindow.cpp" line="+534" />
         <source>Rebuilding the design…</source>
         <translation>[Rébüîldîñg thé désîgñ…~~~~~~]</translation>
     </message>
@@ -4799,9 +4844,87 @@
     </message>
 </context>
 <context>
+    <name>jigapp::CanvasPanel</name>
+    <message>
+        <location line="+1574" />
+        <source>Picture to trace</source>
+        <translation>[Pîçtüré tö tráçé~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>A see-through picture on a plane. Set its width to a size you know (measure something in the photo), then sketch on the same plane and trace over it.</source>
+        <translation>[Á séé-thröügh pîçtüré öñ á pláñé. Sét îts wîdth tö á sîzé ýöü kñöw (méásüré söméthîñg îñ thé phötö), théñ skétçh öñ thé sámé pláñé áñd tráçé övér ît.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+2" />
+        <source>Floor (XY)</source>
+        <translation>[Flöör (XÝ)~~]</translation>
+    </message>
+    <message>
+        <location line="+0" />
+        <source>Front (XZ)</source>
+        <translation>[Fröñt (XZ)~~]</translation>
+    </message>
+    <message>
+        <location line="+0" />
+        <source>Side (YZ)</source>
+        <translation>[Sîdé (ÝZ)~~]</translation>
+    </message>
+    <message>
+        <location line="+7" />
+        <source>See-through</source>
+        <translation>[Séé-thröügh~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Plane</source>
+        <translation>[Pláñé~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Centre across the plane</source>
+        <translation>[Çéñtré áçröss thé pláñé~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Centre up the plane</source>
+        <translation>[Çéñtré üp thé pláñé~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Width</source>
+        <translation>[Wîdth~]</translation>
+    </message>
+    <message>
+        <location line="+2" />
+        <source>Turn</source>
+        <translation>[Türñ~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Strength (faint ↔ solid)</source>
+        <translation>[Stréñgth (fáîñt ↔ sölîd)~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+26" />
+        <source>Place a picture with Insert ▸ Picture to trace.</source>
+        <translation>[Pláçé á pîçtüré wîth Îñsért ▸ Pîçtüré tö tráçé.~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+10" />
+        <source>Picture</source>
+        <translation>[Pîçtüré~~]</translation>
+    </message>
+    <message>
+        <location line="+12" />
+        <source>picture</source>
+        <translation>[pîçtüré~~]</translation>
+    </message>
+</context>
+<context>
     <name>jigapp::CoilPanel</name>
     <message>
-        <location line="+717" />
+        <location line="-922" />
         <location line="+80" />
         <source>Coil</source>
         <translation>[Çöîl~]</translation>
@@ -5830,7 +5953,7 @@
 <context>
     <name>jigapp::MainWindow</name>
     <message>
-        <location filename="../app/MainWindow.cpp" line="-164" />
+        <location filename="../app/MainWindow.cpp" line="-166" />
         <source>OK</source>
         <translation>[ÖK~]</translation>
     </message>
@@ -5856,15 +5979,15 @@
     </message>
     <message>
         <location line="+9" />
-        <location line="+751" />
-        <location line="+738" />
-        <location line="+938" />
+        <location line="+753" />
+        <location line="+763" />
+        <location line="+945" />
         <location line="+27" />
         <source>Sketch</source>
         <translation>[Skétçh~~]</translation>
     </message>
     <message>
-        <location line="-2452" />
+        <location line="-2486" />
         <source>Extrude</source>
         <translation>[Éxtrüdé~~]</translation>
     </message>
@@ -5995,6 +6118,11 @@
     </message>
     <message>
         <location line="+2" />
+        <source>Picture</source>
+        <translation>[Pîçtüré~~]</translation>
+    </message>
+    <message>
+        <location line="+2" />
         <source>Move</source>
         <translation>[Mövé~]</translation>
     </message>
@@ -6060,12 +6188,12 @@
     </message>
     <message>
         <location line="+4" />
-        <location line="+848" />
+        <location line="+873" />
         <source>&lt;p&gt;Nothing selected.&lt;/p&gt;</source>
         <translation>[&lt;p&gt;Ñöthîñg séléçtéd.&lt;/p&gt;~~~~~]</translation>
     </message>
     <message>
-        <location line="-837" />
+        <location line="-862" />
         <source>&lt;h3&gt;Body&lt;/h3&gt;&lt;p&gt;&lt;b&gt;Name:&lt;/b&gt; %1&lt;br&gt;&lt;b&gt;Volume:&lt;/b&gt; %2&lt;br&gt;&lt;b&gt;Size:&lt;/b&gt; %3 × %4 × %5&lt;br&gt;&lt;b&gt;Faces:&lt;/b&gt; %6&lt;/p&gt;&lt;p&gt;Right-click it in the Browser to hide, isolate or rename it.&lt;/p&gt;</source>
         <translation>[&lt;h3&gt;Bödý&lt;/h3&gt;&lt;p&gt;&lt;b&gt;Ñámé:&lt;/b&gt; %1&lt;br&gt;&lt;b&gt;Völümé:&lt;/b&gt; %2&lt;br&gt;&lt;b&gt;Sîzé:&lt;/b&gt; %3 × %4 × %5&lt;br&gt;&lt;b&gt;Fáçés:&lt;/b&gt; %6&lt;/p&gt;&lt;p&gt;Rîght-çlîçk ît îñ thé Bröwsér tö hîdé, îsöláté ör réñámé ît.&lt;/p&gt;~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -6151,12 +6279,12 @@
     </message>
     <message>
         <location line="+2" />
-        <location line="+1615" />
+        <location line="+1647" />
         <source>Mouse and trackpad</source>
         <translation>[Möüsé áñd tráçkpád~~~~~]</translation>
     </message>
     <message>
-        <location line="-1613" />
+        <location line="-1645" />
         <source>Default (middle-drag pans, Shift+middle orbits)</source>
         <translation>[Défáült (mîddlé-drág páñs, Shîft+mîddlé örbîts)~~~~~~~~~~~~]</translation>
     </message>
@@ -6177,30 +6305,30 @@
     </message>
     <message>
         <location line="+11" />
-        <location line="+1588" />
+        <location line="+1620" />
         <source>Theme</source>
         <translation>[Thémé~]</translation>
     </message>
     <message>
-        <location line="-1586" />
-        <location line="+1541" />
+        <location line="-1618" />
+        <location line="+1573" />
         <source>Light</source>
         <translation>[Lîght~]</translation>
     </message>
     <message>
-        <location line="-1541" />
-        <location line="+1540" />
+        <location line="-1573" />
+        <location line="+1572" />
         <source>Dark</source>
         <translation>[Dárk~]</translation>
     </message>
     <message>
-        <location line="-1539" />
-        <location line="+1541" />
+        <location line="-1571" />
+        <location line="+1573" />
         <source>High contrast</source>
         <translation>[Hîgh çöñtrást~~~~]</translation>
     </message>
     <message>
-        <location line="-1533" />
+        <location line="-1565" />
         <source>&amp;Help</source>
         <translation>[&amp;Hélp~]</translation>
     </message>
@@ -6317,12 +6445,12 @@
     </message>
     <message>
         <location line="+2" />
-        <location line="+2300" />
+        <location line="+2362" />
         <source>Rename…</source>
         <translation>[Réñámé…~~]</translation>
     </message>
     <message>
-        <location line="-2297" />
+        <location line="-2359" />
         <source>Delete body</source>
         <translation>[Délété bödý~~~]</translation>
     </message>
@@ -6338,13 +6466,13 @@
     </message>
     <message>
         <location line="+5" />
-        <location line="+1595" />
+        <location line="+1627" />
         <location line="+58" />
         <source>Properties</source>
         <translation>[Pröpértîés~~~]</translation>
     </message>
     <message>
-        <location line="-1647" />
+        <location line="-1679" />
         <source>Properties and help</source>
         <translation>[Pröpértîés áñd hélp~~~~~]</translation>
     </message>
@@ -6430,12 +6558,12 @@
     </message>
     <message>
         <location line="+18" />
-        <location line="+2186" />
+        <location line="+2248" />
         <source>Move rollback marker</source>
         <translation>[Mövé röllbáçk márkér~~~~~~]</translation>
     </message>
     <message>
-        <location line="-2014" />
+        <location line="-2051" />
         <source>Start here: every part begins as a flat sketch.
 Click Sketch on the toolbar, then click a plane.
 Or open the phone stand sample (File ▸ Open a sample).</source>
@@ -6636,12 +6764,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+0" />
-        <location line="+400" />
+        <location line="+407" />
         <source>Jigsmith designs (*.jig)</source>
         <translation>[Jîgsmîth désîgñs (*.jîg)~~~~~~]</translation>
     </message>
     <message>
-        <location line="-353" />
+        <location line="-360" />
         <source>Save view</source>
         <translation>[Sávé vîéw~~]</translation>
     </message>
@@ -6657,12 +6785,22 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+107" />
-        <location line="+1155" />
+        <source>Picture to trace</source>
+        <translation>[Pîçtüré tö tráçé~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Pictures (*.png *.jpg *.jpeg)</source>
+        <translation>[Pîçtürés (*.pñg *.jpg *.jpég)~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+6" />
+        <location line="+1182" />
         <source>Insert mesh</source>
         <translation>[Îñsért mésh~~~]</translation>
     </message>
     <message>
-        <location line="-1154" />
+        <location line="-1181" />
         <source>Meshes (*.stl *.obj *.3mf)</source>
         <translation>[Méshés (*.stl *.öbj *.3mf)~~~~]</translation>
     </message>
@@ -6815,12 +6953,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+0" />
-        <location line="+1055" />
+        <location line="+1082" />
         <source>There is no 3D body yet.</source>
         <translation>[Théré îs ñö 3D bödý ýét.~~~~~]</translation>
     </message>
     <message>
-        <location line="-1052" />
+        <location line="-1079" />
         <source>STL mesh for slicers (*.stl)</source>
         <translation>[STL mésh för slîçérs (*.stl)~~~~~~]</translation>
     </message>
@@ -7101,7 +7239,12 @@ An empty design with the origin ready</source>
         <translation><numerusform>[Împörtéd %n sölîd(s) fröm %1. Ît îs képt îñsîdé thîs désîgñ.~~~~~~~~~~~~~~]</numerusform><numerusform>[Împörtéd %n sölîd(s) fröm %1. Ît îs képt îñsîdé thîs désîgñ.~~~~~~~~~~~~~~]</numerusform></translation>
     </message>
     <message>
-        <location line="+18" />
+        <location line="+14" />
+        <source>Could not place the picture</source>
+        <translation>[Çöüld ñöt pláçé thé pîçtüré~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+31" />
         <source>Millimetres (most 3D-printing files)</source>
         <translation>[Mîllîmétrés (möst 3D-prîñtîñg fîlés)~~~~~~~~~]</translation>
     </message>
@@ -7132,8 +7275,8 @@ An empty design with the origin ready</source>
         <translation>[DXF dráwîñgs (*.dxf)~~~~]</translation>
     </message>
     <message>
-        <location line="-60" />
-        <location line="+66" />
+        <location line="-87" />
+        <location line="+93" />
         <location line="+30" />
         <location line="+25" />
         <location line="+30" />
@@ -7226,7 +7369,7 @@ An empty design with the origin ready</source>
         <translation>[Áñ împörtéd sölîd hás ñö séttîñgs tö çháñgé. Tö üsé á ñéwér çöpý öf thé fîlé, délété thîs stép áñd împört ît ágáîñ.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+57" />
+        <location line="+60" />
         <source>Edit…</source>
         <translation>[Édît…~]</translation>
     </message>
@@ -7541,7 +7684,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
 <context>
     <name>jigapp::MovePanel</name>
     <message>
-        <location line="+2333" />
+        <location line="+2406" />
         <source>free %1</source>
         <translation>[fréé %1~]</translation>
     </message>
@@ -7732,7 +7875,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
 <context>
     <name>jigapp::PatternPanel</name>
     <message>
-        <location line="-3053" />
+        <location line="-3126" />
         <location line="+154" />
         <source>Pattern</source>
         <translation>[Páttérñ~~]</translation>
@@ -10197,7 +10340,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
         <translation>[Thé 3D vîéw ñééds ÖpéñGL 3.3, áñd thîs çömpütér's gráphîçs drîvér öfférs %1. Üpdátîñg thé gráphîçs drîvér üsüállý fîxés thîs. Désîgñs stîll öpéñ, sávé áñd éxpört; öñlý thé vîéw stáýs émptý.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+604" />
+        <location line="+640" />
         <source>touching</source>
         <translation>[töüçhîñg~~]</translation>
     </message>

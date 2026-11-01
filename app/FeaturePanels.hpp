@@ -6,6 +6,7 @@
 #pragma once
 
 #include <array>
+#include <QSlider>
 #include <set>
 #include <string>
 
@@ -1044,6 +1045,39 @@ protected:
 private:
     QComboBox *face_, *size_, *hand_;
     ExprField* pitch_;
+};
+
+// Insert ▸ Picture to trace: where the picture sits, how big, how see-through.
+class CanvasPanel : public FeaturePanel
+{
+    Q_OBJECT
+public:
+    CanvasPanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent = nullptr);
+    QComboBox* plane() const
+    {
+        return plane_;
+    }
+    ExprField* width() const
+    {
+        return width_;
+    }
+    ExprField* angle() const
+    {
+        return angle_;
+    }
+    QSlider* opacity() const
+    {
+        return opacity_;
+    }
+
+protected:
+    jig::Feature draft() const override;
+    QString title() const override;
+
+private:
+    QComboBox* plane_;
+    ExprField *centerX_, *centerY_, *width_, *angle_;
+    QSlider* opacity_;
 };
 
 class MoveHandle;

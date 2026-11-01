@@ -14,6 +14,7 @@
 #include <tuple>
 
 #include "jig/io.hpp"
+#include "jig/picture.hpp"
 
 namespace jig
 {
@@ -161,6 +162,7 @@ CommandRegistry::CommandRegistry()
     add({"inspect.properties", "Properties", "Properties", "INSPECT", "Volume, area, weight and center of mass of a body.", "", {"volume", "weight", "mass", "filament"}, true, false, true, m6});
     add({"insert.step", "Import STEP…", "Insert STEP", "INSERT", "Bring in a solid from another CAD program.", "", {"stp", "import solid"}, false, true, true, m6});
     add({"insert.mesh", "Insert mesh…", "Insert Mesh", "INSERT", "Bring in a closed mesh (STL, OBJ or 3MF) as a solid you can change, kept inside the design.", "", {"stl", "obj", "3mf", "import mesh", "printable"}, false, true, true, m6});
+    add({"insert.canvas", "Picture to trace…", "Canvas", "INSERT", "Place a photo or drawing on a plane, see-through, to trace over with sketch curves.", "", {"image", "photo", "trace", "reference picture", "canvas", "attached canvas"}, false, true, true, m6});
     add({"insert.svg", "Import SVG…", "Insert SVG", "INSERT", "Bring vector artwork into a sketch, e.g. a logo.", "", {"logo", "vector", "artwork"}, false, false, false, m5});
     add({"insert.dxf", "Import DXF…", "Insert DXF", "INSERT", "Bring a 2D drawing or laser-cut file into a sketch.", "", {"laser", "2d drawing"}, false, false, false, m5});
     add({"modify.parameters", "Parameters", "Change Parameters", "MODIFY", "Name sizes like width or wall and use them in any field.", "", {"variables", "named values", "change size"}, true, false, true, m5});
@@ -1510,6 +1512,31 @@ Result<bool> ScriptRunner::runLineUnchecked(std::string_view rawLine)
             return r;
         }
         return checkFeature(id);
+    }
+    if (a.verb == "canvas") {
+        // canvas file=<picture.png|.jpg> [plane=XY|XZ|YZ|<plane id>] [center=x,y] [width=100mm]
+        //        [angle=0deg] [opacity=0.5] [id=cv1]
+        std::string x = "0 mm", y = "0 mm";
+        if (a.has("center")) {
+            const auto xy = split(a.get("center"), ',');
+            if (xy.size() != 2) {
+                return makeError("script.args", "center= needs two values: center=x,y");
+            }
+            x = xy[0], y = xy[1];
+        }
+        double opacity = 0.5;
+        try {
+            opacity = std::stod(a.get("opacity", "0.5"));
+        }
+        catch (...) {
+            return makeError("script.args", "opacity= is a number from 0.05 to 1.");
+        }
+        auto id = insertCanvas(doc, a.get("file"), a.get("plane", "XY"), x, y, a.get("width", "100 mm"),
+                               a.get("angle", "0 deg"), opacity, a.get("id"));
+        if (!id) {
+            return id.error();
+        }
+        return checkFeature(id.value());
     }
     if (a.verb == "scale") {
         // scale bodies=e1;e2 (factor=2 | x=1 y=1 z=2) [about=origin|<point id>] [copy=yes]

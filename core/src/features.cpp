@@ -2249,6 +2249,54 @@ FeatureOutcome applyThread(const Document& doc, const Feature& f, const std::sha
     }
 }
 
+// ---------------------------------------------------------------- canvas
+
+// A picture placed on a plane, centred at a point, at a width (its height follows the
+// picture's shape), turned by an angle: something to trace over. It changes no geometry.
+FeatureOutcome applyCanvas(const Document& doc, const Feature& f, const std::shared_ptr<const ModelState>& in)
+{
+    const auto& p = f.params;
+    FeatureStatus status;
+    auto frame = planeFrame(p.value("plane", nlohmann::json("XY")), in, status);
+    if (!frame) {
+        return failed(frame.error());
+    }
+    double cx = 0, cy = 0;
+    const nlohmann::json cj = p.value("center", nlohmann::json::array());
+    if (cj.is_array() && cj.size() == 2) {
+        for (int i = 0; i < 2; ++i) {
+            auto v = doc.evalLength(cj[size_t(i)].is_string() ? cj[size_t(i)].get<std::string>() : cj[size_t(i)].dump());
+            if (!v) {
+                return failed(v.error());
+            }
+            (i == 0 ? cx : cy) = v.value();
+        }
+    }
+    auto w = doc.evalLength(p.value("width", std::string("100 mm")));
+    if (!w) {
+        return failed(w.error());
+    }
+    if (w.value() <= 1e-6) {
+        return failed("The picture's width must be more than zero.");
+    }
+    auto ang = doc.evalAngle(p.value("angle", std::string("0 deg")));
+    if (!ang) {
+        return failed(ang.error());
+    }
+    const double aspect = p.value("aspect", 1.0);
+    const double opacity = std::clamp(p.value("opacity", 0.5), 0.05, 1.0);
+    if (!(aspect > 0) || p.value("image", std::string {}).empty()) {
+        return failed("This picture is missing from the design.", {"Delete the step and insert the picture again."});
+    }
+    gp_Ax3 fr = frame.value();
+    const gp_Pnt c = fr.Location().Translated(gp_Vec(fr.XDirection()) * cx + gp_Vec(fr.YDirection()) * cy);
+    fr.SetLocation(c);
+    fr.Rotate(gp_Ax1(c, fr.Direction()), ang.value());
+    auto out = copyState(in);
+    out->canvases[f.id] = {fr, w.value(), w.value() * aspect, opacity};
+    return {out, status};
+}
+
 // ---------------------------------------------------------------- press pull
 
 // Pushes or pulls a flat face straight along its normal: out adds material, in removes it.
@@ -3391,6 +3439,8 @@ FeatureOutcome applyFeature(const Document& doc, const Feature& f, const std::sh
                 return applyScale(doc, f, in);
             case FeatureKind::Thread:
                 return applyThread(doc, f, in);
+            case FeatureKind::Canvas:
+                return applyCanvas(doc, f, in);
             case FeatureKind::Hole:
                 return applyHole(doc, f, in);
             case FeatureKind::Pattern:

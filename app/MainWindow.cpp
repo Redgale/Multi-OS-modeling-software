@@ -66,6 +66,7 @@
 #include "Viewport.hpp"
 #include "jig/commands.hpp"
 #include "jig/io.hpp"
+#include "jig/picture.hpp"
 #include "jig/version.hpp"
 
 // Resources live in the static jigsmith_ui library: register them explicitly.
@@ -182,6 +183,8 @@ QString kindWord(jig::FeatureKind k)
             return MainWindow::tr("Scale");
         case jig::FeatureKind::Thread:
             return MainWindow::tr("Thread");
+        case jig::FeatureKind::Canvas:
+            return MainWindow::tr("Picture");
         case jig::FeatureKind::Move:
             return MainWindow::tr("Move");
     }
@@ -1288,6 +1291,31 @@ void MainWindow::refreshDatums()
         labels.emplace_back(feat ? q(feat->name) : q(id), c);
     }
     view_->setDatums(std::move(ov), std::move(labels));
+    // pictures to trace: decoded once per step (and again only when the picture changes)
+    std::vector<Viewport::CanvasPicture> pictures;
+    for (auto& [id, cv] : doc_->state().canvases) {
+        const jig::Feature* feat = doc_->feature(id);
+        if (!feat) {
+            continue;
+        }
+        const std::string image = feat->params.value("image", std::string {});
+        const size_t key = std::hash<std::string> {}(image);
+        auto& cached = canvasImages_[id];
+        if (cached.first != key || cached.second.isNull()) {
+            cached = {key, QImage::fromData(QByteArray::fromBase64(QByteArray::fromStdString(image)))};
+        }
+        Viewport::CanvasPicture pic;
+        pic.image = cached.second;
+        pic.opacity = cv.opacity;
+        const gp_XYZ o = cv.frame.Location().XYZ(), x = cv.frame.XDirection().XYZ() * (cv.width / 2),
+                     y = cv.frame.YDirection().XYZ() * (cv.height / 2);
+        const gp_XYZ corners[4] = {o - x - y, o + x - y, o + x + y, o - x + y};
+        for (int k = 0; k < 4; ++k) {
+            pic.corners[size_t(k)] = QVector3D(float(corners[k].X()), float(corners[k].Y()), float(corners[k].Z()));
+        }
+        pictures.push_back(std::move(pic));
+    }
+    view_->setCanvases(std::move(pictures));
 }
 
 void MainWindow::refreshAll()
@@ -1829,6 +1857,13 @@ void MainWindow::runCommand(const QString& id)
     }
     else if (id == "insert.svg") {
         importSvg();
+    }
+    else if (id == "insert.canvas") {
+        const QString path = QFileDialog::getOpenFileName(this, tr("Picture to trace"), {},
+                                                          tr("Pictures (*.png *.jpg *.jpeg)"));
+        if (!path.isEmpty()) {
+            insertCanvasFile(path);
+        }
     }
     else if (id == "insert.mesh") {
         const QString path = QFileDialog::getOpenFileName(this, tr("Insert mesh"), {},
@@ -2971,6 +3006,33 @@ bool MainWindow::importStepFile(const QString& path)
     return true;
 }
 
+bool MainWindow::insertCanvasFile(const QString& path)
+{
+    if (sketch_) {
+        exitSketch();
+    }
+    cancelPicker();
+    auto id = jig::insertCanvas(*doc_, path.toStdString(), "XY", "0 mm", "0 mm", doc_->defaultLength(100, 4));
+    if (!id) {
+        QMessageBox::warning(this, tr("Could not place the picture"), coreText(id.error().message));
+        return false;
+    }
+    refreshAll();
+    view_->viewTop();
+    // straight on to its settings: plane, place, size, see-through
+    openCanvas(id.value());
+    return true;
+}
+
+void MainWindow::openCanvas(const std::string& editId)
+{
+    if (sketch_) {
+        exitSketch();
+    }
+    cancelPicker();
+    showPanel(new CanvasPanel(*doc_, view_, editId, panelHost_));
+}
+
 bool MainWindow::insertMeshFile(const QString& path, double unitMm)
 {
     if (sketch_) {
@@ -3282,6 +3344,9 @@ void MainWindow::editFeature(int index)
             break;
         case jig::FeatureKind::Thread:
             openThread(f.id);
+            break;
+        case jig::FeatureKind::Canvas:
+            openCanvas(f.id);
             break;
         case jig::FeatureKind::Sweep:
             openSweep(f.id);

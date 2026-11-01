@@ -15,6 +15,8 @@
 #include <QMatrix4x4>
 #include <QOpenGLBuffer>
 #include <QOpenGLFunctions_3_3_Core>
+#include <array>
+#include <QImage>
 #include <QOpenGLShaderProgram>
 #include <QOpenGLVertexArrayObject>
 #include <QOpenGLWidget>
@@ -220,6 +222,19 @@ public:
     int sketchGridPerMajor() const;
     // Construction planes and their names: drawn under any tool overlay.
     void setDatums(SceneOverlay geometry, std::vector<std::pair<QString, QVector3D>> labels);
+    // Pictures to trace over (canvases), drawn see-through under the overlays; corners in
+    // order: bottom-left, bottom-right, top-right, top-left of the picture.
+    struct CanvasPicture
+    {
+        QImage image;
+        std::array<QVector3D, 4> corners;
+        double opacity = 0.5;
+    };
+    void setCanvases(std::vector<CanvasPicture> pictures);
+    int canvasCount() const
+    {
+        return int(canvases_.size());
+    }
     void setEdgeHighlight(const std::string& body, std::vector<int> edges);
     void setFaceHighlight(const std::string& body, std::vector<int> faces);
     // Model colour override for previews; nullopt restores the theme colour.
@@ -398,6 +413,7 @@ private:
     std::optional<QVector4D> section_;
     jig::LengthUnit units_ = jig::LengthUnit::Millimetre;                                     // construction planes, always shown
     std::vector<std::pair<QString, QVector3D>> datumLabels_;
+    std::vector<CanvasPicture> canvases_;
     bool overlayDirty_ = false;
     std::unique_ptr<QOpenGLShaderProgram> colorProg_;
     QOpenGLVertexArrayObject ovVao_;

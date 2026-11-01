@@ -1030,9 +1030,45 @@ void Viewport::paintGL()
     overlay_->update();  // gizmo and hints are painted by the raster overlay widget
 }
 
+void Viewport::setCanvases(std::vector<CanvasPicture> pictures)
+{
+    canvases_ = std::move(pictures);
+    update();
+}
+
 void Viewport::paintOverlay(QPainter& p)
 {
     p.setRenderHint(QPainter::Antialiasing);
+    // pictures to trace: each mapped onto its four projected corners (a plane seen in
+    // perspective is exactly such a mapping); skipped when a corner is behind the camera
+    const QMatrix4x4 pv = projMatrix() * viewMatrix();
+    for (const auto& c : canvases_) {
+        if (c.image.isNull()) {
+            continue;
+        }
+        QPolygonF to;
+        bool behind = false;
+        for (const QVector3D& w : c.corners) {
+            const QVector4D h = pv * QVector4D(w, 1);
+            if (h.w() <= 1e-6f) {
+                behind = true;
+                break;
+            }
+            to << QPointF((h.x() / h.w() + 1) * 0.5 * width(), (1 - h.y() / h.w()) * 0.5 * height());
+        }
+        QTransform t;
+        const QPolygonF from({QPointF(0, c.image.height()), QPointF(c.image.width(), c.image.height()),
+                              QPointF(c.image.width(), 0), QPointF(0, 0)});
+        if (behind || !QTransform::quadToQuad(from, to, t)) {
+            continue;
+        }
+        p.save();
+        p.setRenderHint(QPainter::SmoothPixmapTransform);
+        p.setOpacity(c.opacity);
+        p.setTransform(t);
+        p.drawImage(QPointF(0, 0), c.image);
+        p.restore();
+    }
     if (interactor_) {
         p.save();
         interactor_->paint(p);

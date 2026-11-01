@@ -8,6 +8,7 @@ class QLockFile;
 
 #include <set>
 
+#include <QImage>
 #include <QMainWindow>
 #include <QPointer>
 
@@ -112,6 +113,9 @@ public:
     bool importStepFile(const QString& path);
     // A mesh file as a solid; unitMm <= 0 asks for the unit (STL and OBJ do not say).
     bool insertMeshFile(const QString& path, double unitMm = 0);
+    // A picture to trace, on the floor plane, then its settings panel.
+    bool insertCanvasFile(const QString& path);
+    void openCanvas(const std::string& editId);
     void saveVersionInteractive();
     bool saveNamedVersion(const QString& label);  // saves first when the design has no file yet
     void showVersions();
@@ -260,6 +264,7 @@ private:
     QAction* centerRect_ = nullptr;
     Theme theme_ = Theme::Dark;
     bool updatingRollback_ = false;
+    std::map<std::string, std::pair<size_t, QImage>> canvasImages_;  // canvas step -> decoded picture
 };
 
 }  // namespace jigapp

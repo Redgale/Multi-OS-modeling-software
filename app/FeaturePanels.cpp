@@ -4722,6 +4722,79 @@ QString ThreadPanel::title() const
     return tr("thread");
 }
 
+// ---------------------------------------------------------------- Canvas
+
+CanvasPanel::CanvasPanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent)
+    : FeaturePanel(doc, view, std::move(editId), parent)
+{
+    form_->addWidget(heading(this, tr("Picture to trace"),
+                             tr("A see-through picture on a plane. Set its width to a size you know (measure "
+                                "something in the photo), then sketch on the same plane and trace over it.")));
+    plane_ = combo(this, {{tr("Floor (XY)"), "XY"}, {tr("Front (XZ)"), "XZ"}, {tr("Side (YZ)"), "YZ"}});
+    centerX_ = new ExprField(doc, jig::Dim::len(), this);
+    centerY_ = new ExprField(doc, jig::Dim::len(), this);
+    width_ = new ExprField(doc, jig::Dim::len(), this);
+    angle_ = new ExprField(doc, jig::Dim::ang(), this);
+    opacity_ = new QSlider(Qt::Horizontal, this);
+    opacity_->setRange(5, 100);
+    opacity_->setAccessibleName(tr("See-through"));
+    addRow(tr("Plane"), plane_);
+    addRow(tr("Centre across the plane"), centerX_);
+    addRow(tr("Centre up the plane"), centerY_);
+    addRow(tr("Width"), width_);
+    bindParam("width", width_);
+    addRow(tr("Turn"), angle_);
+    addRow(tr("Strength (faint ↔ solid)"), opacity_);
+    const auto before = stateBefore();
+    for (int i = 0; i < insertIndex(); ++i) {
+        const auto& f = doc_.model().features[size_t(i)];
+        if (f.kind == jig::FeatureKind::Plane && before->planes.count(f.id)) {
+            plane_->addItem(q(f.name), q(f.id));
+        }
+    }
+    const jig::Feature* edit = editId_.empty() ? nullptr : doc_.feature(editId_);
+    const nlohmann::json p = edit ? edit->params : nlohmann::json::object();
+    const nlohmann::json pl = p.value("plane", nlohmann::json("XY"));
+    select(plane_, pl.is_string() ? pl.get<std::string>() : std::string("XY"));
+    const nlohmann::json c = p.value("center", nlohmann::json::array({"0 mm", "0 mm"}));
+    auto str = [](const nlohmann::json& v) { return v.is_string() ? v.get<std::string>() : v.dump(); };
+    const bool two = c.is_array() && c.size() == 2;
+    centerX_->setText(q(two ? str(c[0]) : std::string("0 mm")));
+    centerY_->setText(q(two ? str(c[1]) : std::string("0 mm")));
+    width_->setText(q(p.value("width", doc_.defaultLength(100, 4))));
+    angle_->setText(q(p.value("angle", std::string("0 deg"))));
+    opacity_->setValue(int(std::lround(p.value("opacity", 0.5) * 100)));
+    for (auto* e : {centerX_, centerY_, width_, angle_}) {
+        connect(e, &ExprField::changed, this, [this] { schedulePreview(); });
+    }
+    connect(plane_, &QComboBox::currentIndexChanged, this, [this] { schedulePreview(); });
+    connect(opacity_, &QSlider::valueChanged, this, [this] { schedulePreview(); });
+    if (!edit) {
+        status_->setText("<b>✕ " + tr("Place a picture with Insert ▸ Picture to trace.") + "</b>");
+        ok_->setEnabled(false);
+    }
+    else {
+        schedulePreview();
+    }
+}
+
+jig::Feature CanvasPanel::draft() const
+{
+    jig::Feature f = startDraft(doc_, editId_, "cv", tr("Picture"));
+    f.kind = jig::FeatureKind::Canvas;  // the picture itself and its shape stay as they are
+    f.params["plane"] = current(plane_);
+    f.params["center"] = {centerX_->text().toStdString(), centerY_->text().toStdString()};
+    f.params["width"] = width_->text().toStdString();
+    f.params["angle"] = angle_->text().toStdString();
+    f.params["opacity"] = opacity_->value() / 100.0;
+    return f;
+}
+
+QString CanvasPanel::title() const
+{
+    return tr("picture");
+}
+
 // ---------------------------------------------------------------- Move
 
 // Three arrows (X, Y, Z) from the bodies' centre; drag a grip to move along that axis.

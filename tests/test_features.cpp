@@ -8,6 +8,7 @@
 
 #include "helpers.hpp"
 #include "jig/io.hpp"
+#include "jig/picture.hpp"
 #include "jig/screws.hpp"
 #include <BRepAdaptor_Surface.hxx>
 #include <BRepAlgoAPI_Common.hxx>
@@ -2883,4 +2884,50 @@ TEST(MeshImport, StlObjAnd3mfBecomeSolids)
             EXPECT_FALSE(insertMesh(*d, p).ok()) << junk << ext;
         }
     }
+}
+
+TEST(Canvas, PicturesArePlacedOnPlanesAndKeptInTheDesign)
+{
+    EXPECT_EQ(base64Encode(""), "");
+    EXPECT_EQ(base64Encode("f"), "Zg==");
+    EXPECT_EQ(base64Encode("fo"), "Zm8=");
+    EXPECT_EQ(base64Encode("foo"), "Zm9v");
+    EXPECT_EQ(base64Encode("foobar"), "Zm9vYmFy");
+    // a PNG header saying 200 x 100, and a JPEG with a start-of-frame saying 640 x 480
+    std::string png("\x89PNG\r\n\x1a\n\0\0\0\x0dIHDR\0\0\0\xc8\0\0\0\x64\x08\x06\0\0\0", 29);
+    std::string jpg("\xff\xd8\xff\xe0\0\x04xx\xff\xc0\0\x11\x08\x01\xe0\x02\x80\x03", 19);
+    EXPECT_EQ(pictureSize(png), std::make_pair(200, 100));
+    EXPECT_EQ(pictureSize(jpg), std::make_pair(640, 480));
+    EXPECT_FALSE(pictureSize("GIF89a....").has_value());
+    const auto dir = tempDir();
+    const std::string path = (dir / "logo.png").string();
+    {
+        std::ofstream o(path, std::ios::binary);
+        o << png;
+    }
+    // on the front plane, centred at (10, 20), 100 wide: 50 high; turned 90 degrees
+    auto doc = build("canvas id=cv1 file=" + path + " plane=XZ center=10,20 width=100mm angle=90deg opacity=0.4\n");
+    expectAllOk(*doc);
+    const auto& cv = doc->state().canvases.at("cv1");
+    EXPECT_NEAR(cv.width, 100, 1e-9);
+    EXPECT_NEAR(cv.height, 50, 1e-9);
+    EXPECT_NEAR(cv.opacity, 0.4, 1e-9);
+    EXPECT_NEAR(cv.frame.Location().X(), 10, 1e-9);
+    EXPECT_NEAR(cv.frame.Location().Z(), 20, 1e-9);
+    EXPECT_NEAR(std::abs(cv.frame.XDirection().Z()), 1, 1e-9);  // its width now runs up
+    EXPECT_TRUE(doc->state().bodies.empty());                   // it changes no geometry
+    // the picture travels inside the design
+    auto back = Document::fromJson(doc->toJson());
+    ASSERT_TRUE(back.ok());
+    EXPECT_EQ((*back)->model().features[0].params.value("image", std::string {}), base64Encode(png));
+    EXPECT_NEAR((*back)->state().canvases.at("cv1").height, 50, 1e-9);
+    // not a picture, and a missing file, are refused with a reason
+    const std::string txt = (dir / "notes.png").string();
+    {
+        std::ofstream o(txt);
+        o << "hello";
+    }
+    auto d = std::make_unique<Document>();
+    EXPECT_FALSE(insertCanvas(*d, txt, "XY", "0", "0", "100 mm").ok());
+    EXPECT_FALSE(insertCanvas(*d, (dir / "none.png").string(), "XY", "0", "0", "100 mm").ok());
 }

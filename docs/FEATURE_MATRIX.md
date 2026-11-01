@@ -151,7 +151,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Insert SVG, DXF | 22 | v0.1 M5 | **app** + scripts: DXF (lines, arcs, circles, polylines with bulges, splines, ellipses, text, blocks; unit detection); SVG (filled paths and shapes, drawn outlines as bands, text, transforms, viewBox; as scalable artwork) | |
 | Insert STEP | 22 | v0.1 M6 | **app** + scripts (`import step`): an Import step with one body per solid, kept inside the design; faces named `<step>/face:<n>` for later steps | |
 | Insert mesh (STL/OBJ/3MF) | 22, 27 | v0.2 | **app** + scripts (`import mesh`): closed meshes become solids kept in the design | Up to 20,000 triangles; open meshes refused |
-| Attached canvas (image tracing) | 22 | v0.2 | — | Hobby-valuable; small |
+| Attached canvas (image tracing) | 22 | v0.2 | **app** + scripts (`canvas`): PNG/JPEG on any plane, width, turn, see-through strength, kept in the design | Calibrating by two clicked points not yet |
 | Decal | 22, 34 | v0.3+ | — | Rendering |
 | McMaster-Carr, manufacturer parts | 22, 32 | never | — | Requires network and third-party catalogs |
 | Insert fastener (standard parts) | 22, 32 | v0.2 | — | Brief v0.2: offline library |

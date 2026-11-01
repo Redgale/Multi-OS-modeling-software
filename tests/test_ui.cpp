@@ -19,6 +19,7 @@
 #include <QTableWidget>
 #include <QToolBar>
 #include <QToolButton>
+#include <QPainter>
 #include <QStatusBar>
 #include <QTimer>
 #include <QTreeWidget>
@@ -3178,6 +3179,45 @@ private slots:
         });
         QVERIFY(!w.insertMeshFile(bad, 1));
         QCOMPARE(int(w.document().model().features.size()), 1);
+    }
+
+    // A picture to trace: placed on the floor, its panel opens, its width set; it is drawn
+    // see-through in the view and kept in the design.
+    void pictureToTrace()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        QImage img(200, 100, QImage::Format_RGB32);
+        img.fill(QColor(230, 120, 40));
+        {
+            QPainter p(&img);
+            p.setPen(QPen(Qt::white, 6));
+            p.drawEllipse(QRectF(60, 10, 80, 80));
+        }
+        const QString path = QDir::temp().filePath("jig-ui-trace.png");
+        QVERIFY(img.save(path));
+        QVERIFY(w.insertCanvasFile(path));
+        auto* cp = qobject_cast<CanvasPanel*>(w.featurePanel());
+        QVERIFY(cp);
+        cp->width()->setText("80 mm");
+        cp->opacity()->setValue(60);
+        QTRY_VERIFY(cp->previewOk());
+        QVERIFY(cp->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        const auto& cv = w.document().state().canvases.begin()->second;
+        QVERIFY(std::abs(cv.width - 80) < 1e-9 && std::abs(cv.height - 40) < 1e-9);
+        QVERIFY(std::abs(cv.opacity - 0.6) < 1e-9);
+        QCOMPARE(w.viewport()->canvasCount(), 1);
+        w.viewport()->viewTop();
+        QTest::qWait(300);
+        const QImage shot = w.grab().toImage();
+        shot.save(shotPath("picture-to-trace"));
+        // the picture shows in the middle of the view (orange, see-through on the dark view)
+        const QPoint mid = w.viewport()->mapTo(&w, QPoint(w.viewport()->width() / 2, w.viewport()->height() / 2));
+        const QColor at = shot.pixelColor(mid + QPoint(-int(w.viewport()->width() * 0.05), 0));
+        QVERIFY2(at.red() > at.blue() + 40, qPrintable(at.name()));
     }
 
     // Areas of a sketch are picked by clicking them in the 3D view: a square with a circle in it
