@@ -114,7 +114,12 @@ ounces) is shown in inches. The owner's standing instruction is in `CLAUDE.md`.
 
 ### CI results (GitHub Actions, branch `claude/pensive-mayer-l4r19c`)
 
-Latest full run: [run 41235988638](https://github.com/Redgale/Multi-OS-modeling-software/actions/runs/41235988638)
+Latest full run: [run 41259509645](https://github.com/Redgale/Multi-OS-modeling-software/actions/runs/41259509645)
+on commit 2333073 (2026-11-01): every job green except openSUSE Tumbleweed, which could not install
+Qt because its package mirror was mid-update (the image's glib 2.90 against the mirror's 2.88);
+not a Jigsmith failure, to be rechecked on the next full run.
+
+Before that: [run 41235988638](https://github.com/Redgale/Multi-OS-modeling-software/actions/runs/41235988638)
 on commit e7be291 (2026-10-31, `[full ci]` push; the run before it, 41232385913 on 85ee5b6, was green too): all build and test jobs green on Linux
 (Ubuntu, Fedora, Arch, openSUSE, Void glibc and musl, OCCT from source, ASan + UBSan), macOS
 (Apple silicon and Intel) and Windows, including the GUI screenshots on macOS and Windows
