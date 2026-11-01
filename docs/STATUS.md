@@ -153,7 +153,7 @@ Earlier full run: run 41161765171 on commit 31d7fb5, all 13 jobs green.
 | Void Linux glibc and musl, Fedora, Arch, openSUSE Tumbleweed (containers, `scripts/install-deps.sh` only): build + 78 tests | distribution packages | ✓ (5 jobs) |
 | OCCT built from source (`scripts/build-occt.sh`) | source | ✓ |
 | macOS universal (B-005, added 2026-11-01): built once for both architectures (official universal Qt; OCCT 7.9.3 and FreeType built from source; no HarfBuzz yet), tests natively and `test_features` under Rosetta, opened both ways, .dmg. The first attempt, joining the two Homebrew apps with `lipo`, failed in run 150: their libraries differ (ICU 79 vs 78, OpenSSL 4 vs 3, different Qt image plugins) | 7.9.3 (source) | not yet run |
-| Flatpak (B-007, added 2026-11-01): `packaging/flatpak` manifest on the KDE 6.8 runtime, OCCT 7.9.3 built in it, bundle, CLI runs the phone stand inside the sandbox | 7.9.3 | not yet run |
+| Flatpak (B-007, added 2026-11-01): `packaging/flatpak` manifest on the KDE 6.8 runtime, OCCT 7.9.3 built in it, bundle, CLI runs the phone stand inside the sandbox | 7.9.3 | ✓ run 41299218517 (64 min with OCCT; the run before failed only on the post-install paths). The bundle is a CI artifact; the GUI inside the sandbox has not been opened yet |
 | Publish `continuous` pre-release | — | ✓ [AppImage, two .dmg, Windows zip](https://github.com/Redgale/Multi-OS-modeling-software/releases/tag/continuous) |
 
 The run before it (41161215933) was the first full run since billing was restored. Every
@@ -193,7 +193,7 @@ screenshot (B-003). No real GPU on Windows or Linux has been tried. Builds are u
 
 ## Next three tasks
 
-1. Leftovers: a green Flatpak CI run (B-007); universal macOS binary (B-005).
+1. Leftovers: universal macOS binary (B-005); open the Flatpak's window on a real desktop.
 2. M7/M8 leftovers: the step kind inside messages ("the extrude") as translatable words; first real
    language once a reviewer is found.
 3. Review THIRD_PARTY_DLLS.txt before the first release (B-011); B-001 libslvs
