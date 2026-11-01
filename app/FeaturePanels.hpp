@@ -1115,6 +1115,10 @@ public:
     {
         return animate_;
     }
+    QCheckBox* asBuilt() const
+    {
+        return asBuilt_;
+    }
     QCheckBox* flip() const
     {
         return flip_;
@@ -1136,6 +1140,7 @@ private:
     QSlider* try_;
     QCheckBox* flip_;
     QPushButton* animate_ = nullptr;
+    QCheckBox* asBuilt_ = nullptr;
     QTimer* animation_ = nullptr;
     int animStep_ = 1;
 };

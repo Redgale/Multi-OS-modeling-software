@@ -3017,6 +3017,11 @@ FeatureOutcome applyJoint(const Document& doc, const Feature& f, const std::shar
         from = gp_Ax3(from.Location(), from.Direction().Reversed());
     }
     from = withX(from, to.XDirection());
+    if (p.value("as_built", false)) {
+        // as built: the part stays where it was modelled; only the motion about (and along)
+        // the target is added
+        from = to;
+    }
     // motion in the target's frame: slide along its x/y (planar) or its normal (slider), then
     // turn about its normal (and its x, for a ball)
     gp_Ax3 goal = to;

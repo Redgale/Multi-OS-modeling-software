@@ -1603,6 +1603,9 @@ Result<bool> ScriptRunner::runLineUnchecked(std::string_view rawLine)
         if (a.has("part")) {
             params["part"] = a.get("part");  // the part that moves, when `from` is an axis
         }
+        if (a.get("as_built", "no") == "yes") {
+            params["as_built"] = true;  // keep the part where it is; only add the motion
+        }
         for (const char* k : {"angle", "angle_min", "angle_max", "angle2", "distance", "distance_min", "distance_max",
                               "distance2", "offset"}) {
             if (a.has(k)) {

@@ -3187,3 +3187,18 @@ TEST(SketchCurves, ControlPointSplines)
     }
     EXPECT_TRUE(control);
 }
+
+TEST(Joint, AsBuiltKeepsThePartWhereItIs)
+{
+    const std::string parts = "box id=a length=40mm width=40mm height=10mm\n"
+                              "box id=b center=100,0 length=10mm width=20mm height=6mm op=new\n";
+    // as built about the base's top: the small box stays at x = 100, then turns about the top's
+    // middle (the origin's vertical): a quarter turn takes it to y = 100
+    auto still = build(parts + "joint id=j1 kind=revolute from=face:b/bottom to=face:a/top as_built=yes\n");
+    expectAllOk(*still);
+    EXPECT_NEAR(massProperties(still->state().bodies.at("b")->shape()).xmin, 95, 1e-6);
+    auto turned = build(parts + "joint id=j1 kind=revolute from=face:b/bottom to=face:a/top as_built=yes angle=90deg\n");
+    auto bt = massProperties(turned->state().bodies.at("b")->shape());
+    EXPECT_NEAR((bt.ymin + bt.ymax) / 2, 100, 1e-6);
+    EXPECT_NEAR(bt.zmin, 0, 1e-6);
+}

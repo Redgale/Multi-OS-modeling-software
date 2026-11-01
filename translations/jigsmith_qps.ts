@@ -5802,7 +5802,7 @@
 <context>
     <name>jigapp::FastenerPanel</name>
     <message>
-        <location line="+3748" />
+        <location line="+3753" />
         <source>Screw, nut or washer</source>
         <translation>[Sçréw, ñüt ör wáshér~~~~~]</translation>
     </message>
@@ -5915,7 +5915,7 @@
 <context>
     <name>jigapp::FeaturePanel</name>
     <message>
-        <location line="-4629" />
+        <location line="-4634" />
         <source>OK</source>
         <translation>[ÖK~]</translation>
     </message>
@@ -6283,12 +6283,12 @@
     <name>jigapp::JointPanel</name>
     <message>
         <location line="+2649" />
-        <location line="+218" />
+        <location line="+222" />
         <source>Joint</source>
         <translation>[Jöîñt~]</translation>
     </message>
     <message>
-        <location line="-217" />
+        <location line="-221" />
         <source>Click an edge or face on the part that moves (a hole's edge, the bottom of a lid), then one on the part it attaches to. They meet face to face; then the joint lets it turn or slide.</source>
         <translation>[Çlîçk áñ édgé ör fáçé öñ thé párt thát mövés (á hölé's édgé, thé böttöm öf á lîd), théñ öñé öñ thé párt ît áttáçhés tö. Théý méét fáçé tö fáçé; théñ thé jöîñt léts ît türñ ör slîdé.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -6339,14 +6339,19 @@
     </message>
     <message>
         <location line="+5" />
-        <location line="+24" />
+        <location line="+26" />
         <source>Try the motion</source>
         <translation>[Trý thé mötîöñ~~~~]</translation>
     </message>
     <message>
-        <location line="-23" />
+        <location line="-25" />
         <source>Face the same way instead of facing each other</source>
         <translation>[Fáçé thé sámé wáý îñstéád öf fáçîñg éáçh öthér~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>As built: keep the part where it is, only add the motion</source>
+        <translation>[Ás büîlt: kéép thé párt whéré ît îs, öñlý ádd thé mötîöñ~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <location line="+1" />
@@ -6409,7 +6414,7 @@
         <translation>[Dîstáñçé át möst~~~~]</translation>
     </message>
     <message>
-        <location line="+10" />
+        <location line="+11" />
         <location line="+6" />
         <source>Animate</source>
         <translation>[Áñîmáté~~]</translation>
@@ -6420,7 +6425,7 @@
         <translation>[Stöp~]</translation>
     </message>
     <message>
-        <location line="+70" />
+        <location line="+72" />
         <source>A joint needs parts: make at least one body first.</source>
         <translation>[Á jöîñt ñééds párts: máké át léást öñé bödý fîrst.~~~~~~~~~~~~~]</translation>
     </message>
@@ -6465,7 +6470,7 @@
         <translation>[Ñöw çlîçk áñ édgé ör fáçé öñ thé párt ît áttáçhés tö.~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+28" />
+        <location line="+29" />
         <source>joint</source>
         <translation>[jöîñt~]</translation>
     </message>
@@ -6473,7 +6478,7 @@
 <context>
     <name>jigapp::LoftPanel</name>
     <message>
-        <location line="-1469" />
+        <location line="-1474" />
         <location line="+50" />
         <source>Loft</source>
         <translation>[Löft~]</translation>
@@ -8420,7 +8425,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
 <context>
     <name>jigapp::MovePanel</name>
     <message>
-        <location line="+2754" />
+        <location line="+2759" />
         <source>free %1</source>
         <translation>[fréé %1~]</translation>
     </message>
@@ -8661,7 +8666,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
 <context>
     <name>jigapp::PatternPanel</name>
     <message>
-        <location line="-3554" />
+        <location line="-3559" />
         <location line="+154" />
         <source>Pattern</source>
         <translation>[Páttérñ~~]</translation>

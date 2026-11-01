@@ -4825,6 +4825,7 @@ JointPanel::JointPanel(jig::Document& doc, Viewport* view, std::string editId, Q
     try_->setRange(0, 360);
     try_->setAccessibleName(tr("Try the motion"));
     flip_ = new QCheckBox(tr("Face the same way instead of facing each other"), this);
+    asBuilt_ = new QCheckBox(tr("As built: keep the part where it is, only add the motion"), this);
     addRow(tr("Kind"), kind_);
     addRow(tr("Moving part attaches at"), fromLabel_);
     addRow(tr("To"), toLabel_);
@@ -4847,6 +4848,7 @@ JointPanel::JointPanel(jig::Document& doc, Viewport* view, std::string editId, Q
         bindParam(key, e);
         connect(e, &ExprField::changed, this, [this] { schedulePreview(); });
     }
+    form_->addWidget(asBuilt_);
     addRow(tr("Try the motion"), try_);
     // Animate: the slider runs between the limits (or a full turn / 100) and back
     animate_ = new QPushButton(tr("Animate"), this);
@@ -4879,6 +4881,7 @@ JointPanel::JointPanel(jig::Document& doc, Viewport* view, std::string editId, Q
             e->setText(q(p.value(key, std::string {})));
         }
         flip_->setChecked(p.value("flip", false));
+        asBuilt_->setChecked(p.value("as_built", false));
     }
     else {
         select(kind_, "revolute");
@@ -4898,6 +4901,7 @@ JointPanel::JointPanel(jig::Document& doc, Viewport* view, std::string editId, Q
         connect(e, &ExprField::changed, this, [this] { schedulePreview(); });
     }
     connect(flip_, &QCheckBox::toggled, this, [this] { schedulePreview(); });
+    connect(asBuilt_, &QCheckBox::toggled, this, [this] { schedulePreview(); });
     connect(origin, &QPushButton::clicked, this, [this] { pickOrigin(); });
     connect(again, &QPushButton::clicked, this, [this] {
         from_ = nlohmann::json();
@@ -5026,6 +5030,7 @@ jig::Feature JointPanel::draft() const
                 {"from", from_.is_null() ? nlohmann::json::object() : from_},
                 {"to", to_.is_null() ? nlohmann::json("origin") : to_},
                 {"flip", flip_->isChecked()},
+                {"as_built", asBuilt_->isChecked()},
                 {"angle", angle_->text().toStdString()},
                 {"distance", distance_->text().toStdString()}};
     for (const auto& [key, e] : fields_) {
