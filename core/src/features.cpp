@@ -2134,6 +2134,121 @@ FeatureOutcome applyDraft(const Document& doc, const Feature& f, const std::shar
     return {out, status};
 }
 
+// ---------------------------------------------------------------- thread
+
+// A helical thread on a round face: on a shaft a 60-degree groove is cut in (the face is the
+// major diameter); in a hole a groove is cut outwards (the face is the minor diameter). The
+// groove stays clear of the face's ends. Metric pitches come from the size, or are typed.
+FeatureOutcome applyThread(const Document& doc, const Feature& f, const std::shared_ptr<const ModelState>& in)
+{
+    const auto& p = f.params;
+    FeatureStatus status;
+    ShapeRef ref = ShapeRef::fromJson(p.value("face", nlohmann::json::object()));
+    auto bit = in->bodies.find(ref.body);
+    if (bit == in->bodies.end()) {
+        return failed("The body of the face to thread no longer exists.", {"Edit the thread and click a round face."});
+    }
+    Resolution r = resolve(*bit->second, ref);
+    if (r.status == ResolveStatus::Missing || r.status == ResolveStatus::Ambiguous) {
+        return failed("The face to thread no longer exists.", {"Edit the thread and click a round face."});
+    }
+    const TopoDS_Face face = TopoDS::Face(bit->second->face(r.index));
+    BRepAdaptor_Surface sa(face);
+    if (sa.GetType() != GeomAbs_Cylinder) {
+        return failed("Threads go on round (cylindrical) faces: a shaft or the wall of a hole.");
+    }
+    auto pitch = doc.evalLength(p.value("pitch", std::string("1 mm")));
+    if (!pitch) {
+        return failed(pitch.error());
+    }
+    const double P = pitch.value();
+    const gp_Cylinder cy = sa.Cylinder();
+    const double R = cy.Radius();
+    if (P <= 1e-6 || P > R) {
+        return failed("The pitch must be more than zero and no more than the radius.",
+                      {"Metric coarse pitches: M3 0.5, M4 0.7, M5 0.8, M6 1, M8 1.25, M10 1.5, M12 1.75 mm."});
+    }
+    // shaft or hole: the face's outward side points away from the axis on a shaft
+    double u0, u1, v0, v1;
+    BRepTools::UVBounds(face, u0, u1, v0, v1);
+    gp_Pnt at;
+    gp_Vec du, dv;
+    sa.D1((u0 + u1) / 2, (v0 + v1) / 2, at, du, dv);
+    gp_Vec normal = du.Crossed(dv);
+    if (face.Orientation() == TopAbs_REVERSED) {
+        normal.Reverse();
+    }
+    const gp_Pnt c0 = cy.Location();
+    const gp_Dir axisDir = cy.Axis().Direction();
+    gp_Vec radial(c0, at);
+    radial -= gp_Vec(axisDir) * radial.Dot(gp_Vec(axisDir));
+    const bool hole = normal.Dot(radial) < 0;
+    // the face's extent along the axis
+    const double a0 = std::min(v0, v1), a1 = std::max(v0, v1);
+    const double depth = 0.6134 * P;  // the basic thread depth (5/8 of the 60-degree triangle's height)
+    const double extra = 0.1 * P;      // past the surface, so the cut is clean
+    const double half = (depth + extra) * std::tan(std::numbers::pi / 6);  // half the groove's widest width
+    const double start = a0 + half + 0.01 * P, end = a1 - half - 0.01 * P;
+    if (end - start < P * 0.25) {
+        return failed("This face is too short for a thread with this pitch.", {"Use a finer pitch, or a longer face."});
+    }
+    if (hole ? false : depth >= R * 0.9) {
+        return failed("The thread would be deeper than the shaft is thick.");
+    }
+    const double turns = (end - start) / P;
+    const bool left = p.value("hand", std::string("right")) == "left";
+    try {
+        const gp_Pnt c = c0.Translated(gp_Vec(axisDir) * start);
+        gp_Ax3 axis(c, axisDir, cy.Position().XDirection());
+        if (left) {
+            axis.YReverse();
+        }
+        // the helix runs at the groove's tip radius would be wrong for the section's frame; it
+        // runs on the face itself, with the section placed relative to it
+        Handle(Geom_CylindricalSurface) cs = new Geom_CylindricalSurface(axis, R);
+        const gp_Dir2d dir(2 * std::numbers::pi, P);
+        Handle(Geom2d_Line) line = new Geom2d_Line(gp_Pnt2d(0, 0), dir);
+        TopoDS_Edge helix = BRepBuilderAPI_MakeEdge(line, cs, 0, turns * std::hypot(2 * std::numbers::pi, P)).Edge();
+        BRepLib::BuildCurves3d(helix, 1e-7, GeomAbs_C2, 14, 400);
+        const TopoDS_Wire spine = BRepBuilderAPI_MakeWire(helix).Wire();
+        const gp_Dir out = axis.XDirection();
+        const gp_Pnt onFace = c.Translated(gp_Vec(out) * R);
+        // the triangle: tip into the material, wide end just outside it
+        const double inward = hole ? 1.0 : -1.0;  // which way is material along `out`
+        const gp_Pnt tip = onFace.Translated(gp_Vec(out) * (-inward * -depth));
+        const gp_Pnt b1 = onFace.Translated(gp_Vec(out) * (-inward * extra) + gp_Vec(axisDir) * half);
+        const gp_Pnt b2 = onFace.Translated(gp_Vec(out) * (-inward * extra) - gp_Vec(axisDir) * half);
+        BRepBuilderAPI_MakeWire tri;
+        tri.Add(BRepBuilderAPI_MakeEdge(tip, b1).Edge());
+        tri.Add(BRepBuilderAPI_MakeEdge(b1, b2).Edge());
+        tri.Add(BRepBuilderAPI_MakeEdge(b2, tip).Edge());
+        BRepOffsetAPI_MakePipeShell pipe(spine);
+        pipe.SetMode(axisDir);
+        pipe.Add(tri.Wire(), false, false);
+        pipe.Build();
+        if (!pipe.IsDone() || !pipe.MakeSolid()) {
+            return failed("This thread could not be made.", {"Try a coarser pitch."});
+        }
+        TopoDS_Shape groove = pipe.Shape();
+        GProp_GProps gp;
+        BRepGProp::VolumeProperties(groove, gp);
+        if (gp.Mass() < 0) {
+            groove.Reverse();
+        }
+        NamedShape tool(groove);
+        for (int i = 0; i < tool.faceCount(); ++i) {
+            tool.setFaceName(i, f.id + "/flank" + std::to_string(i + 1));
+        }
+        Feature g = f;
+        g.params["target"] = ref.body;
+        return applyTool(g, BoolOp::Cut, std::move(tool), in, status);
+    }
+    catch (const Standard_Failure& e) {
+        const char* m = e.GetMessageString();
+        return failed("This thread could not be made.", {"Try a coarser pitch."}, m ? m : "");
+    }
+}
+
 // ---------------------------------------------------------------- press pull
 
 // Pushes or pulls a flat face straight along its normal: out adds material, in removes it.
@@ -3274,6 +3389,8 @@ FeatureOutcome applyFeature(const Document& doc, const Feature& f, const std::sh
                 return applyDraft(doc, f, in);
             case FeatureKind::Scale:
                 return applyScale(doc, f, in);
+            case FeatureKind::Thread:
+                return applyThread(doc, f, in);
             case FeatureKind::Hole:
                 return applyHole(doc, f, in);
             case FeatureKind::Pattern:

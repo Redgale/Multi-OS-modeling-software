@@ -134,6 +134,7 @@ CommandRegistry::CommandRegistry()
     add({"solid.torus", "Torus", "Torus", "CREATE", "A ring (doughnut) lying on a plane, without drawing a sketch.", "", {"ring", "doughnut", "donut", "o-ring", "primitive", "basic shape"}, false, false, true, ""});
     add({"solid.rib", "Rib", "Rib", "CREATE", "A thin wall from an open sketch curve to the body: gussets that stiffen corners.", "", {"gusset", "web", "stiffener", "brace"}, false, false, true, ""});
     add({"solid.emboss", "Emboss", "Emboss", "CREATE", "Wrap a sketch's text or shapes onto a round face, raised out of it or sunk in.", "", {"wrap", "deboss", "engrave", "lettering", "text on cylinder"}, false, false, true, ""});
+    add({"solid.thread", "Thread", "Thread", "CREATE", "Cut a real screw thread into a shaft or the wall of a hole, for printed bolts and nuts.", "", {"screw thread", "tap", "bolt", "nut", "helical"}, false, false, true, ""});
     add({"solid.hole", "Hole", "Hole", "CREATE", "Drill a plain, counterbored or countersunk hole for a screw.", "H", {"drill", "screw hole", "bore", "countersink", "counterbore"}, true, false, false, m3});
     add({"solid.mirror", "Mirror", "Mirror", "CREATE", "Copy a body across a plane, e.g. to make a symmetric part.", "", {"symmetric", "flip copy"}, false, false, false, m3});
     add({"solid.pattern_rect", "Grid copy", "Rectangular Pattern", "CREATE", "Repeat a feature in rows and columns.", "", {"array", "grid", "repeat"}, false, false, false, m3});
@@ -174,7 +175,7 @@ CommandRegistry::CommandRegistry()
         "constraint.midpoint", "constraint.fix",
         "constraint.parallel", "constraint.perpendicular", "constraint.horizontal", "constraint.tangent",
         "constraint.symmetric", "constraint.equal", "solid.extrude", "solid.fillet", "solid.chamfer", "solid.shell",
-        "solid.revolve", "solid.loft", "solid.sweep", "solid.pipe", "solid.coil", "solid.box", "solid.cylinder", "solid.sphere", "solid.torus", "solid.rib", "solid.emboss", "solid.hole", "solid.mirror", "solid.pattern_rect", "solid.pattern_circ", "modify.parameters",
+        "solid.revolve", "solid.loft", "solid.sweep", "solid.pipe", "solid.coil", "solid.box", "solid.cylinder", "solid.sphere", "solid.torus", "solid.rib", "solid.emboss", "solid.thread", "solid.hole", "solid.mirror", "solid.pattern_rect", "solid.pattern_circ", "modify.parameters",
         "inspect.measure", "inspect.properties", "file.export_3mf", "construct.offset_plane", "construct.angle_plane",
         "construct.midplane", "construct.tangent_plane", "construct.points_plane", "construct.path_plane", "construct.axis", "construct.point", "solid.draft", "solid.scale", "solid.presspull", "solid.combine", "solid.split", "solid.move",
         "inspect.section", "insert.dxf", "insert.svg", "help.tutorial"};
@@ -1845,7 +1846,7 @@ Result<bool> ScriptRunner::runLineUnchecked(std::string_view rawLine)
     if (a.verb == "revolve" || a.verb == "hole" || a.verb == "pattern" || a.verb == "mirror" || a.verb == "loft" ||
         a.verb == "sweep" || a.verb == "pipe" || a.verb == "coil" ||
         a.verb == "box" || a.verb == "cylinder" || a.verb == "sphere" || a.verb == "torus" || a.verb == "rib" ||
-        a.verb == "emboss") {
+        a.verb == "emboss" || a.verb == "thread") {
         // revolve sketch=s1 axis=X|Y|Z|line:<name> [angle=360deg | extent=to to=<plane>|face:<name>]
         //         [op=new|join|cut|intersect] [profiles=…]
         // hole sketch=s2 diameter=3.4mm (depth=10mm | extent=all) [type=simple|counterbore|countersink]
@@ -1861,7 +1862,8 @@ Result<bool> ScriptRunner::runLineUnchecked(std::string_view rawLine)
             {"pipe", {FeatureKind::Pipe, "pi"}}, {"coil", {FeatureKind::Coil, "co"}},
             {"box", {FeatureKind::Primitive, "bx"}}, {"cylinder", {FeatureKind::Primitive, "cy"}},
             {"sphere", {FeatureKind::Primitive, "sp"}}, {"torus", {FeatureKind::Primitive, "to"}},
-            {"rib", {FeatureKind::Rib, "rb"}}, {"emboss", {FeatureKind::Emboss, "em"}}};
+            {"rib", {FeatureKind::Rib, "rb"}}, {"emboss", {FeatureKind::Emboss, "em"}},
+            {"thread", {FeatureKind::Thread, "th"}}};
         const auto& [kind, prefix] = kinds.at(a.verb);
         nlohmann::json params = nlohmann::json::object();
         for (auto& [k, v] : a.kv) {
@@ -1931,6 +1933,19 @@ Result<bool> ScriptRunner::runLineUnchecked(std::string_view rawLine)
                 params["center"] = xy;
             }
             params["flip"] = a.get("flip", "no") == "yes";
+        }
+        if (a.verb == "thread") {
+            // thread face=<round face name> pitch=1mm [hand=right|left]
+            params["face"] = nullptr;
+            for (auto& [bid, body] : doc.state().bodies) {
+                auto hits = body->findFaces(a.get("face"));
+                if (hits.size() == 1) {
+                    params["face"] = body->faceRef(bid, hits[0]).toJson();
+                }
+            }
+            if (params["face"].is_null()) {
+                return makeError("script.args", "There is no single face called '" + a.get("face") + "'.");
+            }
         }
         if (a.verb == "emboss") {
             // emboss sketch=s3 face=<round face name> depth=1mm [op=join|cut] [profiles=all|key;…]

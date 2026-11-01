@@ -1013,6 +1013,39 @@ private:
     QCheckBox* copy_;
 };
 
+// Create ▸ Thread: a real screw thread cut into a shaft or the wall of a hole.
+class ThreadPanel : public FeaturePanel
+{
+    Q_OBJECT
+public:
+    ThreadPanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent = nullptr);
+    QComboBox* face() const
+    {
+        return face_;
+    }
+    QComboBox* size() const
+    {
+        return size_;
+    }
+    ExprField* pitch() const
+    {
+        return pitch_;
+    }
+    QComboBox* hand() const
+    {
+        return hand_;
+    }
+    void pickFace(const std::string& body, const std::string& name);  // a click in the view
+
+protected:
+    jig::Feature draft() const override;
+    QString title() const override;
+
+private:
+    QComboBox *face_, *size_, *hand_;
+    ExprField* pitch_;
+};
+
 class MoveHandle;
 
 // Move / copy bodies: shift along X, Y, Z and turn around an origin axis.

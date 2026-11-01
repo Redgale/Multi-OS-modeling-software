@@ -620,6 +620,16 @@
     </message>
     <message>
         <location line="+1"/>
+        <source>Thread</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Cut a real screw thread into a shaft or the wall of a hole, for printed bolts and nuts.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>Hole</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1334,6 +1344,11 @@
     <message>
         <location line="+1"/>
         <source>Wrap a sketch&apos;s text or shapes onto a round face, raised out of it or sunk in.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Cut a real screw thread into a shaft or the wall of a hole, for printed bolts and nuts.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -2478,6 +2493,61 @@
     </message>
     <message>
         <location line="+1"/>
+        <source>The body of the face to thread no longer exists.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Edit the thread and click a round face.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The face to thread no longer exists.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Threads go on round (cylindrical) faces: a shaft or the wall of a hole.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The pitch must be more than zero and no more than the radius.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Metric coarse pitches: M3 0.5, M4 0.7, M5 0.8, M6 1, M8 1.25, M10 1.5, M12 1.75 mm.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>This face is too short for a thread with this pitch.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Use a finer pitch, or a longer face.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The thread would be deeper than the shaft is thick.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>This thread could not be made.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Try a coarser pitch.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>The body of the face to push or pull no longer exists.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3602,7 +3672,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-262"/>
+        <location line="-273"/>
         <source>This DXF has no lines, circles, arcs, curves, text or blocks to bring in.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3642,7 +3712,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+175"/>
+        <location line="+186"/>
         <source>The 3MF file could not be created.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4353,7 +4423,7 @@
 <context>
     <name>MainWindow</name>
     <message>
-        <location filename="../app/MainWindow.cpp" line="+529"/>
+        <location filename="../app/MainWindow.cpp" line="+531"/>
         <source>Rebuilding the design…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5635,7 +5705,7 @@
 <context>
     <name>jigapp::MainWindow</name>
     <message>
-        <location filename="../app/MainWindow.cpp" line="-162"/>
+        <location filename="../app/MainWindow.cpp" line="-164"/>
         <source>OK</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5661,15 +5731,15 @@
     </message>
     <message>
         <location line="+9"/>
-        <location line="+749"/>
+        <location line="+751"/>
         <location line="+738"/>
-        <location line="+928"/>
+        <location line="+931"/>
         <location line="+27"/>
         <source>Sketch</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2440"/>
+        <location line="-2445"/>
         <source>Extrude</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5791,6 +5861,11 @@
     <message>
         <location line="+2"/>
         <source>Scale</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Thread</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -5951,12 +6026,12 @@
     </message>
     <message>
         <location line="+2"/>
-        <location line="+1605"/>
+        <location line="+1608"/>
         <source>Mouse and trackpad</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1603"/>
+        <location line="-1606"/>
         <source>Default (middle-drag pans, Shift+middle orbits)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5977,30 +6052,30 @@
     </message>
     <message>
         <location line="+11"/>
-        <location line="+1578"/>
+        <location line="+1581"/>
         <source>Theme</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1576"/>
-        <location line="+1531"/>
+        <location line="-1579"/>
+        <location line="+1534"/>
         <source>Light</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1531"/>
-        <location line="+1530"/>
+        <location line="-1534"/>
+        <location line="+1533"/>
         <source>Dark</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1529"/>
-        <location line="+1531"/>
+        <location line="-1532"/>
+        <location line="+1534"/>
         <source>High contrast</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1523"/>
+        <location line="-1526"/>
         <source>&amp;Help</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6117,12 +6192,12 @@
     </message>
     <message>
         <location line="+2"/>
-        <location line="+2235"/>
+        <location line="+2250"/>
         <source>Rename…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2232"/>
+        <location line="-2247"/>
         <source>Delete body</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6138,13 +6213,13 @@
     </message>
     <message>
         <location line="+5"/>
-        <location line="+1585"/>
+        <location line="+1588"/>
         <location line="+58"/>
         <source>Properties</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1637"/>
+        <location line="-1640"/>
         <source>Properties and help</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6230,12 +6305,12 @@
     </message>
     <message>
         <location line="+18"/>
-        <location line="+2121"/>
+        <location line="+2136"/>
         <source>Move rollback marker</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1949"/>
+        <location line="-1964"/>
         <source>Start here: every part begins as a flat sketch.
 Click Sketch on the toolbar, then click a plane.
 Or open the phone stand sample (File ▸ Open a sample).</source>
@@ -6434,12 +6509,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+0"/>
-        <location line="+390"/>
+        <location line="+393"/>
         <source>Jigsmith designs (*.jig)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-343"/>
+        <location line="-346"/>
         <source>Save view</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6454,7 +6529,7 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+104"/>
+        <location line="+107"/>
         <source>Import STEP</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6604,12 +6679,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+0"/>
-        <location line="+1003"/>
+        <location line="+1012"/>
         <source>There is no 3D body yet.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1000"/>
+        <location line="-1009"/>
         <source>STL mesh for slicers (*.stl)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6879,7 +6954,7 @@ An empty design with the origin ready</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+164"/>
+        <location line="+173"/>
         <source>That face was made by %1: change its size here.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6995,7 +7070,7 @@ An empty design with the origin ready</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+54"/>
+        <location line="+57"/>
         <source>Edit…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7308,7 +7383,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::MovePanel</name>
     <message>
-        <location line="+2233"/>
+        <location line="+2333"/>
         <source>free %1</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7501,7 +7576,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::PatternPanel</name>
     <message>
-        <location line="-2953"/>
+        <location line="-3053"/>
         <location line="+154"/>
         <source>Pattern</source>
         <translation type="unfinished"></translation>
@@ -9784,6 +9859,70 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
     <message>
         <location line="+48"/>
         <source>sweep</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>jigapp::ThreadPanel</name>
+    <message>
+        <location line="+854"/>
+        <location line="+81"/>
+        <source>Thread</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-80"/>
+        <source>Cut a real screw thread: click a shaft (its size is the thread&apos;s outside) or the wall of a hole (its size is the thread&apos;s inside). For printing, a pitch of 1 mm or more prints best.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Typed pitch</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+11"/>
+        <source>Right-handed (most screws)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Left-handed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Round face</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Metric size (coarse pitch)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Pitch</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Winding</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+39"/>
+        <source>A thread needs a round face: make a shaft or a hole first.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+15"/>
+        <source>Click a round face: a shaft or the wall of a hole.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+17"/>
+        <source>thread</source>
         <translation type="unfinished"></translation>
     </message>
 </context>

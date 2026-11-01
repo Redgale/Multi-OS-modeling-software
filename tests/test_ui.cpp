@@ -3112,6 +3112,38 @@ private slots:
         sp->cancel();
     }
 
+    // Thread from the panel: pick M6 (1 mm pitch), click the shaft, OK cuts the groove.
+    void threadPanel()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        {
+            jig::ScriptRunner r(w.document());
+            QVERIFY(r.runText("cylinder id=cy1 diameter=6mm height=20mm\n").ok());
+        }
+        w.refreshAll();
+        w.runCommand("solid.thread");
+        auto* tp = qobject_cast<ThreadPanel*>(w.featurePanel());
+        QVERIFY(tp);
+        tp->size()->setCurrentIndex(tp->size()->findData("1 mm"));
+        QCOMPARE(tp->pitch()->text(), QString("1 mm"));
+        tp->face()->setCurrentIndex(-1);
+        tp->pickFace("cy1", "cy1/side");
+        QCOMPARE(tp->face()->currentText(), QString("cy1/side"));
+        QTRY_VERIFY_WITH_TIMEOUT(tp->previewOk(), 15000);
+        w.viewport()->homeView();
+        QTRY_VERIFY(w.viewport()->meshesReady());
+        QTest::qWait(200);
+        w.grab().save(shotPath("thread-panel"));
+        QVERIFY(tp->accept());
+        QTRY_VERIFY_WITH_TIMEOUT(w.featurePanel() == nullptr, 15000);
+        const double v = jig::massProperties(w.document().state().bodies.begin()->second->shape()).volume;
+        QVERIFY(v < std::numbers::pi * 9 * 20 - 50);
+        QVERIFY(w.document().status(1).level == jig::StatusLevel::Ok);
+    }
+
     // Areas of a sketch are picked by clicking them in the 3D view: a square with a circle in it
     // can become a round post (the circle) or a block with a hole (the ring), not only a block.
     void clickAreasToExtrude()

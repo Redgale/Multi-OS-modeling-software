@@ -2779,3 +2779,42 @@ TEST(Scale, EvenlyPerAxisAboutAPointAndCopies)
         EXPECT_FALSE(d->status(1).message.empty());
     }
 }
+
+TEST(Thread, ShaftsAndHolesGetAHelicalGroove)
+{
+    // a 6 mm shaft 20 long with a 1 mm pitch: the groove removes about its in-material
+    // triangle (depth^2 tan 30) screwed round at its centroid radius, over the threaded length
+    auto shaft = build("cylinder id=cy1 diameter=6mm height=20mm\nthread id=th1 face=cy1/side pitch=1mm\n");
+    expectAllOk(*shaft);
+    auto ps = props(*shaft);
+    EXPECT_TRUE(ps.valid);
+    EXPECT_EQ(ps.solids, 1);
+    const double depth = 0.6134, R = 3;
+    const double perTurn = depth * depth * std::tan(pi / 6) * 2 * pi * (R - depth / 3);
+    const double removed = pi * 9 * 20 - ps.volume;
+    EXPECT_GT(removed, perTurn * 17);
+    EXPECT_LT(removed, perTurn * 20);
+    EXPECT_NEAR(ps.xmax - ps.xmin, 6, 1e-3);  // the major diameter stays
+    // the two hands differ
+    auto left = build("cylinder id=cy1 diameter=6mm height=20mm\nthread id=th1 face=cy1/side pitch=1mm hand=left\n");
+    expectAllOk(*left);
+    EXPECT_NEAR(props(*left).volume, ps.volume, ps.volume * 1e-4);
+    // a 5 mm hole through a block, threaded: material is cut outwards from the hole wall
+    auto nut = build("box id=bx1 length=20mm width=20mm height=10mm\ncylinder id=cy2 diameter=5mm height=10mm op=cut\n"
+                     "thread id=th1 face=cy2/side pitch=0.8mm\n");
+    expectAllOk(*nut);
+    auto pn = props(*nut);
+    EXPECT_TRUE(pn.valid);
+    EXPECT_LT(pn.volume, 4000 - pi * 6.25 * 10 - 1);
+    // flat faces, a pitch larger than the radius and a face too short are refused
+    for (const char* bad : {"cylinder id=cy1 diameter=6mm height=20mm\nthread id=th1 face=cy1/top pitch=1mm\n",
+                            "cylinder id=cy1 diameter=6mm height=20mm\nthread id=th1 face=cy1/side pitch=4mm\n",
+                            "cylinder id=cy1 diameter=6mm height=0.5mm\nthread id=th1 face=cy1/side pitch=1mm\n"}) {
+        auto d = std::make_unique<Document>();
+        ScriptRunner r(*d);
+        r.strict = false;
+        ASSERT_TRUE(r.runText(bad).ok());
+        EXPECT_EQ(d->status(1).level, StatusLevel::Error) << bad;
+        EXPECT_FALSE(d->status(1).message.empty());
+    }
+}

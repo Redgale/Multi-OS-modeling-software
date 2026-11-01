@@ -4622,6 +4622,106 @@ QString ScalePanel::title() const
     return tr("scale");
 }
 
+// ---------------------------------------------------------------- Thread
+
+ThreadPanel::ThreadPanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent)
+    : FeaturePanel(doc, view, std::move(editId), parent)
+{
+    form_->addWidget(heading(this, tr("Thread"),
+                             tr("Cut a real screw thread: click a shaft (its size is the thread's outside) or the "
+                                "wall of a hole (its size is the thread's inside). For printing, a pitch of 1 mm "
+                                "or more prints best.")));
+    face_ = new QComboBox(this);
+    size_ = combo(this, {{tr("Typed pitch"), ""},
+                         {"M3 · 0.5 mm", "0.5 mm"},
+                         {"M4 · 0.7 mm", "0.7 mm"},
+                         {"M5 · 0.8 mm", "0.8 mm"},
+                         {"M6 · 1 mm", "1 mm"},
+                         {"M8 · 1.25 mm", "1.25 mm"},
+                         {"M10 · 1.5 mm", "1.5 mm"},
+                         {"M12 · 1.75 mm", "1.75 mm"},
+                         {"M16 · 2 mm", "2 mm"},
+                         {"M20 · 2.5 mm", "2.5 mm"}});
+    pitch_ = new ExprField(doc, jig::Dim::len(), this);
+    hand_ = combo(this, {{tr("Right-handed (most screws)"), "right"}, {tr("Left-handed"), "left"}});
+    addRow(tr("Round face"), face_);
+    addRow(tr("Metric size (coarse pitch)"), size_);
+    addRow(tr("Pitch"), pitch_);
+    bindParam("pitch", pitch_);
+    addRow(tr("Winding"), hand_);
+    const auto before = stateBefore();
+    for (auto& [bid, body] : before->bodies) {
+        for (int i = 0; i < body->faceCount(); ++i) {
+            BRepAdaptor_Surface sa(TopoDS::Face(body->face(i)));
+            if (sa.GetType() == GeomAbs_Cylinder && !body->faceName(i).empty()) {
+                face_->addItem(q(body->faceName(i)), q(body->faceRef(bid, i).toJson().dump()));
+            }
+        }
+    }
+    if (const jig::Feature* edit = editId_.empty() ? nullptr : doc_.feature(editId_)) {
+        const jig::ShapeRef ref = jig::ShapeRef::fromJson(edit->params.value("face", nlohmann::json::object()));
+        if (const int k = face_->findText(q(ref.name)); k >= 0) {
+            face_->setCurrentIndex(k);
+        }
+        pitch_->setText(q(edit->params.value("pitch", std::string("1 mm"))));
+        select(hand_, edit->params.value("hand", std::string("right")));
+    }
+    else {
+        pitch_->setText("1 mm");
+    }
+    connect(size_, &QComboBox::currentIndexChanged, this, [this] {
+        const QString p = size_->currentData().toString();
+        if (!p.isEmpty()) {
+            pitch_->setText(p);
+        }
+    });
+    connect(pitch_, &ExprField::changed, this, [this] { schedulePreview(); });
+    for (auto* c : {face_, hand_}) {
+        connect(c, &QComboBox::currentIndexChanged, this, [this] { schedulePreview(); });
+    }
+    if (view_) {
+        view_->setPickMode(PickMode::Faces);
+        connect(view_.data(), &Viewport::faceClicked, this,
+                [this](const QString& body, const QString& name, Qt::KeyboardModifiers) {
+                    pickFace(body.toStdString(), name.toStdString());
+                });
+    }
+    if (face_->count() == 0) {
+        status_->setText("<b>✕ " + tr("A thread needs a round face: make a shaft or a hole first.") + "</b>");
+        ok_->setEnabled(false);
+    }
+    else {
+        schedulePreview();
+    }
+}
+
+void ThreadPanel::pickFace(const std::string& body, const std::string& name)
+{
+    (void)body;
+    if (const int k = face_->findText(q(name)); k >= 0) {
+        face_->setCurrentIndex(k);
+    }
+    else {
+        status_->setText("<b>✕ " + tr("Click a round face: a shaft or the wall of a hole.") + "</b>");
+    }
+}
+
+jig::Feature ThreadPanel::draft() const
+{
+    jig::Feature f = startDraft(doc_, editId_, "th", tr("Thread"));
+    f.kind = jig::FeatureKind::Thread;
+    const std::string ref = face_->currentData().toString().toStdString();
+    f.params = {{"face", ref.empty() ? nlohmann::json::object() : nlohmann::json::parse(ref, nullptr, false)},
+                {"pitch", pitch_->text().toStdString()},
+                {"hand", current(hand_)}};
+    return f;
+}
+
+QString ThreadPanel::title() const
+{
+    return tr("thread");
+}
+
 // ---------------------------------------------------------------- Move
 
 // Three arrows (X, Y, Z) from the bodies' centre; drag a grip to move along that axis.

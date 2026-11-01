@@ -135,6 +135,7 @@ public:
     void openEmboss(const std::string& editId);
     void openDraft(const std::string& editId);
     void openScale(const std::string& editId);
+    void openThread(const std::string& editId);
     void openPrimitive(const std::string& editId, const std::string& shape);
     void openPlane(const std::string& editId = {}, const std::string& kind = "offset");
     void openAxis(const std::string& editId = {});

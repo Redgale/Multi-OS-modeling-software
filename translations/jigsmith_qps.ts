@@ -619,6 +619,16 @@
     </message>
     <message>
         <location line="+1" />
+        <source>Thread</source>
+        <translation>[Thréád~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Cut a real screw thread into a shaft or the wall of a hole, for printed bolts and nuts.</source>
+        <translation>[Çüt á réál sçréw thréád îñtö á sháft ör thé wáll öf á hölé, för prîñtéd bölts áñd ñüts.~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
         <source>Hole</source>
         <translation>[Hölé~]</translation>
     </message>
@@ -1334,6 +1344,11 @@
         <location line="+1" />
         <source>Wrap a sketch's text or shapes onto a round face, raised out of it or sunk in.</source>
         <translation>[Wráp á skétçh's téxt ör shápés öñtö á röüñd fáçé, ráîséd öüt öf ît ör süñk îñ.~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Cut a real screw thread into a shaft or the wall of a hole, for printed bolts and nuts.</source>
+        <translation>[Çüt á réál sçréw thréád îñtö á sháft ör thé wáll öf á hölé, för prîñtéd bölts áñd ñüts.~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
         <location line="+1" />
@@ -2477,6 +2492,61 @@
     </message>
     <message>
         <location line="+1" />
+        <source>The body of the face to thread no longer exists.</source>
+        <translation>[Thé bödý öf thé fáçé tö thréád ñö löñgér éxîsts.~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Edit the thread and click a round face.</source>
+        <translation>[Édît thé thréád áñd çlîçk á röüñd fáçé.~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The face to thread no longer exists.</source>
+        <translation>[Thé fáçé tö thréád ñö löñgér éxîsts.~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Threads go on round (cylindrical) faces: a shaft or the wall of a hole.</source>
+        <translation>[Thréáds gö öñ röüñd (çýlîñdrîçál) fáçés: á sháft ör thé wáll öf á hölé.~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The pitch must be more than zero and no more than the radius.</source>
+        <translation>[Thé pîtçh müst bé möré tháñ zérö áñd ñö möré tháñ thé rádîüs.~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Metric coarse pitches: M3 0.5, M4 0.7, M5 0.8, M6 1, M8 1.25, M10 1.5, M12 1.75 mm.</source>
+        <translation>[Métrîç çöársé pîtçhés: M3 0.5, M4 0.7, M5 0.8, M6 1, M8 1.25, M10 1.5, M12 1.75 mm.~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>This face is too short for a thread with this pitch.</source>
+        <translation>[Thîs fáçé îs töö shört för á thréád wîth thîs pîtçh.~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Use a finer pitch, or a longer face.</source>
+        <translation>[Üsé á fîñér pîtçh, ör á löñgér fáçé.~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>The thread would be deeper than the shaft is thick.</source>
+        <translation>[Thé thréád wöüld bé déépér tháñ thé sháft îs thîçk.~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>This thread could not be made.</source>
+        <translation>[Thîs thréád çöüld ñöt bé mádé.~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Try a coarser pitch.</source>
+        <translation>[Trý á çöársér pîtçh.~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
         <source>The body of the face to push or pull no longer exists.</source>
         <translation>[Thé bödý öf thé fáçé tö püsh ör püll ñö löñgér éxîsts.~~~~~~~~~~~~~~]</translation>
     </message>
@@ -3601,7 +3671,7 @@
         <translation>[Théré îs ñöthîñg tö éxpört ýét.~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="-262" />
+        <location line="-273" />
         <source>This DXF has no lines, circles, arcs, curves, text or blocks to bring in.</source>
         <translation>[Thîs DXF hás ñö lîñés, çîrçlés, árçs, çürvés, téxt ör blöçks tö brîñg îñ.~~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -3641,7 +3711,7 @@
         <translation>[Thát fáçé îs lévél wîth thé skétçh, sö théré îs ñö wáý tö téll whîçh wáý tö éxtrüdé.~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+175" />
+        <location line="+186" />
         <source>The 3MF file could not be created.</source>
         <translation>[Thé 3MF fîlé çöüld ñöt bé çréátéd.~~~~~~~~]</translation>
     </message>
@@ -4352,7 +4422,7 @@
 <context>
     <name>MainWindow</name>
     <message>
-        <location filename="../app/MainWindow.cpp" line="+529" />
+        <location filename="../app/MainWindow.cpp" line="+531" />
         <source>Rebuilding the design…</source>
         <translation>[Rébüîldîñg thé désîgñ…~~~~~~]</translation>
     </message>
@@ -5630,7 +5700,7 @@
 <context>
     <name>jigapp::MainWindow</name>
     <message>
-        <location filename="../app/MainWindow.cpp" line="-162" />
+        <location filename="../app/MainWindow.cpp" line="-164" />
         <source>OK</source>
         <translation>[ÖK~]</translation>
     </message>
@@ -5656,15 +5726,15 @@
     </message>
     <message>
         <location line="+9" />
-        <location line="+749" />
+        <location line="+751" />
         <location line="+738" />
-        <location line="+928" />
+        <location line="+931" />
         <location line="+27" />
         <source>Sketch</source>
         <translation>[Skétçh~~]</translation>
     </message>
     <message>
-        <location line="-2440" />
+        <location line="-2445" />
         <source>Extrude</source>
         <translation>[Éxtrüdé~~]</translation>
     </message>
@@ -5787,6 +5857,11 @@
         <location line="+2" />
         <source>Scale</source>
         <translation>[Sçálé~]</translation>
+    </message>
+    <message>
+        <location line="+2" />
+        <source>Thread</source>
+        <translation>[Thréád~~]</translation>
     </message>
     <message>
         <location line="+2" />
@@ -5946,12 +6021,12 @@
     </message>
     <message>
         <location line="+2" />
-        <location line="+1605" />
+        <location line="+1608" />
         <source>Mouse and trackpad</source>
         <translation>[Möüsé áñd tráçkpád~~~~~]</translation>
     </message>
     <message>
-        <location line="-1603" />
+        <location line="-1606" />
         <source>Default (middle-drag pans, Shift+middle orbits)</source>
         <translation>[Défáült (mîddlé-drág páñs, Shîft+mîddlé örbîts)~~~~~~~~~~~~]</translation>
     </message>
@@ -5972,30 +6047,30 @@
     </message>
     <message>
         <location line="+11" />
-        <location line="+1578" />
+        <location line="+1581" />
         <source>Theme</source>
         <translation>[Thémé~]</translation>
     </message>
     <message>
-        <location line="-1576" />
-        <location line="+1531" />
+        <location line="-1579" />
+        <location line="+1534" />
         <source>Light</source>
         <translation>[Lîght~]</translation>
     </message>
     <message>
-        <location line="-1531" />
-        <location line="+1530" />
+        <location line="-1534" />
+        <location line="+1533" />
         <source>Dark</source>
         <translation>[Dárk~]</translation>
     </message>
     <message>
-        <location line="-1529" />
-        <location line="+1531" />
+        <location line="-1532" />
+        <location line="+1534" />
         <source>High contrast</source>
         <translation>[Hîgh çöñtrást~~~~]</translation>
     </message>
     <message>
-        <location line="-1523" />
+        <location line="-1526" />
         <source>&amp;Help</source>
         <translation>[&amp;Hélp~]</translation>
     </message>
@@ -6112,12 +6187,12 @@
     </message>
     <message>
         <location line="+2" />
-        <location line="+2235" />
+        <location line="+2250" />
         <source>Rename…</source>
         <translation>[Réñámé…~~]</translation>
     </message>
     <message>
-        <location line="-2232" />
+        <location line="-2247" />
         <source>Delete body</source>
         <translation>[Délété bödý~~~]</translation>
     </message>
@@ -6133,13 +6208,13 @@
     </message>
     <message>
         <location line="+5" />
-        <location line="+1585" />
+        <location line="+1588" />
         <location line="+58" />
         <source>Properties</source>
         <translation>[Pröpértîés~~~]</translation>
     </message>
     <message>
-        <location line="-1637" />
+        <location line="-1640" />
         <source>Properties and help</source>
         <translation>[Pröpértîés áñd hélp~~~~~]</translation>
     </message>
@@ -6225,12 +6300,12 @@
     </message>
     <message>
         <location line="+18" />
-        <location line="+2121" />
+        <location line="+2136" />
         <source>Move rollback marker</source>
         <translation>[Mövé röllbáçk márkér~~~~~~]</translation>
     </message>
     <message>
-        <location line="-1949" />
+        <location line="-1964" />
         <source>Start here: every part begins as a flat sketch.
 Click Sketch on the toolbar, then click a plane.
 Or open the phone stand sample (File ▸ Open a sample).</source>
@@ -6431,12 +6506,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+0" />
-        <location line="+390" />
+        <location line="+393" />
         <source>Jigsmith designs (*.jig)</source>
         <translation>[Jîgsmîth désîgñs (*.jîg)~~~~~~]</translation>
     </message>
     <message>
-        <location line="-343" />
+        <location line="-346" />
         <source>Save view</source>
         <translation>[Sávé vîéw~~]</translation>
     </message>
@@ -6451,7 +6526,7 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
         <translation>[Vîéw %1~]</translation>
     </message>
     <message>
-        <location line="+104" />
+        <location line="+107" />
         <source>Import STEP</source>
         <translation>[Împört STÉP~~~]</translation>
     </message>
@@ -6599,12 +6674,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+0" />
-        <location line="+1003" />
+        <location line="+1012" />
         <source>There is no 3D body yet.</source>
         <translation>[Théré îs ñö 3D bödý ýét.~~~~~]</translation>
     </message>
     <message>
-        <location line="-1000" />
+        <location line="-1009" />
         <source>STL mesh for slicers (*.stl)</source>
         <translation>[STL mésh för slîçérs (*.stl)~~~~~~]</translation>
     </message>
@@ -6875,7 +6950,7 @@ An empty design with the origin ready</source>
         <translation>[Théré îs ñö 3D bödý ýét: skétçh áñd éxtrüdé fîrst.~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+164" />
+        <location line="+173" />
         <source>That face was made by %1: change its size here.</source>
         <translation>[Thát fáçé wás mádé bý %1: çháñgé îts sîzé héré.~~~~~~~~~~~]</translation>
     </message>
@@ -6987,7 +7062,7 @@ An empty design with the origin ready</source>
         <translation>[Áñ împörtéd sölîd hás ñö séttîñgs tö çháñgé. Tö üsé á ñéwér çöpý öf thé fîlé, délété thîs stép áñd împört ît ágáîñ.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+54" />
+        <location line="+57" />
         <source>Edit…</source>
         <translation>[Édît…~]</translation>
     </message>
@@ -7302,7 +7377,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
 <context>
     <name>jigapp::MovePanel</name>
     <message>
-        <location line="+2233" />
+        <location line="+2333" />
         <source>free %1</source>
         <translation>[fréé %1~]</translation>
     </message>
@@ -7493,7 +7568,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
 <context>
     <name>jigapp::PatternPanel</name>
     <message>
-        <location line="-2953" />
+        <location line="-3053" />
         <location line="+154" />
         <source>Pattern</source>
         <translation>[Páttérñ~~]</translation>
@@ -9771,6 +9846,70 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
         <location line="+48" />
         <source>sweep</source>
         <translation>[swéép~]</translation>
+    </message>
+</context>
+<context>
+    <name>jigapp::ThreadPanel</name>
+    <message>
+        <location line="+854" />
+        <location line="+81" />
+        <source>Thread</source>
+        <translation>[Thréád~~]</translation>
+    </message>
+    <message>
+        <location line="-80" />
+        <source>Cut a real screw thread: click a shaft (its size is the thread's outside) or the wall of a hole (its size is the thread's inside). For printing, a pitch of 1 mm or more prints best.</source>
+        <translation>[Çüt á réál sçréw thréád: çlîçk á sháft (îts sîzé îs thé thréád's öütsîdé) ör thé wáll öf á hölé (îts sîzé îs thé thréád's îñsîdé). För prîñtîñg, á pîtçh öf 1 mm ör möré prîñts bést.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+4" />
+        <source>Typed pitch</source>
+        <translation>[Týpéd pîtçh~~~]</translation>
+    </message>
+    <message>
+        <location line="+11" />
+        <source>Right-handed (most screws)</source>
+        <translation>[Rîght-háñdéd (möst sçréws)~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+0" />
+        <source>Left-handed</source>
+        <translation>[Léft-háñdéd~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Round face</source>
+        <translation>[Röüñd fáçé~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Metric size (coarse pitch)</source>
+        <translation>[Métrîç sîzé (çöársé pîtçh)~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>Pitch</source>
+        <translation>[Pîtçh~]</translation>
+    </message>
+    <message>
+        <location line="+2" />
+        <source>Winding</source>
+        <translation>[Wîñdîñg~~]</translation>
+    </message>
+    <message>
+        <location line="+39" />
+        <source>A thread needs a round face: make a shaft or a hole first.</source>
+        <translation>[Á thréád ñééds á röüñd fáçé: máké á sháft ör á hölé fîrst.~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+15" />
+        <source>Click a round face: a shaft or the wall of a hole.</source>
+        <translation>[Çlîçk á röüñd fáçé: á sháft ör thé wáll öf á hölé.~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+17" />
+        <source>thread</source>
+        <translation>[thréád~~]</translation>
     </message>
 </context>
 <context>

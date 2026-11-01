@@ -180,6 +180,8 @@ QString kindWord(jig::FeatureKind k)
             return MainWindow::tr("Draft");
         case jig::FeatureKind::Scale:
             return MainWindow::tr("Scale");
+        case jig::FeatureKind::Thread:
+            return MainWindow::tr("Thread");
         case jig::FeatureKind::Move:
             return MainWindow::tr("Move");
     }
@@ -1759,6 +1761,9 @@ void MainWindow::runCommand(const QString& id)
     else if (id == "solid.box" || id == "solid.cylinder" || id == "solid.sphere" || id == "solid.torus") {
         openPrimitive({}, id.mid(6).toStdString());
     }
+    else if (id == "solid.thread") {
+        openThread({});
+    }
     else if (id == "solid.scale") {
         openScale({});
     }
@@ -2844,6 +2849,15 @@ void MainWindow::openScale(const std::string& editId)
     showPanel(new ScalePanel(*doc_, view_, editId, panelHost_));
 }
 
+void MainWindow::openThread(const std::string& editId)
+{
+    if (sketch_) {
+        exitSketch();
+    }
+    cancelPicker();
+    showPanel(new ThreadPanel(*doc_, view_, editId, panelHost_));
+}
+
 void MainWindow::openLoft(const std::string& editId)
 {
     if (sketch_) {
@@ -3215,6 +3229,9 @@ void MainWindow::editFeature(int index)
             break;
         case jig::FeatureKind::Scale:
             openScale(f.id);
+            break;
+        case jig::FeatureKind::Thread:
+            openThread(f.id);
             break;
         case jig::FeatureKind::Sweep:
             openSweep(f.id);

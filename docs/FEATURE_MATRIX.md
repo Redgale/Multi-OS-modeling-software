@@ -117,7 +117,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Hole: simple, counterbore, countersink; distance/all; drill point | 16 | v0.1 M3 | **app** + scripts: all three types, depth or through; flat bottom or 118° drill point; screw-size clearance table (ISO 273, US drill chart) with close/normal/loose fit | |
 | Hole from sketch points | 16 | v0.1 M3 | **app** + scripts | |
 | Clearance hole sizes | 16 | v0.1 M3 | **app** + scripts (`hole size= fit=`): metric (ISO 273) and US screw sizes, close/normal/loose fit, counterbore and countersink for the head | Hobby tip table |
-| Tapped holes, Thread (modelled/cosmetic) | 16 | v0.2 | — | |
+| Tapped holes, Thread (modelled/cosmetic) | 16 | v0.2 | **app** + scripts (`thread`): modelled 60° threads on shafts and in holes, metric coarse pitches offered, either hand | Cosmetic threads and tapped-hole option in Hole not yet |
 | Fillet constant | 18 | v0.1 M3 | **app** (edge picking, preview, one-click fix) + scripts | |
 | Fillet variable | 18 | v0.1 M3 | **app** + scripts: one radius at each end of an edge | |
 | Fillet chord length, setback corners, G2 | 18 | v0.2 | — | |
