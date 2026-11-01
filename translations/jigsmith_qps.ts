@@ -2336,7 +2336,17 @@
         <translation>[Éxpört á sölîd (ñöt jüst sürfáçés) fröm thé öthér prögrám.~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+63" />
+        <location line="+40" />
+        <source>Extend works on lines and arcs. An ellipse or smooth curve can be what they run to, but not extended itself.</source>
+        <translation>[Éxtéñd wörks öñ lîñés áñd árçs. Áñ éllîpsé ör smööth çürvé çáñ bé whát théý rüñ tö, büt ñöt éxtéñdéd îtsélf.~~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+3" />
+        <source>Click a curve to break it.</source>
+        <translation>[Çlîçk á çürvé tö bréák ît.~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+20" />
         <source>Pick an edge to project.</source>
         <translation>[Pîçk áñ édgé tö pröjéçt.~~~~~~]</translation>
     </message>
@@ -3236,12 +3246,7 @@
         <translation>[Á skétçh îñ thîs fîlé îs dámágéd.~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+1" />
-        <source>Extend works on lines and arcs (not ellipses or smooth curves yet).</source>
-        <translation>[Éxtéñd wörks öñ lîñés áñd árçs (ñöt éllîpsés ör smööth çürvés ýét).~~~~~~~~~~~~~~~~~]</translation>
-    </message>
-    <message>
-        <location line="+1" />
+        <location line="+2" />
         <source>That end is joined to another curve. Only a loose end can be extended.</source>
         <translation>[Thát éñd îs jöîñéd tö áñöthér çürvé. Öñlý á löösé éñd çáñ bé éxtéñdéd.~~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -3251,12 +3256,7 @@
         <translation>[Ñöthîñg lîés áhéád öf thát éñd tö éxtéñd ît tö.~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+1" />
-        <source>Click a line, circle or arc to break it (not an ellipse or smooth curve yet).</source>
-        <translation>[Çlîçk á lîñé, çîrçlé ör árç tö bréák ît (ñöt áñ éllîpsé ör smööth çürvé ýét).~~~~~~~~~~~~~~~~~~~]</translation>
-    </message>
-    <message>
-        <location line="+1" />
+        <location line="+2" />
         <source>Nothing crosses this curve there, so there is nowhere to break it.</source>
         <translation>[Ñöthîñg çrössés thîs çürvé théré, sö théré îs ñöwhéré tö bréák ît.~~~~~~~~~~~~~~~~~]</translation>
     </message>

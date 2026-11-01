@@ -314,6 +314,10 @@ private:
     void syncCurvePoints();
     void dropUnusedPoint(int pointId);
     int attachedPoint(int skipEntity, double px, double py);
+    // Cuts an ellipse or smooth curve where other curves cross it: drops the piece nearest
+    // (x, y) (trim), or keeps them all (break). The kept pieces are smooth curves through
+    // points along the original; its own end points stay.
+    bool splitFreeForm(int entityId, double x, double y, bool keepAll, std::vector<int>* made);
     int crossingCurveOf(int pointId) const;
     void dropSizeConstraints(int entityId);
 

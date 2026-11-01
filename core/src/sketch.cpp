@@ -397,11 +397,56 @@ std::optional<Sketch::TrimPiece> Sketch::trimPiece(int entityId, double x, doubl
     };
     std::vector<double> cuts;
     for (auto& [id, e] : entities_) {
-        if (id == entityId || e.type == EntityType::Point || e.construction || freeForm(e.type)) {
+        if (id == entityId || e.type == EntityType::Point || e.construction) {
+            continue;
+        }
+        std::vector<std::pair<double, double>> pts;
+        if (freeForm(e.type)) {
+            // an ellipse or smooth curve cuts too: where its short pieces cross this curve
+            const auto Q = curvePoints(id, 32);
+            for (size_t k = 0; k + 1 < Q.size(); ++k) {
+                const double wEnd = k + 2 == Q.size() ? 1 + 1e-12 : 1;  // the curve's last point counts
+                const double qx = Q[k].first, qy = Q[k].second, ex = Q[k + 1].first - qx, ey = Q[k + 1].second - qy;
+                if (T.line) {
+                    const double rx = T.bx - T.ax, ry = T.by - T.ay, den = rx * ey - ry * ex;
+                    if (std::abs(den) < 1e-12) {
+                        continue;
+                    }
+                    const double w = ((qx - T.ax) * ry - (qy - T.ay) * rx) / den;  // along the piece
+                    if (w >= 0 && w < wEnd) {
+                        pts.emplace_back(qx + ex * w, qy + ey * w);
+                    }
+                }
+                else {
+                    const double fx = qx - T.cx, fy = qy - T.cy;
+                    const double A = ex * ex + ey * ey, B = 2 * (fx * ex + fy * ey), Cc = fx * fx + fy * fy - T.r * T.r;
+                    const double disc = B * B - 4 * A * Cc;
+                    if (A > 0 && disc >= 0) {
+                        for (double sgn : {-1.0, 1.0}) {
+                            const double w = (-B + sgn * std::sqrt(disc)) / (2 * A);
+                            if (w >= 0 && w < wEnd) {
+                                pts.emplace_back(qx + ex * w, qy + ey * w);
+                            }
+                        }
+                    }
+                }
+            }
+            for (auto [px, py] : pts) {
+                if (!onArc(T, px, py)) {
+                    continue;
+                }
+                const double prm = paramOf(px, py);
+                const double end = T.line ? 1.0 : T.span;
+                if (!T.line && T.span >= kTau - eps) {
+                    cuts.push_back(prm > end - eps ? 0.0 : prm);
+                }
+                else if (prm > eps && prm < end - eps) {
+                    cuts.push_back(prm);
+                }
+            }
             continue;
         }
         const Geo C = geoOf(e);
-        std::vector<std::pair<double, double>> pts;
         if (T.line && C.line) {
             const double rx = T.bx - T.ax, ry = T.by - T.ay, sx = C.bx - C.ax, sy = C.by - C.ay;
             const double den = rx * sy - ry * sx;
@@ -702,11 +747,12 @@ int Sketch::attachedPoint(int entityId, double px, double py)
     const int pid = addPoint(px, py, true);
     // the crossing curve(s): every other curve passing through (px, py)
     for (auto& [id, e] : entities_) {
-        if (id == entityId || e.type == EntityType::Point || e.construction || id == pid || freeForm(e.type)) {
+        if (id == entityId || e.type == EntityType::Point || e.construction || id == pid) {
             continue;
         }
-        // an existing endpoint there: share it
-        for (int q : {e.p1, e.p2}) {
+        // an existing endpoint there (a smooth curve's too): share it
+        const int f0 = e.pts.empty() ? 0 : e.pts.front(), f1 = e.pts.empty() ? 0 : e.pts.back();
+        for (int q : {e.p1, e.p2, f0, f1}) {
             if (q && q != pid) {
                 auto [qx, qy] = pointXY(q);
                 if (std::hypot(qx - px, qy - py) < 1e-6) {
@@ -758,8 +804,167 @@ void Sketch::dropSizeConstraints(int entityId)
     });
 }
 
+bool Sketch::splitFreeForm(int entityId, double x, double y, bool keepAll, std::vector<int>* made)
+{
+    const SketchEntity* t = entity(entityId);
+    if (!t || !freeForm(t->type)) {
+        return false;
+    }
+    // the curve as short pieces, and the distance along it to each point
+    const auto P = curvePoints(entityId, 32);
+    if (P.size() < 2) {
+        return false;
+    }
+    std::vector<double> S(P.size(), 0.0);
+    for (size_t k = 1; k < P.size(); ++k) {
+        S[k] = S[k - 1] + std::hypot(P[k].first - P[k - 1].first, P[k].second - P[k - 1].second);
+    }
+    const double L = S.back();
+    const bool closed = std::hypot(P.front().first - P.back().first, P.front().second - P.back().second) < 1e-9;
+    auto at = [&](double s) {
+        if (closed) {
+            s = std::fmod(std::fmod(s, L) + L, L);
+        }
+        size_t k = 0;
+        while (k + 2 < P.size() && S[k + 1] < s) {
+            ++k;
+        }
+        const double seg = S[k + 1] - S[k], w = seg > 0 ? std::clamp((s - S[k]) / seg, 0.0, 1.0) : 0;
+        return std::pair {P[k].first + (P[k + 1].first - P[k].first) * w, P[k].second + (P[k + 1].second - P[k].second) * w};
+    };
+    // where other curves cross it (their own short pieces, or exact lines)
+    struct C
+    {
+        double s;
+        int entity;
+    };
+    std::vector<C> cuts;
+    for (auto& [id, e] : entities_) {
+        if (id == entityId || e.type == EntityType::Point || e.construction) {
+            continue;
+        }
+        const auto Q = curvePoints(id, 32);
+        for (size_t i = 0; i + 1 < P.size(); ++i) {
+            const double ax = P[i].first, ay = P[i].second, rx = P[i + 1].first - ax, ry = P[i + 1].second - ay;
+            for (size_t j = 0; j + 1 < Q.size(); ++j) {
+                const double bx = Q[j].first, by = Q[j].second, sx = Q[j + 1].first - bx, sy = Q[j + 1].second - by;
+                const double den = rx * sy - ry * sx;
+                if (std::abs(den) < 1e-14) {
+                    continue;
+                }
+                const double u = ((bx - ax) * sy - (by - ay) * sx) / den, v = ((bx - ax) * ry - (by - ay) * rx) / den;
+                if (u >= 0 && u < 1 && v >= 0 && v <= 1) {
+                    const double s = S[i] + u * (S[i + 1] - S[i]);
+                    if (closed || (s > 1e-7 && s < L - 1e-7)) {
+                        cuts.push_back({s, id});
+                    }
+                }
+            }
+        }
+    }
+    std::sort(cuts.begin(), cuts.end(), [](const C& a, const C& b) { return a.s < b.s; });
+    cuts.erase(std::unique(cuts.begin(), cuts.end(), [&](const C& a, const C& b) { return b.s - a.s < 1e-6 * std::max(1.0, L); }), cuts.end());
+    // where the click is along it
+    double click = 0, best = 1e300;
+    for (size_t k = 0; k + 1 < P.size(); ++k) {
+        const double ax = P[k].first, ay = P[k].second, dx = P[k + 1].first - ax, dy = P[k + 1].second - ay;
+        const double L2 = dx * dx + dy * dy, w = L2 > 0 ? std::clamp(((x - ax) * dx + (y - ay) * dy) / L2, 0.0, 1.0) : 0;
+        const double d = std::hypot(ax + dx * w - x, ay + dy * w - y);
+        if (d < best) {
+            best = d;
+            click = S[k] + w * std::sqrt(L2);
+        }
+    }
+    // the pieces between cuts: [from, to] with the curve that ends each one there (0: an end)
+    struct Piece
+    {
+        double from, to;
+        int fromCut, toCut;
+    };
+    std::vector<Piece> pieces;
+    if (closed) {
+        if (cuts.size() < (keepAll ? 1u : 2u)) {
+            if (!keepAll && cuts.size() < 2) {
+                return remove(entityId);  // nothing to stop at: the whole curve goes
+            }
+            return false;
+        }
+        for (size_t k = 0; k < cuts.size(); ++k) {
+            const C& a = cuts[k];
+            const C& b = cuts[(k + 1) % cuts.size()];
+            pieces.push_back({a.s, b.s > a.s ? b.s : b.s + L, a.entity, b.entity});
+        }
+    }
+    else {
+        double from = 0;
+        int fromCut = 0;
+        for (const C& c : cuts) {
+            pieces.push_back({from, c.s, fromCut, c.entity});
+            from = c.s;
+            fromCut = c.entity;
+        }
+        pieces.push_back({from, L, fromCut, 0});
+        if (pieces.size() < 2) {
+            return keepAll ? false : remove(entityId);
+        }
+    }
+    auto contains = [&](const Piece& p) {
+        return (click >= p.from && click <= p.to) || (closed && click + L >= p.from && click + L <= p.to);
+    };
+    // the original's own end points stay, so curves joined to them stay joined
+    const std::vector<int> fit = t->pts;
+    const int startPt = !closed && !fit.empty() ? fit.front() : 0, endPt = !closed && !fit.empty() ? fit.back() : 0;
+    std::map<long long, int> cutPoints;  // break: neighbouring pieces share the point between them
+    std::vector<int> out;
+    for (const Piece& p : pieces) {
+        if (!keepAll && contains(p)) {
+            continue;  // the clicked piece goes
+        }
+        const int m = std::max(4, int(std::ceil(48 * (p.to - p.from) / L)));
+        std::vector<std::pair<double, double>> pts;
+        for (int k = 0; k <= m; ++k) {
+            pts.push_back(at(p.from + (p.to - p.from) * k / m));
+        }
+        const int id = addSpline(pts, false);
+        SketchEntity& ne = entities_.at(id);
+        auto reuse = [&](size_t slot, int keep) {
+            const int made = ne.pts[slot];
+            ne.pts[slot] = keep;
+            entities_.erase(made);
+        };
+        const long long kf = std::llround(p.from * 1e6), kt = std::llround(std::fmod(p.to, L) * 1e6);
+        if (p.from <= 1e-9 && startPt) {
+            reuse(0, startPt);
+        }
+        else if (keepAll && cutPoints.count(kf)) {
+            reuse(0, cutPoints[kf]);
+        }
+        else {
+            cutPoints[kf] = ne.pts.front();
+        }
+        if (p.to >= L - 1e-9 && endPt && !closed) {
+            reuse(ne.pts.size() - 1, endPt);
+        }
+        else if (keepAll && cutPoints.count(kt)) {
+            reuse(ne.pts.size() - 1, cutPoints[kt]);
+        }
+        else {
+            cutPoints[kt] = ne.pts.back();
+        }
+        out.push_back(id);
+    }
+    remove(entityId);
+    if (made) {
+        *made = out;
+    }
+    return true;
+}
+
 bool Sketch::trim(int entityId, double x, double y)
 {
+    if (const SketchEntity* e = entity(entityId); e && freeForm(e->type)) {
+        return splitFreeForm(entityId, x, y, false, nullptr);  // an ellipse or smooth curve
+    }
     auto piece = trimPiece(entityId, x, y);
     if (!piece) {
         return false;

@@ -951,6 +951,26 @@ TEST(SketchExtend, LinesAndArcsReachTheNextCurve)
     EXPECT_NE(a.solve().state, SolveState::Failed);
 }
 
+TEST(SketchExtend, LinesRunOnToEllipsesAndSmoothCurves)
+{
+    // an ellipse centred at (30, 0), radii 10 and 5: the line y = 3 meets it at x = 22
+    Sketch s;
+    const int l = s.addLine(0, 3, 10, 3);
+    const int el = s.addEllipse(30, 0, 40, 0, 5);
+    auto r = s.extend(l, 9, 3);
+    ASSERT_TRUE(r.ok()) << r.error().message;
+    EXPECT_NEAR(s.pointXY(s.entity(l)->p2).first, 22, 0.05);
+    EXPECT_NEAR(s.pointXY(s.entity(l)->p2).second, 3, 1e-9);
+    // a smooth curve through (50, -10), (50, 0), (50, 10): the line's other end runs to it
+    Sketch c;
+    const int m = c.addLine(30, 0, 40, 0);
+    c.addSpline({{50, -10}, {52, 0}, {50, 10}});
+    ASSERT_TRUE(c.extend(m, 39, 0).ok());
+    EXPECT_NEAR(c.pointXY(c.entity(m)->p2).first, 52, 0.05);
+    // the curves themselves are not extended
+    EXPECT_FALSE(s.extend(el, 40, 0).ok());
+}
+
 TEST(SketchBreak, CurvesSplitWhereOthersCross)
 {
     Sketch s;
@@ -2069,4 +2089,51 @@ TEST(Text, BendsAlongACircle)
     auto back = loadDocument(path);
     ASSERT_TRUE(back.ok());
     EXPECT_NE((*back)->state().sketches.at("s1")->solved.texts().begin()->second.path, 0);
+}
+
+TEST(SketchTrim, EllipsesAndSmoothCurves)
+{
+    // a line trimmed back to where a smooth curve crosses it
+    {
+        Sketch s;
+        const int line = s.addLine(0, -10, 0, 20);
+        s.addSpline({{-20, 0}, {0, 5}, {20, 0}});
+        ASSERT_TRUE(s.trim(line, 0, 15));  // the part above the curve goes
+        auto [x2, y2] = s.pointXY(s.entity(line)->p2);
+        auto [x1, y1] = s.pointXY(s.entity(line)->p1);
+        EXPECT_NEAR(std::max(y1, y2), 5, 0.05);
+    }
+    // half an ellipse trimmed away at a line through its middle; the line's ends trimmed too:
+    // a closed half ellipse (area half of pi a b)
+    {
+        Sketch s;
+        const int el = s.addEllipse(0, 0, 20, 0, 10);
+        const int line = s.addLine(0, -15, 0, 15);
+        ASSERT_TRUE(s.trim(el, 20, 0));  // the right half goes
+        int splines = 0;
+        for (auto& [id, e] : s.entities()) {
+            splines += e.type == EntityType::Spline;
+        }
+        EXPECT_EQ(splines, 1);
+        ASSERT_TRUE(s.trim(line, 0, 13));
+        ASSERT_TRUE(s.trim(line, 0, -13));
+        auto prof = buildProfiles(s, originPlaneFrame(OriginPlane::XY, 0));
+        ASSERT_TRUE(prof.ok());
+        ASSERT_EQ(prof->regions.size(), 1u) << "the half ellipse closes";
+        EXPECT_NEAR(prof->regions[0].area, pi * 20 * 10 / 2, pi * 100 * 0.01);
+    }
+    // a smooth curve broken where a line crosses it: two curves sharing the point between them
+    {
+        Sketch s;
+        const int sp = s.addSpline({{0, 0}, {10, 10}, {20, 0}});
+        s.addLine(10, -5, 10, 20);
+        auto pieces = s.breakAt(sp, 5, 5);
+        ASSERT_TRUE(pieces.ok()) << pieces.error().message;
+        ASSERT_EQ(pieces->size(), 2u);
+        const auto& a = s.entity((*pieces)[0])->pts;
+        const auto& b = s.entity((*pieces)[1])->pts;
+        EXPECT_TRUE(a.back() == b.front() || a.front() == b.back());
+        auto [mx, my] = s.pointXY(a.back() == b.front() ? a.back() : a.front());
+        EXPECT_NEAR(mx, 10, 1e-6);
+    }
 }

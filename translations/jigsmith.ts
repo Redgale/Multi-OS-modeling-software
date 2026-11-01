@@ -2337,7 +2337,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+63"/>
+        <location line="+40"/>
+        <source>Extend works on lines and arcs. An ellipse or smooth curve can be what they run to, but not extended itself.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Click a curve to break it.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+20"/>
         <source>Pick an edge to project.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3237,12 +3247,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
-        <source>Extend works on lines and arcs (not ellipses or smooth curves yet).</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+1"/>
+        <location line="+2"/>
         <source>That end is joined to another curve. Only a loose end can be extended.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3252,12 +3257,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
-        <source>Click a line, circle or arc to break it (not an ellipse or smooth curve yet).</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+1"/>
+        <location line="+2"/>
         <source>Nothing crosses this curve there, so there is nowhere to break it.</source>
         <translation type="unfinished"></translation>
     </message>

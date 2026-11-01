@@ -122,7 +122,7 @@ Result<int> Sketch::extend(int entityId, double x, double y)
 {
     const SketchEntity* t = entity(entityId);
     if (!t || (t->type != EntityType::Line && t->type != EntityType::Arc)) {
-        return editError("sketch.extend", "Extend works on lines and arcs (not ellipses or smooth curves yet).");
+        return editError("sketch.extend", "Extend works on lines and arcs. An ellipse or smooth curve can be what they run to, but not extended itself.");
     }
     const Geo T = geoOf(*this, *t);
     // the end nearest the click
@@ -146,15 +146,37 @@ Result<int> Sketch::extend(int entityId, double x, double y)
     double best = 1e300;
     std::pair<double, double> hit;
     for (auto& [id, e] : entities_) {
-        if (id == entityId || e.type == EntityType::Point || e.construction || e.type == EntityType::Ellipse ||
-            e.type == EntityType::Spline) {
+        if (id == entityId || e.type == EntityType::Point || e.construction) {
             continue;
         }
-        const Geo C = geoOf(*this, e);
-        for (auto [px, py] : carrierCrossings(T, C)) {
-            if (!C.contains(px, py)) {
-                continue;
+        // an ellipse or smooth curve: its short straight pieces, each a target
+        std::vector<std::pair<double, double>> pts;
+        if (e.type == EntityType::Ellipse || e.type == EntityType::Spline) {
+            const auto Q = curvePoints(id, 64);
+            for (size_t k = 0; k + 1 < Q.size(); ++k) {
+                Geo S;
+                S.line = true;
+                std::tie(S.ax, S.ay) = Q[k];
+                std::tie(S.bx, S.by) = Q[k + 1];
+                if (std::hypot(S.bx - S.ax, S.by - S.ay) < 1e-12) {
+                    continue;
+                }
+                for (auto p : carrierCrossings(T, S)) {
+                    if (S.contains(p.first, p.second)) {
+                        pts.push_back(p);
+                    }
+                }
             }
+        }
+        else {
+            const Geo C = geoOf(*this, e);
+            for (auto p : carrierCrossings(T, C)) {
+                if (C.contains(p.first, p.second)) {
+                    pts.push_back(p);
+                }
+            }
+        }
+        for (auto [px, py] : pts) {
             double ahead = 0;  // how far past the end, along the curve
             if (T.line) {
                 const double dx = T.bx - T.ax, dy = T.by - T.ay, L = std::hypot(dx, dy);
@@ -214,8 +236,15 @@ Result<int> Sketch::extend(int entityId, double x, double y)
 Result<std::vector<int>> Sketch::breakAt(int entityId, double x, double y)
 {
     const SketchEntity* t = entity(entityId);
-    if (!t || t->type == EntityType::Point || t->type == EntityType::Ellipse || t->type == EntityType::Spline) {
-        return editError("sketch.break", "Click a line, circle or arc to break it (not an ellipse or smooth curve yet).");
+    if (!t || t->type == EntityType::Point) {
+        return editError("sketch.break", "Click a curve to break it.");
+    }
+    if (t->type == EntityType::Ellipse || t->type == EntityType::Spline) {
+        std::vector<int> pieces;
+        if (!splitFreeForm(entityId, x, y, true, &pieces) || pieces.empty()) {
+            return editError("sketch.break", "Nothing crosses this curve there, so there is nowhere to break it.");
+        }
+        return pieces;
     }
     auto piece = trimPiece(entityId, x, y);
     if (!piece || piece->whole) {
