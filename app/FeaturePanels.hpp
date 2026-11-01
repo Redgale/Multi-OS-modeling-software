@@ -723,6 +723,44 @@ private:
     QListWidget* areas_;
 };
 
+// Create ▸ Pipe: a round tube or rod along the curves of a sketch (no circle to draw).
+class PipePanel : public FeaturePanel
+{
+    Q_OBJECT
+public:
+    PipePanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent = nullptr);
+    QComboBox* path() const
+    {
+        return path_;
+    }
+    ExprField* diameter() const
+    {
+        return diameter_;
+    }
+    QCheckBox* hollow() const
+    {
+        return hollow_;
+    }
+    ExprField* wall() const
+    {
+        return wall_;
+    }
+    QComboBox* operation() const
+    {
+        return op_;
+    }
+
+protected:
+    jig::Feature draft() const override;
+    QString title() const override;
+    void rememberValues() override;
+
+private:
+    QComboBox *path_, *op_;
+    ExprField *diameter_, *wall_;
+    QCheckBox* hollow_;
+};
+
 class MoveHandle;
 
 // Move / copy bodies: shift along X, Y, Z and turn around an origin axis.

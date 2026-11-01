@@ -103,7 +103,8 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Revolve (full, angle, to object) | 15 | v0.1 M4 | **app** + scripts: full, angle, up to a plane or flat face the axis lies in, or up to a curved face in its way; origin axis, sketch line or construction axis | |
 | Loft | 15 | v0.2 | **app** + scripts (`loft`): through two or more sketches' closed areas, smooth or straight, new/join/cut/intersect; outer outlines only (holes in sections are filled, with a warning) | |
 | Sweep | 15 | v0.2 | **app** + scripts (`sweep`): closed areas along a path of sketch curves (corrected Frenet), holes kept, new/join/cut/intersect; no twist or scale along the path yet | |
-| Rib, Web, Emboss, Coil, Pipe | 15 | v0.2 (Web v0.3+) | — | Brief v0.2 list |
+| Pipe | 15 | v0.2 | **app** + scripts (`pipe`): round rod or hollow tube along sketch curves (open or closed), diameter and wall by expression, new/join/cut/intersect | |
+| Rib, Web, Emboss, Coil | 15 | v0.2 (Web v0.3+) | — | Brief v0.2 list |
 | Thicken, Boundary fill | 15 | v0.3+ | — | Surface workflows |
 | Derive, Insert into design | 13, 22 | v0.3+ | — | Multi-file projects |
 | Primitives (box, cylinder, sphere, torus) | 13 | v0.2 | — | Sketch+extrude teaches better; low cost later |

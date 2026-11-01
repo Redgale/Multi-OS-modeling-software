@@ -129,6 +129,7 @@ public:
     void openBodyTool(const std::string& tool, const std::string& editId = {});  // combine, split, move
     void openLoft(const std::string& editId);
     void openSweep(const std::string& editId);
+    void openPipe(const std::string& editId);
     void openPlane(const std::string& editId = {}, const std::string& kind = "offset");
     void openAxis(const std::string& editId = {});
     void openPoint(const std::string& editId = {});

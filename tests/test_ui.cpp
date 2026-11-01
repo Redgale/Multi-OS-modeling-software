@@ -2759,6 +2759,52 @@ private slots:
         QVERIFY(w.document().status(1).level == jig::StatusLevel::Ok);  // the path sketch: no warning
     }
 
+    // Pipe from the panel: only a path sketch; hollow with a wall; edit it again later.
+    void pipePanel()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        {
+            jig::ScriptRunner r(w.document());
+            QVERIFY(r.runText("sketch id=s2 plane=XY\nline sketch=s2 p1=0,0 p2=0,20\n"
+                              "arc sketch=s2 center=10,20 r=10 from=90deg to=180deg\n").ok());
+        }
+        w.refreshAll();
+        w.runCommand("solid.pipe");
+        auto* pp = qobject_cast<PipePanel*>(w.featurePanel());
+        QVERIFY(pp);
+        QCOMPARE(pp->path()->currentData().toString(), QString("s2"));
+        QVERIFY(!pp->wall()->isEnabled());
+        pp->diameter()->setText("6 mm");
+        pp->hollow()->setChecked(true);
+        QVERIFY(pp->wall()->isEnabled());
+        pp->wall()->setText("1 mm");
+        QTRY_VERIFY(pp->previewOk());
+        w.viewport()->homeView();
+        QTRY_VERIFY(w.viewport()->meshesReady());
+        QTest::qWait(200);
+        w.grab().save(shotPath("pipe-panel"));
+        QVERIFY(pp->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        const double want = std::numbers::pi * (9 - 4) * (20 + 5 * std::numbers::pi);
+        const auto& st = w.document().state();
+        QCOMPARE(int(st.bodies.size()), 1);
+        QVERIFY(std::abs(jig::massProperties(st.bodies.begin()->second->shape()).volume - want) < want * 1e-3);
+        QVERIFY(w.document().status(0).level == jig::StatusLevel::Ok);  // the path sketch: no warning
+        // a wall that fills the pipe: the panel says why and OK waits
+        w.editFeature(int(w.document().model().features.size()) - 1);
+        pp = qobject_cast<PipePanel*>(w.featurePanel());
+        QVERIFY(pp);
+        QVERIFY(pp->hollow()->isChecked());
+        QCOMPARE(pp->wall()->text(), QString("1 mm"));
+        pp->wall()->setText("3 mm");
+        QTRY_VERIFY(pp->statusText().contains("fills the whole pipe"));
+        QVERIFY(!pp->previewOk());
+        pp->cancel();
+    }
+
     // Areas of a sketch are picked by clicking them in the 3D view: a square with a circle in it
     // can become a round post (the circle) or a block with a hole (the ring), not only a block.
     void clickAreasToExtrude()

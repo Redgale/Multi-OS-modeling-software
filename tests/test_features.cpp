@@ -2420,3 +2420,52 @@ TEST(Sweep, AlongLinesAndArcs)
     ASSERT_TRUE(r.runText("sketch id=s1 plane=XZ\ncircle sketch=s1 center=0,0 d=4\nsweep id=sw1 sketch=s1 path=s1\n").ok());
     EXPECT_EQ(self->status(1).level, StatusLevel::Error);
 }
+
+TEST(Pipe, RodsTubesBendsRingsAndLimits)
+{
+    // a 6 mm rod 50 mm long, without a circle sketch: pi r^2 L
+    auto rod = build("sketch id=s2 plane=XY\nline sketch=s2 p1=0,0 p2=0,50\npipe id=pi1 path=s2 diameter=6mm\n");
+    expectAllOk(*rod);
+    EXPECT_NEAR(props(*rod).volume, pi * 9 * 50, 1e-3);
+    const auto& body = *rod->state().bodies.at("pi1");
+    for (const char* name : {"pi1/start", "pi1/end", "pi1/outside"}) {
+        EXPECT_GE(body.findFaces(name).size(), 1u) << name;
+    }
+    // a tube with a 1 mm wall around a bend (Pappus: ring area x path length)
+    auto tube = build("sketch id=s2 plane=XY\nline sketch=s2 p1=0,0 p2=0,20\n"
+                      "arc sketch=s2 center=10,20 r=10 from=90deg to=180deg\n"
+                      "pipe id=pi1 path=s2 diameter=6mm wall=1mm\n");
+    expectAllOk(*tube);
+    const double ring = pi * (9 - 4), len = 20 + 5 * pi;
+    EXPECT_NEAR(props(*tube).volume, ring * len, ring * len * 1e-3);
+    EXPECT_GE(tube->state().bodies.at("pi1")->findFaces("pi1/inside").size(), 1u);
+    // a closed path: a ring (torus) of 4 mm wire around a 20 mm circle, 2 pi^2 R r^2
+    auto torus = build("sketch id=s2 plane=XY\ncircle sketch=s2 center=0,0 d=40\npipe id=pi1 path=s2 diameter=4mm\n");
+    expectAllOk(*torus);
+    EXPECT_NEAR(props(*torus).volume, 2 * pi * pi * 20 * 4, 2 * pi * pi * 20 * 4 * 1e-3);
+    // follows a parameter
+    auto param = build("param d = 8 mm\nsketch id=s2 plane=XY\nline sketch=s2 p1=0,0 p2=0,10\n"
+                       "pipe id=pi1 path=s2 diameter=d\n");
+    expectAllOk(*param);
+    EXPECT_NEAR(props(*param).volume, pi * 16 * 10, 1e-3);
+    // cuts a channel
+    auto cut = build("sketch id=b plane=XY\nrect sketch=b center=0,25 w=20 h=50\nextrude id=e1 sketch=b distance=10 "
+                     "direction=symmetric\nsketch id=s2 plane=XY\nline sketch=s2 p1=0,0 p2=0,50\n"
+                     "pipe id=pi1 path=s2 diameter=4mm op=cut\n");
+    expectAllOk(*cut);
+    EXPECT_NEAR(props(*cut).volume, 20 * 50 * 10 - pi * 4 * 50, 1e-2);
+    // a wall that fills the pipe, and a missing path, are explained
+    for (const char* bad : {"sketch id=s2 plane=XY\nline sketch=s2 p1=0,0 p2=0,50\npipe id=pi1 path=s2 diameter=6mm wall=3mm\n",
+                            "sketch id=s2 plane=XY\nline sketch=s2 p1=0,0 p2=0,50\npipe id=pi1 path=s2 diameter=0mm\n"}) {
+        auto doc = std::make_unique<Document>();
+        ScriptRunner r(*doc);
+        r.strict = false;
+        ASSERT_TRUE(r.runText(bad).ok());
+        EXPECT_EQ(doc->status(1).level, StatusLevel::Error) << bad;
+        EXPECT_FALSE(doc->status(1).message.empty());
+    }
+    // saved and loaded
+    auto back = Document::fromJson(rod->toJson());
+    ASSERT_TRUE(back.ok());
+    EXPECT_NEAR(props(**back).volume, pi * 9 * 50, 1e-3);
+}

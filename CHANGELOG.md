@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Pipe: a round rod or hollow tube along sketch curves, with no circle to draw.
+
 ## 0.1.0 (2026-11-01)
 
 The first release of Jigsmith: free, open-source parametric CAD for hobbyists and makers.

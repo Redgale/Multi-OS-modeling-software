@@ -53,6 +53,7 @@ QT_TRANSLATE_NOOP("Core", "Push a closed sketch area into 3D, adding or cutting 
 QT_TRANSLATE_NOOP("Core", "Spin a profile around an axis, like a lathe: knobs, cups, wheels.")
 QT_TRANSLATE_NOOP("Core", "Blend between closed areas on two or more sketches, e.g. a square base into a round top.")
 QT_TRANSLATE_NOOP("Core", "Push a closed area along a path of sketch curves: handles, pipes, rims.")
+QT_TRANSLATE_NOOP("Core", "A round tube or rod along sketch curves, without drawing its circle: wires, rails, handles.")
 QT_TRANSLATE_NOOP("Core", "Drill a plain, counterbored or countersunk hole for a screw.")
 QT_TRANSLATE_NOOP("Core", "Copy a body across a plane, e.g. to make a symmetric part.")
 QT_TRANSLATE_NOOP("Core", "Repeat a feature in rows and columns.")
@@ -217,6 +218,17 @@ QT_TRANSLATE_NOOP("Core", "Make sharp bends gentler: the shape must not run into
 QT_TRANSLATE_NOOP("Core", "A hole in this shape could not be swept along the path.")
 QT_TRANSLATE_NOOP("Core", "This sweep has an unknown operation.")
 QT_TRANSLATE_NOOP("Core", "Put the shape at the start of the path, across it.")
+QT_TRANSLATE_NOOP("Core", "Edit the pipe and pick the sketch with the path.")
+QT_TRANSLATE_NOOP("Core", "The pipe's diameter must be more than zero.")
+QT_TRANSLATE_NOOP("Core", "The pipe's wall thickness cannot be negative.")
+QT_TRANSLATE_NOOP("Core", "Use a wall thinner than half the diameter, or 0 for a solid rod.")
+QT_TRANSLATE_NOOP("Core", "The start of this path has no direction.")
+QT_TRANSLATE_NOOP("Core", "A pipe this thick could not follow the path.")
+QT_TRANSLATE_NOOP("Core", "Make the bends gentler than the pipe's radius, or the pipe thinner.")
+QT_TRANSLATE_NOOP("Core", "Check that the path's curves meet end to end.")
+QT_TRANSLATE_NOOP("Core", "The inside of this pipe could not follow the path.")
+QT_TRANSLATE_NOOP("Core", "The inside of this pipe could not be hollowed out.")
+QT_TRANSLATE_NOOP("Core", "This pipe has an unknown operation.")
 QT_TRANSLATE_NOOP("Core", "The body of the face to push or pull no longer exists.")
 QT_TRANSLATE_NOOP("Core", "Edit the step and click a face.")
 QT_TRANSLATE_NOOP("Core", "The face to push or pull no longer exists.")
@@ -515,6 +527,8 @@ inline const char* const kCorePatterns[] = {
     QT_TRANSLATE_NOOP("Core", "The sketch %1 has no closed area to loft through."),
     QT_TRANSLATE_NOOP("Core", "The sketch %1 has several closed areas; pick one for the loft."),
     QT_TRANSLATE_NOOP("Core", "The sketch with this sweep's path (%1) is missing or comes later."),
+    QT_TRANSLATE_NOOP("Core", "The sketch with this pipe's path (%1) is missing or comes later."),
+    QT_TRANSLATE_NOOP("Core", "A wall of %1 fills the whole pipe."),
     QT_TRANSLATE_NOOP("Core", "The body this pattern repeats (%1) no longer exists."),
     QT_TRANSLATE_NOOP("Core", "The step this pattern repeats (%1) is missing, after the pattern, or has a problem."),
     QT_TRANSLATE_NOOP("Core", "The sketch with this pattern's path (%1) is missing or comes later."),

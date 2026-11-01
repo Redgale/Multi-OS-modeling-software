@@ -68,7 +68,8 @@ enum class FeatureKind
     Import,     // a solid brought in from a STEP file, kept inside the design
     Remove,     // bodies taken out of the design from here on (delete a body)
     Loft,       // a solid through closed areas of two or more sketches, in order
-    Sweep       // a sketch's closed area pushed along a path of curves in another sketch
+    Sweep,      // a sketch's closed area pushed along a path of curves in another sketch
+    Pipe        // a round tube or rod along a path of sketch curves
 };
 
 const char* toString(FeatureKind k);

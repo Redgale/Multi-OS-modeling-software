@@ -23,7 +23,10 @@
 #include <BRepAdaptor_Surface.hxx>
 #include <TopoDS_Compound.hxx>
 #include <BRep_Builder.hxx>
+#include <BRepBuilderAPI_MakeEdge.hxx>
 #include <BRepBuilderAPI_MakeFace.hxx>
+#include <BRepBuilderAPI_MakeWire.hxx>
+#include <gp_Circ.hxx>
 #include <BRepGProp.hxx>
 #include <GProp_GProps.hxx>
 #include <BRepGProp_Face.hxx>
@@ -1214,6 +1217,137 @@ FeatureOutcome applySweep(const Document& doc, const Feature& f, const std::shar
     }
 }
 
+// ---------------------------------------------------------------- pipe
+
+// A round tube (or rod) along a path of sketch curves: no profile sketch is needed, the circle
+// is placed across the start of the path. A wall thickness makes it hollow.
+FeatureOutcome applyPipe(const Document& doc, const Feature& f, const std::shared_ptr<const ModelState>& in)
+{
+    const auto& p = f.params;
+    FeatureStatus status;
+    const nlohmann::json pj = p.value("path", nlohmann::json::object());
+    const std::string pathId = pj.is_object() ? pj.value("sketch", std::string {}) : std::string {};
+    const SketchState* pathSketch = findSketch(in, pathId);
+    if (!pathSketch) {
+        return failed(fmt("The sketch with this pipe's path (%1) is missing or comes later.", {pathId}),
+                      {"Edit the pipe and pick the sketch with the path."});
+    }
+    std::vector<int> curves;
+    const nlohmann::json cj = pj.value("curves", nlohmann::json("all"));
+    if (cj.is_array()) {
+        for (auto& c : cj) {
+            if (c.is_number_integer()) {
+                curves.push_back(c.get<int>());
+            }
+        }
+    }
+    else {
+        for (auto& [id, e] : pathSketch->solved.entities()) {
+            if (e.type != EntityType::Point && !e.construction) {
+                curves.push_back(id);
+            }
+        }
+    }
+    auto path = sketchPath(pathSketch->solved, pathSketch->frame, curves);
+    if (!path) {
+        return failed(path.error());
+    }
+    auto d = doc.evalLength(p.value("diameter", std::string("10 mm")));
+    if (!d) {
+        return failed(d.error());
+    }
+    if (d.value() <= 1e-6) {
+        return failed("The pipe's diameter must be more than zero.");
+    }
+    const double r = d.value() / 2;
+    double wall = 0;
+    if (p.contains("wall")) {
+        auto w = doc.evalLength(p.value("wall", std::string("0 mm")));
+        if (!w) {
+            return failed(w.error());
+        }
+        wall = w.value();
+        if (wall < 0) {
+            return failed("The pipe's wall thickness cannot be negative.");
+        }
+        if (wall >= r - 1e-6) {
+            return failed(fmt("A wall of %1 fills the whole pipe.", {formatLength(wall, doc.units())}),
+                          {"Use a wall thinner than half the diameter, or 0 for a solid rod."});
+        }
+    }
+    try {
+        gp_Pnt start;
+        gp_Vec tangent;
+        pathAt(*path, 0, start, tangent);
+        if (tangent.Magnitude() < 1e-12) {
+            return failed("The start of this path has no direction.");
+        }
+        auto circle = [&](double radius) {
+            const gp_Circ c(gp_Ax2(start, gp_Dir(tangent)), radius);
+            return BRepBuilderAPI_MakeWire(BRepBuilderAPI_MakeEdge(c).Edge()).Wire();
+        };
+        auto outer = sweepWire(path->wire, circle(r));
+        if (!outer) {
+            return failed("A pipe this thick could not follow the path.",
+                          {"Make the bends gentler than the pipe's radius, or the pipe thinner.",
+                           "Check that the path's curves meet end to end."});
+        }
+        std::vector<std::pair<TopoDS_Shape, std::string>> names;
+        names.emplace_back(outer->first, f.id + "/start");
+        names.emplace_back(outer->last, f.id + "/end");
+        for (const auto& side : outer->sides) {
+            if (!side.IsNull()) {
+                names.emplace_back(side, f.id + "/outside");
+            }
+        }
+        TopoDS_Shape solid = outer->solid;
+        if (wall > 0) {
+            auto inner = sweepWire(path->wire, circle(r - wall));
+            if (!inner) {
+                return failed("The inside of this pipe could not follow the path.");
+            }
+            for (const auto& side : inner->sides) {
+                if (!side.IsNull()) {
+                    names.emplace_back(side, f.id + "/inside");
+                }
+            }
+            BRepAlgoAPI_Cut cut(solid, inner->solid);
+            if (!cut.IsDone()) {
+                return failed("The inside of this pipe could not be hollowed out.");
+            }
+            for (auto& [face, name] : names) {
+                const auto& mod = cut.Modified(face);
+                if (!mod.IsEmpty()) {
+                    face = mod.First();
+                }
+            }
+            solid = cut.Shape();
+        }
+        NamedShape tool(solid);
+        int other = 0;
+        for (int i = 0; i < tool.faceCount(); ++i) {
+            std::string name;
+            for (const auto& [face, n] : names) {
+                if (!face.IsNull() && tool.face(i).IsSame(face)) {
+                    name = n;
+                    break;
+                }
+            }
+            tool.setFaceName(i, name.empty() ? f.id + "/face" + std::to_string(++other) : name);
+        }
+        auto op = opFromString(p.value("op", std::string("new")));
+        if (!op) {
+            return failed("This pipe has an unknown operation.");
+        }
+        return applyTool(f, *op, std::move(tool), in, status);
+    }
+    catch (const Standard_Failure& e) {
+        const char* m = e.GetMessageString();
+        return failed("A pipe this thick could not follow the path.",
+                      {"Make the bends gentler than the pipe's radius, or the pipe thinner."}, m ? m : "");
+    }
+}
+
 // ---------------------------------------------------------------- press pull
 
 // Pushes or pulls a flat face straight along its normal: out adds material, in removes it.
@@ -2244,6 +2378,8 @@ FeatureOutcome applyFeature(const Document& doc, const Feature& f, const std::sh
                 return applyLoft(doc, f, in);
             case FeatureKind::Sweep:
                 return applySweep(doc, f, in);
+            case FeatureKind::Pipe:
+                return applyPipe(doc, f, in);
             case FeatureKind::Hole:
                 return applyHole(doc, f, in);
             case FeatureKind::Pattern:

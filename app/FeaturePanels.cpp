@@ -3684,6 +3684,95 @@ QString SweepPanel::title() const
     return tr("sweep");
 }
 
+// ---------------------------------------------------------------- Pipe
+
+PipePanel::PipePanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent)
+    : FeaturePanel(doc, view, std::move(editId), parent)
+{
+    form_->addWidget(heading(this, tr("Pipe"),
+                             tr("A round tube or rod along the curves of a sketch: wires, rails, handles, hoses. "
+                                "There is no circle to draw: it is placed across the start of the path.")));
+    path_ = new QComboBox(this);
+    diameter_ = new ExprField(doc, jig::Dim::len(), this);
+    hollow_ = new QCheckBox(tr("Hollow (a tube)"), this);
+    wall_ = new ExprField(doc, jig::Dim::len(), this);
+    op_ = combo(this, {{tr("New body"), "new"},
+                       {tr("Join: add to the body"), "join"},
+                       {tr("Cut: remove material"), "cut"},
+                       {tr("Intersect: keep the overlap"), "intersect"}});
+    addRow(tr("Path (sketch)"), path_);
+    addRow(tr("Diameter"), diameter_);
+    bindParam("diameter", diameter_);
+    form_->addWidget(hollow_);
+    addRow(tr("Wall thickness"), wall_);
+    bindParam("wall", wall_);
+    addRow(tr("Operation"), op_);
+    const auto before = stateBefore();
+    for (int i = 0; i < insertIndex(); ++i) {
+        const auto& f = doc_.model().features[size_t(i)];
+        if (f.kind == jig::FeatureKind::Sketch && before->sketches.count(f.id)) {
+            path_->addItem(q(f.name), q(f.id));
+        }
+    }
+    if (const jig::Feature* edit = editId_.empty() ? nullptr : doc_.feature(editId_)) {
+        select(path_, edit->params.value("path", nlohmann::json::object()).value("sketch", std::string {}));
+        diameter_->setText(q(edit->params.value("diameter", std::string("10 mm"))));
+        hollow_->setChecked(edit->params.contains("wall"));
+        wall_->setText(q(edit->params.value("wall", doc_.defaultLength(1, 0.04))));
+        select(op_, edit->params.value("op", std::string("new")));
+    }
+    else {
+        if (path_->count() > 0) {
+            path_->setCurrentIndex(path_->count() - 1);  // usually the sketch drawn last
+        }
+        diameter_->setText(remembered().count("pipe.diameter") ? remembered()["pipe.diameter"]
+                                                                : q(doc_.defaultLength(6, 0.25)));
+        wall_->setText(remembered().count("pipe.wall") ? remembered()["pipe.wall"] : q(doc_.defaultLength(1, 0.04)));
+    }
+    wall_->setEnabled(hollow_->isChecked());
+    connect(hollow_, &QCheckBox::toggled, this, [this](bool on) {
+        wall_->setEnabled(on);
+        schedulePreview();
+    });
+    for (auto* e : {diameter_, wall_}) {
+        connect(e, &ExprField::changed, this, [this] { schedulePreview(); });
+    }
+    for (auto* c : {path_, op_}) {
+        connect(c, &QComboBox::currentIndexChanged, this, [this] { schedulePreview(); });
+    }
+    if (path_->count() == 0) {
+        status_->setText("<b>✕ " + tr("A pipe needs a sketch with the path: draw its lines and arcs first.") + "</b>");
+        ok_->setEnabled(false);
+    }
+    else {
+        schedulePreview();
+    }
+}
+
+jig::Feature PipePanel::draft() const
+{
+    jig::Feature f = startDraft(doc_, editId_, "pi", tr("Pipe"));
+    f.kind = jig::FeatureKind::Pipe;
+    f.params = {{"path", {{"sketch", current(path_)}, {"curves", "all"}}},
+                {"diameter", diameter_->text().toStdString()},
+                {"op", current(op_)}};
+    if (hollow_->isChecked()) {
+        f.params["wall"] = wall_->text().toStdString();
+    }
+    return f;
+}
+
+void PipePanel::rememberValues()
+{
+    remembered()["pipe.diameter"] = diameter_->text();
+    remembered()["pipe.wall"] = wall_->text();
+}
+
+QString PipePanel::title() const
+{
+    return tr("pipe");
+}
+
 // ---------------------------------------------------------------- Move
 
 // Three arrows (X, Y, Z) from the bodies' centre; drag a grip to move along that axis.
