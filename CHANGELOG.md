@@ -25,6 +25,7 @@
 - Sketch scale: selected curves bigger or smaller, with their dimensions.
 - Control-point splines in sketches.
 - As-built joints (the part stays put; only the motion is added).
+- Rigid groups: parts that move together under joints.
 - Fixed: a fillet or chamfer on the edges of a loft or sweep could lose its edges when an earlier step changed.
 
 ## 0.1.0 (2026-11-01)

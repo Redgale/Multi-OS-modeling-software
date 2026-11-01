@@ -193,6 +193,8 @@ QString kindWord(jig::FeatureKind k)
             return MainWindow::tr("Joint");
         case jig::FeatureKind::Fastener:
             return MainWindow::tr("Fastener");
+        case jig::FeatureKind::RigidGroup:
+            return MainWindow::tr("Rigid group");
         case jig::FeatureKind::Move:
             return MainWindow::tr("Move");
     }
@@ -1893,6 +1895,13 @@ void MainWindow::runCommand(const QString& id)
     else if (id == "view.appearance") {
         openAppearance();
     }
+    else if (id == "assemble.rigid_group") {
+        if (sketch_) {
+            exitSketch();
+        }
+        cancelPicker();
+        showPanel(new RigidGroupPanel(*doc_, view_, {}, panelHost_));
+    }
     else if (id == "assemble.joint") {
         openJoint({});
     }
@@ -3553,6 +3562,13 @@ void MainWindow::editFeature(int index)
             break;
         case jig::FeatureKind::Fastener:
             openFastener(f.id);
+            break;
+        case jig::FeatureKind::RigidGroup:
+            if (sketch_) {
+                exitSketch();
+            }
+            cancelPicker();
+            showPanel(new RigidGroupPanel(*doc_, view_, f.id, panelHost_));
             break;
         case jig::FeatureKind::Sweep:
             openSweep(f.id);

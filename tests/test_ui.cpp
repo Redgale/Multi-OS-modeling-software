@@ -3466,6 +3466,30 @@ private slots:
         QVERIFY(!sk->splineControl());
     }
 
+    // Rigid group from the panel: two ticked parts; one alone waits.
+    void rigidGroupPanel()
+    {
+        MainWindow w;
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        {
+            jig::ScriptRunner r(w.document());
+            QVERIFY(r.runText("box id=a length=10mm width=10mm height=10mm\nbox id=b center=30,0 length=5mm width=5mm height=5mm op=new\n").ok());
+        }
+        w.refreshAll();
+        w.runCommand("assemble.rigid_group");
+        auto* gp = qobject_cast<RigidGroupPanel*>(w.featurePanel());
+        QVERIFY(gp);
+        QCOMPARE(gp->parts()->count(), 2);
+        gp->parts()->item(0)->setCheckState(Qt::Checked);
+        QTRY_VERIFY(gp->statusText().contains("at least two"));
+        gp->parts()->item(1)->setCheckState(Qt::Checked);
+        QTRY_VERIFY(gp->previewOk());
+        QVERIFY(gp->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        QCOMPARE(int(w.document().state().rigidGroups.size()), 1);
+    }
+
     // Areas of a sketch are picked by clicking them in the 3D view: a square with a circle in it
     // can become a round post (the circle) or a block with a hole (the ring), not only a block.
     void clickAreasToExtrude()

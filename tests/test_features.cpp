@@ -3202,3 +3202,29 @@ TEST(Joint, AsBuiltKeepsThePartWhereItIs)
     EXPECT_NEAR((bt.ymin + bt.ymax) / 2, 100, 1e-6);
     EXPECT_NEAR(bt.zmin, 0, 1e-6);
 }
+
+TEST(Joint, RigidGroupsMoveTogether)
+{
+    // a lid with a handle grouped to it: the hinge turns both
+    const std::string parts = "box id=a length=40mm width=40mm height=10mm\n"
+                              "box id=b center=100,0 length=10mm width=20mm height=6mm op=new\n"
+                              "box id=c center=100,30 length=4mm width=4mm height=4mm op=new\n";
+    auto doc = build(parts + "rigid id=rg1 bodies=b;c\njoint id=j1 kind=rigid from=face:b/bottom to=face:a/top\n");
+    expectAllOk(*doc);
+    auto cb = massProperties(doc->state().bodies.at("c")->shape());
+    EXPECT_NEAR((cb.xmin + cb.xmax) / 2, 0, 1e-6);   // came along with b
+    EXPECT_NEAR((cb.ymin + cb.ymax) / 2, 30, 1e-6);
+    EXPECT_NEAR(cb.zmin, 10, 1e-6);
+    // without the group the handle stays
+    auto alone = build(parts + "joint id=j1 kind=rigid from=face:b/bottom to=face:a/top\n");
+    EXPECT_NEAR(massProperties(alone->state().bodies.at("c")->shape()).xmin, 98, 1e-6);
+    // a joint between two parts of one group is refused; one part is not a group
+    for (const std::string& bad : {parts + "rigid id=rg1 bodies=a;b\njoint id=j1 kind=rigid from=face:b/bottom to=face:a/top\n",
+                                   parts + "rigid id=rg1 bodies=a\n"}) {
+        auto d = std::make_unique<Document>();
+        ScriptRunner r(*d);
+        r.strict = false;
+        ASSERT_TRUE(r.runText(bad).ok());
+        EXPECT_EQ(d->status(int(d->model().features.size()) - 1).level, StatusLevel::Error) << bad;
+    }
+}

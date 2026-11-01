@@ -79,7 +79,8 @@ enum class FeatureKind
     Thread,     // a helical thread cut into a shaft or the wall of a hole
     Canvas,     // a picture placed on a plane to trace over (display only)
     Joint,      // a part placed against another and moved by the joint's motion
-    Fastener    // a standard screw, nut or washer (simplified, no thread)
+    Fastener,   // a standard screw, nut or washer (simplified, no thread)
+    RigidGroup  // parts that move together under later joints
 };
 
 const char* toString(FeatureKind k);
@@ -167,6 +168,8 @@ struct ModelState
         double width = 0, height = 0, opacity = 0.5;
     };
     std::map<std::string, Canvas> canvases;
+    // parts that move together: a joint that moves one of them moves the rest too
+    std::vector<std::set<std::string>> rigidGroups;
 };
 
 // Two parts that overlap, and by how much (Inspect ▸ Interference).

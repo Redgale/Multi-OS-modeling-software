@@ -5150,6 +5150,65 @@ QString FastenerPanel::title() const
     return tr("fastener");
 }
 
+// ---------------------------------------------------------------- Rigid group
+
+RigidGroupPanel::RigidGroupPanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent)
+    : FeaturePanel(doc, view, std::move(editId), parent)
+{
+    form_->addWidget(heading(this, tr("Rigid group"),
+                             tr("Tick the parts that move together, like a lid and its handle: a joint that moves "
+                                "one of them moves them all.")));
+    parts_ = new QListWidget(this);
+    parts_->setMaximumHeight(160);
+    addRow(tr("Parts"), parts_);
+    std::set<std::string> chosen;
+    if (const jig::Feature* edit = editId_.empty() ? nullptr : doc_.feature(editId_)) {
+        for (auto& b : edit->params.value("bodies", nlohmann::json::array())) {
+            if (b.is_string()) {
+                chosen.insert(b.get<std::string>());
+            }
+        }
+    }
+    const auto before = stateBefore();  // kept alive while its bodies are listed
+    for (auto& [id, b] : before->bodies) {
+        const jig::Feature* bf = doc_.feature(id);
+        auto* item = new QListWidgetItem(bf ? q(bf->name) : q(id), parts_);
+        item->setData(Qt::UserRole, q(id));
+        item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+        item->setCheckState(chosen.count(id) ? Qt::Checked : Qt::Unchecked);
+    }
+    connect(parts_, &QListWidget::itemChanged, this, [this] { schedulePreview(); });
+    schedulePreview();
+}
+
+QString RigidGroupPanel::notReady() const
+{
+    int n = 0;
+    for (int i = 0; i < parts_->count(); ++i) {
+        n += parts_->item(i)->checkState() == Qt::Checked;
+    }
+    return n < 2 ? tr("Tick at least two parts.") : QString();
+}
+
+jig::Feature RigidGroupPanel::draft() const
+{
+    jig::Feature f = startDraft(doc_, editId_, "rg", tr("Rigid group"));
+    f.kind = jig::FeatureKind::RigidGroup;
+    nlohmann::json b = nlohmann::json::array();
+    for (int i = 0; i < parts_->count(); ++i) {
+        if (parts_->item(i)->checkState() == Qt::Checked) {
+            b.push_back(parts_->item(i)->data(Qt::UserRole).toString().toStdString());
+        }
+    }
+    f.params = {{"bodies", b}};
+    return f;
+}
+
+QString RigidGroupPanel::title() const
+{
+    return tr("rigid group");
+}
+
 // ---------------------------------------------------------------- Move
 
 // Three arrows (X, Y, Z) from the bodies' centre; drag a grip to move along that axis.

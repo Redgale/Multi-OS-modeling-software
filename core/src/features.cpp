@@ -3044,8 +3044,51 @@ FeatureOutcome applyJoint(const Document& doc, const Feature& f, const std::shar
     gp_Trsf t;
     t.SetDisplacement(from, goal);
     auto out = copyState(in);
-    out->bodies[moving] = std::make_shared<NamedShape>(transformedCopy(*in->bodies.at(moving), t, ""));
+    // the part, and every part grouped rigidly with it (groups that share a part join up)
+    std::set<std::string> moved {moving};
+    for (bool grew = true; grew;) {
+        grew = false;
+        for (const auto& g : in->rigidGroups) {
+            const bool touches = std::any_of(g.begin(), g.end(), [&](const std::string& b) { return moved.count(b) > 0; });
+            for (const auto& b : g) {
+                if (touches && !moved.count(b)) {
+                    moved.insert(b);
+                    grew = true;
+                }
+            }
+        }
+    }
+    if (!fixed.empty() && moved.count(fixed)) {
+        return failed("The two parts of this joint are in one rigid group, so they cannot move against each other.",
+                      {"Take one of them out of the group, or join to a part outside it."});
+    }
+    for (const auto& b : moved) {
+        if (auto it = in->bodies.find(b); it != in->bodies.end()) {
+            out->bodies[b] = std::make_shared<NamedShape>(transformedCopy(*it->second, t, ""));
+        }
+    }
     return {out, status};
+}
+
+// ---------------------------------------------------------------- rigid group
+
+// Parts that move together: later joints that move one of them move them all.
+FeatureOutcome applyRigidGroup(const Document& doc, const Feature& f, const std::shared_ptr<const ModelState>& in)
+{
+    (void)doc;
+    std::set<std::string> g;
+    for (const auto& b : bodyList(f.params.value("bodies", nlohmann::json::array()))) {
+        if (!in->bodies.count(b)) {
+            return failed(fmt("The part '%1' of this group no longer exists.", {b}), {"Edit the group and pick the parts again."});
+        }
+        g.insert(b);
+    }
+    if (g.size() < 2) {
+        return failed("A rigid group needs at least two parts.");
+    }
+    auto out = copyState(in);
+    out->rigidGroups.push_back(std::move(g));
+    return {out, {}};
 }
 
 // ---------------------------------------------------------------- revolve
@@ -3815,6 +3858,8 @@ FeatureOutcome applyFeature(const Document& doc, const Feature& f, const std::sh
                 return applyJoint(doc, f, in);
             case FeatureKind::Fastener:
                 return applyFastener(doc, f, in);
+            case FeatureKind::RigidGroup:
+                return applyRigidGroup(doc, f, in);
             case FeatureKind::Hole:
                 return applyHole(doc, f, in);
             case FeatureKind::Pattern:

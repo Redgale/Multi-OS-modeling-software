@@ -147,6 +147,7 @@ CommandRegistry::CommandRegistry()
     add({"solid.scale", "Scale", "Scale", "MODIFY", "Make bodies bigger or smaller about a point, evenly or by a factor along each axis.", "", {"resize", "enlarge", "shrink", "stretch"}, false, false, true, m3});
     add({"view.appearance", "Appearance", "Appearance", "INSPECT", "Give a body a colour and a finish (matte, satin, glossy or metal); 3MF exports carry the colour.", "A", {"colour", "color", "material look", "paint", "finish"}, false, false, true, m3});
     add({"assemble.joint", "Joint", "Joint", "ASSEMBLE", "Put one part against another and let it turn or slide: hinges, lids, sliders.", "J", {"hinge", "assemble", "connect parts", "mate", "pivot"}, false, false, true, m3});
+    add({"assemble.rigid_group", "Rigid group", "Rigid Group", "ASSEMBLE", "Make parts move together: a joint that moves one of them moves them all.", "", {"group parts", "weld", "glue together"}, false, false, true, m3});
     add({"inspect.interference", "Interference", "Interference", "INSPECT", "Find parts that overlap each other, and by how much.", "", {"collision", "overlap", "clash", "check fit"}, false, false, true, m3});
     add({"solid.presspull", "Press pull", "Press Pull", "MODIFY", "Push or pull a flat face by a distance; on a rounded edge or hole it opens the step that made it.", "Q", {"push", "pull", "drag face"}, false, false, true, m3});
     add({"solid.fillet", "Fillet", "Fillet", "MODIFY", "Round off edges so parts look finished and are comfortable to hold.", "F", {"round the edges", "round", "soften", "radius"}, true, false, true, m3});
@@ -187,7 +188,7 @@ CommandRegistry::CommandRegistry()
         "constraint.symmetric", "constraint.equal", "solid.extrude", "solid.fillet", "solid.chamfer", "solid.shell",
         "solid.revolve", "solid.loft", "solid.sweep", "solid.pipe", "solid.coil", "solid.box", "solid.cylinder", "solid.sphere", "solid.torus", "solid.rib", "solid.emboss", "solid.thread", "solid.hole", "solid.mirror", "solid.pattern_rect", "solid.pattern_circ", "modify.parameters",
         "inspect.measure", "inspect.properties", "file.export_3mf", "construct.offset_plane", "construct.angle_plane",
-        "construct.midplane", "construct.tangent_plane", "construct.points_plane", "construct.path_plane", "construct.axis", "construct.point", "solid.draft", "solid.scale", "assemble.joint", "inspect.interference", "view.appearance", "solid.presspull", "solid.combine", "solid.split", "solid.move",
+        "construct.midplane", "construct.tangent_plane", "construct.points_plane", "construct.path_plane", "construct.axis", "construct.point", "solid.draft", "solid.scale", "assemble.joint", "assemble.rigid_group", "inspect.interference", "view.appearance", "solid.presspull", "solid.combine", "solid.split", "solid.move",
         "inspect.section", "insert.dxf", "insert.svg", "help.tutorial"};
     for (auto& c : commands_) {
         if (inApp.count(c.id)) {
@@ -1564,6 +1565,33 @@ Result<bool> ScriptRunner::runLineUnchecked(std::string_view rawLine)
             c = "#" + c;
         }
         return doc.setAppearance(a.get("body"), {c, a.get("finish", "satin")});
+    }
+    if (a.verb == "rigid") {
+        // rigid bodies=a;b;… : these parts move together under later joints
+        const auto bodies = split(a.get("bodies"), ';');
+        for (const auto& b : bodies) {
+            if (!doc.state().bodies.count(b)) {
+                return makeError("script.args", fmt("There is no body called '%1'.", {b}));
+            }
+        }
+        std::string id;
+        auto r = doc.transact("Rigid group", [&](Model& m) -> Result<bool> {
+            Feature f;
+            f.id = a.get("id", Document::newId(m, "rg"));
+            if (findFeature(m, f.id)) {
+                return makeError("script.args", "The id '" + f.id + "' is already used.");
+            }
+            f.name = a.get("name", stepName("Rigid group", f.id, "rg"));
+            f.kind = FeatureKind::RigidGroup;
+            f.params = {{"bodies", bodies}};
+            id = f.id;
+            insertFeature(m, std::move(f));
+            return true;
+        });
+        if (!r) {
+            return r;
+        }
+        return checkFeature(id);
     }
     if (a.verb == "joint") {
         // joint kind=rigid|revolute|slider|cylindrical|ball|planar from=edge:<name>|face:<name>

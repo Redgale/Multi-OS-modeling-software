@@ -106,5 +106,5 @@ timeline edit/rename/suppress/roll back/delete with dependents warning, Paramete
   triangles), and it took 20 s, so it was not kept. Next attempt: quadric edge collapse that
   refuses non-manifold collapses, or sewing large meshes in parallel chunks.
 - **B-041 In-app Python console** (D-018): needs a Python runtime in every package.
-- **B-042 Rigid groups, nested components** (as-built joints done); conic curves; mesh plane cut (Split
+- **B-042 Nested components** (as-built joints and rigid groups done); conic curves; mesh plane cut (Split
   with a plane already cuts solids made from meshes).

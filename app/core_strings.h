@@ -73,6 +73,7 @@ QT_TRANSLATE_NOOP("Core", "Slope faces by a small angle so the part leaves a mou
 QT_TRANSLATE_NOOP("Core", "Make bodies bigger or smaller about a point, evenly or by a factor along each axis.")
 QT_TRANSLATE_NOOP("Core", "Give a body a colour and a finish (matte, satin, glossy or metal); 3MF exports carry the colour.")
 QT_TRANSLATE_NOOP("Core", "Put one part against another and let it turn or slide: hinges, lids, sliders.")
+QT_TRANSLATE_NOOP("Core", "Make parts move together: a joint that moves one of them moves them all.")
 QT_TRANSLATE_NOOP("Core", "Find parts that overlap each other, and by how much.")
 QT_TRANSLATE_NOOP("Core", "Push or pull a flat face by a distance; on a rounded edge or hole it opens the step that made it.")
 QT_TRANSLATE_NOOP("Core", "Round off edges so parts look finished and are comfortable to hold.")
@@ -375,6 +376,10 @@ QT_TRANSLATE_NOOP("Core", "A joint attaches to a round edge, a straight edge or 
 QT_TRANSLATE_NOOP("Core", "The first pick of a joint must be on the part that moves (or name the part that turns about an axis).")
 QT_TRANSLATE_NOOP("Core", "A joint connects two different parts.")
 QT_TRANSLATE_NOOP("Core", "Pick the second edge or face on another part.")
+QT_TRANSLATE_NOOP("Core", "The two parts of this joint are in one rigid group, so they cannot move against each other.")
+QT_TRANSLATE_NOOP("Core", "Take one of them out of the group, or join to a part outside it.")
+QT_TRANSLATE_NOOP("Core", "Edit the group and pick the parts again.")
+QT_TRANSLATE_NOOP("Core", "A rigid group needs at least two parts.")
 QT_TRANSLATE_NOOP("Core", "The axis line of this revolve is gone from the sketch.")
 QT_TRANSLATE_NOOP("Core", "Edit the revolve and pick an axis again.")
 QT_TRANSLATE_NOOP("Core", "The axis line has no length.")
@@ -702,6 +707,7 @@ inline const char* const kCorePatterns[] = {
     QT_TRANSLATE_NOOP("Core", "The axis '%1' is missing or comes later in the timeline."),
     QT_TRANSLATE_NOOP("Core", "Jigsmith has no joint called '%1'."),
     QT_TRANSLATE_NOOP("Core", "The joint stops at its limit (%1)."),
+    QT_TRANSLATE_NOOP("Core", "The part '%1' of this group no longer exists."),
     QT_TRANSLATE_NOOP("Core", "The body this pattern repeats (%1) no longer exists."),
     QT_TRANSLATE_NOOP("Core", "The step this pattern repeats (%1) is missing, after the pattern, or has a problem."),
     QT_TRANSLATE_NOOP("Core", "The sketch with this pattern's path (%1) is missing or comes later."),

@@ -1179,6 +1179,26 @@ private:
     QCheckBox* flip_;
 };
 
+// Assemble ▸ Rigid group: parts that move together under later joints.
+class RigidGroupPanel : public FeaturePanel
+{
+    Q_OBJECT
+public:
+    RigidGroupPanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent = nullptr);
+    QListWidget* parts() const
+    {
+        return parts_;
+    }
+
+protected:
+    QString notReady() const override;
+    jig::Feature draft() const override;
+    QString title() const override;
+
+private:
+    QListWidget* parts_;
+};
+
 class MoveHandle;
 
 // Move / copy bodies: shift along X, Y, Z and turn around an origin axis.
