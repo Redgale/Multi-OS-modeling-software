@@ -91,6 +91,7 @@ QT_TRANSLATE_NOOP("Core", "Slice the view to look inside walls and holes.")
 QT_TRANSLATE_NOOP("Core", "Volume, area, weight and center of mass of a body.")
 QT_TRANSLATE_NOOP("Core", "Bring in a solid from another CAD program.")
 QT_TRANSLATE_NOOP("Core", "Bring in a closed mesh (STL, OBJ or 3MF) as a solid you can change, kept inside the design.")
+QT_TRANSLATE_NOOP("Core", "Standard metric socket head and hex head screws, nuts and washers, M2 to M12 (simple shapes, no thread).")
 QT_TRANSLATE_NOOP("Core", "Place a photo or drawing on a plane, see-through, to trace over with sketch curves.")
 QT_TRANSLATE_NOOP("Core", "Bring vector artwork into a sketch, e.g. a logo.")
 QT_TRANSLATE_NOOP("Core", "Bring a 2D drawing or laser-cut file into a sketch.")
@@ -323,6 +324,11 @@ QT_TRANSLATE_NOOP("Core", "Try a coarser pitch.")
 QT_TRANSLATE_NOOP("Core", "The picture's width must be more than zero.")
 QT_TRANSLATE_NOOP("Core", "This picture is missing from the design.")
 QT_TRANSLATE_NOOP("Core", "Delete the step and insert the picture again.")
+QT_TRANSLATE_NOOP("Core", "Sizes: M2, M2.5, M3, M4, M5, M6, M8, M10, M12.")
+QT_TRANSLATE_NOOP("Core", "A fastener is a socket head screw, a hex head screw, a nut or a washer.")
+QT_TRANSLATE_NOOP("Core", "A screw's length (under the head) must be more than 0.5 mm and at most 500 mm.")
+QT_TRANSLATE_NOOP("Core", "This fastener has an unknown operation.")
+QT_TRANSLATE_NOOP("Core", "This fastener could not be made.")
 QT_TRANSLATE_NOOP("Core", "The body of the face to push or pull no longer exists.")
 QT_TRANSLATE_NOOP("Core", "Edit the step and click a face.")
 QT_TRANSLATE_NOOP("Core", "The face to push or pull no longer exists.")
@@ -683,6 +689,7 @@ inline const char* const kCorePatterns[] = {
     QT_TRANSLATE_NOOP("Core", "Use a pitch larger than the section size (%1)."),
     QT_TRANSLATE_NOOP("Core", "The %1 must be more than zero."),
     QT_TRANSLATE_NOOP("Core", "Jigsmith has no basic shape called '%1'."),
+    QT_TRANSLATE_NOOP("Core", "Jigsmith has no fastener size '%1'."),
     QT_TRANSLATE_NOOP("Core", "The point '%1' to scale about is missing or comes later."),
     QT_TRANSLATE_NOOP("Core", "Jigsmith has no joint called '%1'."),
     QT_TRANSLATE_NOOP("Core", "The joint stops at its limit (%1)."),

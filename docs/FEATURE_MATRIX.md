@@ -154,7 +154,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Attached canvas (image tracing) | 22 | v0.2 | **app** + scripts (`canvas`): PNG/JPEG on any plane, width, turn, see-through strength, kept in the design | Calibrating by two clicked points not yet |
 | Decal | 22, 34 | v0.3+ | — | Rendering |
 | McMaster-Carr, manufacturer parts | 22, 32 | never | — | Requires network and third-party catalogs |
-| Insert fastener (standard parts) | 22, 32 | v0.2 | — | Brief v0.2: offline library |
+| Insert fastener (standard parts) | 22, 32 | v0.2 | **app** + scripts (`fastener`): socket head and hex head screws, nuts, washers, M2–M12, offline, as parts or cut into a body | Inch sizes and threads on the parts not yet |
 | Select, selection priority, filters | 23 | v0.1 M2 | **app**: filter in the status bar (faces, edges, bodies) with details for each; Select Other (long press: every face under the cursor, nearest first) | |
 | Window and crossing selection | 23 | v0.1 M2 | **app** in sketches (window left to right, crossing right to left); in 3D for edges while picking them (Fillet, Chamfer) faces (Shell), visible ones only, and bodies (Move) | |
 | Freeform, paint selection, selection sets | 23 | v0.2 | — | |

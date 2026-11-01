@@ -131,6 +131,7 @@ const std::map<QString, QString>& icons()
         {"inspect.properties", "O12 12 9 M12 11 L12 17 f O12 7.5 1.3"},
         {"insert.step", "M6 3 L14 3 L19 8 L19 21 L6 21 Z a M3 14 L11 14 M8 11 L11 14 L8 17"},
         {"insert.mesh", "M12 3 L20 8 L20 17 L12 21 L4 17 L4 8 Z M4 8 L12 12 L20 8 M12 12 L12 21 M4 8 L20 17 M20 8 L4 17"},
+        {"insert.fastener", "M6 3 L18 3 L18 8 L6 8 Z M10 8 L10 21 M14 8 L14 21 a M10 11 L14 13 M10 15 L14 17"},
         {"insert.canvas", "R3 5 18 14 M3 16 L9 10 L13 14 L16 11 L21 16 f O16 8 1.6"},
         {"insert.svg", "M6 3 L14 3 L19 8 L19 21 L6 21 Z a M9 17 C9 10 16 16 16 10 f O9 17 1.3 O16 10 1.3"},
         {"insert.dxf", "M6 3 L14 3 L19 8 L19 21 L6 21 Z a M9 11 L16 11 L16 18 L9 18 Z"},

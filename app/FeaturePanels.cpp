@@ -5023,6 +5023,107 @@ QString JointPanel::title() const
     return tr("joint");
 }
 
+// ---------------------------------------------------------------- Fastener
+
+FastenerPanel::FastenerPanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent)
+    : FeaturePanel(doc, view, std::move(editId), parent)
+{
+    form_->addWidget(heading(this, tr("Screw, nut or washer"),
+                             tr("Standard metric hardware to place in a design, or to cut its shape into a part "
+                                "(Cut: a screw makes its own hole and head pocket). Simple shapes, no thread.")));
+    kind_ = combo(this, {{tr("Socket head screw"), "capscrew"},
+                         {tr("Hex head screw"), "hexscrew"},
+                         {tr("Hex nut"), "nut"},
+                         {tr("Washer"), "washer"}});
+    size_ = new QComboBox(this);
+    for (const auto& z : jig::fastenerSizes()) {
+        size_->addItem(q(z.name), q(z.name));
+    }
+    length_ = new ExprField(doc, jig::Dim::len(), this);
+    plane_ = combo(this, {{tr("Floor (XY)"), "XY"}, {tr("Front (XZ)"), "XZ"}, {tr("Side (YZ)"), "YZ"}});
+    centerX_ = new ExprField(doc, jig::Dim::len(), this);
+    centerY_ = new ExprField(doc, jig::Dim::len(), this);
+    flip_ = new QCheckBox(tr("Upside down"), this);
+    op_ = combo(this, {{tr("New body"), "new"}, {tr("Cut its shape from the body"), "cut"}, {tr("Join to the body"), "join"}});
+    addRow(tr("Kind"), kind_);
+    addRow(tr("Size"), size_);
+    addRow(tr("Length under the head"), length_);
+    bindParam("length", length_);
+    addRow(tr("Plane"), plane_);
+    addRow(tr("Centre across the plane"), centerX_);
+    addRow(tr("Centre up the plane"), centerY_);
+    form_->addWidget(flip_);
+    addRow(tr("Result"), op_);
+    const auto before = stateBefore();
+    for (int i = 0; i < insertIndex(); ++i) {
+        const auto& f = doc_.model().features[size_t(i)];
+        if (f.kind == jig::FeatureKind::Plane && before->planes.count(f.id)) {
+            plane_->addItem(q(f.name), q(f.id));
+        }
+    }
+    const jig::Feature* edit = editId_.empty() ? nullptr : doc_.feature(editId_);
+    const nlohmann::json p = edit ? edit->params : nlohmann::json::object();
+    select(kind_, p.value("kind", std::string("capscrew")));
+    select(size_, p.value("size", std::string("M3")));
+    length_->setText(q(p.value("length", std::string("10 mm"))));
+    const nlohmann::json pl = p.value("plane", nlohmann::json("XY"));
+    select(plane_, pl.is_string() ? pl.get<std::string>() : std::string("XY"));
+    const nlohmann::json c = p.value("center", nlohmann::json::array({"0 mm", "0 mm"}));
+    auto str = [](const nlohmann::json& v) { return v.is_string() ? v.get<std::string>() : v.dump(); };
+    const bool two = c.is_array() && c.size() == 2;
+    centerX_->setText(q(two ? str(c[0]) : std::string("0 mm")));
+    centerY_->setText(q(two ? str(c[1]) : std::string("0 mm")));
+    flip_->setChecked(p.value("flip", false));
+    select(op_, p.value("op", std::string("new")));
+    showFields();
+    connect(kind_, &QComboBox::currentIndexChanged, this, [this] {
+        showFields();
+        schedulePreview();
+    });
+    for (auto* cb : {size_, plane_, op_}) {
+        connect(cb, &QComboBox::currentIndexChanged, this, [this] { schedulePreview(); });
+    }
+    for (auto* e : {length_, centerX_, centerY_}) {
+        connect(e, &ExprField::changed, this, [this] { schedulePreview(); });
+    }
+    connect(flip_, &QCheckBox::toggled, this, [this] { schedulePreview(); });
+    schedulePreview();
+}
+
+void FastenerPanel::showFields()
+{
+    const std::string k = current(kind_);
+    const bool screw = k == "capscrew" || k == "hexscrew";
+    length_->setVisible(screw);
+    const int i = form_->indexOf(length_);
+    if (i > 0) {
+        if (auto* item = form_->itemAt(i - 1); item && item->widget()) {
+            item->widget()->setVisible(screw);
+        }
+    }
+}
+
+jig::Feature FastenerPanel::draft() const
+{
+    jig::Feature f = startDraft(doc_, editId_, "fs", tr("Fastener"));
+    f.kind = jig::FeatureKind::Fastener;
+    f.params = {{"kind", current(kind_)},
+                {"size", current(size_)},
+                {"plane", current(plane_)},
+                {"center", {centerX_->text().toStdString(), centerY_->text().toStdString()}},
+                {"flip", flip_->isChecked()},
+                {"op", current(op_)}};
+    if (length_->isVisibleTo(this)) {
+        f.params["length"] = length_->text().toStdString();
+    }
+    return f;
+}
+
+QString FastenerPanel::title() const
+{
+    return tr("fastener");
+}
+
 // ---------------------------------------------------------------- Move
 
 // Three arrows (X, Y, Z) from the bodies' centre; drag a grip to move along that axis.

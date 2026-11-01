@@ -165,6 +165,7 @@ CommandRegistry::CommandRegistry()
     add({"inspect.properties", "Properties", "Properties", "INSPECT", "Volume, area, weight and center of mass of a body.", "", {"volume", "weight", "mass", "filament"}, true, false, true, m6});
     add({"insert.step", "Import STEP…", "Insert STEP", "INSERT", "Bring in a solid from another CAD program.", "", {"stp", "import solid"}, false, true, true, m6});
     add({"insert.mesh", "Insert mesh…", "Insert Mesh", "INSERT", "Bring in a closed mesh (STL, OBJ or 3MF) as a solid you can change, kept inside the design.", "", {"stl", "obj", "3mf", "import mesh", "printable"}, false, true, true, m6});
+    add({"insert.fastener", "Screw, nut or washer…", "Insert Fastener", "INSERT", "Standard metric socket head and hex head screws, nuts and washers, M2 to M12 (simple shapes, no thread).", "", {"bolt", "screw", "nut", "washer", "hardware", "standard parts"}, false, true, true, m6});
     add({"insert.canvas", "Picture to trace…", "Canvas", "INSERT", "Place a photo or drawing on a plane, see-through, to trace over with sketch curves.", "", {"image", "photo", "trace", "reference picture", "canvas", "attached canvas"}, false, true, true, m6});
     add({"insert.svg", "Import SVG…", "Insert SVG", "INSERT", "Bring vector artwork into a sketch, e.g. a logo.", "", {"logo", "vector", "artwork"}, false, false, false, m5});
     add({"insert.dxf", "Import DXF…", "Insert DXF", "INSERT", "Bring a 2D drawing or laser-cut file into a sketch.", "", {"laser", "2d drawing"}, false, false, false, m5});
@@ -1967,7 +1968,7 @@ Result<bool> ScriptRunner::runLineUnchecked(std::string_view rawLine)
     if (a.verb == "revolve" || a.verb == "hole" || a.verb == "pattern" || a.verb == "mirror" || a.verb == "loft" ||
         a.verb == "sweep" || a.verb == "pipe" || a.verb == "coil" ||
         a.verb == "box" || a.verb == "cylinder" || a.verb == "sphere" || a.verb == "torus" || a.verb == "rib" ||
-        a.verb == "emboss" || a.verb == "thread") {
+        a.verb == "emboss" || a.verb == "thread" || a.verb == "fastener") {
         // revolve sketch=s1 axis=X|Y|Z|line:<name> [angle=360deg | extent=to to=<plane>|face:<name>]
         //         [op=new|join|cut|intersect] [profiles=…]
         // hole sketch=s2 diameter=3.4mm (depth=10mm | extent=all) [type=simple|counterbore|countersink]
@@ -1984,7 +1985,7 @@ Result<bool> ScriptRunner::runLineUnchecked(std::string_view rawLine)
             {"box", {FeatureKind::Primitive, "bx"}}, {"cylinder", {FeatureKind::Primitive, "cy"}},
             {"sphere", {FeatureKind::Primitive, "sp"}}, {"torus", {FeatureKind::Primitive, "to"}},
             {"rib", {FeatureKind::Rib, "rb"}}, {"emboss", {FeatureKind::Emboss, "em"}},
-            {"thread", {FeatureKind::Thread, "th"}}};
+            {"thread", {FeatureKind::Thread, "th"}}, {"fastener", {FeatureKind::Fastener, "fs"}}};
         const auto& [kind, prefix] = kinds.at(a.verb);
         nlohmann::json params = nlohmann::json::object();
         for (auto& [k, v] : a.kv) {
@@ -2046,6 +2047,18 @@ Result<bool> ScriptRunner::runLineUnchecked(std::string_view rawLine)
             // box [plane=XY|…] [center=x,y] length= width= height= [flip=yes] [op=…]
             // cylinder … diameter= height= ; sphere … diameter= ; torus … diameter= tube=
             params["shape"] = a.verb;
+            if (a.has("center")) {
+                const auto xy = split(a.get("center"), ',');
+                if (xy.size() != 2) {
+                    return makeError("script.args", "center= needs two values: center=x,y");
+                }
+                params["center"] = xy;
+            }
+            params["flip"] = a.get("flip", "no") == "yes";
+        }
+        if (a.verb == "fastener") {
+            // fastener kind=capscrew|hexscrew|nut|washer size=M3 [length=10mm] [plane=XY|…] [center=x,y]
+            //          [flip=yes] [op=new|join|cut]
             if (a.has("center")) {
                 const auto xy = split(a.get("center"), ',');
                 if (xy.size() != 2) {

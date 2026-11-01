@@ -3045,3 +3045,47 @@ TEST(Variant, NamedSetsOfParameterValues)
     EXPECT_FALSE(saveVariant(*empty, "A").ok());
     EXPECT_FALSE(saveVariant(*doc, "").ok());
 }
+
+TEST(Fastener, ScrewsNutsAndWashersAtTheirStandardSizes)
+{
+    // an M3 x 10 socket head cap screw: head 5.5 across, 3 high, above the plane; shank 3 x 10 below
+    auto cap = build("fastener id=fs1 kind=capscrew size=M3 length=10mm\n");
+    expectAllOk(*cap);
+    auto pc = props(*cap);
+    EXPECT_TRUE(pc.valid);
+    EXPECT_NEAR(pc.zmax, 3, 1e-6);
+    EXPECT_NEAR(pc.zmin, -10, 1e-6);
+    EXPECT_NEAR(pc.xmax - pc.xmin, 5.5, 1e-6);
+    const double head = pi * 2.75 * 2.75 * 3, shank = pi * 1.5 * 1.5 * 10;
+    EXPECT_LT(pc.volume, head + shank);           // the hex socket is cut out
+    EXPECT_GT(pc.volume, head + shank - 15);
+    for (const char* n : {"fs1/top", "fs1/shank", "fs1/under_head", "fs1/end"}) {
+        EXPECT_GE(cap->state().bodies.at("fs1")->findFaces(n).size(), 1u) << n;
+    }
+    // an M6 nut: 10 across flats, 5.2 high, with a 6 mm hole
+    auto nut = build("fastener id=n1 kind=nut size=M6\n");
+    expectAllOk(*nut);
+    const double hexArea = std::sqrt(3.0) / 2 * 10 * 10;
+    EXPECT_NEAR(props(*nut).volume, (hexArea - pi * 9) * 5.2, 1e-3);
+    // an M8 washer: 8.4 / 16 x 1.6
+    auto washer = build("fastener id=w1 kind=washer size=M8\n");
+    EXPECT_NEAR(props(*washer).volume, pi * (64 - 4.2 * 4.2) * 1.6, 1e-3);
+    // a hex head screw sized by a parameter, flipped and placed off-centre
+    auto hex = build("param L = 16 mm\nfastener id=fs1 kind=hexscrew size=M4 length=L center=20,0 flip=yes\n");
+    expectAllOk(*hex);
+    EXPECT_NEAR(props(*hex).zmax, 16, 1e-6);
+    EXPECT_NEAR((props(*hex).xmin + props(*hex).xmax) / 2, 20, 1e-6);
+    // a screw cut into a block leaves its shape as a hole
+    auto cut = build("box id=bx1 length=20mm width=20mm height=10mm\nplane id=pl1 base=XY distance=10mm\n"
+                     "fastener kind=capscrew size=M3 length=10mm plane=pl1 op=cut\n");
+    expectAllOk(*cut);
+    EXPECT_NEAR(props(*cut).volume, 4000 - pi * 1.5 * 1.5 * 10, 1e-3);
+    // unknown sizes and kinds are explained
+    for (const char* bad : {"fastener kind=capscrew size=M7\n", "fastener kind=rivet size=M3\n"}) {
+        auto d = std::make_unique<Document>();
+        ScriptRunner r(*d);
+        r.strict = false;
+        ASSERT_TRUE(r.runText(bad).ok());
+        EXPECT_EQ(d->status(0).level, StatusLevel::Error) << bad;
+    }
+}

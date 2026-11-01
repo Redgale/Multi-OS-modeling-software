@@ -15,6 +15,8 @@
 #include <BRepAdaptor_Curve.hxx>
 #include <BRepAlgoAPI_Common.hxx>
 #include <BRepBndLib.hxx>
+#include <BRepBuilderAPI_MakePolygon.hxx>
+#include <ShapeUpgrade_UnifySameDomain.hxx>
 #include <ShapeFix_Face.hxx>
 #include <GCE2d_MakeSegment.hxx>
 #include <GCPnts_QuasiUniformDeflection.hxx>
@@ -2298,6 +2300,149 @@ FeatureOutcome applyCanvas(const Document& doc, const Feature& f, const std::sha
     return {out, status};
 }
 
+// ---------------------------------------------------------------- fasteners
+
+namespace
+{
+// A hexagon `s` across flats, `h` tall, standing on the frame's xy plane at height z0.
+TopoDS_Shape hexPrism(const gp_Ax2& ax, double s, double z0, double h)
+{
+    const double r = s / std::sqrt(3.0);  // corner radius
+    BRepBuilderAPI_MakePolygon poly;
+    for (int i = 0; i < 6; ++i) {
+        const double a = i * std::numbers::pi / 3;
+        poly.Add(ax.Location().Translated(gp_Vec(ax.XDirection()) * (r * std::cos(a)) + gp_Vec(ax.YDirection()) * (r * std::sin(a)) +
+                                          gp_Vec(ax.Direction()) * z0));
+    }
+    poly.Close();
+    const TopoDS_Face face = BRepBuilderAPI_MakeFace(poly.Wire(), true).Face();
+    return BRepPrimAPI_MakePrism(face, gp_Vec(ax.Direction()) * h).Shape();
+}
+
+TopoDS_Shape cylinderAt(const gp_Ax2& ax, double d, double z0, double h)
+{
+    gp_Ax2 a = ax;
+    a.SetLocation(ax.Location().Translated(gp_Vec(ax.Direction()) * z0));
+    return BRepPrimAPI_MakeCylinder(a, d / 2, h).Shape();
+}
+}  // namespace
+
+// A standard metric screw, nut or washer (simplified: no thread), placed on a plane at a
+// point. Screws stand with the underside of the head on the plane and the shank going down
+// into the part; nuts and washers sit on the plane.
+FeatureOutcome applyFastener(const Document& doc, const Feature& f, const std::shared_ptr<const ModelState>& in)
+{
+    const auto& p = f.params;
+    FeatureStatus status;
+    auto size = fastenerSize(p.value("size", std::string("M3")));
+    if (!size) {
+        return failed(fmt("Jigsmith has no fastener size '%1'.", {p.value("size", std::string {})}),
+                      {"Sizes: M2, M2.5, M3, M4, M5, M6, M8, M10, M12."});
+    }
+    const std::string kind = p.value("kind", std::string("capscrew"));
+    if (kind != "capscrew" && kind != "hexscrew" && kind != "nut" && kind != "washer") {
+        return failed("A fastener is a socket head screw, a hex head screw, a nut or a washer.");
+    }
+    auto frame = planeFrame(p.value("plane", nlohmann::json("XY")), in, status);
+    if (!frame) {
+        return failed(frame.error());
+    }
+    double cx = 0, cy = 0;
+    const nlohmann::json cj = p.value("center", nlohmann::json::array());
+    if (cj.is_array() && cj.size() == 2) {
+        for (int i = 0; i < 2; ++i) {
+            auto v = doc.evalLength(cj[size_t(i)].is_string() ? cj[size_t(i)].get<std::string>() : cj[size_t(i)].dump());
+            if (!v) {
+                return failed(v.error());
+            }
+            (i == 0 ? cx : cy) = v.value();
+        }
+    }
+    double length = 0;
+    if (kind == "capscrew" || kind == "hexscrew") {
+        auto l = doc.evalLength(p.value("length", std::string("10 mm")));
+        if (!l) {
+            return failed(l.error());
+        }
+        length = l.value();
+        if (length <= 0.5 || length > 500) {
+            return failed("A screw's length (under the head) must be more than 0.5 mm and at most 500 mm.");
+        }
+    }
+    try {
+        const gp_Ax3& fr = frame.value();
+        const gp_Pnt c = fr.Location().Translated(gp_Vec(fr.XDirection()) * cx + gp_Vec(fr.YDirection()) * cy);
+        gp_Dir up = fr.Direction(), xd = fr.XDirection();
+        if (p.value("flip", false)) {
+            up.Reverse();
+            xd.Reverse();
+        }
+        const gp_Ax2 ax(c, up, xd);
+        const FastenerSize& z = *size;
+        TopoDS_Shape solid;
+        if (kind == "capscrew") {
+            TopoDS_Shape head = cylinderAt(ax, z.capHead, 0, z.capHeight);
+            const double depth = std::min(z.capHeight * 0.6, z.d * 0.5 + 0.2);
+            head = BRepAlgoAPI_Cut(head, hexPrism(ax, z.socket, z.capHeight - depth, depth + 1)).Shape();
+            solid = BRepAlgoAPI_Fuse(head, cylinderAt(ax, z.d, -length, length)).Shape();
+        }
+        else if (kind == "hexscrew") {
+            solid = BRepAlgoAPI_Fuse(hexPrism(ax, z.hexHead, 0, z.hexHeight), cylinderAt(ax, z.d, -length, length)).Shape();
+        }
+        else if (kind == "nut") {
+            solid = BRepAlgoAPI_Cut(hexPrism(ax, z.hexHead, 0, z.nutHeight), cylinderAt(ax, z.d, -1, z.nutHeight + 2)).Shape();
+        }
+        else {
+            solid = BRepAlgoAPI_Cut(cylinderAt(ax, z.washerOuter, 0, z.washerThick),
+                                    cylinderAt(ax, z.washerHole, -1, z.washerThick + 2))
+                        .Shape();
+        }
+        ShapeUpgrade_UnifySameDomain unify(solid, true, true, false);
+        unify.Build();
+        if (!unify.Shape().IsNull()) {
+            solid = unify.Shape();
+        }
+        NamedShape tool(solid);
+        int other = 0;
+        for (int i = 0; i < tool.faceCount(); ++i) {
+            const TopoDS_Face face = TopoDS::Face(tool.face(i));
+            BRepAdaptor_Surface sa(face);
+            std::string name;
+            if (sa.GetType() == GeomAbs_Cylinder && std::abs(sa.Cylinder().Radius() - z.d / 2) < 1e-6) {
+                name = kind == "nut" || kind == "washer" ? "hole" : "shank";
+            }
+            else if (sa.GetType() == GeomAbs_Plane) {
+                gp_Dir n = sa.Plane().Axis().Direction();
+                if (face.Orientation() == TopAbs_REVERSED) {
+                    n.Reverse();
+                }
+                GProp_GProps gp;
+                BRepGProp::SurfaceProperties(face, gp);
+                const double h = gp_Vec(c, gp.CentreOfMass()).Dot(gp_Vec(up));
+                if (n.Dot(up) > 0.99 && h > 0) {
+                    name = "top";
+                }
+                else if (n.Dot(up) < -0.99 && std::abs(h) < 1e-6) {
+                    name = kind == "capscrew" || kind == "hexscrew" ? "under_head" : "bottom";
+                }
+                else if (n.Dot(up) < -0.99 && h < -0.5) {
+                    name = "end";
+                }
+            }
+            tool.setFaceName(i, name.empty() ? f.id + "/face" + std::to_string(++other) : f.id + "/" + name);
+        }
+        auto op = opFromString(p.value("op", std::string("new")));
+        if (!op) {
+            return failed("This fastener has an unknown operation.");
+        }
+        return applyTool(f, *op, std::move(tool), in, status);
+    }
+    catch (const Standard_Failure& e) {
+        const char* m = e.GetMessageString();
+        return failed("This fastener could not be made.", {}, m ? m : "");
+    }
+}
+
 // ---------------------------------------------------------------- press pull
 
 // Pushes or pulls a flat face straight along its normal: out adds material, in removes it.
@@ -3639,6 +3784,8 @@ FeatureOutcome applyFeature(const Document& doc, const Feature& f, const std::sh
                 return applyCanvas(doc, f, in);
             case FeatureKind::Joint:
                 return applyJoint(doc, f, in);
+            case FeatureKind::Fastener:
+                return applyFastener(doc, f, in);
             case FeatureKind::Hole:
                 return applyHole(doc, f, in);
             case FeatureKind::Pattern:

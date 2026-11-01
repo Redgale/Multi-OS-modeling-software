@@ -86,4 +86,31 @@ Result<double> clearanceDiameter(std::string_view size, HoleFit fit)
     return d;
 }
 
+const std::vector<FastenerSize>& fastenerSizes()
+{
+    // name, d, pitch, cap head dk, k, socket s, hex s, hex k, nut m, washer d1, d2, h
+    static const std::vector<FastenerSize> sizes = {
+        {"M2", 2, 0.4, 3.8, 2, 1.5, 4, 1.4, 1.6, 2.2, 5, 0.3},
+        {"M2.5", 2.5, 0.45, 4.5, 2.5, 2, 5, 1.7, 2, 2.7, 6, 0.5},
+        {"M3", 3, 0.5, 5.5, 3, 2.5, 5.5, 2, 2.4, 3.2, 7, 0.5},
+        {"M4", 4, 0.7, 7, 4, 3, 7, 2.8, 3.2, 4.3, 9, 0.8},
+        {"M5", 5, 0.8, 8.5, 5, 4, 8, 3.5, 4.7, 5.3, 10, 1},
+        {"M6", 6, 1, 10, 6, 5, 10, 4, 5.2, 6.4, 12, 1.6},
+        {"M8", 8, 1.25, 13, 8, 6, 13, 5.3, 6.8, 8.4, 16, 1.6},
+        {"M10", 10, 1.5, 16, 10, 8, 16, 6.4, 8.4, 10.5, 20, 2},
+        {"M12", 12, 1.75, 18, 12, 10, 18, 7.5, 10.8, 13, 24, 2.5},
+    };
+    return sizes;
+}
+
+std::optional<FastenerSize> fastenerSize(std::string_view name)
+{
+    for (const auto& f : fastenerSizes()) {
+        if (f.name == name) {
+            return f;
+        }
+    }
+    return std::nullopt;
+}
+
 }  // namespace jig

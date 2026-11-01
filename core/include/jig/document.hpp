@@ -78,7 +78,8 @@ enum class FeatureKind
     Scale,      // bodies made bigger or smaller about a point (or stretched per axis)
     Thread,     // a helical thread cut into a shaft or the wall of a hole
     Canvas,     // a picture placed on a plane to trace over (display only)
-    Joint       // a part placed against another and moved by the joint's motion
+    Joint,      // a part placed against another and moved by the joint's motion
+    Fastener    // a standard screw, nut or washer (simplified, no thread)
 };
 
 const char* toString(FeatureKind k);

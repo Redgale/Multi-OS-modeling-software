@@ -1133,6 +1133,40 @@ private:
     QCheckBox* flip_;
 };
 
+// Insert ▸ Screw, nut or washer: standard metric hardware placed on a plane.
+class FastenerPanel : public FeaturePanel
+{
+    Q_OBJECT
+public:
+    FastenerPanel(jig::Document& doc, Viewport* view, std::string editId, QWidget* parent = nullptr);
+    QComboBox* kind() const
+    {
+        return kind_;
+    }
+    QComboBox* size() const
+    {
+        return size_;
+    }
+    ExprField* length() const
+    {
+        return length_;
+    }
+    QComboBox* operation() const
+    {
+        return op_;
+    }
+
+protected:
+    jig::Feature draft() const override;
+    QString title() const override;
+
+private:
+    void showFields();
+    QComboBox *kind_, *size_, *plane_, *op_;
+    ExprField *length_, *centerX_, *centerY_;
+    QCheckBox* flip_;
+};
+
 class MoveHandle;
 
 // Move / copy bodies: shift along X, Y, Z and turn around an origin axis.

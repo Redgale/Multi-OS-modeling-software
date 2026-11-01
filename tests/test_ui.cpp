@@ -3336,6 +3336,33 @@ private slots:
         QVERIFY(std::abs(vol() - 6000) < 1e-6);
     }
 
+    // A screw from the library: M4 x 12 socket head; a nut hides the length field.
+    void fastenerPanel()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        w.runCommand("insert.fastener");
+        auto* fp = qobject_cast<FastenerPanel*>(w.featurePanel());
+        QVERIFY(fp);
+        QVERIFY(fp->length()->isVisibleTo(fp));
+        fp->kind()->setCurrentIndex(fp->kind()->findData("nut"));
+        QVERIFY(!fp->length()->isVisibleTo(fp));
+        fp->kind()->setCurrentIndex(fp->kind()->findData("capscrew"));
+        fp->size()->setCurrentIndex(fp->size()->findData("M4"));
+        fp->length()->setText("12 mm");
+        QTRY_VERIFY(fp->previewOk());
+        w.viewport()->homeView();
+        QTRY_VERIFY(w.viewport()->meshesReady());
+        QTest::qWait(200);
+        w.grab().save(shotPath("fastener-panel"));
+        QVERIFY(fp->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        const auto m = jig::massProperties(w.document().state().bodies.begin()->second->shape());
+        QVERIFY(std::abs(m.zmin + 12) < 1e-6 && std::abs(m.zmax - 4) < 1e-6);
+    }
+
     // Areas of a sketch are picked by clicking them in the 3D view: a square with a circle in it
     // can become a round post (the circle) or a block with a hole (the ring), not only a block.
     void clickAreasToExtrude()

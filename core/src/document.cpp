@@ -75,6 +75,8 @@ const char* toString(FeatureKind k)
             return "canvas";
         case FeatureKind::Joint:
             return "joint";
+        case FeatureKind::Fastener:
+            return "fastener";
     }
     return "sketch";
 }
@@ -97,7 +99,7 @@ std::optional<FeatureKind> featureKindFromString(std::string_view s)
         return FeatureKind::Shell;
     }
     for (auto k : {FeatureKind::Revolve, FeatureKind::Hole, FeatureKind::Pattern, FeatureKind::Mirror, FeatureKind::Plane,
-                   FeatureKind::Combine, FeatureKind::Split, FeatureKind::Move, FeatureKind::Axis, FeatureKind::PressPull, FeatureKind::Point, FeatureKind::Import, FeatureKind::Remove, FeatureKind::Loft, FeatureKind::Sweep, FeatureKind::Pipe, FeatureKind::Coil, FeatureKind::Primitive, FeatureKind::Rib, FeatureKind::Emboss, FeatureKind::Draft, FeatureKind::Scale, FeatureKind::Thread, FeatureKind::Canvas, FeatureKind::Joint}) {
+                   FeatureKind::Combine, FeatureKind::Split, FeatureKind::Move, FeatureKind::Axis, FeatureKind::PressPull, FeatureKind::Point, FeatureKind::Import, FeatureKind::Remove, FeatureKind::Loft, FeatureKind::Sweep, FeatureKind::Pipe, FeatureKind::Coil, FeatureKind::Primitive, FeatureKind::Rib, FeatureKind::Emboss, FeatureKind::Draft, FeatureKind::Scale, FeatureKind::Thread, FeatureKind::Canvas, FeatureKind::Joint, FeatureKind::Fastener}) {
         if (s == toString(k)) {
             return k;
         }

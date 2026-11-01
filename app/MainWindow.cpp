@@ -191,6 +191,8 @@ QString kindWord(jig::FeatureKind k)
             return MainWindow::tr("Picture");
         case jig::FeatureKind::Joint:
             return MainWindow::tr("Joint");
+        case jig::FeatureKind::Fastener:
+            return MainWindow::tr("Fastener");
         case jig::FeatureKind::Move:
             return MainWindow::tr("Move");
     }
@@ -1888,6 +1890,9 @@ void MainWindow::runCommand(const QString& id)
             QMessageBox::information(this, tr("Interference"), text);
         }
     }
+    else if (id == "insert.fastener") {
+        openFastener({});
+    }
     else if (id == "insert.canvas") {
         const QString path = QFileDialog::getOpenFileName(this, tr("Picture to trace"), {},
                                                           tr("Pictures (*.png *.jpg *.jpeg)"));
@@ -3135,6 +3140,15 @@ void MainWindow::openAppearance()
     dlg.exec();
 }
 
+void MainWindow::openFastener(const std::string& editId)
+{
+    if (sketch_) {
+        exitSketch();
+    }
+    cancelPicker();
+    showPanel(new FastenerPanel(*doc_, view_, editId, panelHost_));
+}
+
 void MainWindow::openJoint(const std::string& editId)
 {
     if (sketch_) {
@@ -3512,6 +3526,9 @@ void MainWindow::editFeature(int index)
             break;
         case jig::FeatureKind::Joint:
             openJoint(f.id);
+            break;
+        case jig::FeatureKind::Fastener:
+            openFastener(f.id);
             break;
         case jig::FeatureKind::Sweep:
             openSweep(f.id);

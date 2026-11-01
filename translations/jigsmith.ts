@@ -945,6 +945,16 @@
     </message>
     <message>
         <location line="+1"/>
+        <source>Screw, nut or washer…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Standard metric socket head and hex head screws, nuts and washers, M2 to M12 (simple shapes, no thread).</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>Picture to trace…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1549,6 +1559,11 @@
     <message>
         <location line="+1"/>
         <source>Bring in a closed mesh (STL, OBJ or 3MF) as a solid you can change, kept inside the design.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Standard metric socket head and hex head screws, nuts and washers, M2 to M12 (simple shapes, no thread).</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -2669,6 +2684,31 @@
     <message>
         <location line="+1"/>
         <source>Delete the step and insert the picture again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Sizes: M2, M2.5, M3, M4, M5, M6, M8, M10, M12.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>A fastener is a socket head screw, a hex head screw, a nut or a washer.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>A screw&apos;s length (under the head) must be more than 0.5 mm and at most 500 mm.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>This fastener has an unknown operation.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>This fastener could not be made.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -3838,6 +3878,11 @@
     </message>
     <message>
         <location line="+1"/>
+        <source>Jigsmith has no fastener size &apos;%1&apos;.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>The point &apos;%1&apos; to scale about is missing or comes later.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3902,7 +3947,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-54"/>
+        <location line="-55"/>
         <source>The id &apos;%1&apos; is already used.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3912,7 +3957,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+70"/>
+        <location line="+71"/>
         <source>A wall of %1 does not fit this outline.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3997,12 +4042,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-278"/>
+        <location line="-279"/>
         <source>There is nothing to export yet.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-288"/>
+        <location line="-293"/>
         <source>This DXF has no lines, circles, arcs, curves, text or blocks to bring in.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4042,7 +4087,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+201"/>
+        <location line="+206"/>
         <source>The 3MF file could not be created.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4645,7 +4690,7 @@
 <context>
     <name>CoreWords</name>
     <message>
-        <location line="+108"/>
+        <location line="+109"/>
         <source>ball face (sphere)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4753,7 +4798,7 @@
 <context>
     <name>MainWindow</name>
     <message>
-        <location filename="../app/MainWindow.cpp" line="+540"/>
+        <location filename="../app/MainWindow.cpp" line="+542"/>
         <source>Rebuilding the design…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5683,9 +5728,122 @@
     </message>
 </context>
 <context>
+    <name>jigapp::FastenerPanel</name>
+    <message>
+        <location line="+3727"/>
+        <source>Screw, nut or washer</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Standard metric hardware to place in a design, or to cut its shape into a part (Cut: a screw makes its own hole and head pocket). Simple shapes, no thread.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Socket head screw</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Hex head screw</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Hex nut</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Washer</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>Floor (XY)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Front (XZ)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Side (YZ)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Upside down</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>New body</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Cut its shape from the body</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Join to the body</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Kind</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Size</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Length under the head</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Plane</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Centre across the plane</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Centre up the plane</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Result</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+52"/>
+        <source>Fastener</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+16"/>
+        <source>fastener</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>jigapp::FeaturePanel</name>
     <message>
-        <location line="-788"/>
+        <location line="-4608"/>
         <source>OK</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6288,7 +6446,7 @@
 <context>
     <name>jigapp::MainWindow</name>
     <message>
-        <location filename="../app/MainWindow.cpp" line="-168"/>
+        <location filename="../app/MainWindow.cpp" line="-170"/>
         <source>OK</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6314,15 +6472,15 @@
     </message>
     <message>
         <location line="+9"/>
-        <location line="+755"/>
+        <location line="+757"/>
         <location line="+775"/>
-        <location line="+960"/>
+        <location line="+963"/>
         <location line="+27"/>
         <source>Sketch</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2515"/>
+        <location line="-2520"/>
         <source>Extrude</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6462,7 +6620,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+2"/>
+        <location line="+4"/>
         <source>Move</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6619,12 +6777,12 @@
     </message>
     <message>
         <location line="+2"/>
-        <location line="+1674"/>
+        <location line="+1677"/>
         <source>Mouse and trackpad</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1672"/>
+        <location line="-1675"/>
         <source>Default (middle-drag pans, Shift+middle orbits)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6645,30 +6803,30 @@
     </message>
     <message>
         <location line="+11"/>
-        <location line="+1647"/>
+        <location line="+1650"/>
         <source>Theme</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1645"/>
-        <location line="+1600"/>
+        <location line="-1648"/>
+        <location line="+1603"/>
         <source>Light</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1600"/>
-        <location line="+1599"/>
+        <location line="-1603"/>
+        <location line="+1602"/>
         <source>Dark</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1598"/>
-        <location line="+1600"/>
+        <location line="-1601"/>
+        <location line="+1603"/>
         <source>High contrast</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1592"/>
+        <location line="-1595"/>
         <source>&amp;Help</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6785,12 +6943,12 @@
     </message>
     <message>
         <location line="+2"/>
-        <location line="+2521"/>
+        <location line="+2536"/>
         <source>Rename…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2518"/>
+        <location line="-2533"/>
         <source>Delete body</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6806,13 +6964,13 @@
     </message>
     <message>
         <location line="+5"/>
-        <location line="+1654"/>
+        <location line="+1657"/>
         <location line="+60"/>
         <source>Properties</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1708"/>
+        <location line="-1711"/>
         <source>Properties and help</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6898,12 +7056,12 @@
     </message>
     <message>
         <location line="+18"/>
-        <location line="+2400"/>
+        <location line="+2415"/>
         <source>Move rollback marker</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2198"/>
+        <location line="-2213"/>
         <source>Start here: every part begins as a flat sketch.
 Click Sketch on the toolbar, then click a plane.
 Or open the phone stand sample (File ▸ Open a sample).</source>
@@ -6996,7 +7154,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+5"/>
+        <location line="-1231"/>
+        <source>Fastener</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1236"/>
         <source>Tick to show, untick to hide. Right-click to isolate or rename.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7102,12 +7265,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+0"/>
-        <location line="+419"/>
+        <location line="+422"/>
         <source>Jigsmith designs (*.jig)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-372"/>
+        <location line="-375"/>
         <source>Save view</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7127,7 +7290,7 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+4"/>
+        <location line="+7"/>
         <source>Picture to trace</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7138,12 +7301,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+6"/>
-        <location line="+1313"/>
+        <location line="+1322"/>
         <source>Insert mesh</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1312"/>
+        <location line="-1321"/>
         <source>Meshes (*.stl *.obj *.3mf)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7298,12 +7461,12 @@ Or open the phone stand sample (File ▸ Open a sample).</source>
     </message>
     <message>
         <location line="+0"/>
-        <location line="+1213"/>
+        <location line="+1222"/>
         <source>There is no 3D body yet.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1210"/>
+        <location line="-1219"/>
         <source>STL mesh for slicers (*.stl)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7701,7 +7864,7 @@ An empty design with the origin ready</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+22"/>
+        <location line="+31"/>
         <source>There is only one part, so nothing can overlap.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7752,8 +7915,8 @@ An empty design with the origin ready</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-213"/>
-        <location line="+219"/>
+        <location line="-222"/>
+        <location line="+228"/>
         <location line="+30"/>
         <location line="+25"/>
         <location line="+30"/>
@@ -7848,7 +8011,7 @@ An empty design with the origin ready</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+63"/>
+        <location line="+66"/>
         <source>Edit…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8161,7 +8324,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::MovePanel</name>
     <message>
-        <location line="+2632"/>
+        <location line="+2733"/>
         <source>free %1</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8404,7 +8567,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
 <context>
     <name>jigapp::PatternPanel</name>
     <message>
-        <location line="-3432"/>
+        <location line="-3533"/>
         <location line="+154"/>
         <source>Pattern</source>
         <translation type="unfinished"></translation>

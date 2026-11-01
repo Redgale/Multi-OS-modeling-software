@@ -39,4 +39,22 @@ std::optional<HoleFit> holeFitFromString(std::string_view s);
 // The clearance diameter for a size and fit, or why there is none.
 Result<double> clearanceDiameter(std::string_view size, HoleFit fit);
 
+// Standard metric fasteners (simplified shapes, sizes from ISO 4762 socket head cap screws,
+// ISO 4017 hex head screws, ISO 4032 hex nuts and ISO 7089 washers), M2 to M12.
+struct FastenerSize
+{
+    std::string name;      // "M3"
+    double d = 0;          // thread diameter
+    double pitch = 0;      // coarse pitch
+    double capHead = 0;    // socket head: head diameter
+    double capHeight = 0;  //               head height
+    double socket = 0;     //               hex key size (across flats)
+    double hexHead = 0;    // hex head screw and nut: across flats
+    double hexHeight = 0;  // hex head height
+    double nutHeight = 0;
+    double washerHole = 0, washerOuter = 0, washerThick = 0;
+};
+const std::vector<FastenerSize>& fastenerSizes();
+std::optional<FastenerSize> fastenerSize(std::string_view name);
+
 }  // namespace jig
