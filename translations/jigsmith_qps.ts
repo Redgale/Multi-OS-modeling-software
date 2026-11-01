@@ -1412,6 +1412,11 @@
     </message>
     <message>
         <location line="+1" />
+        <source>The design is still being rebuilt. Try again in a moment.</source>
+        <translation>[Thé désîgñ îs stîll béîñg rébüîlt. Trý ágáîñ îñ á möméñt.~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
         <source>Suppressed: this step is skipped.</source>
         <translation>[Süpprésséd: thîs stép îs skîppéd.~~~~~~~~~]</translation>
     </message>
@@ -3367,6 +3372,19 @@
     </message>
 </context>
 <context>
+    <name>MainWindow</name>
+    <message>
+        <location filename="../app/MainWindow.cpp" line="+509" />
+        <source>Rebuilding the design…</source>
+        <translation>[Rébüîldîñg thé désîgñ…~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+11" />
+        <source>Rebuilding the design: step %1 of %2…</source>
+        <translation>[Rébüîldîñg thé désîgñ: stép %1 öf %2…~~~~~~~~]</translation>
+    </message>
+</context>
+<context>
     <name>QObject</name>
     <message>
         <location filename="../app/FeaturePanels.cpp" line="+122" />
@@ -3444,7 +3462,7 @@
         <translation>[çürvéd édgé~~~]</translation>
     </message>
     <message>
-        <location filename="../app/MainWindow.cpp" line="+343" />
+        <location filename="../app/MainWindow.cpp" line="-171" />
         <source>Click a plane, a construction plane or a flat face to sketch on, or press 1 (floor), 2 (front) or 3 (side).  Esc cancels.</source>
         <translation>[Çlîçk á pláñé, á çöñstrüçtîöñ pláñé ör á flát fáçé tö skétçh öñ, ör préss 1 (flöör), 2 (fröñt) ör 3 (sîdé).  Ésç çáñçéls.~~~~~~~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -4324,7 +4342,7 @@
     </message>
     <message>
         <location line="+9" />
-        <location line="+656" />
+        <location line="+722" />
         <location line="+738" />
         <location line="+834" />
         <location line="+27" />
@@ -4332,7 +4350,7 @@
         <translation>[Skétçh~~]</translation>
     </message>
     <message>
-        <location line="-2253" />
+        <location line="-2319" />
         <source>Extrude</source>
         <translation>[Éxtrüdé~~]</translation>
     </message>
@@ -4417,7 +4435,7 @@
         <translation>[Mövé~]</translation>
     </message>
     <message>
-        <location line="+309" />
+        <location line="+375" />
         <source>Jigsmith</source>
         <translation>[Jîgsmîth~~]</translation>
     </message>

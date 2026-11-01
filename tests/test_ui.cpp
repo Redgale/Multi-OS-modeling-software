@@ -22,6 +22,7 @@
 #include <QTimer>
 #include <QTreeWidget>
 #include <QtTest>
+#include <QProgressDialog>
 
 #include "FeaturePanels.hpp"
 #include "InspectPanels.hpp"
@@ -2455,6 +2456,52 @@ private slots:
         QTRY_VERIFY(w.featurePanel() == nullptr);
         const auto mp = jig::massProperties(w.document().state().bodies.at("e1")->shape());
         QVERIFY2(std::abs(mp.xmin - (-10 + dx)) < 1e-6, qPrintable(QString::number(mp.xmin)));
+    }
+
+    // B-009: a rebuild runs on a worker thread; the window keeps its event loop going (timers
+    // fire, it repaints), clicks wait, and a progress dialog says how far it has got.
+    void rebuildOffTheUiThread()
+    {
+        qputenv("JIG_PROGRESS_AFTER_MS", "0");  // show the dialog at once
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        QVERIFY(w.openSample("phone_stand"));
+        const auto& doc = w.document();
+        int ticks = 0;
+        bool sawDialog = false, sawProgress = false;
+        QTimer tick;
+        tick.setInterval(2);
+        QObject::connect(&tick, &QTimer::timeout, [&] {
+            ++ticks;
+            if (auto* d = w.findChild<QProgressDialog*>("RebuildProgress"); d && d->isVisible()) {
+                sawDialog = true;
+            }
+            for (QWidget* top : QApplication::topLevelWidgets()) {
+                if (top->objectName() == "RebuildProgress" && top->isVisible()) {
+                    sawDialog = true;
+                }
+            }
+            sawProgress |= doc.recomputing() && doc.recomputeProgress().second > 0;
+        });
+        tick.start();
+        const int before = ticks;
+        jig::ScriptRunner r(w.document());
+        QVERIFY(r.runText("param base_w = 120 mm\n").ok());  // the first step changes: all rebuilt
+        tick.stop();
+        qunsetenv("JIG_PROGRESS_AFTER_MS");
+        QCOMPARE(doc.recomputedLastTime(), int(doc.model().features.size()));
+        QVERIFY2(ticks > before, "the event loop ran during the rebuild");
+        QVERIFY(sawProgress);
+        QVERIFY(sawDialog);
+        QVERIFY(!doc.recomputing());
+        for (QWidget* top : QApplication::topLevelWidgets()) {
+            QVERIFY(!(top->objectName() == "RebuildProgress" && top->isVisible()));  // gone again
+        }
+        for (int i = 0; i < int(doc.model().features.size()); ++i) {
+            QVERIFY(doc.status(i).level == jig::StatusLevel::Ok);
+        }
     }
 
     // Move by the free grip: seen from above it moves in XY, from the front in XZ.

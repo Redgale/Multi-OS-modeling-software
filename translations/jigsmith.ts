@@ -1413,6 +1413,11 @@
     </message>
     <message>
         <location line="+1"/>
+        <source>The design is still being rebuilt. Try again in a moment.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>Suppressed: this step is skipped.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3368,6 +3373,19 @@
     </message>
 </context>
 <context>
+    <name>MainWindow</name>
+    <message>
+        <location filename="../app/MainWindow.cpp" line="+509"/>
+        <source>Rebuilding the design…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+11"/>
+        <source>Rebuilding the design: step %1 of %2…</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>QObject</name>
     <message>
         <location filename="../app/FeaturePanels.cpp" line="+122"/>
@@ -3445,7 +3463,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../app/MainWindow.cpp" line="+343"/>
+        <location filename="../app/MainWindow.cpp" line="-171"/>
         <source>Click a plane, a construction plane or a flat face to sketch on, or press 1 (floor), 2 (front) or 3 (side).  Esc cancels.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4327,7 +4345,7 @@
     </message>
     <message>
         <location line="+9"/>
-        <location line="+656"/>
+        <location line="+722"/>
         <location line="+738"/>
         <location line="+834"/>
         <location line="+27"/>
@@ -4335,7 +4353,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2253"/>
+        <location line="-2319"/>
         <source>Extrude</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4420,7 +4438,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+309"/>
+        <location line="+375"/>
         <source>Jigsmith</source>
         <translation type="unfinished"></translation>
     </message>

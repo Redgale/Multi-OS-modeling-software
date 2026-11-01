@@ -406,6 +406,9 @@ Result<bool> Document::moveFeature(const std::string& id, int to)
 
 Result<bool> Document::transact(const std::string& label, const Edit& edit)
 {
+    if (busy_) {
+        return makeError("document.busy", "The design is still being rebuilt. Try again in a moment.");
+    }
     Model next = model_;
     auto r = edit(next);
     if (!r) {
@@ -499,46 +502,79 @@ std::string Document::cacheKey(const Feature& f, const std::string& prevKey) con
     return std::to_string(std::hash<std::string> {}(k));
 }
 
+namespace
+{
+Document::Runner& recomputeRunner()
+{
+    static Document::Runner r;
+    return r;
+}
+}  // namespace
+
+void Document::setRecomputeRunner(Runner r)
+{
+    recomputeRunner() = std::move(r);
+}
+
 void Document::recompute()
 {
     auto t0 = std::chrono::steady_clock::now();
-    recomputed_ = 0;
+    busy_ = true;
     const int n = int(model_.features.size());
     const int active = activeCount();
-    states_.clear();
-    statuses_.assign(n, {});
-    std::shared_ptr<const ModelState> prev = empty_;
-    std::string prevKey = "root";
-    std::set<std::string> live;
-    for (int i = 0; i < n; ++i) {
-        const Feature& f = model_.features[i];
-        live.insert(f.id);
-        if (i >= active) {
-            statuses_[i].level = StatusLevel::RolledBack;
-            continue;
-        }
-        if (f.suppressed) {
-            statuses_[i].level = StatusLevel::Suppressed;
-            statuses_[i].message = "Suppressed: this step is skipped.";
-            states_.push_back(prev);
-            continue;
-        }
-        std::string key = cacheKey(f, prevKey);
-        auto it = cache_.find(f.id);
-        if (it == cache_.end() || it->second.key != key) {
-            FeatureOutcome o = applyFeature(*this, f, prev);
-            if (!o.after) {
-                o.after = prev;  // failed features change nothing (rollback)
+    // worked out into these, then put in place: anything that looks at the document while
+    // the work runs elsewhere sees the previous results, never half of the new ones
+    std::vector<std::shared_ptr<const ModelState>> states;
+    std::vector<FeatureStatus> statuses(static_cast<size_t>(n));
+    int recomputed = 0;
+    progressDone_ = 0;
+    progressTotal_ = n;
+    auto work = [&] {
+        std::shared_ptr<const ModelState> prev = empty_;
+        std::string prevKey = "root";
+        std::set<std::string> live;
+        for (int i = 0; i < n; ++i) {
+            const Feature& f = model_.features[size_t(i)];
+            live.insert(f.id);
+            progressDone_ = i;
+            if (i >= active) {
+                statuses[size_t(i)].level = StatusLevel::RolledBack;
+                continue;
             }
-            cache_[f.id] = {key, o.after, o.status};
-            it = cache_.find(f.id);
-            ++recomputed_;
+            if (f.suppressed) {
+                statuses[size_t(i)].level = StatusLevel::Suppressed;
+                statuses[size_t(i)].message = "Suppressed: this step is skipped.";
+                states.push_back(prev);
+                continue;
+            }
+            std::string key = cacheKey(f, prevKey);
+            auto it = cache_.find(f.id);
+            if (it == cache_.end() || it->second.key != key) {
+                FeatureOutcome o = applyFeature(*this, f, prev);
+                if (!o.after) {
+                    o.after = prev;  // failed features change nothing (rollback)
+                }
+                cache_[f.id] = {key, o.after, o.status};
+                it = cache_.find(f.id);
+                ++recomputed;
+            }
+            statuses[size_t(i)] = it->second.status;
+            states.push_back(it->second.after);
+            prev = it->second.after;
+            prevKey = key;
         }
-        statuses_[i] = it->second.status;
-        states_.push_back(it->second.after);
-        prev = it->second.after;
-        prevKey = key;
+        std::erase_if(cache_, [&](const auto& kv) { return !live.count(kv.first); });
+        progressDone_ = n;
+    };
+    if (recomputeRunner()) {
+        recomputeRunner()(*this, work);
     }
+    else {
+        work();
+    }
+    states_ = std::move(states);
+    statuses_ = std::move(statuses);
+    recomputed_ = recomputed;
     // A sketch of open curves is not a problem when a later step builds a wall along them.
     for (int i = 0; i < n; ++i) {
         const Feature& f = model_.features[size_t(i)];
@@ -558,7 +594,9 @@ void Document::recompute()
             }
         }
     }
-    std::erase_if(cache_, [&](const auto& kv) { return !live.count(kv.first); });
+    progressDone_ = 0;
+    progressTotal_ = 0;
+    busy_ = false;
     lastMs_ = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
 }
 

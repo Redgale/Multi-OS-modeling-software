@@ -435,3 +435,24 @@ never spans the end of a sentence, so several sentences side by side are matched
 a pattern that could match another pattern's text would be ambiguous (none do today; the
 first in the list wins). Words that are values themselves ("extrude" in "the extrude") stay
 English until they become translatable words.
+
+## D-017 Recompute on a worker thread, results swapped in afterwards (accepted)
+
+**Context.** Brief 5.3.6: the UI must not freeze on long rebuilds. The benchmark's 50-step design
+takes 444 ms to rebuild after an edit to its first step (B-009's trigger was 100 ms).
+
+**Options.** (a) Make the document asynchronous: `transact` returns at once, results arrive later.
+Every caller (about 20 places in the app, all scripts and tests) would have to wait for them.
+(b) Keep `transact` synchronous for its caller, but let the app say *how* the work runs: the core
+calls a runner (inline by default, so the CLI and tests are unchanged) and the app's runner does
+the work on a worker thread while the UI thread runs a local event loop that holds back user input.
+(c) Process events from inside the recompute loop: no thread, but re-entrancy at every step.
+
+**Decision.** (b). The feature code only reads the model and parameters (it is handed the state it
+builds on), so the work writes nothing but the per-feature cache, which only recompute uses; the
+new states and statuses are built aside and swapped in on the calling thread, so readers during
+the rebuild see the previous results whole. A change requested while rebuilding is refused with
+an explanation. The core stays headless: the runner is a plain `std::function`.
+
+**Evidence.** `Document.RecomputeCanRunOnAnotherThread` (same results and file as inline; also
+clean under ThreadSanitizer); UI test `rebuildOffTheUiThread`.

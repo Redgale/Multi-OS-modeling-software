@@ -49,6 +49,12 @@
 #include <QTreeWidget>
 #include <QVBoxLayout>
 #include <QWhatsThis>
+#include <QElapsedTimer>
+#include <QEventLoop>
+#include <QProgressDialog>
+#include <QThread>
+#include <atomic>
+#include <thread>
 
 #include "FeaturePanels.hpp"
 #include "InspectPanels.hpp"
@@ -461,9 +467,75 @@ private:
     Hit hover_;
 };
 
+namespace
+{
+// Recomputes run on a worker thread (B-009) while this thread keeps its event loop going:
+// the window repaints, clicks and keys wait until the rebuild is done, and a long rebuild
+// shows how far it has got. JIG_PROGRESS_AFTER_MS sets when that dialog appears (tests).
+void installRecomputeRunner()
+{
+    static bool done = false;
+    if (done) {
+        return;
+    }
+    done = true;
+    jig::Document::setRecomputeRunner([](const jig::Document& doc, const std::function<void()>& work) {
+        if (!qApp || QThread::currentThread() != qApp->thread()) {
+            work();
+            return;
+        }
+        std::atomic<bool> finished {false};
+        std::thread worker([&] {
+            work();
+            finished = true;
+        });
+        const int showAfter = qEnvironmentVariableIsSet("JIG_PROGRESS_AFTER_MS")
+                                  ? qEnvironmentVariableIntValue("JIG_PROGRESS_AFTER_MS")
+                                  : 400;
+        QElapsedTimer clock;
+        clock.start();
+        QEventLoop loop;
+        std::unique_ptr<QProgressDialog> dialog;
+        QTimer tick;
+        tick.setInterval(20);
+        QObject::connect(&tick, &QTimer::timeout, &loop, [&] {
+            if (finished) {
+                loop.quit();
+                return;
+            }
+            const auto [stepsDone, total] = doc.recomputeProgress();
+            if (!dialog && clock.elapsed() >= showAfter) {
+                dialog = std::make_unique<QProgressDialog>(
+                    QCoreApplication::translate("MainWindow", "Rebuilding the design…"), QString(), 0,
+                    std::max(total, 1), QApplication::activeWindow());
+                dialog->setObjectName("RebuildProgress");
+                // not modal: a modal one would handle clicks and keys itself whenever its value
+                // changes; this loop holds them back until the rebuild is done
+                dialog->setWindowModality(Qt::NonModal);
+                dialog->setMinimumDuration(0);
+                dialog->setAutoClose(false);
+                dialog->show();
+            }
+            if (dialog) {
+                dialog->setLabelText(QCoreApplication::translate("MainWindow", "Rebuilding the design: step %1 of %2…")
+                                         .arg(std::min(stepsDone + 1, total))
+                                         .arg(total));
+                dialog->setValue(std::min(stepsDone, total));
+            }
+        });
+        tick.start();
+        if (!finished) {
+            loop.exec(QEventLoop::ExcludeUserInputEvents);
+        }
+        worker.join();
+    });
+}
+}  // namespace
+
 MainWindow::MainWindow()
 {
     initJigResources();
+    installRecomputeRunner();
     setWindowTitle(tr("Jigsmith"));
     setObjectName("MainWindow");
     view_ = new Viewport(this);

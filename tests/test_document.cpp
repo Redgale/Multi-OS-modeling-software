@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Transactions, undo/redo, incremental recompute and the .jig file format.
 #include <cmath>
+#include <atomic>
+#include <chrono>
 #include <random>
+#include <thread>
 
 #include <gtest/gtest.h>
 
@@ -92,6 +95,53 @@ TEST(Document, RecomputeIsIncremental)
     // Undo hits the cache: nothing upstream of the change is rebuilt.
     doc->undo();
     EXPECT_LE(doc->recomputedLastTime(), n - doc->featureIndex("s4"));
+}
+
+TEST(Document, RecomputeCanRunOnAnotherThread)
+{
+    // the app's runner: the work on a worker thread while the caller watches the progress
+    // and can still read the previous results
+    auto plain = buildSample("phone_stand.jigs");
+    std::vector<std::pair<int, int>> seen;
+    double volumeDuring = -1;
+    const Document* watched = nullptr;
+    Document::setRecomputeRunner([&](const Document&, const std::function<void()>& work) {
+        std::atomic<bool> done {false};
+        std::thread t([&] {
+            work();
+            done = true;
+        });
+        while (!done) {
+            if (watched) {
+                seen.push_back(watched->recomputeProgress());
+                if (volumeDuring < 0 && !watched->state().bodies.empty()) {
+                    volumeDuring = props(*watched).volume;  // the old results, whole
+                }
+            }
+            std::this_thread::sleep_for(std::chrono::microseconds(200));
+        }
+        t.join();
+    });
+    auto doc = buildSample("phone_stand.jigs");
+    const double before = props(*doc).volume;
+    watched = doc.get();
+    EXPECT_FALSE(doc->recomputing());
+    run(*doc, "param slot_w = 12 mm");
+    Document::setRecomputeRunner(nullptr);
+    run(*plain, "param slot_w = 12 mm");
+    EXPECT_NEAR(props(*doc).volume, props(*plain).volume, 1e-9);
+    EXPECT_EQ(doc->toJson(), plain->toJson());
+    expectAllOk(*doc);
+    ASSERT_FALSE(seen.empty());
+    for (auto [done, total] : seen) {
+        EXPECT_EQ(total, int(doc->model().features.size()));
+        EXPECT_LE(done, total);
+    }
+    if (volumeDuring >= 0) {
+        EXPECT_NEAR(volumeDuring, before, 1e-9);
+    }
+    EXPECT_EQ(doc->recomputeProgress(), std::make_pair(0, 0));  // idle again
+    EXPECT_FALSE(doc->recomputing());
 }
 
 TEST(Document, SaveLoadRecomputesIdentically)

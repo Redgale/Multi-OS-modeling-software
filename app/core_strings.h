@@ -106,6 +106,7 @@ QT_TRANSLATE_NOOP("Core", "See docs/SCRIPTING.md for the list of script commands
 QT_TRANSLATE_NOOP("Core", "Change one of the expressions so they don't refer to each other in a loop.")
 QT_TRANSLATE_NOOP("Core", "That step no longer exists.")
 QT_TRANSLATE_NOOP("Core", "Try another place in the timeline.")
+QT_TRANSLATE_NOOP("Core", "The design is still being rebuilt. Try again in a moment.")
 QT_TRANSLATE_NOOP("Core", "Suppressed: this step is skipped.")
 QT_TRANSLATE_NOOP("Core", "This is not a Jigsmith design file.")
 QT_TRANSLATE_NOOP("Core", "This design was saved by a newer version of Jigsmith.")

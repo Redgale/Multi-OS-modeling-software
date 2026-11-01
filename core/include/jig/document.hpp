@@ -9,6 +9,7 @@
 // (D-007), which is trivially correct because recompute is deterministic.
 #pragma once
 
+#include <atomic>
 #include <functional>
 #include <map>
 #include <memory>
@@ -210,6 +211,21 @@ public:
 
     // ---- recompute --------------------------------------------------------
     void recompute();
+    // How recomputes run. The runner is handed the work and must return only once it has
+    // run (it may run it on another thread and keep its own event loop going meanwhile).
+    // The work reads the model and writes nothing the rest of the program reads; the
+    // results are put in place afterwards on the calling thread. Default: run it right here.
+    using Runner = std::function<void(const Document& doc, const std::function<void()>& work)>;
+    static void setRecomputeRunner(Runner r);
+    // While a recompute runs: steps done so far and steps to do (both 0 when idle).
+    std::pair<int, int> recomputeProgress() const
+    {
+        return {progressDone_.load(), progressTotal_.load()};
+    }
+    bool recomputing() const
+    {
+        return busy_;
+    }
     const ModelState& state() const;  // at the rollback marker
     const ModelState& stateBefore(int featureIndex) const;
     const FeatureStatus& status(int featureIndex) const;
@@ -286,6 +302,8 @@ private:
     std::shared_ptr<const ModelState> empty_;
     int recomputed_ = 0;
     double lastMs_ = 0;
+    std::atomic<int> progressDone_ {0}, progressTotal_ {0};
+    bool busy_ = false;
     uint64_t revision_ = 0;
     std::set<std::string> hidden_, folded_, shownSketches_;
     std::map<std::string, nlohmann::json> views_;

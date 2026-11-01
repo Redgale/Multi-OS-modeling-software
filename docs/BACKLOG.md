@@ -32,8 +32,8 @@ decision or finding). Move items to STATUS.md when started.
   from the programs and Qt plugins and writes THIRD_PARTY_DLLS.txt (conda package + licence); the
   trimmed package renders, installs and runs in CI (run 41225131582). Review that list before the
   first release.
-- **B-009 Recompute off the UI thread** for long timelines with a progress indicator
-  (5.3.6), once any real design exceeds 100 ms.
+- ~~B-009 Recompute off the UI thread~~ done (worker thread, progress dialog after 0.4 s, input held
+  back meanwhile; D-017). Left: a Cancel button (would need the feature code to stop between steps).
 
 ## M1 Sketch core and solver (in progress: core done in session 2)
 
