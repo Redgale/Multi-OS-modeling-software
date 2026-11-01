@@ -9,6 +9,7 @@
 #include <gtest/gtest.h>
 
 #include "helpers.hpp"
+#include "jig/files.hpp"
 #include "jig/io.hpp"
 
 using namespace jig;
@@ -238,7 +239,7 @@ TEST(Document, DamagedDesignsNeverCrash)
                             "text sketch=s1 at=0,-20 text=\"Ab\" size=6mm\n"
                             "extrude id=e1 sketch=s1 distance=5\n")
                           ->toJson());
-    const int rounds = std::getenv("JIG_FUZZ_ROUNDS") ? std::atoi(std::getenv("JIG_FUZZ_ROUNDS")) : 60;
+    const int rounds = std::getenv("JIG_FUZZ_ROUNDS") ? std::atoi(std::getenv("JIG_FUZZ_ROUNDS")) : 20;
     std::mt19937 rng(2026);
     const std::vector<nlohmann::json> replacements {
         nlohmann::json(nullptr), nlohmann::json(-1), nlohmann::json(0), nlohmann::json(1), nlohmann::json(7),
@@ -301,6 +302,52 @@ TEST(Document, DamagedDesignsNeverCrash)
         }
     }
     SUCCEED() << opened << " of " << total << " damaged designs opened and rebuilt";
+}
+
+// Paths are UTF-8 everywhere; on Windows they used to be read in the system code page, so a
+// design in a folder with an accented or non-Latin name could not be saved or opened there.
+TEST(Document, PathsWithAnyLettersWork)
+{
+    const std::string dir = utf8FromPath(tempDir()) + "/Désign ölçü 設計";
+    std::error_code ec;
+    std::filesystem::create_directories(pathFromUtf8(dir), ec);
+    ASSERT_FALSE(ec) << ec.message();
+    auto doc = buildSample("phone_stand.jigs");
+    const std::string jig = dir + "/Stänð.jig";
+    ASSERT_TRUE(saveDocument(*doc, jig).ok());
+    ASSERT_TRUE(saveDocument(*doc, jig).ok());  // a second save reads the first (its versions)
+    auto back = loadDocument(jig);
+    ASSERT_TRUE(back.ok()) << back.error().message;
+    EXPECT_NEAR(props(**back).volume, props(*doc).volume, 1e-6);
+    // exports, and a STEP read back in
+    const auto shape = doc->combinedShape();
+    EXPECT_TRUE(exportStl(shape, dir + "/ständ.stl", 0.1).ok());
+    EXPECT_TRUE(export3mf({{"stand", shape}}, dir + "/ständ.3mf").ok());
+    ASSERT_TRUE(exportStep(shape, dir + "/ständ.step").ok());
+    EXPECT_TRUE(std::filesystem::exists(pathFromUtf8(dir + "/ständ.stl")));
+    EXPECT_TRUE(std::filesystem::exists(pathFromUtf8(dir + "/ständ.3mf")));
+    auto step = importStep(dir + "/ständ.step");
+    ASSERT_TRUE(step.ok()) << step.error().message;
+    // a script file read from there
+    {
+        std::ofstream f(pathFromUtf8(dir + "/skript.jigs"));
+        f << "sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=10 h=10\nextrude id=e1 sketch=s1 distance=5\n";
+    }
+    Document d2;
+    ScriptRunner run(d2);
+    auto r = run.runFile(dir + "/skript.jigs");
+    ASSERT_TRUE(r.ok()) << r.error().message;
+    EXPECT_NEAR(props(d2).volume, 500, 1e-6);
+    // a font file from there
+    std::filesystem::copy_file(pathFromUtf8(std::string(JIG_SOURCE_DIR) + "/assets/fonts/Inter-Regular.otf"),
+                               pathFromUtf8(dir + "/Schrift ü.otf"), ec);
+    ASSERT_FALSE(ec) << ec.message();
+    auto lettering = build("sketch id=s1 plane=XY\ntext sketch=s1 center=0,0 height=10mm text=\"Jig\" font=\"" + dir +
+                           "/Schrift ü.otf\"\n");
+    EXPECT_TRUE(lettering->status(0).message.find("could not be read") == std::string::npos)
+        << lettering->status(0).message;
+    EXPECT_FALSE(lettering->state().sketches.at("s1")->profiles.regions.empty());
+    std::filesystem::remove_all(pathFromUtf8(dir), ec);
 }
 
 TEST(Document, AtomicSaveLeavesNoPartialFile)

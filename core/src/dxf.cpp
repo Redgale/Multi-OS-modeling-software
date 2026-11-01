@@ -12,6 +12,7 @@
 #include <numbers>
 #include <sstream>
 
+#include "jig/files.hpp"
 #include "jig/kernel.hpp"
 
 namespace jig
@@ -458,7 +459,7 @@ Result<DxfDrawing> parseDxfImpl(const std::string& text)
 
 Result<DxfDrawing> readDxf(const std::string& path)
 {
-    std::ifstream f(path, std::ios::binary);
+    std::ifstream f(pathFromUtf8(path), std::ios::binary);  // UTF-8 path, also on Windows
     if (!f) {
         return makeError("dxf.open", "This file could not be opened.");
     }

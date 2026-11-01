@@ -2238,6 +2238,11 @@
     </message>
     <message>
         <location line="+1"/>
+        <source>Check that the folder exists, that you can write to it and that the disk is not full.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>This file is not a Jigsmith design, or it is damaged.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2273,16 +2278,26 @@
     </message>
     <message>
         <location line="+1"/>
+        <source>The design could not be saved (it may be too large).</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>This file could not be read. Check that it still exists and that you can open it.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>The file could not be written (it may be too large).</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+63"/>
         <source>Check that the folder exists and you can write to it.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
-        <source>The design could not be saved (the disk may be full).</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+1"/>
+        <location line="-67"/>
         <source>This file could not be opened. It may be damaged or not a Jigsmith design.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2342,7 +2357,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+51"/>
+        <location line="+52"/>
         <source>The imported solid stored in this design is damaged.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2762,12 +2777,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-220"/>
+        <location line="-221"/>
         <source>There is nothing to export yet.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-170"/>
+        <location line="-171"/>
         <source>This DXF has no lines, circles, arcs, curves, text or blocks to bring in.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2802,7 +2817,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+95"/>
+        <location line="+96"/>
         <source>The 3MF file could not be created.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2812,12 +2827,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
-        <source>The file could not be written (the disk may be full).</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+1"/>
+        <location line="+2"/>
         <source>A sketch can only be placed on a flat face.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3072,7 +3082,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
+        <location line="+2"/>
         <source>The STL file could not be created.</source>
         <translation type="unfinished"></translation>
     </message>

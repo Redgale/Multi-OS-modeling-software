@@ -27,6 +27,7 @@
 #include <hb.h>
 #endif
 
+#include "jig/files.hpp"
 #include "jig/kernel.hpp"
 
 extern const unsigned char jig_font_inter_regular[];
@@ -327,6 +328,30 @@ std::vector<std::filesystem::path> fontFolders()
 }
 }  // namespace
 
+namespace
+{
+// Opens a font file named by a UTF-8 path. FreeType takes a char* path, which Windows reads
+// in the system code page, so there a path that is not plain ASCII is read into `bytes`
+// (which must outlive the face) and opened from memory.
+FT_Error openFace(FT_Library lib, const std::string& utf8Path, long index, FT_Face* face, std::string& bytes)
+{
+#ifdef _WIN32
+    const bool ascii = std::all_of(utf8Path.begin(), utf8Path.end(), [](char c) { return (unsigned char)c < 0x80; });
+    if (!ascii) {
+        auto data = readWholeFile(utf8Path, 256u * 1024u * 1024u);
+        if (!data) {
+            return FT_Err_Cannot_Open_Resource;
+        }
+        bytes = std::move(*data);
+        return FT_New_Memory_Face(lib, reinterpret_cast<const FT_Byte*>(bytes.data()), FT_Long(bytes.size()), index,
+                                  face);
+    }
+#endif
+    (void)bytes;
+    return FT_New_Face(lib, utf8Path.c_str(), index, face);
+}
+}  // namespace
+
 const std::vector<FontFace>& installedFonts(bool rescan)
 {
     static std::vector<FontFace> fonts;
@@ -349,20 +374,21 @@ const std::vector<FontFace>& installedFonts(bool rescan)
             for (auto it = std::filesystem::recursive_directory_iterator(
                      dir, std::filesystem::directory_options::skip_permission_denied, ec);
                  !ec && it != std::filesystem::recursive_directory_iterator(); it.increment(ec)) {
-                const std::string ext = lower(it->path().extension().string());
+                const std::string ext = lower(utf8FromPath(it->path().extension()));
                 if (ext != ".ttf" && ext != ".otf" && ext != ".ttc" && ext != ".otc") {
                     continue;
                 }
-                const std::string path = it->path().string();
+                const std::string path = utf8FromPath(it->path());
+                std::string bytes;
                 FT_Face probe = nullptr;
-                if (FT_New_Face(lib, path.c_str(), -1, &probe) != 0) {
+                if (openFace(lib, path, -1, &probe, bytes) != 0) {
                     continue;
                 }
                 const long n = probe->num_faces;
                 FT_Done_Face(probe);
                 for (long i = 0; i < n && i < 64; ++i) {
                     FT_Face f = nullptr;
-                    if (FT_New_Face(lib, path.c_str(), i, &f) != 0) {
+                    if (openFace(lib, path, i, &f, bytes) != 0) {
                         continue;
                     }
                     if (f->family_name && FT_IS_SCALABLE(f)) {
@@ -416,7 +442,8 @@ std::optional<FontFace> findFont(const std::string& wanted)
 
 Result<TextOutline> textFaces(const SketchText& t, double x, double y, const gp_Ax3& frame)
 {
-    if (!t.font.empty() && t.font != "Inter" && !std::filesystem::exists(t.font)) {
+    std::error_code existsEc;
+    if (!t.font.empty() && t.font != "Inter" && !std::filesystem::exists(pathFromUtf8(t.font), existsEc)) {
         (void)installedFonts();  // the first scan takes the FreeType lock itself
     }
     std::lock_guard<std::mutex> guard(ftLock());
@@ -425,12 +452,14 @@ Result<TextOutline> textFaces(const SketchText& t, double x, double y, const gp_
         return makeError("text.font", "The text engine could not start.");
     }
     TextOutline result;
+    std::string fontBytes;  // a font read into memory (see openFace); outlives the face
     FT_Face face = nullptr;
     std::string facePath;  // where the face came from, for the shaper (empty: the built-in font)
     int faceIndex = 0;
-    if (!t.font.empty() && std::filesystem::exists(t.font)) {
+    std::error_code fileEc;
+    if (!t.font.empty() && std::filesystem::exists(pathFromUtf8(t.font), fileEc)) {
         facePath = t.font;
-        if (FT_New_Face(lib, t.font.c_str(), 0, &face) != 0) {
+        if (openFace(lib, t.font, 0, &face, fontBytes) != 0) {
             face = nullptr;
             result.note = fmt("The font file %1 could not be read; using the built-in font (Inter).", {t.font});
         }
@@ -438,7 +467,7 @@ Result<TextOutline> textFaces(const SketchText& t, double x, double y, const gp_
     else if (!t.font.empty() && t.font != "Inter") {
         // an installed font by family name (and style)
         const std::optional<FontFace> found = findFont(t.font);  // (fonts were scanned before the lock)
-        if (found && FT_New_Face(lib, found->path.c_str(), found->index, &face) != 0) {
+        if (found && openFace(lib, found->path, found->index, &face, fontBytes) != 0) {
             face = nullptr;
         }
         if (face) {
@@ -511,6 +540,9 @@ Result<TextOutline> textFaces(const SketchText& t, double x, double y, const gp_
     hb_blob_t* blob = facePath.empty()
                           ? hb_blob_create(reinterpret_cast<const char*>(jig_font_inter_regular),
                                            unsigned(jig_font_inter_regular_size), HB_MEMORY_MODE_READONLY, nullptr,
+                                           nullptr)
+                      : !fontBytes.empty()
+                          ? hb_blob_create(fontBytes.data(), unsigned(fontBytes.size()), HB_MEMORY_MODE_READONLY, nullptr,
                                            nullptr)
                           : hb_blob_create_from_file(facePath.c_str());
     hb_face_t* hface = hb_face_create(blob, unsigned(faceIndex));

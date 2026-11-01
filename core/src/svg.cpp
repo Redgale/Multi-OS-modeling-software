@@ -33,6 +33,7 @@
 #include <gp_Circ.hxx>
 #include <gp_Pln.hxx>
 
+#include "jig/files.hpp"
 #include "jig/kernel.hpp"
 
 namespace jig
@@ -991,7 +992,7 @@ Result<SvgArtwork> parseSvg(const std::string& text)
 
 Result<SvgArtwork> readSvg(const std::string& path)
 {
-    std::ifstream f(path, std::ios::binary);
+    std::ifstream f(pathFromUtf8(path), std::ios::binary);  // UTF-8 path, also on Windows
     if (!f) {
         return makeError("svg.open", "This file could not be opened.");
     }

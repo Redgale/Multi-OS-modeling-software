@@ -20,6 +20,7 @@
 #include <BRepMesh_IncrementalMesh.hxx>
 #include <BRepBuilderAPI_Copy.hxx>
 
+#include "jig/files.hpp"
 #include "jig/version.hpp"
 
 namespace jig
@@ -28,15 +29,51 @@ namespace
 {
 
 constexpr size_t kMaxJsonBytes = 64u * 1024u * 1024u;
+constexpr size_t kMaxFileBytes = 1024u * 1024u * 1024u;  // a design file larger than 1 GB is refused
+
+// Writes a zip built in memory to `tmp`, then puts it in place of `target` (both UTF-8 paths).
+Result<bool> writeZipAtomically(mz_zip_archive& zip, const std::filesystem::path& target, const char* code,
+                                const char* failed)
+{
+    namespace fs = std::filesystem;
+    void* buf = nullptr;
+    size_t size = 0;
+    const bool built = mz_zip_writer_finalize_heap_archive(&zip, &buf, &size);
+    mz_zip_writer_end(&zip);
+    if (!built) {
+        mz_free(buf);
+        return makeError(code, failed);
+    }
+    fs::path tmp = target;
+    tmp += ".partial";
+    const bool written = writeWholeFile(tmp, buf, size);
+    mz_free(buf);
+    std::error_code ec;
+    if (!written) {
+        fs::remove(tmp, ec);
+        return makeError(code, failed, {"Check that the folder exists, that you can write to it and that the disk "
+                                        "is not full."});
+    }
+    fs::rename(tmp, target, ec);
+    if (ec) {
+        fs::remove(tmp, ec);
+        return makeError(code, failed, {}, ec.message());
+    }
+    return true;
+}
 constexpr const char* kFormatName = "jigsmith-design";
 
 // Every "versions/…" entry of an existing design file (empty when there is none).
 std::map<std::string, std::string> readVersionEntries(const std::string& path)
 {
     std::map<std::string, std::string> out;
+    const auto bytes = readWholeFile(path, kMaxFileBytes);
+    if (!bytes) {
+        return out;
+    }
     mz_zip_archive zip;
     std::memset(&zip, 0, sizeof zip);
-    if (!mz_zip_reader_init_file(&zip, path.c_str(), 0)) {
+    if (!mz_zip_reader_init_mem(&zip, bytes->data(), bytes->size(), 0)) {
         return out;
     }
     const mz_uint n = mz_zip_reader_get_num_files(&zip);
@@ -195,14 +232,10 @@ Result<bool> writeDesign(const Document& doc, const std::string& path, const std
     const std::string m = manifest.dump(2) + "\n";
     const std::string d = doc.toJson().dump(2) + "\n";
 
-    fs::path target(path);
-    fs::path tmp = target;
-    tmp += ".partial";
     mz_zip_archive zip;
     std::memset(&zip, 0, sizeof zip);
-    if (!mz_zip_writer_init_file(&zip, tmp.string().c_str(), 0)) {
-        return makeError("file.write", "The design could not be saved here.",
-                         {"Check that the folder exists and you can write to it."});
+    if (!mz_zip_writer_init_heap(&zip, 0, 0)) {
+        return makeError("file.write", "The design could not be saved here.");
     }
     bool ok = mz_zip_writer_add_mem(&zip, "manifest.json", m.data(), m.size(), MZ_BEST_COMPRESSION)
            && mz_zip_writer_add_mem(&zip, "document.json", d.data(), d.size(), MZ_BEST_COMPRESSION);
@@ -213,32 +246,21 @@ Result<bool> writeDesign(const Document& doc, const std::string& path, const std
     for (auto& [name, data] : versions) {
         ok = ok && mz_zip_writer_add_mem(&zip, name.c_str(), data.data(), data.size(), MZ_BEST_COMPRESSION);
     }
-    ok = ok && mz_zip_writer_finalize_archive(&zip);
-    mz_zip_writer_end(&zip);
-    std::error_code ec;
     if (!ok) {
-        fs::remove(tmp, ec);
-        return makeError("file.write", "The design could not be saved (the disk may be full).");
+        mz_zip_writer_end(&zip);
+        return makeError("file.write", "The design could not be saved (it may be too large).");
     }
-    fs::rename(tmp, target, ec);
-    if (ec) {
-        fs::remove(tmp, ec);
-        return makeError("file.write", "The design could not be saved here.", {}, ec.message());
-    }
-    return true;
+    return writeZipAtomically(zip, pathFromUtf8(path), "file.write", "The design could not be saved here.");
 }
 
 Result<std::unique_ptr<Document>> loadDocument(const std::string& path)
 {
-    mz_zip_archive zip;
-    std::memset(&zip, 0, sizeof zip);
-    if (!mz_zip_reader_init_file(&zip, path.c_str(), 0)) {
-        return makeError("file.open", "This file could not be opened. It may be damaged or not a "
-                                      "Jigsmith design.");
+    const auto bytes = readWholeFile(path, kMaxFileBytes);
+    if (!bytes) {
+        return makeError("file.open", "This file could not be read. Check that it still exists and that you can "
+                                      "open it.");
     }
-    auto r = readArchive(zip);
-    mz_zip_reader_end(&zip);
-    return r;
+    return loadDocumentFromMemory(bytes->data(), bytes->size());
 }
 
 Result<std::unique_ptr<Document>> loadDocumentFromMemory(const void* data, size_t size)
@@ -376,31 +398,20 @@ Result<bool> export3mf(const std::vector<std::pair<std::string, TopoDS_Shape>>& 
         "Type=\"http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel\"/>\n"
         "</Relationships>\n";
 
-    fs::path target(path);
-    fs::path tmp = target;
-    tmp += ".partial";
     mz_zip_archive zip;
     std::memset(&zip, 0, sizeof zip);
-    if (!mz_zip_writer_init_file(&zip, tmp.string().c_str(), 0)) {
-        return makeError("export.write", "The file could not be written.",
-                         {"Check that the folder exists and you can write to it."});
+    if (!mz_zip_writer_init_heap(&zip, 0, 0)) {
+        return makeError("export.write", "The file could not be written.");
     }
-    bool ok = mz_zip_writer_add_mem(&zip, "[Content_Types].xml", types.data(), types.size(), MZ_DEFAULT_COMPRESSION)
-           && mz_zip_writer_add_mem(&zip, "_rels/.rels", rels.data(), rels.size(), MZ_DEFAULT_COMPRESSION)
-           && mz_zip_writer_add_mem(&zip, "3D/3dmodel.model", model.data(), model.size(), MZ_DEFAULT_COMPRESSION)
-           && mz_zip_writer_finalize_archive(&zip);
-    mz_zip_writer_end(&zip);
-    std::error_code ec;
+    const bool ok =
+        mz_zip_writer_add_mem(&zip, "[Content_Types].xml", types.data(), types.size(), MZ_DEFAULT_COMPRESSION)
+        && mz_zip_writer_add_mem(&zip, "_rels/.rels", rels.data(), rels.size(), MZ_DEFAULT_COMPRESSION)
+        && mz_zip_writer_add_mem(&zip, "3D/3dmodel.model", model.data(), model.size(), MZ_DEFAULT_COMPRESSION);
     if (!ok) {
-        fs::remove(tmp, ec);
-        return makeError("export.write", "The file could not be written (the disk may be full).");
+        mz_zip_writer_end(&zip);
+        return makeError("export.write", "The file could not be written (it may be too large).");
     }
-    fs::rename(tmp, target, ec);
-    if (ec) {
-        fs::remove(tmp, ec);
-        return makeError("export.write", "The file could not be written.", {}, ec.message());
-    }
-    return true;
+    return writeZipAtomically(zip, pathFromUtf8(path), "export.write", "The file could not be written.");
 }
 
 // ---------------------------------------------------------------- STEP import step
@@ -415,7 +426,7 @@ Result<std::string> insertStep(Document& doc, const std::string& path, std::stri
     if (!bodies) {
         return bodies.error();
     }
-    const std::string file = std::filesystem::path(path).filename().string();
+    const std::string file = utf8FromPath(pathFromUtf8(path).filename());
     const std::string brep = shapeToText(imp->shape);
     auto r = doc.transact("Import " + file, [&](Model& m) -> Result<bool> {
         Feature f;

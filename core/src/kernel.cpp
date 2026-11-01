@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "jig/kernel.hpp"
+#include "jig/files.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -2381,11 +2382,11 @@ template<typename WriteFn>
 Result<bool> atomicWrite(const std::string& path, WriteFn&& fn)
 {
     namespace fs = std::filesystem;
-    fs::path target(path);
+    const fs::path target = pathFromUtf8(path);
     fs::path tmp = target;
     tmp += ".partial";
     std::error_code ec;
-    if (!fn(tmp.string())) {
+    if (!fn(utf8FromPath(tmp))) {  // OCCT's writers take UTF-8 file names
         fs::remove(tmp, ec);
         return makeError("export.write", "The file could not be written.",
                          {"Check that the folder exists and you can write to it."});

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+#include "jig/files.hpp"
 #include "jig/commands.hpp"
 
 #include <algorithm>
@@ -444,7 +445,7 @@ Result<bool> ScriptRunner::runText(std::string_view text)
 
 Result<bool> ScriptRunner::runFile(const std::string& path)
 {
-    std::ifstream f(path, std::ios::binary);
+    std::ifstream f(pathFromUtf8(path), std::ios::binary);  // UTF-8 path, also on Windows
     if (!f) {
         return makeError("script.open", "The script file '" + path + "' could not be opened.");
     }
@@ -2013,7 +2014,7 @@ Result<bool> ScriptRunner::runLineUnchecked(std::string_view rawLine)
                     }
                     wv = w.value();
                 }
-                const std::string name = std::filesystem::path(a.positional[1]).stem().string();
+                const std::string name = utf8FromPath(pathFromUtf8(a.positional[1]).stem());
                 const int id = s.addArtwork(x, y, art->contours, art->width, we, wv, name);
                 const int anchor = s.artworks().at(id).anchor;
                 s.addConstraint(ConstraintType::DistanceX, anchor, 0, 0, std::to_string(x));

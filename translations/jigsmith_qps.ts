@@ -2237,6 +2237,11 @@
     </message>
     <message>
         <location line="+1" />
+        <source>Check that the folder exists, that you can write to it and that the disk is not full.</source>
+        <translation>[Çhéçk thát thé földér éxîsts, thát ýöü çáñ wrîté tö ît áñd thát thé dîsk îs ñöt füll.~~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
         <source>This file is not a Jigsmith design, or it is damaged.</source>
         <translation>[Thîs fîlé îs ñöt á Jîgsmîth désîgñ, ör ît îs dámágéd.~~~~~~~~~~~~~]</translation>
     </message>
@@ -2272,16 +2277,26 @@
     </message>
     <message>
         <location line="+1" />
+        <source>The design could not be saved (it may be too large).</source>
+        <translation>[Thé désîgñ çöüld ñöt bé sávéd (ît máý bé töö lárgé).~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
+        <source>This file could not be read. Check that it still exists and that you can open it.</source>
+        <translation>[Thîs fîlé çöüld ñöt bé réád. Çhéçk thát ît stîll éxîsts áñd thát ýöü çáñ öpéñ ît.~~~~~~~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+5" />
+        <source>The file could not be written (it may be too large).</source>
+        <translation>[Thé fîlé çöüld ñöt bé wrîttéñ (ît máý bé töö lárgé).~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+63" />
         <source>Check that the folder exists and you can write to it.</source>
         <translation>[Çhéçk thát thé földér éxîsts áñd ýöü çáñ wrîté tö ît.~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+1" />
-        <source>The design could not be saved (the disk may be full).</source>
-        <translation>[Thé désîgñ çöüld ñöt bé sávéd (thé dîsk máý bé füll).~~~~~~~~~~~~~]</translation>
-    </message>
-    <message>
-        <location line="+1" />
+        <location line="-67" />
         <source>This file could not be opened. It may be damaged or not a Jigsmith design.</source>
         <translation>[Thîs fîlé çöüld ñöt bé öpéñéd. Ît máý bé dámágéd ör ñöt á Jîgsmîth désîgñ.~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -2341,7 +2356,7 @@
         <translation>[Pîçk á fáçé thát çövérs thé skétçh's öütlîñé, ör á flát fáçé ör pláñé.~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+51" />
+        <location line="+52" />
         <source>The imported solid stored in this design is damaged.</source>
         <translation>[Thé împörtéd sölîd störéd îñ thîs désîgñ îs dámágéd.~~~~~~~~~~~~~~]</translation>
     </message>
@@ -2761,12 +2776,12 @@
         <translation>[Thé föñt '%1' îs ñöt áváîláblé héré; üsîñg thé büîlt-îñ föñt (Îñtér).~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="-220" />
+        <location line="-221" />
         <source>There is nothing to export yet.</source>
         <translation>[Théré îs ñöthîñg tö éxpört ýét.~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="-170" />
+        <location line="-171" />
         <source>This DXF has no lines, circles, arcs, curves, text or blocks to bring in.</source>
         <translation>[Thîs DXF hás ñö lîñés, çîrçlés, árçs, çürvés, téxt ör blöçks tö brîñg îñ.~~~~~~~~~~~~~~~~~~]</translation>
     </message>
@@ -2801,7 +2816,7 @@
         <translation>[Thát fáçé îs lévél wîth thé skétçh, sö théré îs ñö wáý tö téll whîçh wáý tö éxtrüdé.~~~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+95" />
+        <location line="+96" />
         <source>The 3MF file could not be created.</source>
         <translation>[Thé 3MF fîlé çöüld ñöt bé çréátéd.~~~~~~~~]</translation>
     </message>
@@ -2811,12 +2826,7 @@
         <translation>[Thé fîlé çöüld ñöt bé wrîttéñ.~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+1" />
-        <source>The file could not be written (the disk may be full).</source>
-        <translation>[Thé fîlé çöüld ñöt bé wrîttéñ (thé dîsk máý bé füll).~~~~~~~~~~~~~]</translation>
-    </message>
-    <message>
-        <location line="+1" />
+        <location line="+2" />
         <source>A sketch can only be placed on a flat face.</source>
         <translation>[Á skétçh çáñ öñlý bé pláçéd öñ á flát fáçé.~~~~~~~~~~~]</translation>
     </message>
@@ -3071,7 +3081,7 @@
         <translation>[Thé dîstáñçé bétwééñ thésé twö çöüld ñöt bé méásüréd.~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+1" />
+        <location line="+2" />
         <source>The STL file could not be created.</source>
         <translation>[Thé STL fîlé çöüld ñöt bé çréátéd.~~~~~~~~~]</translation>
     </message>

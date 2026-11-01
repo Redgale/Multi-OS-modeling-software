@@ -8,8 +8,17 @@
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <vector>
+
+#ifdef _WIN32
+#define NOMINMAX
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include <shellapi.h>
+#endif
 
 #include "jig/commands.hpp"
+#include "jig/files.hpp"
 #include "jig/io.hpp"
 #include "jig/version.hpp"
 
@@ -35,15 +44,43 @@ void printError(const jig::Error& e)
         std::cerr << "  (detail: " << e.detail << ")\n";
     }
 }
+
+// The arguments as UTF-8 (Jigsmith's paths are UTF-8). Windows hands argv over in the system
+// code page, so there they are read again from the wide command line.
+std::vector<std::string> utf8Arguments(int argc, char** argv)
+{
+    std::vector<std::string> out;
+#ifdef _WIN32
+    int n = 0;
+    if (LPWSTR* w = CommandLineToArgvW(GetCommandLineW(), &n)) {
+        for (int i = 0; i < n; ++i) {
+            const int len = WideCharToMultiByte(CP_UTF8, 0, w[i], -1, nullptr, 0, nullptr, nullptr);
+            std::string s(size_t(len > 0 ? len - 1 : 0), '\0');
+            if (len > 1) {
+                WideCharToMultiByte(CP_UTF8, 0, w[i], -1, s.data(), len, nullptr, nullptr);
+            }
+            out.push_back(std::move(s));
+        }
+        LocalFree(w);
+        return out;
+    }
+#endif
+    for (int i = 0; i < argc; ++i) {
+        out.emplace_back(argv[i]);
+    }
+    return out;
+}
 }  // namespace
 
 int main(int argc, char** argv)
 {
     std::string run, open, report, save;
     bool listCommands = false;
-    for (int i = 1; i < argc; ++i) {
-        std::string a = argv[i];
-        auto next = [&]() -> std::string { return i + 1 < argc ? argv[++i] : std::string {}; };
+    const std::vector<std::string> args = utf8Arguments(argc, argv);
+    const int count = int(args.size());
+    for (int i = 1; i < count; ++i) {
+        std::string a = args[size_t(i)];
+        auto next = [&]() -> std::string { return i + 1 < count ? args[size_t(++i)] : std::string {}; };
         if (a == "--run") {
             run = next();
         }
@@ -110,7 +147,7 @@ int main(int argc, char** argv)
             std::cout << text;
         }
         else {
-            std::ofstream(report) << text;
+            std::ofstream(jig::pathFromUtf8(report)) << text;
         }
     }
     if (!save.empty()) {
