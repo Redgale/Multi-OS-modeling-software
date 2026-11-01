@@ -459,13 +459,11 @@ Result<DxfDrawing> parseDxfImpl(const std::string& text)
 
 Result<DxfDrawing> readDxf(const std::string& path)
 {
-    std::ifstream f(pathFromUtf8(path), std::ios::binary);  // UTF-8 path, also on Windows
-    if (!f) {
-        return makeError("dxf.open", "This file could not be opened.");
+    const auto text = readWholeFile(path, 256u * 1024u * 1024u);
+    if (!text) {
+        return makeError("dxf.open", "This file could not be opened, or it is larger than 256 MB.");
     }
-    std::stringstream ss;
-    ss << f.rdbuf();
-    return parseDxf(ss.str());
+    return parseDxf(*text);
 }
 
 int addDxfToSketch(Sketch& s, const DxfDrawing& d, double scale, double dx, double dy)

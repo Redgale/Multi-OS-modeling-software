@@ -1472,12 +1472,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+3"/>
-        <source>This file could not be opened.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+1"/>
+        <location line="+4"/>
         <source>Check the expression, for example: 20 mm, width / 2, 2 in, 45 deg.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2493,6 +2488,11 @@
     </message>
     <message>
         <location line="+1"/>
+        <source>This file could not be opened, or it is larger than 64 MB.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>This artwork could not be turned into shapes.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2518,6 +2518,11 @@
     </message>
     <message>
         <location line="+5"/>
+        <source>The script file &apos;%1&apos; could not be opened, or it is larger than 16 MB.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>There is no body called &apos;%1&apos;.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2697,12 +2702,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-13"/>
+        <location line="-15"/>
         <source>This SVG has no shapes, outlines or text to bring in.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+48"/>
+        <location line="+50"/>
         <source>A wall of %1 does not fit this outline.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2777,7 +2782,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-221"/>
+        <location line="-223"/>
         <source>There is nothing to export yet.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2792,7 +2797,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+71"/>
+        <location line="+1"/>
+        <source>This file could not be opened, or it is larger than 256 MB.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+70"/>
         <source>The face this extrude goes up to no longer exists.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3420,7 +3430,7 @@
 <context>
     <name>CoreWords</name>
     <message>
-        <location line="+84"/>
+        <location line="+86"/>
         <source>ball face (sphere)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7109,7 +7119,7 @@ They will show a problem until you fix them. You can undo this. Delete anyway?</
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+204"/>
+        <location line="+206"/>
         <source>Columns</source>
         <translation type="unfinished"></translation>
     </message>

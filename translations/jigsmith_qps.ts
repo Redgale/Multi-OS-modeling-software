@@ -1471,12 +1471,7 @@
         <translation>[Thîs DXF fîlé îs émptý.~~~~~~]</translation>
     </message>
     <message>
-        <location line="+3" />
-        <source>This file could not be opened.</source>
-        <translation>[Thîs fîlé çöüld ñöt bé öpéñéd.~~~~~~~~]</translation>
-    </message>
-    <message>
-        <location line="+1" />
+        <location line="+4" />
         <source>Check the expression, for example: 20 mm, width / 2, 2 in, 45 deg.</source>
         <translation>[Çhéçk thé éxpréssîöñ, för éxámplé: 20 mm, wîdth / 2, 2 îñ, 45 dég.~~~~~~~~~~~~~]</translation>
     </message>
@@ -2492,6 +2487,11 @@
     </message>
     <message>
         <location line="+1" />
+        <source>This file could not be opened, or it is larger than 64 MB.</source>
+        <translation>[Thîs fîlé çöüld ñöt bé öpéñéd, ör ît îs lárgér tháñ 64 MB.~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
         <source>This artwork could not be turned into shapes.</source>
         <translation>[Thîs ártwörk çöüld ñöt bé türñéd îñtö shápés.~~~~~~~~~~~~]</translation>
     </message>
@@ -2517,6 +2517,11 @@
     </message>
     <message>
         <location line="+5" />
+        <source>The script file '%1' could not be opened, or it is larger than 16 MB.</source>
+        <translation>[Thé sçrîpt fîlé '%1' çöüld ñöt bé öpéñéd, ör ît îs lárgér tháñ 16 MB.~~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+1" />
         <source>There is no body called '%1'.</source>
         <translation>[Théré îs ñö bödý çálléd '%1'.~~~~~~]</translation>
     </message>
@@ -2696,12 +2701,12 @@
         <translation>[Thé îd '%1' îs álréádý üséd.~~~~~~]</translation>
     </message>
     <message>
-        <location line="-13" />
+        <location line="-15" />
         <source>This SVG has no shapes, outlines or text to bring in.</source>
         <translation>[Thîs SVG hás ñö shápés, öütlîñés ör téxt tö brîñg îñ.~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+48" />
+        <location line="+50" />
         <source>A wall of %1 does not fit this outline.</source>
         <translation>[Á wáll öf %1 döés ñöt fît thîs öütlîñé.~~~~~~~~~]</translation>
     </message>
@@ -2776,7 +2781,7 @@
         <translation>[Thé föñt '%1' îs ñöt áváîláblé héré; üsîñg thé büîlt-îñ föñt (Îñtér).~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="-221" />
+        <location line="-223" />
         <source>There is nothing to export yet.</source>
         <translation>[Théré îs ñöthîñg tö éxpört ýét.~~~~~~~~]</translation>
     </message>
@@ -2791,7 +2796,12 @@
         <translation>[Hátçhés áñd dîméñsîöñs áré ñöt împörtéd: éxplödé thém tö lîñés fîrst.~~~~~~~~~~~~~~~~~~~]</translation>
     </message>
     <message>
-        <location line="+71" />
+        <location line="+1" />
+        <source>This file could not be opened, or it is larger than 256 MB.</source>
+        <translation>[Thîs fîlé çöüld ñöt bé öpéñéd, ör ît îs lárgér tháñ 256 MB.~~~~~~~~~~~~~~]</translation>
+    </message>
+    <message>
+        <location line="+70" />
         <source>The face this extrude goes up to no longer exists.</source>
         <translation>[Thé fáçé thîs éxtrüdé göés üp tö ñö löñgér éxîsts.~~~~~~~~~~~~~]</translation>
     </message>
@@ -3419,7 +3429,7 @@
 <context>
     <name>CoreWords</name>
     <message>
-        <location line="+84" />
+        <location line="+86" />
         <source>ball face (sphere)</source>
         <translation>[báll fáçé (sphéré)~~~~]</translation>
     </message>
@@ -7101,7 +7111,7 @@ Théý wîll shöw á pröblém üñtîl ýöü fîx thém. Ýöü çáñ üñd�
         <translation>[Ñöt ápplîéd: %1~~~]</translation>
     </message>
     <message>
-        <location line="+204" />
+        <location line="+206" />
         <source>Columns</source>
         <translation>[Çölümñs~~]</translation>
     </message>

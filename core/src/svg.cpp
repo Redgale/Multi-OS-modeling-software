@@ -992,13 +992,11 @@ Result<SvgArtwork> parseSvg(const std::string& text)
 
 Result<SvgArtwork> readSvg(const std::string& path)
 {
-    std::ifstream f(pathFromUtf8(path), std::ios::binary);  // UTF-8 path, also on Windows
-    if (!f) {
-        return makeError("svg.open", "This file could not be opened.");
+    const auto text = readWholeFile(path, 64u * 1024u * 1024u);
+    if (!text) {
+        return makeError("svg.open", "This file could not be opened, or it is larger than 64 MB.");
     }
-    std::stringstream ss;
-    ss << f.rdbuf();
-    return parseSvg(ss.str());
+    return parseSvg(*text);
 }
 
 Result<std::vector<TopoDS_Face>> artworkFaces(const SketchArtwork& a, double x, double y, const gp_Ax3& frame)

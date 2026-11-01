@@ -120,7 +120,7 @@ QT_TRANSLATE_NOOP("Core", "Save it from your drawing program as ASCII DXF (R12 o
 QT_TRANSLATE_NOOP("Core", "This DXF file is empty.")
 QT_TRANSLATE_NOOP("Core", "This DXF has no lines, circles, arcs, curves, text or blocks to bring in.")
 QT_TRANSLATE_NOOP("Core", "Hatches and dimensions are not imported: explode them to lines first.")
-QT_TRANSLATE_NOOP("Core", "This file could not be opened.")
+QT_TRANSLATE_NOOP("Core", "This file could not be opened, or it is larger than 256 MB.")
 QT_TRANSLATE_NOOP("Core", "Check the expression, for example: 20 mm, width / 2, 2 in, 45 deg.")
 QT_TRANSLATE_NOOP("Core", "Give both sides the same kind of unit, e.g. 10 mm + 2 mm.")
 QT_TRANSLATE_NOOP("Core", "This expression divides by zero.")
@@ -451,6 +451,7 @@ QT_TRANSLATE_NOOP("Core", "This is not an SVG file.")
 QT_TRANSLATE_NOOP("Core", "This SVG has no shapes, outlines or text to bring in.")
 QT_TRANSLATE_NOOP("Core", "The shapes in this SVG have no size.")
 QT_TRANSLATE_NOOP("Core", "This SVG file is damaged and could not be read.")
+QT_TRANSLATE_NOOP("Core", "This file could not be opened, or it is larger than 64 MB.")
 QT_TRANSLATE_NOOP("Core", "This artwork could not be turned into shapes.")
 QT_TRANSLATE_NOOP("Core", "The text engine could not start.")
 QT_TRANSLATE_NOOP("Core", "The built-in font could not be loaded.")
@@ -460,6 +461,7 @@ QT_TRANSLATE_NOOP("Core", "Try another font.")
 
 // Messages built from values: their patterns, with %1, %2… where the values go.
 inline const char* const kCorePatterns[] = {
+    QT_TRANSLATE_NOOP("Core", "The script file '%1' could not be opened, or it is larger than 16 MB."),
     QT_TRANSLATE_NOOP("Core", "There is no body called '%1'."),
     QT_TRANSLATE_NOOP("Core", "The id '%1' is already used."),
     QT_TRANSLATE_NOOP("Core", "There is no sketch called '%1' to use as the path."),

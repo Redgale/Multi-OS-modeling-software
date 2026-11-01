@@ -445,13 +445,12 @@ Result<bool> ScriptRunner::runText(std::string_view text)
 
 Result<bool> ScriptRunner::runFile(const std::string& path)
 {
-    std::ifstream f(pathFromUtf8(path), std::ios::binary);  // UTF-8 path, also on Windows
-    if (!f) {
-        return makeError("script.open", "The script file '" + path + "' could not be opened.");
+    const auto text = readWholeFile(path, 16u * 1024u * 1024u);
+    if (!text) {
+        return makeError("script.open", fmt("The script file '%1' could not be opened, or it is larger than 16 MB.",
+                                            {path}));
     }
-    std::stringstream ss;
-    ss << f.rdbuf();
-    return runText(ss.str());
+    return runText(*text);
 }
 
 Result<bool> ScriptRunner::runLine(std::string_view rawLine)
