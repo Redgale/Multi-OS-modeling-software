@@ -2758,6 +2758,60 @@ private slots:
         QVERIFY(w.document().status(1).level == jig::StatusLevel::Ok);  // the path sketch: no warning
     }
 
+    // Areas of a sketch are picked by clicking them in the 3D view: a square with a circle in it
+    // can become a round post (the circle) or a block with a hole (the ring), not only a block.
+    void clickAreasToExtrude()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        {
+            jig::ScriptRunner r(w.document());
+            QVERIFY(r.runText("sketch id=s1 plane=XY\nrect sketch=s1 center=0,0 w=40 h=40\n"
+                              "circle sketch=s1 center=0,0 d=10\n").ok());
+        }
+        w.refreshAll();
+        Viewport* view = w.viewport();
+        auto extrudeBy = [&](QVector3D at) -> double {
+            w.runCommand("solid.extrude");
+            auto* ep = qobject_cast<ExtrudePanel*>(w.featurePanel());
+            if (!ep) {
+                return -1;
+            }
+            ep->distance()->setText("10 mm");
+            view->viewTop();
+            // two areas: none picked yet, the panel says how to pick, OK waits
+            QTest::qWait(300);
+            if (ep->previewOk() || !ep->statusText().contains("Click")) {
+                return -2;
+            }
+            const QPoint p = view->project(at).toPoint();
+            QTest::mouseMove(view, p);
+            QTest::mouseClick(view, Qt::LeftButton, Qt::NoModifier, p);
+            QTest::qWait(300);
+            if (at.x() > 1) {
+                view->homeView();
+                QTest::qWaitFor([&] { return view->meshesReady(); }, 5000);
+                QTest::qWait(200);
+                w.grab().save(shotPath("pick-areas"));
+            }
+            if (!ep->previewOk() || !ep->accept()) {
+                return -3;
+            }
+            return jig::massProperties(w.document().state().bodies.rbegin()->second->shape()).volume;
+        };
+        // the circle: a round post
+        const double post = extrudeBy(QVector3D(0, 0, 0));
+        QVERIFY2(std::abs(post - std::numbers::pi * 25 * 10) < 1e-3, qPrintable(QString::number(post)));
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        w.runCommand("edit.undo");
+        QTRY_COMPARE(int(w.document().state().bodies.size()), 0);
+        // the ring between them: a block with a round hole
+        const double ring = extrudeBy(QVector3D(15, 15, 0));
+        QVERIFY2(std::abs(ring - (1600 - std::numbers::pi * 25) * 10) < 1e-3, qPrintable(QString::number(ring)));
+    }
+
     // Move by the free grip: seen from above it moves in XY, from the front in XZ.
     void moveFreely()
     {

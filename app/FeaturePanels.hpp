@@ -109,6 +109,11 @@ protected:
     virtual void rememberValues() {}
     // Called after each preview, e.g. to draw a construction plane that has no body.
     virtual void previewed(const jig::FeatureOutcome&) {}
+    // An instruction while the step cannot be previewed yet ("click the areas…"), else empty.
+    virtual QString notReady() const
+    {
+        return {};
+    }
     void schedulePreview();
     void addRow(const QString& label, QWidget* w);
     // Which field holds a step parameter, so a one-click fix can set it.
@@ -136,6 +141,7 @@ private:
 };
 
 class ExtrudeHandle;
+class AreaPicker;
 
 class ExtrudePanel : public FeaturePanel
 {
@@ -184,12 +190,19 @@ public:
     }
     void useFace(const std::string& body, const std::string& name);  // "up to" this face
 
+    AreaPicker* areaPicker() const
+    {
+        return picker_.get();
+    }
+
 protected:
+    QString notReady() const override;
     jig::Feature draft() const override;
     QString title() const override;
     void rememberValues() override;
 
 private:
+    const jig::SketchState* currentSketch() const;
     void fillProfiles();
     void updateVisibility();
     QString autoOperation() const;
@@ -197,6 +210,8 @@ private:
     ExprField* toOffset_;
     void previewed(const jig::FeatureOutcome& o) override;
     friend class ExtrudeHandle;
+    std::unique_ptr<AreaPicker> picker_;  // the sketch's areas, clickable in the view
+    bool pickAll_ = false;                // tick every area (editing a step that used them all)
     std::unique_ptr<ExtrudeHandle> handle_;
     std::optional<QVector3D> handleBase_;  // the arrow starts at the profile's centre
     QVector3D handleDir_;                  // along the extrude direction
@@ -318,11 +333,19 @@ public:
     // a click on a flat face: turn up to it
     void useFace(const std::string& body, const std::string& name);
 
+    AreaPicker* areaPicker() const
+    {
+        return picker_.get();
+    }
+    ~RevolvePanel() override;
+
 protected:
+    QString notReady() const override;
     jig::Feature draft() const override;
     QString title() const override;
 
 private:
+    std::unique_ptr<AreaPicker> picker_;
     void fillFromSketch();
     void updateVisibility();
     QComboBox *sketch_, *axis_, *op_, *extent_, *to_;
@@ -682,11 +705,19 @@ public:
         return op_;
     }
 
+    AreaPicker* areaPicker() const
+    {
+        return picker_.get();
+    }
+    ~SweepPanel() override;
+
 protected:
+    QString notReady() const override;
     jig::Feature draft() const override;
     QString title() const override;
 
 private:
+    std::unique_ptr<AreaPicker> picker_;
     void fillAreas(const nlohmann::json& wanted);
     QComboBox *sketch_, *path_, *op_;
     QListWidget* areas_;

@@ -10,7 +10,11 @@
 #include <regex>
 #include <set>
 
+#include <BRepAdaptor_Curve.hxx>
 #include <BRepGProp.hxx>
+#include <BRepTools_WireExplorer.hxx>
+#include <TopExp_Explorer.hxx>
+#include <TopoDS.hxx>
 #include <GProp_GProps.hxx>
 #include <QAbstractItemView>
 #include <QAbstractSpinBox>
@@ -26,6 +30,7 @@
 #include <QMessageBox>
 #include <QMouseEvent>
 #include <QPainter>
+#include <QPainterPath>
 #include <QPushButton>
 #include <QTableWidget>
 #include <QTextDocumentFragment>
@@ -122,7 +127,11 @@ void fillProfileList(QListWidget* list, const jig::SketchState* sk, const nlohma
             auto* item = new QListWidgetItem(QObject::tr("Area %1 · %2").arg(n++).arg(q(jig::formatArea(r.area, units))), list);
             item->setData(Qt::UserRole, q(r.key));
             item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
-            item->setCheckState(keys.empty() || keys.count(r.key) ? Qt::Checked : Qt::Unchecked);
+            // "all" (or nothing chosen in an old step): every area; null (a new step): only when
+            // there is just one, otherwise the user clicks the ones wanted
+            const bool on = chosen.is_null() ? sk->profiles.regions.size() == 1
+                                             : (chosen.is_string() || keys.count(r.key) > 0);
+            item->setCheckState(on ? Qt::Checked : Qt::Unchecked);
         }
         if (sk->profiles.regions.empty()) {
             new QListWidgetItem(QObject::tr("(no closed areas: the outline has a gap)"), list);
@@ -148,6 +157,246 @@ nlohmann::json chosenProfiles(const QListWidget* list)
         }
     }
     return all ? nlohmann::json("all") : keys;
+}
+
+}  // namespace
+
+// The closed areas of the sketch a step works on, drawn shaded in the 3D view: clicking one
+// picks it or leaves it out (the list in the panel follows). Picked areas are filled more
+// strongly and marked with a tick (not only a colour); the area under the cursor is outlined.
+// Mouse events go to `next` first (the extrude arrow, say).
+class AreaPicker : public Interactor
+{
+public:
+    AreaPicker(Viewport* view, QListWidget* list, Interactor* next = nullptr)
+        : view_(view)
+        , list_(list)
+        , next_(next)
+    {}
+    void setSketch(const jig::SketchState* sk)
+    {
+        areas_.clear();
+        if (!sk) {
+            return;
+        }
+        for (const auto& r : sk->profiles.regions) {
+            Area a;
+            a.key = q(r.key);
+            a.size = r.area;
+            for (TopExp_Explorer wx(r.face, TopAbs_WIRE); wx.More(); wx.Next()) {
+                std::vector<QVector3D> loop;
+                for (BRepTools_WireExplorer ex(TopoDS::Wire(wx.Current()), r.face); ex.More(); ex.Next()) {
+                    BRepAdaptor_Curve c(ex.Current());
+                    const bool straight = c.GetType() == GeomAbs_Line;
+                    const int n = straight ? 1 : 32;
+                    const double t0 = c.FirstParameter(), t1 = c.LastParameter();
+                    const bool rev = ex.Current().Orientation() == TopAbs_REVERSED;
+                    for (int k = 0; k <= n; ++k) {
+                        const double t = rev ? t1 - (t1 - t0) * k / n : t0 + (t1 - t0) * k / n;
+                        const gp_Pnt p = c.Value(t);
+                        loop.emplace_back(float(p.X()), float(p.Y()), float(p.Z()));
+                    }
+                }
+                if (loop.size() >= 3) {
+                    a.loops.push_back(std::move(loop));
+                }
+            }
+            GProp_GProps g;
+            BRepGProp::SurfaceProperties(r.face, g);
+            const gp_Pnt c = g.CentreOfMass();
+            a.centre = QVector3D(float(c.X()), float(c.Y()), float(c.Z()));
+            areas_.push_back(std::move(a));
+        }
+        hover_.clear();
+    }
+    bool mousePress(QMouseEvent* e) override
+    {
+        if (next_ && next_->mousePress(e)) {
+            forwarded_ = true;
+            return true;
+        }
+        forwarded_ = false;
+        if (e->button() != Qt::LeftButton) {
+            return false;
+        }
+        pressed_ = areaAt(e->position());
+        pressAt_ = e->position();
+        return !pressed_.isEmpty();  // a press on an area picks it; elsewhere the view handles it
+    }
+    bool mouseMove(QMouseEvent* e) override
+    {
+        if (forwarded_) {
+            return next_->mouseMove(e);
+        }
+        if (!pressed_.isEmpty()) {
+            return true;
+        }
+        const bool used = next_ && next_->mouseMove(e);
+        const QString over = areaAt(e->position());
+        if (over != hover_ && view_) {
+            hover_ = over;
+            view_->update();
+        }
+        return used;
+    }
+    bool mouseRelease(QMouseEvent* e) override
+    {
+        if (forwarded_) {
+            forwarded_ = false;
+            return next_->mouseRelease(e);
+        }
+        if (pressed_.isEmpty()) {
+            return false;
+        }
+        const QString key = pressed_;
+        pressed_.clear();
+        if (QLineF(pressAt_, e->position()).length() < 6 && areaAt(e->position()) == key) {
+            toggle(key);
+        }
+        return true;
+    }
+    bool mouseDoubleClick(QMouseEvent* e) override
+    {
+        return next_ && next_->mouseDoubleClick(e);
+    }
+    bool key(QKeyEvent* e) override
+    {
+        return next_ && next_->key(e);
+    }
+    void paint(QPainter& g) override
+    {
+        if (view_) {
+            g.setRenderHint(QPainter::Antialiasing);
+            const QColor tint(70, 140, 255);
+            for (const Area& a : areas_) {
+                const bool on = picked(a.key), over = a.key == hover_;
+                QPainterPath path = screenPath(a);
+                QColor fill = tint;
+                fill.setAlpha(on ? 110 : over ? 60 : 28);
+                QPen pen(tint, over ? 2.5 : 1.2, on ? Qt::SolidLine : Qt::DashLine);
+                g.setPen(pen);
+                g.setBrush(fill);
+                g.drawPath(path);
+                if (on) {
+                    g.setPen(view_->colors().text);
+                    g.drawText(labelPoint(a, path) + QPointF(-4, 5), QStringLiteral("✓"));
+                }
+            }
+        }
+        if (next_) {
+            next_->paint(g);
+        }
+    }
+    // The area under a point of the view (the smallest, for areas inside others), or empty.
+    QString areaAt(const QPointF& pos) const
+    {
+        QString best;
+        double size = 1e300;
+        for (const Area& a : areas_) {
+            if (a.size < size && screenPath(a).contains(pos)) {
+                size = a.size;
+                best = a.key;
+            }
+        }
+        return best;
+    }
+    std::optional<QPointF> centreOf(const QString& key) const
+    {
+        for (const Area& a : areas_) {
+            if (a.key == key && view_) {
+                return view_->project(a.centre);
+            }
+        }
+        return std::nullopt;
+    }
+
+private:
+    struct Area
+    {
+        QString key;
+        double size = 0;
+        std::vector<std::vector<QVector3D>> loops;
+        QVector3D centre;
+    };
+    QPainterPath screenPath(const Area& a) const
+    {
+        QPainterPath path;
+        path.setFillRule(Qt::OddEvenFill);  // holes stay holes
+        for (const auto& loop : a.loops) {
+            path.moveTo(view_->project(loop.front()));
+            for (size_t i = 1; i < loop.size(); ++i) {
+                path.lineTo(view_->project(loop[i]));
+            }
+            path.closeSubpath();
+        }
+        return path;
+    }
+    // Where the tick goes: the centre when it is inside the area (not inside a hole of it),
+    // otherwise a point a little way in from the outline.
+    QPointF labelPoint(const Area& a, const QPainterPath& path) const
+    {
+        const QPointF c = view_->project(a.centre);
+        if (path.contains(c) || a.loops.empty()) {
+            return c;
+        }
+        for (const QVector3D& p : a.loops.front()) {
+            for (float t : {0.08f, 0.15f, 0.3f}) {
+                const QPointF q = view_->project(p + (a.centre - p) * t);
+                if (path.contains(q)) {
+                    return q;
+                }
+            }
+        }
+        return c;
+    }
+    QListWidgetItem* itemFor(const QString& key) const
+    {
+        for (int i = 0; i < list_->count(); ++i) {
+            if (list_->item(i)->data(Qt::UserRole).toString() == key) {
+                return list_->item(i);
+            }
+        }
+        return nullptr;
+    }
+    bool picked(const QString& key) const
+    {
+        const auto* it = itemFor(key);
+        return it && it->checkState() == Qt::Checked;
+    }
+    void toggle(const QString& key)
+    {
+        if (auto* it = itemFor(key)) {
+            it->setCheckState(it->checkState() == Qt::Checked ? Qt::Unchecked : Qt::Checked);  // the panel previews
+            if (view_) {
+                view_->update();
+            }
+        }
+    }
+    QPointer<Viewport> view_;
+    QListWidget* list_;
+    Interactor* next_;
+    std::vector<Area> areas_;
+    QString hover_, pressed_;
+    QPointF pressAt_;
+    bool forwarded_ = false;
+};
+
+namespace
+{
+// A hint for the panels: while areas exist but none is picked, say how to pick them.
+QString pickAreasHint(const QListWidget* list)
+{
+    bool any = false, picked = false;
+    for (int i = 0; i < list->count(); ++i) {
+        const QString key = list->item(i)->data(Qt::UserRole).toString();
+        if (key.isEmpty()) {
+            continue;
+        }
+        any = true;
+        picked |= list->item(i)->checkState() == Qt::Checked;
+    }
+    return any && !picked ? QObject::tr("Click the closed areas to use in the 3D view (or tick them in the list).")
+                          : QString();
 }
 
 // A new feature's id and name, or the edited feature.
@@ -406,6 +655,24 @@ void FeaturePanel::runPreview()
     }
     if (doc_.recomputing()) {
         timer_->start();  // the design is being rebuilt on another thread: preview after that
+        return;
+    }
+    if (const QString wait = notReady(); !wait.isEmpty()) {
+        // nothing to preview yet: show the design as it is and say what to do
+        previewOk_ = false;
+        const auto before = stateBefore();
+        std::vector<Viewport::BodyInput> bodies;
+        for (auto& [id, b] : before->bodies) {
+            bodies.push_back({id, b});
+        }
+        view_->setBodies(std::move(bodies));
+        view_->setModelTint(std::nullopt);
+        while (auto* item = fixes_->layout()->takeAt(0)) {
+            delete item->widget();
+            delete item;
+        }
+        status_->setText("<b>→ " + wait.toHtmlEscaped() + "</b>");
+        ok_->setEnabled(false);
         return;
     }
     const jig::Feature f = draft();
@@ -694,7 +961,9 @@ ExtrudePanel::ExtrudePanel(jig::Document& doc, Viewport* view, std::string editI
         taper_->setText("0 deg");
         thin_->setText(q(doc_.defaultLength(2, 0.08)));
     }
+    pickAll_ = edit && !(edit->params.contains("profiles") && edit->params["profiles"].is_array());
     fillProfiles();
+    pickAll_ = false;
     if (edit && edit->params.contains("profiles") && edit->params["profiles"].is_array()) {
         std::set<std::string> keys;
         for (auto& k : edit->params["profiles"]) {
@@ -707,9 +976,17 @@ ExtrudePanel::ExtrudePanel(jig::Document& doc, Viewport* view, std::string editI
     }
     connect(sketch_, &QComboBox::currentIndexChanged, this, [this] {
         fillProfiles();
+        if (picker_) {
+            picker_->setSketch(currentSketch());
+        }
         schedulePreview();
     });
-    connect(profiles_, &QListWidget::itemChanged, this, [this] { schedulePreview(); });
+    connect(profiles_, &QListWidget::itemChanged, this, [this] {
+        schedulePreview();
+        if (view_) {
+            view_->update();
+        }
+    });
     for (auto* c : {extent_, direction_, op_, to_}) {
         connect(c, &QComboBox::currentIndexChanged, this, [this] { schedulePreview(); });
     }
@@ -737,7 +1014,9 @@ ExtrudePanel::ExtrudePanel(jig::Document& doc, Viewport* view, std::string editI
     });
     if (view_) {
         handle_ = std::make_unique<ExtrudeHandle>(this);
-        view_->setInteractor(handle_.get());
+        picker_ = std::make_unique<AreaPicker>(view_, profiles_, handle_.get());
+        picker_->setSketch(currentSketch());
+        view_->setInteractor(picker_.get());
     }
     updateVisibility();
     if (sketch_->count() == 0) {
@@ -753,9 +1032,22 @@ ExtrudePanel::ExtrudePanel(jig::Document& doc, Viewport* view, std::string editI
 
 ExtrudePanel::~ExtrudePanel()
 {
-    if (view_ && view_->interactor() == handle_.get()) {
+    if (view_ && (view_->interactor() == handle_.get() || view_->interactor() == picker_.get())) {
         view_->setInteractor(nullptr);
     }
+}
+
+const jig::SketchState* ExtrudePanel::currentSketch() const
+{
+    const auto before = stateBefore();
+    auto it = before->sketches.find(current(sketch_));
+    // (the state lives in the document's cache, which outlives this call)
+    return it == before->sketches.end() ? nullptr : it->second.get();
+}
+
+QString ExtrudePanel::notReady() const
+{
+    return pickAreasHint(profiles_);
 }
 
 std::optional<QPointF> ExtrudePanel::handleTip() const
@@ -875,7 +1167,9 @@ void ExtrudePanel::fillProfiles()
             auto* item = new QListWidgetItem(tr("Area %1 · %2").arg(n++).arg(q(jig::formatArea(r.area, doc_.units()))), profiles_);
             item->setData(Qt::UserRole, q(r.key));
             item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
-            item->setCheckState(Qt::Checked);
+            // one area: it is the one; several: the user clicks the ones wanted (a square with a
+            // circle in it is not meant to become a solid block)
+            item->setCheckState(pickAll_ || it->second->profiles.regions.size() == 1 ? Qt::Checked : Qt::Unchecked);
         }
         // open curves can still be extruded as a wall
         const bool open = !it->second->solved.openEndpoints().empty();
@@ -1509,7 +1803,19 @@ RevolvePanel::RevolvePanel(jig::Document& doc, Viewport* view, std::string editI
         fillFromSketch();
         schedulePreview();
     });
-    connect(profiles_, &QListWidget::itemChanged, this, [this] { schedulePreview(); });
+    connect(profiles_, &QListWidget::itemChanged, this, [this] {
+        schedulePreview();
+        if (view_) {
+            view_->update();
+        }
+    });
+    if (view_) {
+        picker_ = std::make_unique<AreaPicker>(view_, profiles_);
+        const auto b = stateBefore();
+        auto sit = b->sketches.find(current(sketch_));
+        picker_->setSketch(sit == b->sketches.end() ? nullptr : sit->second.get());
+        view_->setInteractor(picker_.get());
+    }
     for (auto* c : {axis_, op_, extent_, to_}) {
         connect(c, &QComboBox::currentIndexChanged, this, [this] {
             updateVisibility();
@@ -1532,6 +1838,18 @@ RevolvePanel::RevolvePanel(jig::Document& doc, Viewport* view, std::string editI
     else {
         schedulePreview();
     }
+}
+
+RevolvePanel::~RevolvePanel()
+{
+    if (view_ && picker_ && view_->interactor() == picker_.get()) {
+        view_->setInteractor(nullptr);
+    }
+}
+
+QString RevolvePanel::notReady() const
+{
+    return pickAreasHint(profiles_);
 }
 
 void RevolvePanel::useFace(const std::string& body, const std::string& name)
@@ -1577,8 +1895,13 @@ void RevolvePanel::fillFromSketch()
     auto it = before->sketches.find(current(sketch_));
     const jig::SketchState* sk = it == before->sketches.end() ? nullptr : it->second.get();
     const jig::Feature* edit = editId_.empty() ? nullptr : doc_.feature(editId_);
-    fillProfileList(profiles_, sk, edit ? edit->params.value("profiles", nlohmann::json("all")) : nlohmann::json("all"),
+    fillProfileList(profiles_, sk, edit && current(sketch_) == edit->params.value("sketch", std::string {})
+                                       ? edit->params.value("profiles", nlohmann::json("all"))
+                                       : nlohmann::json(),
                     doc_.units());
+    if (picker_) {
+        picker_->setSketch(sk);
+    }
     axis_->blockSignals(true);
     axis_->clear();
     // Lines of the sketch first (construction lines are the usual choice), then the origin axes.
@@ -3254,7 +3577,7 @@ SweepPanel::SweepPanel(jig::Document& doc, Viewport* view, std::string editId, Q
         }
         path_->addItem(q(f.name), q(f.id));
     }
-    nlohmann::json wanted = "all";
+    nlohmann::json wanted;  // a new sweep: the only area, or the ones clicked
     if (const jig::Feature* edit = editId_.empty() ? nullptr : doc_.feature(editId_)) {
         select(sketch_, edit->params.value("sketch", std::string {}));
         select(path_, edit->params.value("path", nlohmann::json::object()).value("sketch", std::string {}));
@@ -3265,11 +3588,29 @@ SweepPanel::SweepPanel(jig::Document& doc, Viewport* view, std::string editId, Q
         path_->setCurrentIndex(path_->count() - 1);  // usually the sketch drawn last
     }
     fillAreas(wanted);
-    connect(sketch_, &QComboBox::currentIndexChanged, this, [this] {
-        fillAreas("all");
+    if (view_) {
+        picker_ = std::make_unique<AreaPicker>(view_, areas_);
+        view_->setInteractor(picker_.get());
+    }
+    auto showAreas = [this] {
+        if (picker_) {
+            const auto b = stateBefore();
+            auto it = b->sketches.find(current(sketch_));
+            picker_->setSketch(it == b->sketches.end() ? nullptr : it->second.get());
+        }
+    };
+    showAreas();
+    connect(sketch_, &QComboBox::currentIndexChanged, this, [this, showAreas] {
+        fillAreas(nlohmann::json());
+        showAreas();
         schedulePreview();
     });
-    connect(areas_, &QListWidget::itemChanged, this, [this] { schedulePreview(); });
+    connect(areas_, &QListWidget::itemChanged, this, [this] {
+        schedulePreview();
+        if (view_) {
+            view_->update();
+        }
+    });
     for (auto* c : {path_, op_}) {
         connect(c, &QComboBox::currentIndexChanged, this, [this] { schedulePreview(); });
     }
@@ -3296,8 +3637,9 @@ void SweepPanel::fillAreas(const nlohmann::json& wanted)
                                              areas_);
             item->setData(Qt::UserRole, q(r.key));
             item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
-            const bool on = wanted == nlohmann::json("all") ||
-                            (wanted.is_array() && std::find(wanted.begin(), wanted.end(), r.key) != wanted.end());
+            const bool on = wanted.is_null() ? it->second->profiles.regions.size() == 1
+                            : wanted == nlohmann::json("all") ||
+                                  (wanted.is_array() && std::find(wanted.begin(), wanted.end(), r.key) != wanted.end());
             item->setCheckState(on ? Qt::Checked : Qt::Unchecked);
         }
     }
@@ -3323,6 +3665,18 @@ jig::Feature SweepPanel::draft() const
                 {"path", {{"sketch", current(path_)}, {"curves", "all"}}},
                 {"op", current(op_)}};
     return f;
+}
+
+SweepPanel::~SweepPanel()
+{
+    if (view_ && picker_ && view_->interactor() == picker_.get()) {
+        view_->setInteractor(nullptr);
+    }
+}
+
+QString SweepPanel::notReady() const
+{
+    return pickAreasHint(areas_);
 }
 
 QString SweepPanel::title() const
