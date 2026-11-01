@@ -3886,6 +3886,140 @@ QString CoilPanel::title() const
     return tr("coil");
 }
 
+// ---------------------------------------------------------------- Basic shapes
+
+PrimitivePanel::PrimitivePanel(jig::Document& doc, Viewport* view, std::string editId, const std::string& shape,
+                               QWidget* parent)
+    : FeaturePanel(doc, view, std::move(editId), parent)
+{
+    form_->addWidget(heading(this, tr("Basic shape"),
+                             tr("A box, cylinder, sphere or torus placed on a plane, without drawing a sketch.")));
+    shape_ = combo(this, {{tr("Box"), "box"}, {tr("Cylinder"), "cylinder"}, {tr("Sphere"), "sphere"},
+                          {tr("Torus (ring)"), "torus"}});
+    plane_ = combo(this, {{tr("Floor plane (XY)"), "XY"}, {tr("Front plane (XZ)"), "XZ"}, {tr("Side plane (YZ)"), "YZ"}});
+    addRow(tr("Shape"), shape_);
+    addRow(tr("Plane"), plane_);
+    const std::vector<std::pair<std::string, QString>> rows = {
+        {"center_x", tr("Centre across the plane")}, {"center_y", tr("Centre up the plane")},
+        {"length", tr("Length")}, {"width", tr("Width")}, {"diameter", tr("Diameter")},
+        {"tube", tr("Tube thickness")}, {"height", tr("Height")}};
+    for (const auto& [key, label] : rows) {
+        auto* e = new ExprField(doc, jig::Dim::len(), this);
+        fields_[key] = e;
+        addRow(label, e);
+        if (key != "center_x" && key != "center_y") {
+            bindParam(key, e);
+        }
+        connect(e, &ExprField::changed, this, [this] { schedulePreview(); });
+    }
+    flip_ = new QCheckBox(tr("Grow the other way from the plane"), this);
+    form_->addWidget(flip_);
+    op_ = combo(this, {{tr("New body"), "new"},
+                       {tr("Join: add to the body"), "join"},
+                       {tr("Cut: remove material"), "cut"},
+                       {tr("Intersect: keep the overlap"), "intersect"}});
+    addRow(tr("Operation"), op_);
+    const auto before = stateBefore();
+    for (int i = 0; i < insertIndex(); ++i) {
+        const auto& f = doc_.model().features[size_t(i)];
+        if (f.kind == jig::FeatureKind::Plane && before->planes.count(f.id)) {
+            plane_->addItem(q(f.name), q(f.id));
+        }
+    }
+    const std::map<std::string, std::pair<double, double>> defaults = {
+        {"length", {20, 0.75}}, {"width", {20, 0.75}}, {"height", {20, 0.75}}, {"diameter", {20, 0.75}},
+        {"tube", {6, 0.25}}};
+    if (const jig::Feature* edit = editId_.empty() ? nullptr : doc_.feature(editId_)) {
+        const auto& p = edit->params;
+        select(shape_, p.value("shape", std::string("box")));
+        const nlohmann::json pl = p.value("plane", nlohmann::json("XY"));
+        select(plane_, pl.is_string() ? pl.get<std::string>() : std::string("XY"));
+        const nlohmann::json c = p.value("center", nlohmann::json::array({"0 mm", "0 mm"}));
+        auto str = [](const nlohmann::json& v) { return v.is_string() ? v.get<std::string>() : v.dump(); };
+        const bool two = c.is_array() && c.size() == 2;
+        fields_["center_x"]->setText(q(two ? str(c[0]) : std::string("0 mm")));
+        fields_["center_y"]->setText(q(two ? str(c[1]) : std::string("0 mm")));
+        for (const auto& [key, d] : defaults) {
+            fields_[key]->setText(q(p.value(key, doc_.defaultLength(d.first, d.second))));
+        }
+        flip_->setChecked(p.value("flip", false));
+        select(op_, p.value("op", std::string("new")));
+    }
+    else {
+        select(shape_, shape);
+        fields_["center_x"]->setText(q(doc_.defaultLength(0, 0)));
+        fields_["center_y"]->setText(q(doc_.defaultLength(0, 0)));
+        for (const auto& [key, d] : defaults) {
+            const QString k = q("shape." + key);
+            fields_[key]->setText(remembered().count(k) ? remembered()[k] : q(doc_.defaultLength(d.first, d.second)));
+        }
+        if (!doc_.state().bodies.empty()) {
+            select(op_, "join");  // usually added to the part being made
+        }
+    }
+    showFields();
+    connect(shape_, &QComboBox::currentIndexChanged, this, [this] {
+        showFields();
+        schedulePreview();
+    });
+    for (auto* c : {plane_, op_}) {
+        connect(c, &QComboBox::currentIndexChanged, this, [this] { schedulePreview(); });
+    }
+    connect(flip_, &QCheckBox::toggled, this, [this] { schedulePreview(); });
+    schedulePreview();
+}
+
+void PrimitivePanel::showFields()
+{
+    const std::string k = current(shape_);
+    const std::map<std::string, bool> on = {
+        {"length", k == "box"}, {"width", k == "box"}, {"height", k == "box" || k == "cylinder"},
+        {"diameter", k != "box"}, {"tube", k == "torus"}};
+    for (const auto& [key, visible] : on) {
+        ExprField* e = fields_.at(key);
+        e->setVisible(visible);
+        const int i = form_->indexOf(e);
+        if (i > 0) {
+            if (auto* item = form_->itemAt(i - 1); item && item->widget()) {
+                item->widget()->setVisible(visible);  // its label
+            }
+        }
+    }
+    flip_->setVisible(k == "box" || k == "cylinder");
+}
+
+jig::Feature PrimitivePanel::draft() const
+{
+    const std::string k = current(shape_);
+    const std::map<std::string, std::string> prefix = {{"box", "bx"}, {"cylinder", "cy"}, {"sphere", "sp"}, {"torus", "to"}};
+    const QString name = shape_->currentText().section(' ', 0, 0);
+    jig::Feature f = startDraft(doc_, editId_, prefix.count(k) ? prefix.at(k) : "bx", name);
+    f.kind = jig::FeatureKind::Primitive;
+    f.params = {{"shape", k},
+                {"plane", current(plane_)},
+                {"center", {fields_.at("center_x")->text().toStdString(), fields_.at("center_y")->text().toStdString()}},
+                {"flip", flip_->isChecked() && flip_->isVisible()},
+                {"op", current(op_)}};
+    for (const char* key : {"length", "width", "height", "diameter", "tube"}) {
+        if (fields_.at(key)->isVisibleTo(this)) {
+            f.params[key] = fields_.at(key)->text().toStdString();
+        }
+    }
+    return f;
+}
+
+void PrimitivePanel::rememberValues()
+{
+    for (const char* key : {"length", "width", "height", "diameter", "tube"}) {
+        remembered()[q(std::string("shape.") + key)] = fields_.at(key)->text();
+    }
+}
+
+QString PrimitivePanel::title() const
+{
+    return shape_->currentText().section(' ', 0, 0).toLower();
+}
+
 // ---------------------------------------------------------------- Move
 
 // Three arrows (X, Y, Z) from the bodies' centre; drag a grip to move along that axis.

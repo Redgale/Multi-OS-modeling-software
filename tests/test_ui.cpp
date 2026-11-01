@@ -2850,6 +2850,62 @@ private slots:
         QVERIFY(std::abs(jig::massProperties(w.document().state().bodies.begin()->second->shape()).volume - sq) < sq * 1e-3);
     }
 
+    // Basic shapes: each command opens the panel on its shape with only its fields; a box and a
+    // cylinder cut from it give the expected volume; editing switches the shape.
+    void primitivePanel()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        for (const char* s : {"torus", "sphere", "cylinder", "box"}) {
+            w.runCommand(QString("solid.") + s);
+            auto* pp = qobject_cast<PrimitivePanel*>(w.featurePanel());
+            QVERIFY(pp);
+            QCOMPARE(pp->shape()->currentData().toString(), QString(s));
+            QCOMPARE(pp->field("length")->isVisibleTo(pp), std::string(s) == "box");
+            QCOMPARE(pp->field("tube")->isVisibleTo(pp), std::string(s) == "torus");
+            QCOMPARE(pp->field("diameter")->isVisibleTo(pp), std::string(s) != "box");
+            if (std::string(s) != "box") {
+                pp->cancel();
+                QTRY_VERIFY(w.featurePanel() == nullptr);
+            }
+        }
+        auto* pp = qobject_cast<PrimitivePanel*>(w.featurePanel());
+        pp->field("length")->setText("30 mm");
+        pp->field("width")->setText("20 mm");
+        pp->field("height")->setText("10 mm");
+        QTRY_VERIFY(pp->previewOk());
+        QVERIFY(pp->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        w.runCommand("solid.cylinder");
+        pp = qobject_cast<PrimitivePanel*>(w.featurePanel());
+        QVERIFY(pp);
+        QCOMPARE(pp->operation()->currentData().toString(), QString("join"));  // a body exists
+        pp->operation()->setCurrentIndex(pp->operation()->findData("cut"));
+        pp->field("diameter")->setText("6 mm");
+        pp->field("height")->setText("10 mm");
+        QTRY_VERIFY(pp->previewOk());
+        w.viewport()->homeView();
+        QTRY_VERIFY(w.viewport()->meshesReady());
+        QTest::qWait(200);
+        w.grab().save(shotPath("primitive-panel"));
+        QVERIFY(pp->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        auto vol = [&] { return jig::massProperties(w.document().state().bodies.begin()->second->shape()).volume; };
+        const double want = 6000 - std::numbers::pi * 9 * 10;
+        QVERIFY(std::abs(vol() - want) < 1e-3);
+        // editing the box: its sizes are back; a zero size is explained
+        w.editFeature(0);
+        pp = qobject_cast<PrimitivePanel*>(w.featurePanel());
+        QVERIFY(pp);
+        QCOMPARE(pp->field("length")->text(), QString("30 mm"));
+        pp->field("width")->setText("0 mm");
+        QTRY_VERIFY(pp->statusText().contains("must be more than zero"));
+        QVERIFY(!pp->previewOk());
+        pp->cancel();
+    }
+
     // Areas of a sketch are picked by clicking them in the 3D view: a square with a circle in it
     // can become a round post (the circle) or a block with a hole (the ring), not only a block.
     void clickAreasToExtrude()

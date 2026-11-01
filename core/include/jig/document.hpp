@@ -70,7 +70,8 @@ enum class FeatureKind
     Loft,       // a solid through closed areas of two or more sketches, in order
     Sweep,      // a sketch's closed area pushed along a path of curves in another sketch
     Pipe,       // a round tube or rod along a path of sketch curves
-    Coil        // a helix with a round or square section (springs)
+    Coil,       // a helix with a round or square section (springs)
+    Primitive   // a box, cylinder, sphere or torus placed on a plane, no sketch
 };
 
 const char* toString(FeatureKind k);

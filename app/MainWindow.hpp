@@ -131,6 +131,7 @@ public:
     void openSweep(const std::string& editId);
     void openPipe(const std::string& editId);
     void openCoil(const std::string& editId);
+    void openPrimitive(const std::string& editId, const std::string& shape);
     void openPlane(const std::string& editId = {}, const std::string& kind = "offset");
     void openAxis(const std::string& editId = {});
     void openPoint(const std::string& editId = {});

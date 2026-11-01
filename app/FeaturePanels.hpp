@@ -807,6 +807,43 @@ private:
     QCheckBox* flip_;
 };
 
+// Create ▸ Box / Cylinder / Sphere / Torus: a basic shape on a plane, no sketch.
+class PrimitivePanel : public FeaturePanel
+{
+    Q_OBJECT
+public:
+    PrimitivePanel(jig::Document& doc, Viewport* view, std::string editId, const std::string& shape,
+                   QWidget* parent = nullptr);
+    QComboBox* shape() const
+    {
+        return shape_;
+    }
+    QComboBox* plane() const
+    {
+        return plane_;
+    }
+    ExprField* field(const std::string& key) const
+    {
+        auto it = fields_.find(key);
+        return it == fields_.end() ? nullptr : it->second;
+    }
+    QComboBox* operation() const
+    {
+        return op_;
+    }
+
+protected:
+    jig::Feature draft() const override;
+    QString title() const override;
+    void rememberValues() override;
+
+private:
+    void showFields();
+    QComboBox *shape_, *plane_, *op_;
+    std::map<std::string, ExprField*> fields_;  // center_x center_y length width height diameter tube
+    QCheckBox* flip_;
+};
+
 class MoveHandle;
 
 // Move / copy bodies: shift along X, Y, Z and turn around an origin axis.

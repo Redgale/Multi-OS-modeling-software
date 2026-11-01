@@ -2521,3 +2521,59 @@ TEST(Coil, SpringsBothHandsSquareSectionsAndLimits)
     ASSERT_TRUE(back.ok());
     EXPECT_NEAR(props(**back).volume, want, want * 1e-3);
 }
+
+TEST(Primitive, BoxCylinderSphereTorusPlacedAndNamed)
+{
+    // a box standing on the floor plane, centred at (10, 5): 30 x 20 x 10
+    auto box = build("box id=bx1 center=10,5 length=30mm width=20mm height=10mm\n");
+    expectAllOk(*box);
+    auto pb = props(*box);
+    EXPECT_NEAR(pb.volume, 30 * 20 * 10, 1e-6);
+    EXPECT_NEAR(pb.xmin, -5, 1e-6);
+    EXPECT_NEAR(pb.xmax, 25, 1e-6);
+    EXPECT_NEAR(pb.ymin, -5, 1e-6);
+    EXPECT_NEAR(pb.zmin, 0, 1e-6);
+    EXPECT_NEAR(pb.zmax, 10, 1e-6);
+    const auto& body = *box->state().bodies.at("bx1");
+    for (const char* n : {"bx1/bottom", "bx1/top", "bx1/left", "bx1/right", "bx1/front", "bx1/back"}) {
+        EXPECT_EQ(body.findFaces(n).size(), 1u) << n;
+    }
+    // the top face is where a fillet or a sketch can find it after the box changes size
+    auto filleted = build("param h = 10 mm\nbox id=bx1 length=30mm width=20mm height=h\nfillet id=f1 edges=face:bx1/top radius=2mm\n"
+                          "param h = 15 mm\n");
+    expectAllOk(*filleted);
+    EXPECT_LT(props(*filleted).volume, 30 * 20 * 15 - 1);  // the four top edges are rounded
+    EXPECT_NEAR(props(*filleted).zmax, 15, 1e-6);
+    // a cylinder on the side plane, flipped (grows towards -X)
+    auto cyl = build("cylinder id=cy1 plane=YZ diameter=10mm height=20mm flip=yes\n");
+    expectAllOk(*cyl);
+    auto pc = props(*cyl);
+    EXPECT_NEAR(pc.volume, pi * 25 * 20, 1e-3);
+    EXPECT_NEAR(pc.xmin, -20, 1e-6);
+    EXPECT_NEAR(pc.xmax, 0, 1e-6);
+    for (const char* n : {"cy1/bottom", "cy1/top", "cy1/side"}) {
+        EXPECT_GE(cyl->state().bodies.at("cy1")->findFaces(n).size(), 1u) << n;
+    }
+    // a sphere centred on the plane, and a torus lying on it
+    auto sph = build("sphere id=sp1 diameter=12mm\n");
+    expectAllOk(*sph);
+    EXPECT_NEAR(props(*sph).volume, 4.0 / 3 * pi * 216, 1e-2);
+    EXPECT_NEAR(props(*sph).zmin, -6, 1e-6);
+    auto tor = build("torus id=to1 plane=XZ diameter=40mm tube=10mm\n");
+    expectAllOk(*tor);
+    EXPECT_NEAR(props(*tor).volume, 2 * pi * pi * 20 * 25, 1e-1);
+    EXPECT_NEAR(props(*tor).ymax - props(*tor).ymin, 10, 1e-6);
+    // a hole through the box with a cylinder cut
+    auto cut = build("box id=bx1 length=30mm width=20mm height=10mm\ncylinder diameter=6mm height=10mm op=cut\n");
+    expectAllOk(*cut);
+    EXPECT_NEAR(props(*cut).volume, 6000 - pi * 9 * 10, 1e-3);
+    // sizes that make no shape are explained
+    for (const char* bad : {"box id=bx1 length=0mm width=20mm height=10mm\n", "torus id=to1 diameter=10mm tube=10mm\n"}) {
+        auto doc = std::make_unique<Document>();
+        ScriptRunner r(*doc);
+        r.strict = false;
+        ASSERT_TRUE(r.runText(bad).ok());
+        EXPECT_EQ(doc->status(0).level, StatusLevel::Error) << bad;
+        EXPECT_FALSE(doc->status(0).message.empty());
+    }
+}

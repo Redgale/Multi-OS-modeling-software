@@ -108,7 +108,7 @@ scope (with reason). Milestones (M1 to M8) are the v0.1 build order from the bri
 | Rib, Web, Emboss | 15 | v0.2 (Web v0.3+) | — | Brief v0.2 list |
 | Thicken, Boundary fill | 15 | v0.3+ | — | Surface workflows |
 | Derive, Insert into design | 13, 22 | v0.3+ | — | Multi-file projects |
-| Primitives (box, cylinder, sphere, torus) | 13 | v0.2 | — | Sketch+extrude teaches better; low cost later |
+| Primitives (box, cylinder, sphere, torus) | 13 | v0.2 | **app** + scripts (`box`, `cylinder`, `sphere`, `torus`): on any plane at a centre, sizes by expression, named faces, new/join/cut/intersect | |
 | Create Form (T-splines) | 13, 26 | v0.3+ | — | |
 | Create base feature | 13, 24 | v0.3+ | — | |
 | Create PCB | 13 | never | — | Electronics out of scope |

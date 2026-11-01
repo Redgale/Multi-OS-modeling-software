@@ -5,6 +5,7 @@
 // (clean rollback) and marks the step in the timeline.
 #include <algorithm>
 #include <cctype>
+#include <array>
 #include <cmath>
 #include <cstdio>
 #include <numbers>
@@ -31,6 +32,8 @@
 #include <GProp_GProps.hxx>
 #include <BRepGProp_Face.hxx>
 #include <BRepPrimAPI_MakeBox.hxx>
+#include <BRepPrimAPI_MakeSphere.hxx>
+#include <BRepPrimAPI_MakeTorus.hxx>
 #include <Bnd_Box.hxx>
 #include <TopExp_Explorer.hxx>
 #include <TopoDS.hxx>
@@ -696,6 +699,15 @@ FeatureOutcome applyTool(const Feature& f, BoolOp op, NamedShape tool, const std
                          FeatureStatus status)
 {
     const auto& p = f.params;
+    // edges are named from the faces either side, so a fillet or chamfer on them keeps its
+    // edges when earlier steps change (the tools that name only faces get them here)
+    bool unnamed = false;
+    for (int i = 0; i < tool.edgeCount() && !unnamed; ++i) {
+        unnamed = tool.edgeName(i).empty();
+    }
+    if (unnamed) {
+        tool.deriveEdgeNames();
+    }
     auto toolPtr = std::make_shared<const NamedShape>(std::move(tool));
     auto out = copyState(in);
     if (op == BoolOp::NewBody || (in->bodies.empty() && op == BoolOp::Join)) {
@@ -1480,6 +1492,134 @@ FeatureOutcome applyCoil(const Document& doc, const Feature& f, const std::share
         const char* m = e.GetMessageString();
         return failed("This coil could not be made.", {"Try fewer turns, a larger pitch or a smaller section."},
                       m ? m : "");
+    }
+}
+
+// ---------------------------------------------------------------- basic shapes
+
+// A box, cylinder, sphere or torus without a sketch, placed on a plane at a centre point:
+// the box and cylinder stand on the plane, the sphere and torus are centred on it.
+FeatureOutcome applyPrimitive(const Document& doc, const Feature& f, const std::shared_ptr<const ModelState>& in)
+{
+    const auto& p = f.params;
+    FeatureStatus status;
+    auto frame = planeFrame(p.value("plane", nlohmann::json("XY")), in, status);
+    if (!frame) {
+        return failed(frame.error());
+    }
+    double cx = 0, cy = 0;
+    const nlohmann::json cj = p.value("center", nlohmann::json::array());
+    if (cj.is_array() && cj.size() == 2) {
+        for (int i = 0; i < 2; ++i) {
+            auto v = doc.evalLength(cj[size_t(i)].is_string() ? cj[size_t(i)].get<std::string>() : cj[size_t(i)].dump());
+            if (!v) {
+                return failed(v.error());
+            }
+            (i == 0 ? cx : cy) = v.value();
+        }
+    }
+    const std::string shape = p.value("shape", std::string("box"));
+    std::map<std::string, double> v;
+    auto need = [&](const char* key, const char* def, const char* label) -> std::optional<FeatureOutcome> {
+        auto r = doc.evalLength(p.value(key, std::string(def)));
+        if (!r) {
+            return failed(r.error());
+        }
+        if (r.value() <= 1e-6) {
+            return failed(fmt("The %1 must be more than zero.", {label}));
+        }
+        v[key] = r.value();
+        return std::nullopt;
+    };
+    std::vector<std::array<const char*, 3>> keys;
+    if (shape == "box") {
+        keys = {{"length", "20 mm", word("length")}, {"width", "20 mm", word("width")}, {"height", "20 mm", word("height")}};
+    }
+    else if (shape == "cylinder") {
+        keys = {{"diameter", "20 mm", word("diameter")}, {"height", "20 mm", word("height")}};
+    }
+    else if (shape == "sphere") {
+        keys = {{"diameter", "20 mm", word("diameter")}};
+    }
+    else if (shape == "torus") {
+        keys = {{"diameter", "40 mm", word("diameter")}, {"tube", "10 mm", word("tube thickness")}};
+    }
+    else {
+        return failed(fmt("Jigsmith has no basic shape called '%1'.", {shape}),
+                      {"Use a box, cylinder, sphere or torus."});
+    }
+    for (auto& [k, def, label] : keys) {
+        if (auto bad = need(k, def, label)) {
+            return *bad;
+        }
+    }
+    if (shape == "torus" && v["tube"] >= v["diameter"] - 1e-6) {
+        return failed("The tube is as thick as the whole ring, so there is no hole in the middle.",
+                      {"Make the tube thinner than the ring's diameter (the diameter is to the tube's middle)."});
+    }
+    try {
+        const gp_Ax3& fr = frame.value();
+        const gp_Pnt c = fr.Location().Translated(gp_Vec(fr.XDirection()) * cx + gp_Vec(fr.YDirection()) * cy);
+        gp_Dir up = fr.Direction();
+        gp_Dir xd = fr.XDirection();
+        if (p.value("flip", false)) {
+            up.Reverse();
+            xd.Reverse();  // keep the frame right-handed: y stays where it was
+        }
+        const gp_Ax2 ax(c, up, xd);
+        const gp_Dir yd = ax.YDirection();
+        TopoDS_Shape solid;
+        if (shape == "box") {
+            const gp_Pnt corner = c.Translated(gp_Vec(xd) * (-v["length"] / 2) + gp_Vec(yd) * (-v["width"] / 2));
+            solid = BRepPrimAPI_MakeBox(gp_Ax2(corner, up, xd), v["length"], v["width"], v["height"]).Shape();
+        }
+        else if (shape == "cylinder") {
+            solid = BRepPrimAPI_MakeCylinder(ax, v["diameter"] / 2, v["height"]).Shape();
+        }
+        else if (shape == "sphere") {
+            solid = BRepPrimAPI_MakeSphere(ax, v["diameter"] / 2).Shape();
+        }
+        else {
+            solid = BRepPrimAPI_MakeTorus(ax, v["diameter"] / 2, v["tube"] / 2).Shape();
+        }
+        // names from where each face points: bottom and top across the plane, then the sides
+        NamedShape tool(solid);
+        int other = 0;
+        for (int i = 0; i < tool.faceCount(); ++i) {
+            const TopoDS_Face& face = TopoDS::Face(tool.face(i));
+            BRepAdaptor_Surface surf(face);
+            std::string name;
+            if (surf.GetType() == GeomAbs_Plane) {
+                gp_Dir n = surf.Plane().Axis().Direction();
+                if (face.Orientation() == TopAbs_REVERSED) {
+                    n.Reverse();
+                }
+                const double u = n.Dot(up), x = n.Dot(xd), y = n.Dot(yd);
+                name = u < -0.9  ? "bottom"
+                       : u > 0.9 ? "top"
+                       : x > 0.9 ? "right"
+                       : x < -0.9 ? "left"
+                       : y > 0.9 ? "back"
+                       : y < -0.9 ? "front"
+                                   : "";
+            }
+            else if (shape == "cylinder") {
+                name = "side";
+            }
+            else {
+                name = "surface";
+            }
+            tool.setFaceName(i, name.empty() ? f.id + "/face" + std::to_string(++other) : f.id + "/" + name);
+        }
+        auto op = opFromString(p.value("op", std::string("new")));
+        if (!op) {
+            return failed("This shape has an unknown operation.");
+        }
+        return applyTool(f, *op, std::move(tool), in, status);
+    }
+    catch (const Standard_Failure& e) {
+        const char* m = e.GetMessageString();
+        return failed("This shape could not be made.", {}, m ? m : "");
     }
 }
 
@@ -2517,6 +2657,8 @@ FeatureOutcome applyFeature(const Document& doc, const Feature& f, const std::sh
                 return applyPipe(doc, f, in);
             case FeatureKind::Coil:
                 return applyCoil(doc, f, in);
+            case FeatureKind::Primitive:
+                return applyPrimitive(doc, f, in);
             case FeatureKind::Hole:
                 return applyHole(doc, f, in);
             case FeatureKind::Pattern:
