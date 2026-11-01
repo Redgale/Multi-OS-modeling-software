@@ -195,6 +195,24 @@ public:
         return section_;
     }
     void setUnits(jig::LengthUnit u);  // hover descriptions and the floor grid
+    // While sketching: the grid lies in the sketch's plane instead of on the floor, and adapts
+    // to the zoom (its fine lines are the snap step, heavier lines at round sizes).
+    void setSketchGrid(std::optional<gp_Ax3> frame);
+    // line segments drawn as construction geometry and finished sketches (for tests)
+    int datumSegments() const
+    {
+        return int((datums_.lines.size() + sketchLines_.lines.size()) / 2);
+    }
+    // Finished sketches: drawn with depth, so the model hides what is behind it.
+    void setSketchLines(SceneOverlay lines);
+    std::optional<gp_Ax3> sketchGrid() const
+    {
+        return sketchFrame_;
+    }
+    // The snap step for the current zoom: a round size about 12 pixels across (0.1, 0.2, 0.5,
+    // 1, 2, 5 mm …, or 1/64 in … 1 ft), and how many of them make a heavier line.
+    double sketchGridStep() const;
+    int sketchGridPerMajor() const;
     // Construction planes and their names: drawn under any tool overlay.
     void setDatums(SceneOverlay geometry, std::vector<std::pair<QString, QVector3D>> labels);
     void setEdgeHighlight(const std::string& body, std::vector<int> edges);
@@ -327,6 +345,9 @@ private:
     QOpenGLVertexArrayObject gridVao_;
     QOpenGLBuffer gridVbo_ {QOpenGLBuffer::VertexBuffer};
     int gridMinorCount_ = 0, gridMajorCount_ = 0, axisCount_ = 0;
+    std::optional<gp_Ax3> sketchFrame_;
+    double builtStep_ = 0;          // the sketch grid as last built: its step and centre
+    QPointF builtCentre_;
     std::unique_ptr<QOpenGLFramebufferObject> pickFbo_;
     bool glReady_ = false;
     bool glFailed_ = false;  // no usable OpenGL 3.3: the view draws nothing instead of crashing
@@ -364,6 +385,8 @@ private:
     PickMode pickMode_ = PickMode::Faces;
     SceneOverlay overlayData_;
     SceneOverlay datums_;
+    SceneOverlay sketchLines_;
+    int ovSketchCount_ = 0;
     std::optional<QVector4D> section_;
     jig::LengthUnit units_ = jig::LengthUnit::Millimetre;                                     // construction planes, always shown
     std::vector<std::pair<QString, QVector3D>> datumLabels_;

@@ -124,6 +124,10 @@ public:
     void openPoint(const std::string& editId = {});
     // Named views: the camera kept with the design under a name
     void saveNamedView(const QString& name);
+    // Finished sketches are drawn in the view; one a later step uses hides itself (like a
+    // profile that has been extruded) until shown again from the Browser.
+    bool sketchVisible(const std::string& id) const;
+    void setSketchVisible(const std::string& id, bool on);
     // Delete a body: a Remove step in the timeline (false if there is no such body)
     bool removeBody(const std::string& body);
     // Slice: while sketching, hide the part of the model in front of the sketch plane

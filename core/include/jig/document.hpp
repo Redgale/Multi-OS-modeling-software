@@ -240,6 +240,12 @@ public:
         return folded_;
     }
     void setFoldedGroups(std::set<std::string> groups);
+    // Sketches a later step uses are hidden by default; these were shown again by hand.
+    const std::set<std::string>& shownSketches() const
+    {
+        return shownSketches_;
+    }
+    void setShownSketches(std::set<std::string> ids);
     // Camera positions saved under a name (what is stored is up to the app); a null value
     // removes one.
     const std::map<std::string, nlohmann::json>& namedViews() const
@@ -281,7 +287,7 @@ private:
     int recomputed_ = 0;
     double lastMs_ = 0;
     uint64_t revision_ = 0;
-    std::set<std::string> hidden_, folded_;
+    std::set<std::string> hidden_, folded_, shownSketches_;
     std::map<std::string, nlohmann::json> views_;
 };
 

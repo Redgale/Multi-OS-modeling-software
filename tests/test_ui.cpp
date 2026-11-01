@@ -366,6 +366,109 @@ private slots:
     }
 
     // Text: click, type the words and a size; double-click the anchor to change them.
+    // The grid lies in the sketch's plane while sketching (not always on the floor), and
+    // follows the zoom; the floor grid comes back after.
+    void sketchGridInSketchPlane()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        Viewport* view = w.viewport();
+        QVERIFY(!view->sketchGrid());
+        QVERIFY(w.createSketchOn("XZ"));
+        QTRY_VERIFY(w.sketchEditor() != nullptr);
+        QVERIFY(view->sketchGrid());
+        QVERIFY(view->sketchGrid()->Direction().IsParallel(gp_Dir(0, 1, 0), 1e-9));  // the front plane, not the floor
+        QTest::qWait(200);
+        w.grab().save(shotPath("sketch-grid-front"));
+        const double step = view->sketchGridStep();
+        w.runCommand("sketch.finish");
+        QTRY_VERIFY(w.sketchEditor() == nullptr);
+        QVERIFY(!view->sketchGrid());
+        QVERIFY(w.createSketchOn("YZ"));
+        QVERIFY(view->sketchGrid()->Direction().IsParallel(gp_Dir(1, 0, 0), 1e-9));
+        (void)step;
+    }
+
+    // A finished sketch stays visible until a later step uses it; the Browser can show it again.
+    void finishedSketchIsDrawn()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        Viewport* view = w.viewport();
+        QVERIFY(w.createSketchOn("XY"));
+        SketchEditor* sk = w.sketchEditor();
+        sk->setTool(SketchEditor::Tool::CenterRectangle);
+        QTest::mouseMove(view, sk->screenOf(0, 0));
+        QTest::mouseClick(view, Qt::LeftButton, Qt::NoModifier, sk->screenOf(0, 0));
+        QTest::mouseMove(view, sk->screenOf(10, 8));
+        sk->typeValues({"40", "20"});
+        w.runCommand("sketch.finish");
+        QTRY_VERIFY(w.sketchEditor() == nullptr);
+        const std::string id = w.document().model().features[0].id;
+        QVERIFY(w.sketchVisible(id));
+        QVERIFY(view->datumSegments() >= 4);  // its four sides are drawn
+        w.runCommand("solid.extrude");
+        auto* ex = qobject_cast<ExtrudePanel*>(w.featurePanel());
+        QVERIFY(ex);
+        ex->distance()->setText("5 mm");
+        QTRY_VERIFY(ex->previewOk());
+        QVERIFY(ex->accept());
+        QTRY_VERIFY(w.featurePanel() == nullptr);
+        QVERIFY(!w.sketchVisible(id));  // used by the extrude: it hides itself
+        QCOMPARE(view->datumSegments(), 0);
+        w.setSketchVisible(id, true);   // shown again by hand (the Browser tick)
+        QVERIFY(w.sketchVisible(id));
+        QVERIFY(view->datumSegments() >= 4);
+        QTest::qWait(200);
+        w.grab().save(shotPath("finished-sketch"));
+    }
+
+    // Line midpoints are snap targets: a line started there stays at the middle.
+    void snapToMidpoint()
+    {
+        MainWindow w;
+        w.resize(1280, 820);
+        w.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&w));
+        Viewport* view = w.viewport();
+        QVERIFY(w.createSketchOn("XY"));
+        SketchEditor* sk = w.sketchEditor();
+        auto click = [&](double x, double y) {
+            QTest::mouseMove(view, sk->screenOf(x, y));
+            QTest::mouseClick(view, Qt::LeftButton, Qt::NoModifier, sk->screenOf(x, y));
+        };
+        sk->setTool(SketchEditor::Tool::Line);
+        click(0, 0);
+        click(23, 0);
+        QTest::keyClick(view, Qt::Key_Escape);  // end the chain
+        sk->setTool(SketchEditor::Tool::Line);
+        click(11.6, 0.3);  // near the middle (11.5, 0): it snaps there
+        click(11.5, 15);
+        int mids = 0;
+        for (auto& [cid, c] : sk->sketch().constraints()) {
+            mids += c.type == jig::ConstraintType::Midpoint;
+        }
+        QCOMPARE(mids, 1);
+        // the constrained point is at the middle of the first line, wherever its end snapped to
+        bool atMiddle = false;
+        for (auto& [cid, c] : sk->sketch().constraints()) {
+            if (c.type != jig::ConstraintType::Midpoint) {
+                continue;
+            }
+            const jig::SketchEntity* L = sk->sketch().entity(c.b);
+            QVERIFY(L);
+            auto [x1, y1] = sk->sketch().pointXY(L->p1);
+            auto [x2, y2] = sk->sketch().pointXY(L->p2);
+            auto [px, py] = sk->sketch().pointXY(c.a);
+            atMiddle = std::abs(px - (x1 + x2) / 2) < 1e-6 && std::abs(py - (y1 + y2) / 2) < 1e-6 && std::abs(x2 - x1) > 15;
+        }
+        QVERIFY(atMiddle);
+    }
+
     // Text placed on a circle bends along it.
     void textAlongCircle()
     {

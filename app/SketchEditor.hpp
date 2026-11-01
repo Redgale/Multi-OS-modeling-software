@@ -94,6 +94,8 @@ public:
     {
         return frame_;
     }
+    // A curve as points in the sketch's own coordinates (for drawing it).
+    static std::vector<QPointF> polyline(const jig::Sketch& s, const jig::SketchEntity& e);
 
     struct Options
     {
@@ -157,6 +159,7 @@ private:
     {
         QPointF local;
         int point = 0;           // existing point snapped to, 0 = none
+        int midOf = 0;           // the line whose midpoint it snapped to, 0 = none
         bool horizontal = false;  // inferred from the tool's first point
         bool vertical = false;
     };
@@ -167,6 +170,8 @@ private:
     int pointNear(const QPointF& screen, int exclude = 0) const;
     int entityNear(const QPointF& screen) const;  // curves and points
     double gridStep() const;
+    // places clicked on a line's midpoint: a point made there gets a midpoint constraint
+    std::vector<std::pair<QPointF, int>> midSnaps_;
     bool commit(const QString& label, const jig::Sketch& next);
     void rebuildOverlay();
     void resetToolState();
@@ -175,7 +180,6 @@ private:
     void hideInput();
     QStringList inputValues() const;
     QString inUnits(double mm) const;
-    std::vector<QPointF> polyline(const jig::Sketch& s, const jig::SketchEntity& e) const;
     const jig::Sketch& shown() const
     {
         return dragging_ ? dragSketch_ : work_;

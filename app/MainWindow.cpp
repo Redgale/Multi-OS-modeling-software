@@ -843,6 +843,11 @@ void MainWindow::buildDocks()
     browser_->setHeaderHidden(true);
     browser_->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(browser_, &QTreeWidget::itemChanged, this, [this](QTreeWidgetItem* it, int) {
+        if (const QString sk = it->data(0, Qt::UserRole + 3).toString(); !sk.isEmpty()) {
+            const bool on = it->checkState(0) == Qt::Checked;
+            QTimer::singleShot(0, this, [this, id = sk.toStdString(), on] { setSketchVisible(id, on); });
+            return;
+        }
         const QString id = it->data(0, Qt::UserRole).toString();
         if (!id.isEmpty()) {
             const std::string body = id.toStdString();
@@ -1056,6 +1061,33 @@ void MainWindow::setDocument(std::unique_ptr<jig::Document> doc, const QString& 
     view_->homeView();
 }
 
+bool MainWindow::sketchVisible(const std::string& id) const
+{
+    if (sketch_ && sketch_->featureId() == id) {
+        return true;  // being edited: the sketch editor draws it
+    }
+    const bool used = !doc_->dependents(id).empty();
+    return used ? doc_->shownSketches().count(id) > 0 : !doc_->hiddenBodies().count(id);
+}
+
+void MainWindow::setSketchVisible(const std::string& id, bool on)
+{
+    if (sketchVisible(id) == on) {
+        return;
+    }
+    if (!doc_->dependents(id).empty()) {
+        auto shown = doc_->shownSketches();
+        on ? (void)shown.insert(id) : (void)shown.erase(id);
+        doc_->setShownSketches(std::move(shown));
+    }
+    else {
+        auto hidden = doc_->hiddenBodies();  // the same "hidden" list as bodies (ids never clash)
+        on ? (void)hidden.erase(id) : (void)hidden.insert(id);
+        doc_->setHiddenBodies(std::move(hidden));
+    }
+    refreshAll();
+}
+
 void MainWindow::refreshDatums()
 {
     SceneOverlay ov;
@@ -1065,6 +1097,46 @@ void MainWindow::refreshDatums()
         auto mp = jig::massProperties(b->shape());
         s = std::max({s, float(mp.xmax - mp.xmin) * 0.6f, float(mp.ymax - mp.ymin) * 0.6f, float(mp.zmax - mp.zmin) * 0.6f});
     }
+    // finished sketches: their curves in the view, hidden by the model where it is in front
+    // (construction ones dashed: drawn in short pieces with gaps, not only lighter)
+    SceneOverlay sketchLines;
+    const double dash = std::max(0.5, double(s) / 40);
+    for (auto& [id, sk] : doc_->state().sketches) {
+        if ((sketch_ && sketch_->featureId() == id) || !sketchVisible(id)) {
+            continue;
+        }
+        const gp_Ax3& f = sk->frame;
+        auto to3d = [&](const QPointF& p) {
+            const gp_XYZ w = f.Location().XYZ() + f.XDirection().XYZ() * p.x() + f.YDirection().XYZ() * p.y();
+            return QVector3D(float(w.X()), float(w.Y()), float(w.Z()));
+        };
+        const QColor ink(110, 170, 255, 235);
+        for (auto& [eid, e] : sk->solved.entities()) {
+            if (e.type == jig::EntityType::Point) {
+                continue;
+            }
+            const auto pts = SketchEditor::polyline(sk->solved, e);
+            double along = 0;
+            for (size_t i = 0; i + 1 < pts.size(); ++i) {
+                if (!e.construction) {
+                    sketchLines.lines.push_back({to3d(pts[i]), ink});
+                    sketchLines.lines.push_back({to3d(pts[i + 1]), ink});
+                    continue;
+                }
+                const QPointF a = pts[i], b = pts[i + 1];
+                const double L = QLineF(a, b).length();
+                for (double t = 0; t < L; t += dash / 2) {
+                    const double t1 = std::min(L, t + dash / 2);
+                    if (int(std::floor((along + t) / (dash / 2))) % 2 == 0) {
+                        sketchLines.lines.push_back({to3d(a + (b - a) * (t / L)), ink});
+                        sketchLines.lines.push_back({to3d(a + (b - a) * (t1 / L)), ink});
+                    }
+                }
+                along += L;
+            }
+        }
+    }
+    view_->setSketchLines(std::move(sketchLines));
     for (auto& [id, f] : doc_->state().planes) {
         const auto c = planeCorners(f, s);
         QColor fill = kDatum, edge = kDatum;
@@ -1161,6 +1233,7 @@ void MainWindow::refreshBrowser()
     for (const char* p : {"XY plane (floor)", "XZ plane (front)", "YZ plane (side)"}) {
         new QTreeWidgetItem(origin, {tr(p)});
     }
+    browser_->blockSignals(true);  // ticking the rows below is not a person ticking them
     auto* sketches = new QTreeWidgetItem(browser_, {tr("Sketches")});
     auto* bodies = new QTreeWidgetItem(browser_, {tr("Bodies")});
     const auto& feats = doc_->model().features;
@@ -1175,9 +1248,15 @@ void MainWindow::refreshBrowser()
             extra = it->second->report.dof == 0 ? tr("fully defined")
                                                 : tr("%1 free").arg(it->second->report.dof);
         }
-        auto* sk = new QTreeWidgetItem(sketches, {QString("%1 %2  (%3)").arg(statusGlyph(st.level), q(feats[i].name),
-                                                                             extra.isEmpty() ? statusWord(st.level) : extra)});
+        const bool shown = sketchVisible(feats[i].id);
+        auto* sk = new QTreeWidgetItem(sketches, {QString("%1 %2  (%3)%4").arg(statusGlyph(st.level), q(feats[i].name),
+                                                                               extra.isEmpty() ? statusWord(st.level) : extra,
+                                                                               shown ? QString() : tr("  hidden"))});
         sk->setData(0, Qt::UserRole + 1, q(feats[i].id));  // the step, for "find in timeline"
+        sk->setData(0, Qt::UserRole + 3, q(feats[i].id));  // its tick shows or hides it
+        sk->setFlags(sk->flags() | Qt::ItemIsUserCheckable);
+        sk->setCheckState(0, shown ? Qt::Checked : Qt::Unchecked);
+        sk->setToolTip(0, tr("Tick to show the sketch in the view. A sketch a later step uses hides itself."));
     }
     browser_->blockSignals(true);
     for (auto& [id, b] : doc_->state().bodies) {
@@ -2284,6 +2363,7 @@ void MainWindow::enterSketch(const std::string& id)
     }
     sketch_ = new SketchEditor(view_, *doc_, id, this);
     view_->setInteractor(sketch_);
+    view_->setSketchGrid(sketch_->frame());  // the grid lies in this sketch's plane
     view_->setPickMode(PickMode::None);
     connect(sketch_, &SketchEditor::committed, this, [this] { refreshAll(); });
     connect(sketch_, &SketchEditor::stateChanged, this, &MainWindow::updateSketchInfo);
@@ -2307,6 +2387,7 @@ void MainWindow::exitSketch()
     view_->setInteractor(nullptr);
     view_->setOverlay({});
     view_->setPickMode(PickMode::Faces);
+    view_->setSketchGrid(std::nullopt);  // back to the floor grid
     if (sliceBox_ && sliceBox_->isChecked()) {
         sliceBox_->setChecked(false);  // takes the slice away
     }

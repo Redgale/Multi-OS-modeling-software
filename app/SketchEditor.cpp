@@ -229,6 +229,17 @@ bool SketchEditor::refreshFromDocument()
 bool SketchEditor::commit(const QString& label, const jig::Sketch& next)
 {
     jig::Sketch trial = next;
+    // a new point where a line's midpoint was clicked stays at that midpoint
+    for (auto& [at, line] : midSnaps_) {
+        if (!trial.entity(line)) {
+            continue;
+        }
+        for (auto& [id, e] : next.entities()) {
+            if (e.type == jig::EntityType::Point && !work_.entity(id) && std::hypot(e.x - at.x(), e.y - at.y()) < 1e-9) {
+                trial.addConstraint(jig::ConstraintType::Midpoint, id, line);
+            }
+        }
+    }
     jig::SolveReport rep = trial.solve(doc_.lookup());
     if (rep.state == jig::SolveState::Failed
         || (rep.state == jig::SolveState::OverConstrained && !rep.conflicting.empty())) {
@@ -251,6 +262,7 @@ bool SketchEditor::commit(const QString& label, const jig::Sketch& next)
         return false;
     }
     message_.clear();
+    midSnaps_.clear();
     refreshFromDocument();
     emit committed();
     return true;
@@ -289,24 +301,7 @@ QPoint SketchEditor::screenOf(double x, double y) const
 
 double SketchEditor::gridStep() const
 {
-    // a "nice" step of about 12 screen pixels: 0.1, 0.2, 0.5, 1, 2, 5, 10 ... in metric
-    // designs; 1/64, 1/32, … 1/2, 1, 2, 6, 12 inches in inch and foot designs
-    const double raw = 12 * view_->worldPerPixel();
-    if (doc_.units() == jig::LengthUnit::Inch || doc_.units() == jig::LengthUnit::Foot) {
-        for (double in : {1.0 / 64, 1.0 / 32, 1.0 / 16, 1.0 / 8, 1.0 / 4, 1.0 / 2, 1.0, 2.0, 6.0, 12.0, 24.0, 60.0}) {
-            if (raw <= in * 25.4) {
-                return in * 25.4;
-            }
-        }
-        return 120 * 25.4;
-    }
-    const double p = std::pow(10.0, std::floor(std::log10(std::max(raw, 1e-6))));
-    for (double m : {1.0, 2.0, 5.0, 10.0}) {
-        if (raw <= m * p) {
-            return m * p;
-        }
-    }
-    return 10 * p;
+    return view_->sketchGridStep();  // the step of the grid drawn in the sketch's plane
 }
 
 int SketchEditor::pointNear(const QPointF& screen, int exclude) const
@@ -326,7 +321,7 @@ int SketchEditor::pointNear(const QPointF& screen, int exclude) const
     return best;
 }
 
-std::vector<QPointF> SketchEditor::polyline(const jig::Sketch& s, const jig::SketchEntity& e) const
+std::vector<QPointF> SketchEditor::polyline(const jig::Sketch& s, const jig::SketchEntity& e)
 {
     std::vector<QPointF> pts;
     if (e.type == jig::EntityType::Line) {
@@ -399,6 +394,27 @@ SketchEditor::Snap SketchEditor::snapAt(const QPointF& screen, bool allowInferen
         s.local = QPointF(x, y);
         s.point = p;
         return s;
+    }
+    {
+        // the middle of a line is a place to snap to, as its ends are
+        double best = kSnapPx;
+        for (auto& [id, e] : shown().entities()) {
+            if (e.type != jig::EntityType::Line) {
+                continue;
+            }
+            auto [x1, y1] = shown().pointXY(e.p1);
+            auto [x2, y2] = shown().pointXY(e.p2);
+            const QPointF mid((x1 + x2) / 2, (y1 + y2) / 2);
+            const double d = QLineF(view_->project(toWorld(mid.x(), mid.y())), screen).length();
+            if (d < best) {
+                best = d;
+                s.local = mid;
+                s.midOf = id;
+            }
+        }
+        if (s.midOf) {
+            return s;
+        }
     }
     if (options.snapGrid) {
         const double g = gridStep();
@@ -476,6 +492,7 @@ void SketchEditor::resetToolState()
     editArtwork_ = 0;
     roundAt_.reset();
     tanLines_.clear();
+    midSnaps_.clear();
     trimHover_.reset();
     gridCols_ = 0;
     gridDx_ = 0;
@@ -1702,6 +1719,9 @@ bool SketchEditor::mouseRelease(QMouseEvent* e)
         cursor_ = *forcedCursor_;
         cursorValid_ = true;
         forcedCursor_.reset();
+    }
+    if (cursor_.midOf && tool_ != Tool::Select) {
+        midSnaps_.push_back({cursor_.local, cursor_.midOf});  // a point made here keeps to the middle
     }
     switch (tool_) {
         case Tool::Select: {
@@ -3012,6 +3032,10 @@ void SketchEditor::paint(QPainter& p)
         p.setBrush(Qt::NoBrush);
         if (cursor_.point) {
             p.drawRect(QRectF(c.x() - 6, c.y() - 6, 12, 12));
+        }
+        else if (cursor_.midOf) {
+            // a midpoint: a small triangle (a different shape from an end's square)
+            p.drawPolygon(QPolygonF({c + QPointF(0, -7), c + QPointF(6.5, 5), c + QPointF(-6.5, 5)}));
         }
         QString label;
         if (cursor_.horizontal) {

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "Viewport.hpp"
 
+#include <array>
 #include <chrono>
 #include <cmath>
 #include <future>
@@ -309,33 +310,118 @@ void Viewport::uploadMesh(const std::string& body, std::shared_ptr<const jig::Na
     meshes_.push_back(std::move(g));
 }
 
+double Viewport::sketchGridStep() const
+{
+    const double raw = 12 * worldPerPixel();
+    if (units_ == jig::LengthUnit::Inch || units_ == jig::LengthUnit::Foot) {
+        for (double in : {1.0 / 64, 1.0 / 32, 1.0 / 16, 1.0 / 8, 1.0 / 4, 1.0 / 2, 1.0, 3.0, 6.0, 12.0, 36.0, 120.0}) {
+            if (raw <= in * 25.4) {
+                return in * 25.4;
+            }
+        }
+        return 360 * 25.4;
+    }
+    const double p = std::pow(10.0, std::floor(std::log10(std::max(raw, 1e-6))));
+    for (double m : {1.0, 2.0, 5.0, 10.0}) {
+        if (raw <= m * p) {
+            return m * p;
+        }
+    }
+    return 10 * p;
+}
+
+int Viewport::sketchGridPerMajor() const
+{
+    const double step = sketchGridStep();
+    if (units_ == jig::LengthUnit::Inch || units_ == jig::LengthUnit::Foot) {
+        const double in = step / 25.4;
+        return in < 1 - 1e-9 ? 4 : in < 3 - 1e-9 ? 3 : in < 12 - 1e-9 ? 2 : 3;  // ¼ → 1 in, 1 → 3 in, 6 → 1 ft
+    }
+    // 1 → 5, 2 → 10, 5 → 10: heavier lines at round sizes
+    const double lead = step / std::pow(10.0, std::floor(std::log10(step) + 1e-9));
+    return lead > 4 ? 2 : 5;
+}
+
+void Viewport::setSketchGrid(std::optional<gp_Ax3> frame)
+{
+    sketchFrame_ = std::move(frame);
+    builtStep_ = 0;
+    if (glReady_) {
+        makeCurrent();
+        buildGrid();
+        doneCurrent();
+    }
+    update();
+}
+
 void Viewport::buildGrid()
 {
     std::vector<float> v;
-    // metric designs: 10 mm squares, a heavier line every 50 mm; inch and foot designs:
-    // quarter-inch squares, a heavier line every inch
-    const bool inch = units_ == jig::LengthUnit::Inch || units_ == jig::LengthUnit::Foot;
-    const float minor = inch ? 6.35f : 10.0f;
-    const int perMajor = inch ? 4 : 5, n = inch ? 80 : 50;  // about ±500 mm either way
-    const float ext = minor * float(n);
+    if (sketchFrame_) {
+        // the sketch's plane: around where the view is looking, wide enough to fill it
+        const gp_Ax3& f = *sketchFrame_;
+        const double step = sketchGridStep();
+        const int perMajor = sketchGridPerMajor();
+        const double major = step * perMajor;
+        const gp_Vec rel(f.Location(), gp_Pnt(target_.x(), target_.y(), target_.z()));
+        const double cu = std::round(rel.Dot(gp_Vec(f.XDirection())) / major) * major;
+        const double cv = std::round(rel.Dot(gp_Vec(f.YDirection())) / major) * major;
+        const double span = std::max(width(), height()) * worldPerPixel() * 1.5;
+        const int n = std::min(400, int(std::ceil(span / major)) * perMajor);
+        // a hair towards the viewer's side of the plane, so faces the sketch lies on do not hide it
+        const gp_XYZ lift = f.Direction().XYZ() * (0.2 * worldPerPixel());
+        auto at = [&](double u, double w) {
+            const gp_XYZ p = f.Location().XYZ() + f.XDirection().XYZ() * u + f.YDirection().XYZ() * w + lift;
+            return std::array<float, 3> {float(p.X()), float(p.Y()), float(p.Z())};
+        };
+        auto seg = [&](double u1, double w1, double u2, double w2) {
+            const auto a = at(u1, w1), b = at(u2, w2);
+            v.insert(v.end(), {a[0], a[1], a[2], b[0], b[1], b[2]});
+        };
+        const double ext = step * n;
+        for (int pass = 0; pass < 2; ++pass) {
+            for (int i = -n; i <= n; ++i) {
+                if ((i % perMajor == 0) != (pass == 1)) {
+                    continue;
+                }
+                const double t = step * i;
+                seg(cu + t, cv - ext, cu + t, cv + ext);
+                seg(cu - ext, cv + t, cu + ext, cv + t);
+            }
+            if (pass == 0) {
+                gridMinorCount_ = int(v.size() / 3);
+            }
+        }
+        gridMajorCount_ = int(v.size() / 3) - gridMinorCount_;
+        builtStep_ = step;
+        builtCentre_ = QPointF(cu, cv);
+    }
     auto line = [&](float x1, float y1, float z1, float x2, float y2, float z2) {
         v.insert(v.end(), {x1, y1, z1, x2, y2, z2});
     };
-    for (int i = -n; i <= n; ++i) {
-        if (i % perMajor == 0) {
-            continue;
+    if (!sketchFrame_) {
+        // the floor: metric designs 10 mm squares, a heavier line every 50 mm; inch and foot
+        // designs quarter-inch squares, a heavier line every inch
+        const bool inch = units_ == jig::LengthUnit::Inch || units_ == jig::LengthUnit::Foot;
+        const float minor = inch ? 6.35f : 10.0f;
+        const int perMajor = inch ? 4 : 5, n = inch ? 80 : 50;  // about ±500 mm either way
+        const float ext = minor * float(n);
+        for (int i = -n; i <= n; ++i) {
+            if (i % perMajor == 0) {
+                continue;
+            }
+            const float t = minor * float(i);
+            line(t, -ext, 0, t, ext, 0);
+            line(-ext, t, 0, ext, t, 0);
         }
-        const float t = minor * float(i);
-        line(t, -ext, 0, t, ext, 0);
-        line(-ext, t, 0, ext, t, 0);
+        gridMinorCount_ = int(v.size() / 3);
+        for (int i = -n; i <= n; i += perMajor) {
+            const float t = minor * float(i);
+            line(t, -ext, 0, t, ext, 0);
+            line(-ext, t, 0, ext, t, 0);
+        }
+        gridMajorCount_ = int(v.size() / 3) - gridMinorCount_;
     }
-    gridMinorCount_ = int(v.size() / 3);
-    for (int i = -n; i <= n; i += perMajor) {
-        const float t = minor * float(i);
-        line(t, -ext, 0, t, ext, 0);
-        line(-ext, t, 0, ext, t, 0);
-    }
-    gridMajorCount_ = int(v.size() / 3) - gridMinorCount_;
     // origin axes X, Y, Z (also labelled in the gizmo: never colour alone)
     line(0, 0, 0, 60, 0, 0);
     line(0, 0, 0, 0, 60, 0);
@@ -537,6 +623,13 @@ void Viewport::setSection(std::optional<QVector4D> plane)
     update();
 }
 
+void Viewport::setSketchLines(SceneOverlay lines)
+{
+    sketchLines_ = std::move(lines);
+    overlayDirty_ = true;
+    update();
+}
+
 void Viewport::setDatums(SceneOverlay geometry, std::vector<std::pair<QString, QVector3D>> labels)
 {
     datums_ = std::move(geometry);
@@ -593,7 +686,12 @@ void Viewport::uploadOverlay()
         v.insert(v.end(), {p.x(), p.y(), p.z(), float(c.redF()), float(c.greenF()), float(c.blueF()),
                            float(c.alphaF())});
     };
-    // highlighted (selected) edges, then the hovered edge, then the tool's overlay
+    // finished sketches first (drawn with depth), then highlighted (selected) edges, the
+    // hovered edge and the tool's overlay (drawn on top)
+    for (auto& ov : sketchLines_.lines) {
+        push(ov.p, ov.c);
+    }
+    ovSketchCount_ = int(v.size() / 7);
     auto edgeSegs = [&](const std::string& body, int edge, const QColor& c) {
         for (auto& m : meshes_) {
             if (m->body != body) {
@@ -672,13 +770,20 @@ void Viewport::drawOverlay()
     glEnable(GL_BLEND);
     // blend colour only: the widget composites its framebuffer, so its alpha must stay 1
     glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ZERO, GL_ONE);
+    // Finished sketches with depth (the model hides their far side; faces are drawn pushed
+    // back a little, so a sketch on a face still shows)
+    glDepthFunc(GL_LEQUAL);
+    glDepthRange(0.0, 0.9998);  // a hair towards the viewer: edges the sketch lies on do not hide it
+    glDrawArrays(GL_LINES, 0, ovSketchCount_);
+    glDepthRange(0.0, 1.0);
+    glDepthFunc(GL_LESS);
     // Tool geometry is drawn on top so sketches on faces never disappear into them.
     glDisable(GL_DEPTH_TEST);
     glDepthMask(GL_FALSE);
     if (ovTriCount_ > 0) {
         glDrawArrays(GL_TRIANGLES, ovLineCount_, ovTriCount_);
     }
-    glDrawArrays(GL_LINES, 0, ovLineCount_);
+    glDrawArrays(GL_LINES, ovSketchCount_, ovLineCount_ - ovSketchCount_);
     glDepthMask(GL_TRUE);
     glEnable(GL_DEPTH_TEST);
     glDisable(GL_BLEND);
@@ -873,6 +978,18 @@ void Viewport::paintGL()
         std::erase_if(js, [](auto& j) { return j.mesh.wait_for(std::chrono::seconds(0)) == std::future_status::ready; });
         pending_ = int(js.size());
         return;
+    }
+    if (sketchFrame_) {
+        // the sketch grid follows the zoom (finer or coarser) and where the view looks
+        const double step = sketchGridStep();
+        const gp_Ax3& f = *sketchFrame_;
+        const gp_Vec rel(f.Location(), gp_Pnt(target_.x(), target_.y(), target_.z()));
+        const QPointF c(rel.Dot(gp_Vec(f.XDirection())), rel.Dot(gp_Vec(f.YDirection())));
+        const double major = step * sketchGridPerMajor();
+        if (std::abs(step - builtStep_) > 1e-12 || std::abs(c.x() - builtCentre_.x()) > 2 * major ||
+            std::abs(c.y() - builtCentre_.y()) > 2 * major) {
+            buildGrid();
+        }
     }
     // Collect finished tessellations.
     auto& js = jobs(this);

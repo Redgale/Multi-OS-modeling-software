@@ -607,6 +607,14 @@ void Document::setHiddenBodies(std::set<std::string> ids)
     }
 }
 
+void Document::setShownSketches(std::set<std::string> ids)
+{
+    if (ids != shownSketches_) {
+        shownSketches_ = std::move(ids);
+        ++revision_;
+    }
+}
+
 void Document::setFoldedGroups(std::set<std::string> groups)
 {
     if (groups != folded_) {
@@ -662,8 +670,11 @@ nlohmann::json Document::toJson() const
     j["features"] = feats;
     j["rollback"] = model_.rollback;
     j["counters"] = model_.counters;
-    if (!hidden_.empty() || !folded_.empty() || !views_.empty()) {
+    if (!hidden_.empty() || !folded_.empty() || !views_.empty() || !shownSketches_.empty()) {
         j["view"] = {{"hidden_bodies", hidden_}, {"folded_groups", folded_}};
+        if (!shownSketches_.empty()) {
+            j["view"]["shown_sketches"] = shownSketches_;
+        }
         if (!views_.empty()) {
             j["view"]["named_views"] = views_;
         }
@@ -736,6 +747,7 @@ Result<std::unique_ptr<Document>> Document::fromJson(const nlohmann::json& input
         if (j.contains("view") && j["view"].is_object()) {
             doc->hidden_ = j["view"].value("hidden_bodies", std::set<std::string> {});
             doc->folded_ = j["view"].value("folded_groups", std::set<std::string> {});
+            doc->shownSketches_ = j["view"].value("shown_sketches", std::set<std::string> {});
             if (j["view"].contains("named_views") && j["view"]["named_views"].is_object()) {
                 for (auto& [k, v] : j["view"]["named_views"].items()) {
                     doc->views_[k] = v;
